@@ -13,7 +13,7 @@ const CONFIG = {
       hero: {
         badge: 'ANALOG HYBRID MIXING & MASTERING',
         title: 'Профессиональное<br>сведение & мастеринг',
-        subtitle: 'Специализация: Pop/House • Rock/Metal • Trap/Hip-Hop',
+        subtitle: 'Специализация: Pop/House • Rock/Metal • Rap/R&B',
         usp: 'Превращаю демо-записи и сырые мультитреки в мощный, объемный и конкурентоспособный звук мирового уровня. От первых тактов до финального мастера — каждый элемент на своем месте, каждая частота под контролем.',
         btnPlayer: 'Примеры работ (A/B)',
         btnContact: 'Контакты',
@@ -26,7 +26,8 @@ const CONFIG = {
         filterAll: 'Все жанры',
         filterPopHouse: 'Pop / House',
         filterRockMetal: 'Rock / Metal',
-        filterTrapHipHop: 'Trap / Hip-Hop',
+        filterRapRnB: 'Rap / R&B',
+        filterTrapHipHop: 'Rap / R&B',
         beforeLabel: 'BEFORE (MIX)',
         afterLabel: 'AFTER (MASTERED)',
         volumeLabel: 'Громкость',
@@ -52,7 +53,7 @@ const CONFIG = {
         title: '',
         subtitle: '<span class="font-semibold text-gray-200">Свяжитесь со мной напрямую для обсуждения вашего проекта.</span><br/><span class="text-amber-400 font-extrabold mt-1 inline-block">На связи 7 дней в неделю.</span>',
         telegramBtn: 'Открыть Telegram',
-        copyTgUsername: 'Копировать @Nick_Rise',
+        copyTgUsername: 'Копировать ТГ @Nick_Rise',
         copyEmail: 'Копировать Email',
         instagramBtn: 'Instagram Профиль',
         toastTgCopied: 'Никнейм @nickrise скопирован!',
@@ -65,29 +66,23 @@ const CONFIG = {
       },
       aboutModal: {
         tag: 'STUDIO ENGINEER PROFILE // NICK RISE',
-        title: 'Ник Райз (Nick Rise)',
-        subtitle: 'Звукорежиссер, саундпродюсер & инжиниринг сведения',
-        experience: '8+ лет в индустрии',
-        bioTitle: 'Об авторе & Студии',
-        bioText1: 'Привет! Я Ник Райз — звукорежиссер и саундпродюсер с более чем 8-летним опытом работы с музыкальными релизами. Моя цель — раскрыть максимальный потенциал каждого трека, придав ему коммерческую громкость, объём, прозрачность и плотность.',
-        bioText2: 'В работе использую гибридный сетап: цифровые алгоритмы высочайшей точности и аналоговый окрас легендарных приборов (SSL, Neve, Tube-Tech). Я лично прорабатываю каждую деталь: от филигранного ручного тюнинга вокала до хирургической очистки резонансов и динамической раскачки баса.',
-        stat1Num: '500+',
+        title: 'Александр (Nick Rise)',
+        subtitle: 'Звукорежиссер сведения & мастеринга',
+        experience: '6+ лет в индустрии',
+        bioTitle: 'Обо мне',
+        bioText1: 'Приветствую! Меня зовут Александр, я битмейкер, техник по звуку и звукорежиссёр из Москвы. В моём портфолио — работа с аналоговыми и цифровыми микшерами на концертах и студиях. Отвечал за звук на прямой трансляции Первого канала на ВДНХ, сотрудничал с PRO BATTLE League, Underground Amplitude и другими лейблами и сообществами.',
+        bioText2: 'Проходил обучение у таких звукорежиссёров, как Джон Олин, Константин Матафонов, Илья Лукашев, Павел Уоллен и других.',
+        bioText3: 'С радостью поработаю с тобой!',
+        stat1Num: '150+',
         stat1Text: 'Завершенных треков',
-        stat2Num: '8+ лет',
+        stat2Num: '6+ лет',
         stat2Text: 'Студийного опыта',
         stat3Num: '100%',
         stat3Text: 'Готовность к радио & стримингам',
-        workflowTitle: 'Как происходит работа:',
-        step1Title: '1. Анализ и референсы',
-        step1Desc: 'Вы отправляете мультитрек, мы обсуждаем ваше видение, референсы и желаемый характер звучания.',
-        step2Title: '2. Коррекция и тюнинг',
-        step2Desc: 'Ручной тюнинг и ритмическое выравнивание вокала, очистка шумов и подготовка всех дорожек.',
-        step3Title: '3. Гибридное сведение',
-        step3Desc: 'Частотный баланс, пространственные эффекты, аналоговое насыщение гармониками и компрессия.',
-        step4Title: '4. Финальный мастеринг',
-        step4Desc: 'Подгонка под стандарты Spotify/Apple Music (-14 LUFS / True Peak) + выгрузка минус и акапеллы.',
+        btnFaqWhy: 'Почему стоит выбрать именно меня?',
+        btnFaqWorkflow: 'Как происходит процесс работы?',
         btnDiscuss: 'Обсудить проект',
-        btnDemos: 'Слушать A/B демо',
+        btnDemos: 'Примеры работ (A/B)',
         closeBtn: 'Закрыть'
       }
     },
@@ -105,8 +100,8 @@ const CONFIG = {
       hero: {
         badge: 'ANALOG HYBRID MIXING & MASTERING',
         title: 'Professional<br>Mixing & Mastering',
-        subtitle: 'Specialization: Pop/House • Rock/Metal • Trap/Hip-Hop',
-        usp: 'I turn raw demos and multitracks into a powerful, spacious, and globally competitive sound. From the first note to the final master — every element in its place, every frequency under control.',
+        subtitle: 'Specialization: Pop/House • Rock/Metal • Rap/R&B',
+        usp: 'I transform raw demos and multitracks into a powerful, spacious, and world-class commercial sound. From the first bar to the final master — every element in its place, every frequency under control.',
         btnPlayer: 'Listen A/B Demos',
         btnContact: 'Contacts',
         aboutPhotoBadge: 'About'
@@ -114,11 +109,12 @@ const CONFIG = {
       player: {
         sectionBadge: 'A/B COMPARISON',
         title: 'Hear the Difference',
-        subtitle: 'Seamless real-time A/B switching between raw unmastered mix (BEFORE) and polished studio master (AFTER). Hit PLAY to hear the difference!',
+        subtitle: 'Seamless real-time A/B switching between the raw mix (BEFORE) and polished studio master (AFTER). Hit PLAY to test the difference!',
         filterAll: 'All Genres',
         filterPopHouse: 'Pop / House',
         filterRockMetal: 'Rock / Metal',
-        filterTrapHipHop: 'Trap / Hip-Hop',
+        filterRapRnB: 'Rap / R&B',
+        filterTrapHipHop: 'Rap / R&B',
         beforeLabel: 'BEFORE (MIX)',
         afterLabel: 'AFTER (MASTERED)',
         volumeLabel: 'Volume',
@@ -137,14 +133,14 @@ const CONFIG = {
       faq: {
         sectionBadge: 'FREQUENTLY ASKED QUESTIONS',
         title: 'FAQ',
-        subtitle: 'Everything you need to know about preparing multitracks and session workflow.'
+        subtitle: 'Everything you need to know about multitrack preparation and the workflow process.'
       },
       contacts: {
         sectionBadge: 'DIRECT CONTACT',
         title: '',
         subtitle: '<span class="font-semibold text-gray-200">Reach out directly to discuss your project.</span><br/><span class="text-amber-400 font-extrabold mt-1 inline-block">Available 7 days a week.</span>',
         telegramBtn: 'Open Telegram',
-        copyTgUsername: 'Copy @Nick_Rise',
+        copyTgUsername: 'Copy TG @Nick_Rise',
         copyEmail: 'Copy Email',
         instagramBtn: 'Instagram Profile',
         toastTgCopied: 'Username @nickrise copied to clipboard!',
@@ -157,27 +153,21 @@ const CONFIG = {
       },
       aboutModal: {
         tag: 'STUDIO ENGINEER PROFILE // NICK RISE',
-        title: 'Nick Rise',
-        subtitle: 'Mixing & Mastering Engineer / Sound Producer',
-        experience: '8+ Years Industry Experience',
-        bioTitle: 'About Me & Studio Approach',
-        bioText1: 'Hi! I am Nick Rise — a professional mixing & mastering engineer and sound producer with over 8 years of hands-on experience crafting radio-ready audio. My mission is to elevate your music to commercial release standards with punch, warmth, depth, and clarity.',
-        bioText2: 'I combine high-precision digital DSP with analog warmth (SSL, Neve, Tube-Tech gear). From meticulous manual vocal pitch alignment to surgical resonance cleaning and punchy low-end management, every track gets tailored individual attention.',
-        stat1Num: '500+',
+        title: 'Alexander (Nick Rise)',
+        subtitle: 'Mixing & Mastering Engineer',
+        experience: '6+ Years Industry Experience',
+        bioTitle: 'About Me',
+        bioText1: 'Hello! I\'m Alexander — a beatmaker, audio technician, and sound engineer based in Moscow. My background spans working with both analog and digital consoles across live concert setups and studio sessions. I\'ve managed broadcast sound for live streams and collaborated with labels and communities such as PRO BATTLE League, Underground Amplitude, and others.',
+        bioText2: 'I\'ve trained under renowned audio engineers including John Olin, Konstantin Matafonov, Ilya Lukashev, Pavel Wallen, and more.',
+        bioText3: 'I would be happy to work with you!',
+        stat1Num: '150+',
         stat1Text: 'Tracks Mixed & Mastered',
-        stat2Num: '8+ Yrs',
+        stat2Num: '6+ Yrs',
         stat2Text: 'Studio Experience',
         stat3Num: '100%',
         stat3Text: 'Radio & Streaming Ready',
-        workflowTitle: 'Workflow & Process:',
-        step1Title: '1. Analysis & References',
-        step1Desc: 'You send multitrack stems, we discuss your goals, reference tracks, and desired sonic character.',
-        step2Title: '2. Vocal Tuning & Edit',
-        step2Desc: 'Manual pitch correction, timing alignment, noise reduction, and editing.',
-        step3Title: '3. Hybrid Mixing',
-        step3Desc: 'Frequency balancing, spatial FX, analog saturation, and dynamic control.',
-        step4Title: '4. Final Mastering',
-        step4Desc: 'Loudness optimization for Spotify/Apple Music (-14 LUFS / True Peak) + stems delivery.',
+        btnFaqWhy: 'Why choose me?',
+        btnFaqWorkflow: 'How does the workflow process work?',
         btnDiscuss: 'Discuss Project',
         btnDemos: 'Listen to A/B Demos',
         closeBtn: 'Close'
@@ -190,13 +180,13 @@ const CONFIG = {
     {
       id: 'track-1',
       enabled: true,
-      title: 'Neon Nights',
-      artist: 'The Electronic Wave',
+      title: 'Masochist',
+      artist: 'Ellise',
       genre: 'pop-house',
-      genreLabel: { ru: 'Pop / House', en: 'Pop / House' },
-      audioBefore: './audio/pophouse_1_before.mp3',
-      audioAfter: './audio/pophouse_1_after.mp3',
-      cover: './image/cover1.jpg'
+      genreLabel: { ru: 'Pop Dark', en: 'Pop Dark' },
+      audioBefore: './audio/(P)PopDark_before (Ellise - Masochist).mp3',
+      audioAfter: './audio/(P)PopDark_after (Ellise - Masochist).mp3',
+      cover: './image/image_Ellise_Masochist.jpg'
     },
     {
       id: 'track-2',
@@ -258,24 +248,24 @@ const CONFIG = {
     {
       id: 'track-7',
       enabled: true,
-      title: 'Dark Matter',
-      artist: 'Iron Resonance',
+      title: 'Into The Fire',
+      artist: 'Asking Alexandria',
       genre: 'rock-metal',
-      genreLabel: { ru: 'Rock / Metal', en: 'Rock / Metal' },
-      audioBefore: './audio/rockmetal_1_before.mp3',
-      audioAfter: './audio/rockmetal_1_after.mp3',
-      cover: './image/cover2.jpg'
+      genreLabel: { ru: 'Metal', en: 'Metal' },
+      audioBefore: './audio/(M)Metal_1_before (Asking Alexandria - Into The Fire).mp3',
+      audioAfter: './audio/(M)Metal_1_after (Asking Alexandria - Into The Fire).mp3',
+      cover: './image/Image_IntoTheFire_AskingAlexandria.jpeg'
     },
     {
       id: 'track-8',
-      enabled: false,
-      title: 'Heavy Crown',
-      artist: 'Steel Avalanche',
+      enabled: true,
+      title: 'Dark Horses',
+      artist: 'The Long Wait',
       genre: 'rock-metal',
-      genreLabel: { ru: 'Rock / Metal', en: 'Rock / Metal' },
-      audioBefore: './audio/rockmetal_1_before.mp3',
-      audioAfter: './audio/rockmetal_1_after.mp3',
-      cover: './image/cover1.jpg'
+      genreLabel: { ru: 'Rock Country', en: 'Rock Country' },
+      audioBefore: './audio/(M)RockCountry_2_before (The Long Wait - Dark Horses).mp3',
+      audioAfter: './audio/(M)RockCountry_2_after (The Long Wait - Dark Horses).mp3',
+      cover: './image/image_TheLongWait_DarkHorses.jpg'
     },
     {
       id: 'track-9',
@@ -322,25 +312,25 @@ const CONFIG = {
       cover: './image/cover3.jpg'
     },
 
-    // --- TRAP / HIP-HOP (6 tracks) ---
+    // --- RAP / R&B (6 tracks) ---
     {
       id: 'track-13',
       enabled: true,
-      title: 'Cyber Sub',
-      artist: '808 Dynasty',
-      genre: 'trap-hiphop',
-      genreLabel: { ru: 'Trap / Hip-Hop', en: 'Trap / Hip-Hop' },
-      audioBefore: './audio/traphiphop_1_before.mp3',
-      audioAfter: './audio/traphiphop_1_after.mp3',
-      cover: './image/cover3.jpg'
+      title: 'Teleport',
+      artist: 'TytillidieXXollin',
+      genre: 'rap-rnb',
+      genreLabel: { ru: 'Rap', en: 'Rap' },
+      audioBefore: './audio/(R)Rap_1_before (TytillidieXXollin - Teleport).mp3',
+      audioAfter: './audio/(R)Rap_1_after (TytillidieXXollin - Teleport).mp3',
+      cover: './image/image_TytillidieXXollin_Teleport.jpg'
     },
     {
       id: 'track-14',
       enabled: false,
       title: 'Platinum Chain',
       artist: 'Heavy Bass',
-      genre: 'trap-hiphop',
-      genreLabel: { ru: 'Trap / Hip-Hop', en: 'Trap / Hip-Hop' },
+      genre: 'rap-rnb',
+      genreLabel: { ru: 'Rap / R&B', en: 'Rap / R&B' },
       audioBefore: './audio/traphiphop_1_before.mp3',
       audioAfter: './audio/traphiphop_1_after.mp3',
       cover: './image/cover1.jpg'
@@ -350,8 +340,8 @@ const CONFIG = {
       enabled: false,
       title: 'Night City',
       artist: 'Trap Cartel',
-      genre: 'trap-hiphop',
-      genreLabel: { ru: 'Trap / Hip-Hop', en: 'Trap / Hip-Hop' },
+      genre: 'rap-rnb',
+      genreLabel: { ru: 'Rap / R&B', en: 'Rap / R&B' },
       audioBefore: './audio/traphiphop_1_before.mp3',
       audioAfter: './audio/traphiphop_1_after.mp3',
       cover: './image/cover2.jpg'
@@ -361,8 +351,8 @@ const CONFIG = {
       enabled: false,
       title: 'Underground Kings',
       artist: 'Sub Zero',
-      genre: 'trap-hiphop',
-      genreLabel: { ru: 'Trap / Hip-Hop', en: 'Trap / Hip-Hop' },
+      genre: 'rap-rnb',
+      genreLabel: { ru: 'Rap / R&B', en: 'Rap / R&B' },
       audioBefore: './audio/traphiphop_1_before.mp3',
       audioAfter: './audio/traphiphop_1_after.mp3',
       cover: './image/cover4.jpg'
@@ -372,8 +362,8 @@ const CONFIG = {
       enabled: false,
       title: 'Golden Flow',
       artist: 'Metro Beat',
-      genre: 'trap-hiphop',
-      genreLabel: { ru: 'Trap / Hip-Hop', en: 'Trap / Hip-Hop' },
+      genre: 'rap-rnb',
+      genreLabel: { ru: 'Rap / R&B', en: 'Rap / R&B' },
       audioBefore: './audio/traphiphop_1_before.mp3',
       audioAfter: './audio/traphiphop_1_after.mp3',
       cover: './image/cover3.jpg'
@@ -383,8 +373,8 @@ const CONFIG = {
       enabled: false,
       title: '808 Eclipse',
       artist: 'Phonk Syndicate',
-      genre: 'trap-hiphop',
-      genreLabel: { ru: 'Trap / Hip-Hop', en: 'Trap / Hip-Hop' },
+      genre: 'rap-rnb',
+      genreLabel: { ru: 'Rap / R&B', en: 'Rap / R&B' },
       audioBefore: './audio/traphiphop_1_before.mp3',
       audioAfter: './audio/traphiphop_1_after.mp3',
       cover: './image/cover1.jpg'
@@ -398,7 +388,7 @@ const CONFIG = {
       titleRu: 'Сведение Мультитрека',
       titleEn: 'Multitrack Mixing',
       descRu: 'Идеальный баланс, глубина и мощь. Микс, который звучит дорого и готов к мастерингу.',
-      descEn: 'Perfect balance, depth, and punch. A mix that sounds expensive and is mastering-ready.',
+      descEn: 'Perfect balance, depth, and punch. A mix that sounds premium and is ready for mastering.',
       priceRu: 'от 7 000 ₽',
       priceEn: 'from $150',
       featuresRu: [
@@ -408,10 +398,10 @@ const CONFIG = {
         'Стерео WAV (32-bit) + Минус и Акапелла'
       ],
       featuresEn: [
-        'Up to 20 multitrack audio stems',
+        'Processing for up to 20 multitrack tracks',
         'Manual vocal tuning & pitch alignment',
         '3 complimentary revision rounds',
-        'Master WAV (32-bit) + Instrumental & Acapella'
+        'Stereo WAV (32-bit) + Instrumental & Acapella'
       ]
     },
     {
@@ -420,7 +410,7 @@ const CONFIG = {
       titleRu: 'Сведение + Мастеринг (Полный пакет)',
       titleEn: 'Mixing + Mastering (Full Package)',
       descRu: 'От мультитреков до готового релиза. Всё в одном пакете. Громкий, сбалансированный трек за 3 дня.',
-      descEn: 'From multitracks to release-ready master. All in one package. Loud, balanced track in 3 days.',
+      descEn: 'From raw multitracks to a release-ready master. All in one package. Loud, balanced track in 3 days.',
       priceRu: 'от 10 000 ₽',
       priceEn: 'from $190',
       featuresRu: [
@@ -432,8 +422,8 @@ const CONFIG = {
       featuresEn: [
         'Everything included in Mixing',
         'Everything included in Mastering',
-        'Up to 40 multitrack audio stems',
-        'Priority turnaround (within 3 days)'
+        'Processing for up to 40 multitrack tracks',
+        'Priority turnaround (up to 3 days)'
       ]
     },
     {
@@ -452,38 +442,44 @@ const CONFIG = {
         'Готовые файлы для всех стримингов'
       ],
       featuresEn: [
-        'Reference check on studio-grade and real-world speakers',
-        'Frequency balance & dynamic control',
+        'Playback check on studio monitors and consumer sound systems',
+        'Frequency balance & dynamics control',
         'Mono compatibility check',
-        'Streaming-ready distribution masters'
+        'Distribution-ready streaming masters'
       ]
     }
   ],
 
   faqData: [
     {
-      qRu: 'Как правильно подготовить и отправить мультитрек?',
-      qEn: 'How should I prepare and send my multitracks?',
-      aRu: 'Экспортируйте все дорожки от 0:00:00 в формате WAV или AIFF (24-bit / 44.1kHz или 48kHz). Отключите все эффекты на мастер-шине. Упакуйте папку в ZIP/RAR и отправьте ссылку на Google Drive или Yandex Disk.',
-      aEn: 'Export all tracks from timecode 0:00:00 as 24-bit WAV/AIFF (44.1kHz or 48kHz). Disable master bus limiters or heavy processing. Zip your project folder and upload to Google Drive or WeTransfer.'
+      qRu: 'Почему стоит выбрать именно меня?',
+      qEn: 'Why choose me?',
+      aRu: 'Мой опыт — это не только 6+ лет сведения и мастеринга, но и написания аранжировок. Благодаря этому я могу и контролировать качество на всех этапах создания музыки и давать советы по его улучшению.<br/><br/>Я не просто делаю «громко и чисто». Я слышу трек целиком и понимаю, что нужно именно вашему жанру, настроению и материалу. Вы получаете не просто сведение, а профессиональный взгляд на ваш трек со всех сторон.<br/><br/>Моя задача — чтобы ваш трек звучал на уровне мировых релизов, был конкурентным на стримингах и цеплял слушателя с первой секунды.<div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200/90 text-sm flex items-start sm:items-center gap-3"><svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V6a2 2 0 10-2 2h2zm0 13C10.832 21 2 20 2 15V8a2 2 0 012-2h16a2 2 0 012 2v7c0 5-8.832 6-10 6z"/></svg><span>Вижу вам интересно сотрудничество со мной! Напишите мне в Телеграм <strong class="text-amber-400 font-bold">"NRSDiscount"</strong> и получите скидку на первый заказ в размере <strong class="text-amber-400 font-bold">10%</strong></span></div>',
+      aEn: 'My background spans not only 6+ years of mixing and mastering, but also music arrangement. This allows me to maintain quality control at every stage of music production and provide expert guidance to elevate your sound.<br/><br/>I don\'t just make tracks "loud and clean." I hear the big picture and know exactly what your specific genre, mood, and material need. You get more than just a mix — you get a comprehensive, professional perspective on your music.<br/><br/>My goal is to make your track sound on par with world-class releases, remain competitive across all streaming platforms, and hook the listener from the very first second.<div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200/90 text-sm flex items-start sm:items-center gap-3"><svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V6a2 2 0 10-2 2h2zm0 13C10.832 21 2 20 2 15V8a2 2 0 012-2h16a2 2 0 012 2v7c0 5-8.832 6-10 6z"/></svg><span>I see you\'re interested in working together! Message me <strong class="text-amber-400 font-bold">"NRSDiscount"</strong> on Telegram to get <strong class="text-amber-400 font-bold">10% off</strong> your first order.</span></div>'
+    },
+    {
+      qRu: 'Как происходит процесс работы?',
+      qEn: 'How does the workflow process work?',
+      aRu: 'Весь процесс делится на 4 этапа:<br/><br/>1 - Заявка и ТЗ. Вы присылаете мультитреки, референсы и техническое задание (как его правильно оформить, смотрите в следующем вопросе).<br/><br/>2 - Старт. Я слушаю материал, называю цену и срок. После вашей 50% предоплаты начинаю работу.<br/><br/>3 - Черновой микс и правки. Через 2–3 дня вы получаете MP3-черновик. Слушаете, пишете замечания. Я вношу правки (до 3-х итераций включительно).<br/><br/>4 - Финал. После утверждения микса вы оплачиваете оставшиеся 50%, я делаю мастеринг и отправляю готовые WAV и MP3 файлы.<div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200/90 text-sm flex items-start sm:items-center gap-3"><svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V6a2 2 0 10-2 2h2zm0 13C10.832 21 2 20 2 15V8a2 2 0 012-2h16a2 2 0 012 2v7c0 5-8.832 6-10 6z"/></svg><span>Вижу вам интересно сотрудничество со мной! Напишите мне в Телеграм <strong class="text-amber-400 font-bold">"NRSDiscount"</strong> и получите скидку на первый заказ в размере <strong class="text-amber-400 font-bold">10%</strong></span></div>',
+      aEn: 'The process is divided into 4 stages:<br/><br/>1 - Request & Brief. You send multitracks, reference tracks, and technical requirements (see the next question for details on how to prepare them).<br/><br/>2 - Kickoff. I listen to your material, provide a quote, and set a completion date. Work begins once a 50% deposit is made.<br/><br/>3 - Draft Mix & Revisions. Within 2–3 days, you receive an MP3 preview. You listen and provide feedback, and I apply your adjustments (up to 3 revision rounds included).<br/><br/>4 - Final Delivery. Once the mix is approved, you pay the remaining 50%. I complete the final mastering and deliver your high-resolution WAV and MP3 files.<div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200/90 text-sm flex items-start sm:items-center gap-3"><svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V6a2 2 0 10-2 2h2zm0 13C10.832 21 2 20 2 15V8a2 2 0 012-2h16a2 2 0 012 2v7c0 5-8.832 6-10 6z"/></svg><span>I see you\'re interested in working together! Message me <strong class="text-amber-400 font-bold">"NRSDiscount"</strong> on Telegram to get <strong class="text-amber-400 font-bold">10% off</strong> your first order.</span></div>'
+    },
+    {
+      qRu: 'Как правильно оформить Техническое Задание?',
+      qEn: 'How do I prepare a Technical Brief?',
+      aRu: 'Максимально подробно опишите ваше видение финального результата:<br/><br/>1 - Референсы. 2–3 трека других исполнителей файлом (или ссылкой), чей звук вам нравится. Это может быть бас из одного трека, вокал из другого, общая атмосфера из третьего. Я слушаю и понимаю, куда двигаться.<br/><br/>2 - Характер и описание. Подробно опишите, как вы видите финальный результат: что вы точно хотите сохранить или наоборот убрать. Например, чтобы вокал звучал ближе, а барабаны мощнее. Расскажите про энергетику трека, какие моменты должны цеплять слушателя в первую очередь.<br/><br/>3 - Дополнительная информация. Если есть что-то важное, что я должен знать о записи: например, трек записан в домашних условиях, есть шумы или артефакты, которые вы не можете перезаписать. Или, наоборот, вы гордитесь какой-то партией и хотите, чтобы она звучала ярко. Также укажите, если у вас есть дедлайн — я учту это при планировании работы.<div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200/90 text-sm flex items-start sm:items-center gap-3"><svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V6a2 2 0 10-2 2h2zm0 13C10.832 21 2 20 2 15V8a2 2 0 012-2h16a2 2 0 012 2v7c0 5-8.832 6-10 6z"/></svg><span>Вижу вам интересно сотрудничество со мной! Напишите мне в Телеграм <strong class="text-amber-400 font-bold">"NRSDiscount"</strong> и получите скидку на первый заказ в размере <strong class="text-amber-400 font-bold">10%</strong></span></div>',
+      aEn: 'Describe your vision for the final result in as much detail as possible:<br/><br/>1 - References. Send 2–3 tracks by other artists as files (or links) whose sound you admire. It could be the bass from one track, the vocal treatment from another, or the general vibe from a third. This helps me understand the target sonic direction.<br/><br/>2 - Character & Description. Detail what you want to achieve: what to preserve or remove. For instance, if you want vocals upfront or drums punchier. Explain the track\'s energy and which elements should grab the listener\'s attention first.<br/><br/>3 - Additional Info. Mention anything critical about the recording: e.g., if it was recorded at home with background noise or artifacts you can\'t re-record. Conversely, highlight any specific parts you\'re proud of and want featured prominently. Please mention if you have a tight deadline so I can plan accordingly.<div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200/90 text-sm flex items-start sm:items-center gap-3"><svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V6a2 2 0 10-2 2h2zm0 13C10.832 21 2 20 2 15V8a2 2 0 012-2h16a2 2 0 012 2v7c0 5-8.832 6-10 6z"/></svg><span>I see you\'re interested in working together! Message me <strong class="text-amber-400 font-bold">"NRSDiscount"</strong> on Telegram to get <strong class="text-amber-400 font-bold">10% off</strong> your first order.</span></div>'
     },
     {
       qRu: 'Входят ли в стоимость правки?',
       qEn: 'Are revisions included in the price?',
-      aRu: 'Да! В стоимость любого пакета сведения входит 3 бесплатных круга правок. Я добиваюсь того результата, которым вы будете гордиться на 100%.',
-      aEn: 'Yes! Every mixing package includes 3 free revision rounds. We work together until you are 100% satisfied with your sound.'
-    },
-    {
-      qRu: 'Делаете ли вы ручную коррекцию (тюнинг) вокала?',
-      qEn: 'Do you offer manual vocal tuning?',
-      aRu: 'Обязательно. Ручная подгонка нот в Celemony Melodyne и ритмическая выравнивание вокала входят во все тарифы сведения.',
-      aEn: 'Absolutely. Precise manual pitch correction via Celemony Melodyne and vocal timing alignment are standard in all mixing orders.'
+      aRu: 'Да, в стоимость входит 3 итерации правок.<br/><br/>Это означает, что после получения чернового микса вы можете прислать список замечаний. Я вношу правки, вы слушаете обновлённую версию и при необходимости отправляете новый список. Так до трёх раз.<br/><br/>Важные правила:<br/><br/>1 - Замечания лучше присылать одним общим списком, а не по одному сообщению в день, при надобности указывайте чёткие тайминги, куда нужно вносить правку. Так мы не тратим время зря.<br/><br/>2 - Если после трёх итераций вы всё ещё недовольны — дальнейшие правки оплачиваются отдельно: 1 список правок — 500₽.<div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200/90 text-sm flex items-start sm:items-center gap-3"><svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V6a2 2 0 10-2 2h2zm0 13C10.832 21 2 20 2 15V8a2 2 0 012-2h16a2 2 0 012 2v7c0 5-8.832 6-10 6z"/></svg><span>Вижу вам интересно сотрудничество со мной! Напишите мне в Телеграм <strong class="text-amber-400 font-bold">"NRSDiscount"</strong> и получите скидку на первый заказ в размере <strong class="text-amber-400 font-bold">10%</strong></span></div>',
+      aEn: 'Yes, the price includes up to 3 rounds of revisions.<br/><br/>This means after receiving the initial draft, you can send a list of feedback. I update the mix, you review the new version, and if necessary, submit another list — up to three times.<br/><br/>Important Guidelines:<br/><br/>1 - Please consolidate your feedback into a single organized list (with specific timestamps where adjustments are needed) rather than sending separate messages daily. This saves valuable time.<br/><br/>2 - If additional revisions are needed after 3 rounds, further changes are billed separately at $10 per revision round.<div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200/90 text-sm flex items-start sm:items-center gap-3"><svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V6a2 2 0 10-2 2h2zm0 13C10.832 21 2 20 2 15V8a2 2 0 012-2h16a2 2 0 012 2v7c0 5-8.832 6-10 6z"/></svg><span>I see you\'re interested in working together! Message me <strong class="text-amber-400 font-bold">"NRSDiscount"</strong> on Telegram to get <strong class="text-amber-400 font-bold">10% off</strong> your first order.</span></div>'
     },
     {
       qRu: 'Какой срок выполнения заказа?',
-      qEn: 'What is the turnaround time?',
-      aRu: 'Стандартный срок сведения и мастеринга составляет 3-5 рабочих дней с момента получения корректно подготовленного мультитрека.',
-      aEn: 'Standard turnaround time for mixing and mastering is 3-5 business days after receiving valid stems.'
+      qEn: 'What is the estimated turnaround time?',
+      aRu: 'Стандартный срок — от 3 до 5 рабочих дней на один трек.<br/><br/>Время зависит от количества дорожек и сложности материала. Точную дату я называю после того, как послушаю ваши мультитреки.<br/><br/>Если нужно быстрее — я могу сделать трек за 24–48 часов. Стоимость срочного заказа увеличивается на 5000₽.<div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200/90 text-sm flex items-start sm:items-center gap-3"><svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V6a2 2 0 10-2 2h2zm0 13C10.832 21 2 20 2 15V8a2 2 0 012-2h16a2 2 0 012 2v7c0 5-8.832 6-10 6z"/></svg><span>Вижу вам интересно сотрудничество со мной! Напишите мне в Телеграм <strong class="text-amber-400 font-bold">"NRSDiscount"</strong> и получите скидку на первый заказ в размере <strong class="text-amber-400 font-bold">10%</strong></span></div>',
+      aEn: 'Standard turnaround is 3 to 5 business days per track.<br/><br/>Delivery time depends on track count and complexity. I will provide an exact timeframe after reviewing your multitrack stems.<br/><br/>If you are in a rush, express delivery (24–48 hours) is available with a $100 rush order surcharge.<div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200/90 text-sm flex items-start sm:items-center gap-3"><svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V6a2 2 0 10-2 2h2zm0 13C10.832 21 2 20 2 15V8a2 2 0 012-2h16a2 2 0 012 2v7c0 5-8.832 6-10 6z"/></svg><span>I see you\'re interested in working together! Message me <strong class="text-amber-400 font-bold">"NRSDiscount"</strong> on Telegram to get <strong class="text-amber-400 font-bold">10% off</strong> your first order.</span></div>'
     }
   ]
 };

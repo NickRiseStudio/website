@@ -1,0 +1,1151 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   NICK RISE STUDIO — ANIMATION LAYER  (animations.css)
+   Слой анимаций студийного пульта. Подключается ПОСЛЕ style.css.
+   Ничего из существующей вёрстки и логики не переопределяет —
+   только добавляет движение, свечение и микро-взаимодействия.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --nr-amber: #F59E0B;
+  --nr-amber-lt: #FBBF24;
+  --nr-amber-dk: #D97706;
+  --nr-green: #10B981;
+  --nr-red: #EF4444;
+  --nr-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --nr-snap: cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+/* ═══ 01. BOOT SEQUENCE — «включение пульта» ══════════════════════════
+   Полностью на CSS: заставка рисуется с самого первого кадра, ещё до
+   того, как отработают Tailwind/GSAP, и сама убирается анимацией.
+   Даже если JS не выполнится — экран не залипнет, она уедет сама.
+   Показывается один раз за сессию вкладки (класс .nr-booted).
+═════════════════════════════════════════════════════════════════════ */
+
+html::before {
+  content: 'NICK RISE';
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 46%, #10131C 0%, #06070B 72%);
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-weight: 700;
+  font-size: clamp(1.2rem, 5vw, 2.1rem);
+  color: #F3F4F6;
+  letter-spacing: 0.34em;
+  text-indent: 0.34em;
+  pointer-events: none;
+  animation: nrBootPanel 1.2s cubic-bezier(0.5, 0, 0.2, 1) forwards;
+}
+
+html::after {
+  content: '';
+  position: fixed;
+  z-index: 9999;
+  left: 50%;
+  top: calc(50% + 36px);
+  width: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #D97706, #FBBF24);
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.85);
+  transform: translateX(-50%);
+  pointer-events: none;
+  animation: nrBootLine 1.2s cubic-bezier(0.5, 0, 0.2, 1) forwards;
+}
+
+html.nr-booted::before,
+html.nr-booted::after { content: none; display: none; animation: none; }
+
+@keyframes nrBootPanel {
+  0%   { opacity: 1; letter-spacing: 0.78em; text-indent: 0.78em; }
+  38%  { opacity: 1; letter-spacing: 0.34em; text-indent: 0.34em; }
+  72%  { opacity: 1; }
+  100% { opacity: 0; visibility: hidden; letter-spacing: 0.2em; text-indent: 0.2em; }
+}
+
+@keyframes nrBootLine {
+  0%   { width: 0; opacity: 1; }
+  62%  { width: min(240px, 58vw); opacity: 1; }
+  100% { width: min(240px, 58vw); opacity: 0; visibility: hidden; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html::before, html::after { content: none; display: none; }
+}
+
+
+/* ═══ 02. ГЛОБАЛЬНАЯ АТМОСФЕРА — «стекло монитора» ════════════════════ */
+
+/* «Облегчённый режим» для слабых машин — см. animations.js */
+html.nr-lite #nr-glass::after { display: none; }
+
+#nr-glass {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 4px),
+    radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.38) 100%);
+}
+
+#nr-glass::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 22vh;
+  top: -22vh;
+  background: linear-gradient(180deg, transparent, rgba(245, 158, 11, 0.035), transparent);
+  animation: nrScanSweep 16s linear infinite;
+  will-change: transform;
+}
+
+@keyframes nrScanSweep {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(150vh); }
+}
+
+/* Круги-«волны» от клика */
+#nr-fx {
+  position: fixed;
+  inset: 0;
+  z-index: 9990;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.nr-ripple {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  border: 1px solid rgba(245, 158, 11, 0.85);
+  animation: nrRipple 0.9s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+
+.nr-ripple.nr-ripple-2 { animation-delay: 0.11s; border-color: rgba(245, 158, 11, 0.45); }
+.nr-ripple.nr-ripple-3 { animation-delay: 0.22s; border-color: rgba(245, 158, 11, 0.22); }
+
+@keyframes nrRipple {
+  0%   { transform: scale(0.4); opacity: 0.9; }
+  100% { transform: scale(9); opacity: 0; }
+}
+
+/* ═══ 03. HEADER — линия сигнала, логотип, навигация ══════════════════ */
+
+#mainHeader { will-change: background-color, border-color; }
+
+#nr-scrollline {
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  height: 2px;
+  width: 0%;
+  background: linear-gradient(90deg, var(--nr-amber-dk), var(--nr-amber-lt));
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.75);
+  pointer-events: none;
+  transition: width 0.12s linear;
+}
+
+/* Скрыта на компьютерной версии (от 1024px), доступна на мобильных и планшетах */
+@media (min-width: 1024px) {
+  #nr-scrollline {
+    display: none !important;
+  }
+}
+
+#nr-scrollline::after {
+  content: '';
+  position: absolute;
+  right: -2px;
+  top: -2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--nr-amber-lt);
+  box-shadow: 0 0 12px 2px rgba(245, 158, 11, 0.9);
+}
+
+body.nr-scrolled #mainHeader {
+  background-color: rgba(9, 11, 16, 0.92);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.55);
+}
+
+/* Логотип: мягкое «дыхание» плитки, ускоряется во время проигрывания */
+#mainHeader a > div:first-child {
+  animation: nrLogoBreath 5.5s ease-in-out infinite;
+  transition: transform 0.5s var(--nr-snap);
+}
+
+#mainHeader a:hover > div:first-child { transform: rotate(-4deg) scale(1.06); }
+
+body.nr-playing #mainHeader a > div:first-child { animation-duration: 1.9s; }
+
+@keyframes nrLogoBreath {
+  0%, 100% { box-shadow: 0 8px 20px rgba(245, 158, 11, 0.10); }
+  50%      { box-shadow: 0 8px 26px rgba(245, 158, 11, 0.34); }
+}
+
+/* Подчёркивание пунктов меню «прорисовывается» слева направо плавно и равномерно */
+#mainHeader nav a { 
+  position: relative; 
+  padding-bottom: 2px;
+}
+
+#mainHeader nav a::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3px;
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(90deg, var(--nr-amber-lt), var(--nr-amber));
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.45);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.38s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease;
+  opacity: 0.85;
+}
+
+#mainHeader nav a:hover::after { 
+  transform: scaleX(1); 
+  opacity: 1;
+}
+
+/* ═══ 04. HERO ════════════════════════════════════════════════════════ */
+
+/* Пульсирующее «дыхание» тёплой подсветки студии */
+#hero > div.absolute:first-of-type {
+  animation: nrGlowBreath 9s ease-in-out infinite;
+  will-change: opacity;
+}
+
+@keyframes nrGlowBreath {
+  0%, 100% { opacity: 0.65; }
+  50%      { opacity: 1; }
+}
+
+/* Заголовок — пословный «вкат» плёнки */
+.nr-w {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.42em) rotateX(-38deg);
+  filter: blur(7px);
+  animation: nrWordIn 0.95s var(--nr-ease) forwards;
+}
+
+@keyframes nrWordIn {
+  to { opacity: 1; transform: none; filter: blur(0); }
+}
+
+/* Фото — рамка захвата сигнала + сканирующая полоса */
+.hero-mask-container {
+  transition: transform 0.5s var(--nr-ease);
+  transform-style: preserve-3d;
+  isolation: isolate;
+}
+
+#hero h1 { perspective: 800px; }
+
+.hero-mask-container::before,
+.hero-mask-container::after {
+  content: '';
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  border: 2px solid var(--nr-amber);
+  opacity: 0;
+  transition: opacity 0.45s ease, transform 0.55s var(--nr-ease);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.hero-mask-container::before {
+  top: 12px;
+  left: 12px;
+  border-right: 0;
+  border-bottom: 0;
+  border-radius: 8px 0 0 0;
+  transform: translate(10px, 10px);
+}
+
+.hero-mask-container::after {
+  right: 12px;
+  bottom: 12px;
+  border-left: 0;
+  border-top: 0;
+  border-radius: 0 0 8px 0;
+  transform: translate(-10px, -10px);
+}
+
+.hero-mask-container:hover::before,
+.hero-mask-container:hover::after {
+  opacity: 0.95;
+  transform: translate(0, 0);
+}
+
+.nr-scan-viewport {
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2;
+  /* Для браузеров с Webkit, чтобы border-radius точно обрезал дочерние элементы */
+  -webkit-mask-image: -webkit-radial-gradient(white, black);
+  mask-image: radial-gradient(white, black);
+}
+
+.nr-scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 20%;
+  top: -20%;
+  background: linear-gradient(180deg, transparent, rgba(245, 158, 11, 0.16), transparent);
+  pointer-events: none;
+  animation: nrScanImg 7s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+}
+
+@keyframes nrScanImg {
+  0%       { transform: translateY(0); opacity: 0; }
+  8%       { opacity: 1; }
+  55%      { opacity: 1; }
+  70%, 100% { transform: translateY(620%); opacity: 0; }
+}
+
+/* Расходящиеся звуковые кольца за фото */
+.nr-rings {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.nr-rings i {
+  position: absolute;
+  inset: 0;
+  border-radius: 22px;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  opacity: 0;
+  animation: nrRing 5.4s ease-out infinite;
+}
+
+.nr-rings i:nth-child(2) { animation-delay: 1.8s; }
+.nr-rings i:nth-child(3) { animation-delay: 3.6s; }
+
+body.nr-playing .nr-rings i { animation-duration: 2.4s; }
+body.nr-playing .nr-rings i:nth-child(2) { animation-delay: 0.8s; }
+body.nr-playing .nr-rings i:nth-child(3) { animation-delay: 1.6s; }
+
+@keyframes nrRing {
+  0%   { transform: scale(0.97); opacity: 0; }
+  22%  { opacity: 0.42; }
+  100% { transform: scale(1.13); opacity: 0; }
+}
+
+/* Бейдж «Обо мне» слегка левитирует */
+.hero-mask-container > div.absolute { animation: nrFloat 3.6s ease-in-out infinite; }
+
+@keyframes nrFloat {
+  0%, 100% { transform: translate(-50%, 0); }
+  50%      { transform: translate(-50%, -5px); }
+}
+
+/* Главная кнопка — «REC»: блик + кольцо готовности */
+#hero a[href="#player"] {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+#hero a[href="#player"]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.55) 50%, transparent 62%);
+  background-size: 260% 100%;
+  background-position: 180% 0;
+  transition: background-position 0.85s var(--nr-ease);
+}
+
+#hero a[href="#player"]:hover::before { background-position: -60% 0; }
+
+#hero a[href="#player"]::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  z-index: -2;
+  border-radius: 15px;
+  border: 1.5px solid rgba(245, 158, 11, 0.6);
+  animation: nrRecRing 2.6s ease-out infinite;
+}
+
+@keyframes nrRecRing {
+  0%   { transform: scale(0.98); opacity: 0.75; }
+  70%, 100% { transform: scale(1.09); opacity: 0; }
+}
+
+#hero a[href="#contacts"] { position: relative; transition: box-shadow 0.4s ease, border-color 0.4s ease; }
+#hero a[href="#contacts"]:hover { box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.55), 0 0 26px rgba(245, 158, 11, 0.12); }
+
+/* ═══ 05. ЗАГОЛОВКИ СЕКЦИЙ — рисующаяся кривая эквалайзера ════════════ */
+
+#player, #services, #faq, #contacts { position: relative; }
+
+.nr-eqline {
+  display: block;
+  width: min(230px, 60%);
+  height: 22px;
+  margin: 10px auto 0;
+  overflow: visible;
+}
+
+.nr-eqline path {
+  fill: none;
+  stroke: url(#nr-eqgrad);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 320;
+  stroke-dashoffset: 320;
+}
+
+.nr-eqline.nr-in path { animation: nrDraw 1.5s var(--nr-ease) forwards; }
+
+.nr-eqline circle { fill: var(--nr-amber-lt); opacity: 0; }
+.nr-eqline.nr-in circle { animation: nrDot 1.9s ease forwards 0.7s; }
+
+@keyframes nrDraw { to { stroke-dashoffset: 0; } }
+@keyframes nrDot {
+  0%   { opacity: 0; r: 0; }
+  60%  { opacity: 1; r: 3.4; }
+  100% { opacity: 0.85; r: 2.6; }
+}
+
+/* ═══ 06. ФИЛЬТРЫ ЖАНРОВ — «полосы эквалайзера» ═══════════════════════ */
+
+.genre-filter-btn {
+  position: relative;
+  overflow: hidden;
+  transform: translateZ(0);
+}
+
+.genre-filter-btn::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 0;
+  height: 2px;
+  background: var(--nr-amber);
+  box-shadow: 0 0 8px var(--nr-amber);
+  transform: translateX(-50%);
+  transition: width 0.38s var(--nr-ease);
+}
+
+.genre-filter-btn:hover::after { width: 62%; }
+
+.genre-filter-btn:hover { transform: translateY(-2px); }
+
+.genre-filter-btn.bg-amber-500 {
+  animation: nrActiveBtn 2.8s ease-in-out infinite;
+}
+
+.genre-filter-btn.bg-amber-500::after { width: 0; }
+
+@keyframes nrActiveBtn {
+  0%, 100% { box-shadow: 0 4px 14px rgba(245, 158, 11, 0.22); }
+  50%      { box-shadow: 0 4px 22px rgba(245, 158, 11, 0.55); }
+}
+
+/* ═══ 07. КАРТОЧКИ ТРЕКОВ ═════════════════════════════════════════════ */
+
+#trackListContainer > div {
+  position: relative;
+  transition: transform 0.42s var(--nr-ease), border-color 0.35s ease, background-color 0.35s ease, box-shadow 0.42s ease;
+}
+
+#trackListContainer > div::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 42%, rgba(245, 158, 11, 0.11) 50%, transparent 58%);
+  background-size: 260% 100%;
+  background-position: 175% 0;
+  transition: background-position 0.9s var(--nr-ease);
+}
+
+#trackListContainer > div:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.5), 0 0 22px rgba(245, 158, 11, 0.09);
+}
+
+#trackListContainer > div:hover::after { background-position: -55% 0; }
+
+/* Обложка активного трека медленно вращается, как винил */
+#trackListContainer > div.nr-live img { animation: nrSpin 14s linear infinite; }
+
+@keyframes nrSpin { to { transform: rotate(360deg); } }
+
+/* Пульсирующая рамка активного трека */
+#trackListContainer > div.nr-current { animation: nrCurrentGlow 3s ease-in-out infinite; }
+
+@keyframes nrCurrentGlow {
+  0%, 100% { box-shadow: 0 8px 22px rgba(245, 158, 11, 0.08); }
+  50%      { box-shadow: 0 8px 30px rgba(245, 158, 11, 0.26); }
+}
+
+/* Эквалайзер поверх обложки играющего трека */
+#trackListContainer > div.nr-live .absolute.inset-0 > .animate-ping { display: none; }
+
+.nr-eqbars {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2.5px;
+  pointer-events: none;
+}
+
+.nr-eqbars i {
+  width: 2.5px;
+  height: 70%;
+  border-radius: 1px;
+  background: var(--nr-amber-lt);
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.9);
+  transform-origin: center;
+  animation: nrEqBar 0.85s ease-in-out infinite alternate;
+}
+
+.nr-eqbars i:nth-child(1) { animation-duration: 0.62s; }
+.nr-eqbars i:nth-child(2) { animation-duration: 0.94s; }
+.nr-eqbars i:nth-child(3) { animation-duration: 0.73s; }
+.nr-eqbars i:nth-child(4) { animation-duration: 1.06s; }
+
+@keyframes nrEqBar {
+  from { transform: scaleY(0.26); opacity: 0.65; }
+  to   { transform: scaleY(1); opacity: 1; }
+}
+
+/* Пагинация */
+#btnPrevPage:not(:disabled):hover, #btnNextPage:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(245, 158, 11, 0.22);
+}
+
+#carouselDots button { transition: all 0.35s var(--nr-snap); }
+
+/* ═══ 07.5. ЭКВАЛАЙЗЕР СЕКЦИИ «СЛУШАЙ РАЗНИЦУ» (A/B) ═══════════════════ */
+
+#nr-player-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.9;
+}
+
+/* ═══ 08. НИЖНИЙ ПЛЕЕР — главный «пульт» ══════════════════════════════ */
+
+.sticky-player-bar > div { position: relative; z-index: 1; }
+
+/* Свечение верхней кромки при появлении и во время игры */
+.sticky-player-bar.active { animation: nrBarPower 0.9s var(--nr-ease); }
+
+@keyframes nrBarPower {
+  0%   { border-top-color: rgba(245, 158, 11, 1); box-shadow: 0 -10px 60px rgba(245, 158, 11, 0.35); }
+  100% { border-top-color: rgba(245, 158, 11, 0.35); box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.9); }
+}
+
+.sticky-player-bar::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--nr-amber-lt), transparent);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+body.nr-playing .sticky-player-bar::before {
+  animation: nrBarLive 3.4s ease-in-out infinite;
+  will-change: opacity;
+}
+
+@keyframes nrBarLive {
+  0%, 100% { opacity: 0; }
+  50%      { opacity: 0.9; }
+}
+
+/* Полоса прогресса: блик + «головка воспроизведения» */
+#deckProgressBar { position: relative; box-shadow: 0 0 12px rgba(245, 158, 11, 0.5); }
+
+#deckProgressBar::after {
+  content: '';
+  position: absolute;
+  right: -1px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #FFF3D6;
+  transform: translateY(-50%);
+  box-shadow: 0 0 10px 2px rgba(245, 158, 11, 0.95);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+body.nr-playing #deckProgressBar::after { opacity: 1; }
+
+.sticky-player-bar > div:first-child:hover #deckProgressBar::after { opacity: 1; transform: translateY(-50%) scale(1.35); }
+
+.nr-seek-pulse { animation: nrSeekPulse 0.5s ease; }
+
+@keyframes nrSeekPulse {
+  0%   { filter: brightness(2.4); }
+  100% { filter: brightness(1); }
+}
+
+/* Кнопка Play: вращающееся кольцо + пульс */
+.deck-play-btn { position: relative; }
+
+.deck-play-btn::before {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(245, 158, 11, 0.55);
+  opacity: 0;
+}
+
+body.nr-playing .deck-play-btn::before { animation: nrPlayPulse 1.9s ease-out infinite; }
+
+@keyframes nrPlayPulse {
+  0%   { transform: scale(0.92); opacity: 0.8; }
+  80%, 100% { transform: scale(1.5); opacity: 0; }
+}
+
+.deck-play-btn::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0 62%, rgba(255, 226, 160, 0.95) 78%, transparent 92%);
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+}
+
+body.nr-playing .deck-play-btn::after { opacity: 1; animation: nrSpin 2.4s linear infinite; }
+
+/* Обложка в плеере — винил */
+body.nr-playing .deck-cover { animation: nrSpin 16s linear infinite; }
+
+.deck-cover { transition: filter 0.4s ease; }
+
+/* Смена трека: «перемотка» текста */
+.nr-swap { animation: nrSwap 0.55s var(--nr-ease); }
+
+@keyframes nrSwap {
+  0%   { opacity: 0; transform: translateX(14px); filter: blur(5px); }
+  100% { opacity: 1; transform: none; filter: blur(0); }
+}
+
+/* Переключение BEFORE / AFTER — вспышка кроссфейда */
+.nr-crossfade {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.30), transparent);
+  animation: nrCrossfade 0.75s var(--nr-ease) forwards;
+}
+
+@keyframes nrCrossfade {
+  0%   { transform: translateX(-100%); opacity: 1; }
+  100% { transform: translateX(100%); opacity: 0; }
+}
+
+/* Индикация режима: AFTER горит ярче, BEFORE — приглушённо */
+body.nr-src-after .deck-btn-after { box-shadow: 0 0 18px rgba(245, 158, 11, 0.55) !important; }
+body.nr-src-before .deck-btn-before { box-shadow: 0 0 18px rgba(16, 185, 129, 0.45) !important; }
+
+.deck-volume { transition: box-shadow 0.3s ease; }
+.deck-volume:hover { box-shadow: 0 0 14px rgba(245, 158, 11, 0.4); }
+
+/* ═══ 09. УСЛУГИ — стойка рэка ════════════════════════════════════════ */
+
+#servicesContainer > * {
+  position: relative;
+  transform-style: preserve-3d;
+}
+
+#servicesContainer > *::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.07) 50%, transparent 60%);
+  background-size: 250% 100%;
+  background-position: 170% 0;
+  transition: background-position 1s var(--nr-ease);
+}
+
+#servicesContainer > *:hover::after { background-position: -60% 0; }
+
+/* Винты рэка поворачиваются при наведении */
+.rack-bolt { transition: transform 0.6s var(--nr-snap), box-shadow 0.4s ease; }
+
+#servicesContainer > *:hover .rack-bolt,
+.rack-card:hover .rack-bolt {
+  transform: rotate(92deg);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 8px rgba(245, 158, 11, 0.5);
+}
+
+/* Лента индикаторов по верхней кромке карточки */
+.nr-ledstrip {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 3px;
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+.nr-ledstrip i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #222836;
+}
+
+.nr-ledstrip i:nth-child(1) { animation-delay: 0s; }
+.nr-ledstrip i:nth-child(2) { animation-delay: 0.14s; }
+.nr-ledstrip i:nth-child(3) { animation-delay: 0.28s; }
+.nr-ledstrip i:nth-child(4) { animation-delay: 0.42s; }
+.nr-ledstrip i:nth-child(5) { animation-delay: 0.56s; }
+.nr-ledstrip i:nth-child(6) { animation-delay: 0.7s; }
+.nr-ledstrip i:nth-child(7) { animation-delay: 0.84s; }
+.nr-ledstrip i:nth-child(8) { animation-delay: 0.98s; }
+
+.popular-rack-card .nr-ledstrip { top: 22px; }
+
+#servicesContainer > *:hover .nr-ledstrip { opacity: 1; }
+#servicesContainer > *:hover .nr-ledstrip i { animation: nrLedChase 1.3s ease-in-out infinite; }
+
+@keyframes nrLedChase {
+  0%, 100% { background: #222836; box-shadow: none; }
+  50%      { background: var(--nr-green); box-shadow: 0 0 7px var(--nr-green); }
+}
+
+.popular-rack-card .nr-ledstrip i { animation-name: nrLedChaseAmber; }
+
+@keyframes nrLedChaseAmber {
+  0%, 100% { background: #2A2412; box-shadow: none; }
+  50%      { background: var(--nr-amber); box-shadow: 0 0 8px var(--nr-amber); }
+}
+
+/* Популярная карточка — аура */
+.popular-rack-card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow: 0 0 24px rgba(245, 158, 11, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  animation: nrPopularAura 4.2s ease-in-out infinite;
+  will-change: opacity;
+}
+
+@keyframes nrPopularAura {
+  0%, 100% { opacity: 0; }
+  50%      { opacity: 1; }
+}
+
+.popular-badge {
+  position: relative;
+  overflow: hidden;
+  display: inline-block;
+}
+
+.popular-badge::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.7) 50%, transparent 60%);
+  background-size: 250% 100%;
+  animation: nrBadgeShine 3.4s ease-in-out infinite;
+}
+
+@keyframes nrBadgeShine {
+  0%, 55% { background-position: 180% 0; }
+  85%, 100% { background-position: -70% 0; }
+}
+
+/* Галочки списка — прорисовка */
+#servicesContainer li svg polyline {
+  stroke-dasharray: 26;
+  stroke-dashoffset: 26;
+}
+
+#servicesContainer li.nr-in svg polyline { animation: nrDraw 0.5s ease forwards; }
+
+#servicesContainer li {
+  opacity: 0;
+  transform: translateX(-8px);
+}
+
+#servicesContainer li.nr-in {
+  animation: nrLiIn 0.55s var(--nr-ease) forwards;
+}
+
+@keyframes nrLiIn { to { opacity: 1; transform: none; } }
+
+/* Цена — блик по градиенту */
+#servicesContainer .bg-clip-text { background-size: 220% 100%; }
+
+#servicesContainer > *:hover .bg-clip-text { animation: nrPriceShine 2.6s ease-in-out infinite; }
+
+@keyframes nrPriceShine {
+  0%, 100% { background-position: 0% 0; }
+  50%      { background-position: 100% 0; }
+}
+
+/* Кнопка «Заказать» */
+#servicesContainer button { position: relative; overflow: hidden; }
+
+#servicesContainer button::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.5) 50%, transparent 60%);
+  background-size: 260% 100%;
+  background-position: 180% 0;
+  transition: background-position 0.8s var(--nr-ease);
+}
+
+#servicesContainer button:hover::after { background-position: -60% 0; }
+
+/* ═══ 10. FAQ ═════════════════════════════════════════════════════════ */
+
+#faqContainer > div { position: relative; overflow: hidden; }
+
+#faqContainer > div::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(180deg, var(--nr-amber-lt), var(--nr-amber-dk));
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: transform 0.5s var(--nr-ease);
+}
+
+#faqContainer > div:hover::before,
+#faqContainer > div.nr-faq-open::before { transform: scaleY(1); }
+
+#faqContainer > div.nr-faq-open { box-shadow: 0 0 34px rgba(245, 158, 11, 0.10), inset 0 0 24px rgba(245, 158, 11, 0.04); }
+
+#faqContainer [id^="faq-icon-"] { transition: all 0.42s var(--nr-snap) !important; }
+
+#faqContainer > div.nr-faq-open [id^="faq-icon-"] { transform: rotate(180deg) scale(1.08); }
+
+.faq-content-wrapper > div { position: relative; }
+
+#faqContainer > div.nr-faq-open .faq-content-wrapper p {
+  animation: nrFaqText 0.7s var(--nr-ease) 0.1s both;
+}
+
+@keyframes nrFaqText {
+  from { opacity: 0; transform: translateY(10px); filter: blur(3px); }
+  to   { opacity: 1; transform: none; filter: blur(0); }
+}
+
+/* ═══ 11. КОНТАКТЫ И ПОДВАЛ ═══════════════════════════════════════════ */
+
+#contacts .rack-card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(from 0deg,
+    rgba(245, 158, 11, 0) 0deg 200deg,
+    rgba(245, 158, 11, 0.55) 268deg,
+    rgba(251, 191, 36, 0.9) 292deg,
+    rgba(245, 158, 11, 0.45) 312deg,
+    rgba(245, 158, 11, 0) 350deg 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+#contacts .rack-card:hover::before { animation: nrSpin 6s linear infinite; opacity: 0.9; }
+
+#contacts .grid > a,
+#contacts .grid > button,
+#contactModal .grid > a,
+#contactModal .grid > button {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.35s var(--nr-ease), background-color 0.3s ease, box-shadow 0.4s ease;
+}
+
+#contacts .grid > a:hover,
+#contacts .grid > button:hover,
+#contactModal .grid > a:hover,
+#contactModal .grid > button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(245, 158, 11, 0.12);
+}
+
+#contacts .grid svg,
+#contactModal .grid svg { transition: transform 0.45s var(--nr-snap); }
+
+/* Самолётик Telegram улетает и возвращается */
+#contacts .grid > a[href*="t.me"]:hover svg,
+#contactModal .grid > a[href*="t.me"]:hover svg { animation: nrSend 0.75s var(--nr-ease); }
+
+@keyframes nrSend {
+  0%   { transform: translate(0, 0); }
+  40%  { transform: translate(16px, -14px); opacity: 0; }
+  41%  { transform: translate(-16px, 14px); opacity: 0; }
+  100% { transform: translate(0, 0); opacity: 1; }
+}
+
+#contacts .grid > button:hover svg,
+#contactModal .grid > button:hover svg { transform: scale(1.18) rotate(-6deg); }
+
+#contacts .grid > a[href*="instagram"]:hover svg,
+#contactModal .grid > a[href*="instagram"]:hover svg { animation: nrPop 0.6s var(--nr-snap); }
+
+@keyframes nrPop {
+  0%, 100% { transform: scale(1); }
+  45%      { transform: scale(1.25); }
+}
+
+/* Успешное копирование — зелёная вспышка */
+.nr-copied { animation: nrCopied 0.9s ease; }
+
+@keyframes nrCopied {
+  0%   { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.65); border-color: rgba(16, 185, 129, 0.9); }
+  100% { box-shadow: 0 0 0 16px rgba(16, 185, 129, 0); }
+}
+
+/* ═══ 12. ТОСТ — счётчик времени жизни ════════════════════════════════ */
+
+#toast { position: relative; overflow: hidden; }
+
+.nr-toast-meter {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 100%;
+  background: linear-gradient(90deg, var(--nr-amber-lt), var(--nr-amber-dk));
+  transform-origin: left;
+}
+
+#toast.show .nr-toast-meter { animation: nrToastMeter 3s linear forwards; }
+
+@keyframes nrToastMeter {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
+/* ═══ 13. МОДАЛЬНЫЕ ОКНА — «рэк въезжает в стойку» ════════════════════ */
+
+.modal-overlay.active .modal-content { animation: nrModalIn 0.6s var(--nr-ease); }
+
+@keyframes nrModalIn {
+  0%   { transform: scale(0.9) translateY(30px) rotateX(6deg); filter: blur(8px); }
+  100% { transform: scale(1) translateY(0) rotateX(0); filter: blur(0); }
+}
+
+.modal-content { position: relative; }
+
+.modal-overlay.active .modal-content::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(118deg, transparent 38%, rgba(245, 158, 11, 0.18) 50%, transparent 62%);
+  background-size: 260% 100%;
+  background-position: 175% 0;
+  opacity: 1;
+  animation: nrModalSheen 1.5s var(--nr-ease) 0.15s forwards;
+}
+
+@keyframes nrModalSheen {
+  0%   { background-position: 175% 0; opacity: 1; }
+  70%  { opacity: 1; }
+  100% { background-position: -70% 0; opacity: 0.75; }
+}
+
+.modal-overlay.active .rack-bolt { animation: nrBoltSpin 0.9s var(--nr-snap); }
+
+@keyframes nrBoltSpin {
+  from { transform: rotate(-180deg); }
+  to   { transform: rotate(0); }
+}
+
+#aboutModal .modal-content img { transition: transform 6s ease-out; }
+.modal-overlay.active #aboutModal img,
+#aboutModal.active .modal-content > div img { transform: scale(1.06); }
+
+#aboutModal .grid > div { position: relative; }
+
+/* Кнопки внутри About-модалки */
+#aboutModal button[onclick^="goToFaqItem"] { position: relative; overflow: hidden; }
+
+#aboutModal button[onclick^="goToFaqItem"]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 42%, rgba(245, 158, 11, 0.12) 50%, transparent 58%);
+  background-size: 260% 100%;
+  background-position: 175% 0;
+  transition: background-position 0.85s var(--nr-ease);
+}
+
+#aboutModal button[onclick^="goToFaqItem"]:hover::after { background-position: -60% 0; }
+
+/* ═══ 14. БОКОВОЙ МИКШЕР ══════════════════════════════════════════════ */
+
+#side-mixer-strip { transition: box-shadow 0.5s ease, transform 0.5s var(--nr-ease); }
+
+body.nr-playing #side-mixer-strip {
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7), inset 0 1px 1px rgba(255, 255, 255, 0.12), 0 0 26px rgba(245, 158, 11, 0.18);
+}
+
+.fader-knob { transition: top 0.15s cubic-bezier(0.1, 0.85, 0.25, 1), box-shadow 0.35s ease, transform 0.35s var(--nr-snap); }
+
+body.nr-faderactive .fader-knob {
+  transform: translateX(-50%) scale(1.14);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 0 18px rgba(245, 158, 11, 0.55);
+}
+
+#side-mixer-strip > div:first-child { transition: color 0.4s ease, text-shadow 0.4s ease; }
+
+body.nr-playing #side-mixer-strip > div:first-child {
+  color: var(--nr-amber);
+  text-shadow: 0 0 10px rgba(245, 158, 11, 0.8);
+  animation: nrBlink 1.6s steps(1, end) infinite;
+}
+
+@keyframes nrBlink {
+  0%, 60% { opacity: 1; }
+  61%, 100% { opacity: 0.35; }
+}
+
+#side-db-label { transition: color 0.3s ease, text-shadow 0.3s ease; }
+
+/* ═══ 15. МОБИЛЬНОЕ МЕНЮ ══════════════════════════════════════════════ */
+
+#mobileMenuDrawer > div > * {
+  opacity: 0;
+  transform: translateX(-14px);
+}
+
+#mobileMenuDrawer.nr-open > div > * { animation: nrMenuItem 0.5s var(--nr-ease) forwards; }
+
+#mobileMenuDrawer.nr-open > div > *:nth-child(1) { animation-delay: 0.04s; }
+#mobileMenuDrawer.nr-open > div > *:nth-child(2) { animation-delay: 0.09s; }
+#mobileMenuDrawer.nr-open > div > *:nth-child(3) { animation-delay: 0.14s; }
+#mobileMenuDrawer.nr-open > div > *:nth-child(4) { animation-delay: 0.19s; }
+#mobileMenuDrawer.nr-open > div > *:nth-child(5) { animation-delay: 0.24s; }
+#mobileMenuDrawer.nr-open > div > *:nth-child(6) { animation-delay: 0.29s; }
+
+@keyframes nrMenuItem { to { opacity: 1; transform: none; } }
+
+/* ═══ 16. ПОЯВЛЕНИЕ БЛОКОВ ПРИ СКРОЛЛЕ ════════════════════════════════ */
+
+.nr-reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.8s var(--nr-ease), transform 0.8s var(--nr-ease);
+}
+
+.nr-reveal.nr-in { opacity: 1; transform: none; }
+
+.nr-reveal[data-nr-d="1"] { transition-delay: 0.08s; }
+.nr-reveal[data-nr-d="2"] { transition-delay: 0.16s; }
+.nr-reveal[data-nr-d="3"] { transition-delay: 0.24s; }
+.nr-reveal[data-nr-d="4"] { transition-delay: 0.32s; }
+
+/* ═══ 16.5. ЭКОНОМИЯ РЕСУРСОВ ═════════════════════════════════════════
+   Секции за пределами экрана не анимируются вовсе.
+   Одноразовые анимации появления при этом не замирают.
+═════════════════════════════════════════════════════════════════════ */
+
+.nr-off,
+.nr-off *,
+.nr-off *::before,
+.nr-off *::after { animation-play-state: paused !important; }
+
+.nr-off .nr-w,
+.nr-off .nr-eqline path,
+.nr-off .nr-eqline circle,
+.nr-off #servicesContainer li { animation-play-state: running !important; }
+
+/* ═══ 17. REDUCED MOTION — уважение к системным настройкам ════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  #nr-glass::after,
+  .nr-scan,
+  .nr-rings,
+  .nr-eqbars i,
+  .nr-ledstrip i,
+  .popular-badge::after,
+  #contacts .rack-card::before,
+  .deck-play-btn::before,
+  .deck-play-btn::after {
+    animation: none !important;
+    display: none;
+  }
+
+  *, *::before, *::after {
+    animation-duration: 0.001s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.12s !important;
+  }
+
+  .nr-w, .nr-reveal, #servicesContainer li {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}
+
+/* Мобильная оптимизация: убираем самые тяжёлые эффекты */
+@media (max-width: 640px) {
+  #nr-glass { display: none; }
+  .nr-scan { display: none; }
+}
