@@ -37,7 +37,7 @@ html {
 /* Hero Mask Image */
 .hero-mask-container {
   position: relative;
-  display: inline-block;
+  display: block;
   width: 100%;
 }
 
@@ -57,15 +57,69 @@ html {
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.85), 0 0 45px rgba(245, 158, 11, 0.22);
 }
 
+.hero-about-badge {
+  position: absolute;
+  bottom: 16px;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 10;
+  margin: 0 !important;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hero-mask-container:hover .hero-about-badge {
+  transform: translateX(-50%) scale(1.05) !important;
+}
+
 /* Premium Rack Unit Cards */
+#servicesContainer {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: auto;
+}
+
+@media (max-width: 639px) {
+  #servicesContainer {
+    perspective: 1000px;
+    perspective-origin: center center;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: calc(50vw - 145px);
+    padding-left: calc(50vw - 145px) !important;
+    padding-right: calc(50vw - 145px) !important;
+    touch-action: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+  .service-mobile-card {
+    width: 290px !important;
+    min-width: 290px !important;
+    max-width: 290px !important;
+    scroll-snap-align: center;
+    scroll-snap-stop: always;
+    margin-right: -36px;
+    transform-origin: center center;
+    will-change: transform, opacity, z-index;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    touch-action: auto;
+  }
+  .service-mobile-card:last-child {
+    margin-right: 0 !important;
+  }
+}
+
 .rack-card {
   background: linear-gradient(165deg, #131722 0%, #0B0E15 100%);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   border-radius: 18px;
   position: relative;
-  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.5s ease, box-shadow 0.5s ease, background-color 0.5s ease;
-  will-change: transform, border-color, box-shadow;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+@media (min-width: 640px) {
+  .rack-card {
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.5s ease, box-shadow 0.5s ease, background-color 0.5s ease;
+  }
 }
 
 .rack-card:hover {
@@ -86,11 +140,16 @@ html {
 .popular-rack-card {
   background: radial-gradient(circle at 50% 0%, rgba(245, 158, 11, 0.14) 0%, rgba(28, 24, 17, 0.95) 45%, #0D1017 100%);
   border: 1.5px solid #F59E0B !important;
-  box-shadow: 0 0 24px rgba(245, 158, 11, 0.28), 0 12px 28px rgba(0, 0, 0, 0.7), inset 0 0 20px rgba(245, 158, 11, 0.08);
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.22), 0 10px 24px rgba(0, 0, 0, 0.65), inset 0 0 16px rgba(245, 158, 11, 0.08);
   border-radius: 18px;
   position: relative;
-  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.5s ease;
-  will-change: transform, box-shadow;
+  transition: box-shadow 0.3s ease;
+}
+
+@media (min-width: 640px) {
+  .popular-rack-card {
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.5s ease;
+  }
 }
 
 .popular-rack-card:hover {
@@ -283,13 +342,13 @@ body {
 
 body.has-sticky-player,
 body:has(#stickyPlayerBar.active) {
-  padding-bottom: 78px;
+  padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
 }
 
 @media (min-width: 640px) {
   body.has-sticky-player,
   body:has(#stickyPlayerBar.active) {
-    padding-bottom: 92px;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -307,11 +366,81 @@ body:has(#stickyPlayerBar.active) {
   box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.9);
   transform: translateY(100%);
   transition: transform 0.48s cubic-bezier(0.16, 1, 0.3, 1);
-  padding-bottom: max(0.25rem, env(safe-area-inset-bottom));
+  padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
 }
 
 .sticky-player-bar.active {
   transform: translateY(0) !important;
+}
+
+/* Audio Seek Bar with Enhanced Touch Target for Mobile & Tablet */
+.deck-seek-hitarea {
+  position: relative;
+  height: 6px;
+  touch-action: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: height 0.18s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.18s ease;
+}
+
+/* Invisible generous hit target around the slim bar */
+.deck-seek-hitarea::before {
+  content: '';
+  position: absolute;
+  top: -15px;
+  bottom: -15px;
+  left: 0;
+  right: 0;
+  z-index: 10;
+}
+
+/* Synchronized growth on hover and active scrub */
+.deck-seek-hitarea:hover,
+.deck-seek-hitarea:active {
+  height: 8px;
+  background-color: #0E121E;
+}
+
+.deck-seek-hitarea:hover #deckProgressBar,
+.deck-seek-hitarea:active #deckProgressBar {
+  filter: brightness(1.2);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.8);
+}
+
+/* Scrubber Knob Wrapper strictly centers at right: 0, top: 50% */
+.deck-scrubber-knob-wrapper {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translate(50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Scrubber Knob itself scales strictly from center without any offset */
+.deck-scrubber-knob {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background-color: #FFFFFF;
+  border: 2.5px solid #F59E0B;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.9), 0 1px 3px rgba(0, 0, 0, 0.5);
+  transform-origin: center center;
+  flex-shrink: 0;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.deck-seek-hitarea:hover .deck-scrubber-knob,
+.deck-seek-hitarea:active .deck-scrubber-knob {
+  transform: scale(1.35);
+  background-color: #FFFFFF;
+  border-color: #FBBF24;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 1), 0 0 5px rgba(255, 255, 255, 0.9);
 }
 
 /* Utility Class: Hide Scrollbars */

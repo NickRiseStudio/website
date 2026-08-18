@@ -420,8 +420,6 @@
       n.setAttribute('data-nr-d', String((i % 4) + 1));
       observeReveal(n);
     });
-    var foot = $('footer p');
-    if (foot) { foot.classList.add('nr-reveal'); observeReveal(foot); }
   }
 
   /* ═══ 09. СЧЁТЧИК ЦИФР (цены, статистика) ═══════════════════════════ */
@@ -461,8 +459,10 @@
     var cont = $('#servicesContainer');
     if (!cont) return;
 
+    var isMobile = window.innerWidth < 640;
+
     Array.prototype.slice.call(cont.children).forEach(function (card) {
-      if (!$('.nr-ledstrip', card) && !REDUCED) {
+      if (!$('.nr-ledstrip', card) && !REDUCED && !isMobile) {
         card.appendChild(el('span', 'nr-ledstrip', new Array(9).join('<i></i>')));
       }
 
@@ -472,7 +472,11 @@
       });
 
       var price = $('.bg-clip-text', card);
-      if (price) { price.dataset.nrCount = '1'; price.dataset.nrDone = ''; observeReveal(price); }
+      if (price && !isMobile) {
+        price.dataset.nrCount = '1';
+        price.dataset.nrDone = '';
+        observeReveal(price);
+      }
 
       if (!card.dataset.nrTilt) {
         card.dataset.nrTilt = '1';
@@ -638,19 +642,38 @@
 
   var prev = performance.now();
   var lastPlayerEq = 0;
+  var loopRunning = false;
+
+  function startLoop() {
+    if (!loopRunning && !document.hidden) {
+      loopRunning = true;
+      prev = performance.now();
+      requestAnimationFrame(loop);
+    }
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) {
+      startLoop();
+    } else {
+      loopRunning = false;
+    }
+  });
 
   function loop(now) {
+    if (document.hidden) {
+      loopRunning = false;
+      return;
+    }
     var dt = Math.min(0.05, (now - prev) / 1000) || 0.016;
     prev = now;
 
-    if (!document.hidden) {
-      safe(function () { updateEngine(now, dt); });
-      safe(syncBodyState);
-      /* фоновый эквалайзер в секции «Слушай разницу» — 30-40 fps */
-      if (now - lastPlayerEq > (LITE ? 50 : 25)) {
-        lastPlayerEq = now;
-        safe(function () { drawPlayerEq(now); });
-      }
+    safe(function () { updateEngine(now, dt); });
+    safe(syncBodyState);
+    /* фоновый эквалайзер в секции «Слушай разницу» — 30-40 fps */
+    if (now - lastPlayerEq > (LITE ? 50 : 25)) {
+      lastPlayerEq = now;
+      safe(function () { drawPlayerEq(now); });
     }
     requestAnimationFrame(loop);
   }
@@ -719,7 +742,7 @@
     }, { passive: true });
 
     onScroll();
-    requestAnimationFrame(loop);
+    startLoop();
   }
 
   if (document.readyState === 'loading') {

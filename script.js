@@ -110,12 +110,13 @@ function nextTrackPage() {
 function initPlayer() {
   const enabledTracks = getEnabledTracks();
 
-  // Preload audio files
+  // Lazy Preload: only first 3 tracks preload metadata to avoid 36 simultaneous HTTP range requests
   enabledTracks.forEach((track, index) => {
     const audioA = new Audio(track.audioBefore);
     const audioB = new Audio(track.audioAfter);
-    audioA.preload = 'metadata';
-    audioB.preload = 'metadata';
+    const preloadMode = index < 3 ? 'metadata' : 'none';
+    audioA.preload = preloadMode;
+    audioB.preload = preloadMode;
 
     const handleAudioError = (el, type) => {
       el.addEventListener('error', () => {
@@ -208,6 +209,7 @@ function initPlayer() {
     }, { passive: true });
   }
 
+  initDeckSeekBar();
   updateMasterDeckUI();
   renderTrackList();
 }
@@ -253,6 +255,14 @@ function selectTrack(trackId, shouldPlay = true) {
   const item = trackAudioMap[trackId];
 
   if (item) {
+    if (item.audioA.preload === 'none') {
+      item.audioA.preload = 'metadata';
+      item.audioA.load();
+    }
+    if (item.audioB.preload === 'none') {
+      item.audioB.preload = 'metadata';
+      item.audioB.load();
+    }
     applyAudioVolumes(trackId);
     if (shouldPlay) {
       if (Math.abs(item.audioA.currentTime - item.audioB.currentTime) > 0.05) {
@@ -356,8 +366,15 @@ function seekDeckTrack(e) {
   const item = trackAudioMap[activeTrackId];
   if (!item) return;
 
-  const rect = e.currentTarget.getBoundingClientRect();
-  const clickX = e.clientX - rect.left;
+  const hitArea = document.getElementById('deckSeekHitArea') || e.currentTarget;
+  const rect = hitArea.getBoundingClientRect();
+  if (rect.width <= 0) return;
+
+  const clientX = (e.touches && e.touches[0]) 
+    ? e.touches[0].clientX 
+    : (e.clientX !== undefined ? e.clientX : (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : 0));
+
+  const clickX = Math.max(0, Math.min(rect.width, clientX - rect.left));
   const dur = item.audioA.duration || item.audioB.duration || 0;
 
   if (dur > 0) {
@@ -366,6 +383,62 @@ function seekDeckTrack(e) {
     item.audioB.currentTime = newTime;
     updateDeckProgressUI();
   }
+}
+
+function initDeckSeekBar() {
+  const seekArea = document.getElementById('deckSeekHitArea');
+  if (!seekArea) return;
+
+  let isSeeking = false;
+
+  const handleSeekFromEvent = (e) => {
+    if (!activeTrackId) return;
+    const item = trackAudioMap[activeTrackId];
+    if (!item) return;
+
+    const rect = seekArea.getBoundingClientRect();
+    if (rect.width <= 0) return;
+
+    const clientX = (e.touches && e.touches[0])
+      ? e.touches[0].clientX
+      : (e.clientX !== undefined ? e.clientX : (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : 0));
+
+    const clickX = Math.max(0, Math.min(rect.width, clientX - rect.left));
+    const dur = item.audioA.duration || item.audioB.duration || 0;
+
+    if (dur > 0) {
+      const newTime = (clickX / rect.width) * dur;
+      item.audioA.currentTime = newTime;
+      item.audioB.currentTime = newTime;
+      updateDeckProgressUI();
+    }
+  };
+
+  // Pointer drag events
+  seekArea.addEventListener('pointerdown', (e) => {
+    isSeeking = true;
+    try { seekArea.setPointerCapture(e.pointerId); } catch (err) {}
+    handleSeekFromEvent(e);
+  });
+
+  seekArea.addEventListener('pointermove', (e) => {
+    if (!isSeeking) return;
+    handleSeekFromEvent(e);
+  });
+
+  const stopSeeking = (e) => {
+    if (!isSeeking) return;
+    isSeeking = false;
+    try { seekArea.releasePointerCapture(e.pointerId); } catch (err) {}
+  };
+
+  seekArea.addEventListener('pointerup', stopSeeking);
+  seekArea.addEventListener('pointercancel', stopSeeking);
+
+  // Touch fallback
+  seekArea.addEventListener('touchmove', (e) => {
+    handleSeekFromEvent(e);
+  }, { passive: true });
 }
 
 function prevDeckTrack() {
@@ -631,25 +704,11 @@ function renderServices() {
 
     const card = document.createElement('div');
     card.className = s.isPopular
-      ? 'popular-rack-card p-6 md:p-8 flex flex-col justify-between sm:transition-all sm:duration-300 transform w-[78vw] max-w-[310px] sm:w-auto sm:max-w-none flex-shrink-0 snap-center cursor-pointer sm:cursor-default select-none'
-      : 'rack-card p-6 md:p-8 flex flex-col justify-between sm:transition-all sm:duration-300 transform w-[78vw] max-w-[310px] sm:w-auto sm:max-w-none flex-shrink-0 snap-center cursor-pointer sm:cursor-default select-none';
+      ? 'service-mobile-card popular-rack-card p-6 md:p-8 flex flex-col justify-between sm:transition-all sm:duration-300 transform w-[78vw] max-w-[310px] sm:w-auto sm:max-w-none flex-shrink-0 snap-center cursor-pointer select-none'
+      : 'service-mobile-card rack-card p-6 md:p-8 flex flex-col justify-between sm:transition-all sm:duration-300 transform w-[78vw] max-w-[310px] sm:w-auto sm:max-w-none flex-shrink-0 snap-center cursor-pointer select-none';
 
-    // Pre-apply mobile 3D layering for initial render
-    if (window.innerWidth < 640) {
-      if (idx === 1) { // Center/popular card
-        card.style.transform = 'translate3d(0px, 0, 0) scale(1)';
-        card.style.opacity = '1';
-        card.style.zIndex = '20';
-      } else if (idx === 0) { // Left card behind
-        card.style.transform = 'translate3d(40px, 0, 0) scale(0.92)';
-        card.style.opacity = '0.55';
-        card.style.zIndex = '5';
-      } else if (idx === 2) { // Right card behind
-        card.style.transform = 'translate3d(-40px, 0, 0) scale(0.92)';
-        card.style.opacity = '0.55';
-        card.style.zIndex = '5';
-      }
-    }
+    // Set initial custom attribute
+    card.setAttribute('data-card-index', idx);
 
     card.addEventListener('click', (e) => {
       if (e.target.closest('button')) return;
@@ -699,7 +758,7 @@ function renderServices() {
         </div>
 
         <h3 class="text-2xl font-extrabold text-white mb-2 tracking-tight">${title}</h3>
-        <p class="text-sm text-gray-400 mb-6 leading-relaxed">${desc}</p>
+        <p class="service-card-desc text-sm text-gray-400 mb-6 leading-relaxed sm:max-lg:text-center">${desc}</p>
 
         <ul class="space-y-3 mb-6">
           ${featuresHtml}
@@ -730,28 +789,49 @@ function renderServices() {
 
   container.removeEventListener('scroll', onServicesScroll);
   container.addEventListener('scroll', onServicesScroll, { passive: true });
-  window.removeEventListener('resize', updateServicesDots);
-  window.addEventListener('resize', updateServicesDots);
+  container.addEventListener('touchstart', () => { userInteractedServices = true; }, { passive: true });
+  container.addEventListener('pointerdown', () => { userInteractedServices = true; }, { passive: true });
+  window.removeEventListener('resize', onServicesResize);
+  window.addEventListener('resize', onServicesResize, { passive: true });
 
   const initMobileServicesPosition = () => {
-    if (window.innerWidth < 640) {
+    if (window.innerWidth < 640 && !userInteractedServices) {
       scrollToServiceCard(1, 'instant');
     }
-    updateServicesDots();
+    updateServicesDots(true);
   };
 
-  // Run on next tick and once images/fonts settle
+  // Run immediately and after fonts/layout settle
   initMobileServicesPosition();
   requestAnimationFrame(initMobileServicesPosition);
   setTimeout(initMobileServicesPosition, 60);
-  setTimeout(initMobileServicesPosition, 250);
+  setTimeout(initMobileServicesPosition, 200);
+  setTimeout(initMobileServicesPosition, 500);
+
+  // Ensure card 1 is centered when user scrolls to services section
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && !userInteractedServices && window.innerWidth < 640) {
+          scrollToServiceCard(1, 'instant');
+        }
+      });
+    }, { threshold: 0.1 });
+    observer.observe(container);
+  }
+}
+
+let userInteractedServices = false;
+
+function onServicesResize() {
+  updateServicesDots(true);
 }
 
 let isServicesScrollTicking = false;
 function onServicesScroll() {
   if (!isServicesScrollTicking) {
     requestAnimationFrame(() => {
-      updateServicesDots();
+      updateServicesDots(false);
       isServicesScrollTicking = false;
     });
     isServicesScrollTicking = true;
@@ -764,23 +844,27 @@ function scrollToServiceCard(index, behavior = 'smooth') {
   const cards = container.children;
   if (cards && cards[index]) {
     const card = cards[index];
-    const cardLeft = card.offsetLeft;
-    const cardWidth = card.offsetWidth;
-    const containerWidth = container.offsetWidth;
-    const targetScrollLeft = cardLeft - (containerWidth / 2) + (cardWidth / 2);
+    const card0 = cards[0];
+    
+    let targetScrollLeft = 0;
+    if (index > 0 && card0) {
+      const delta = card.offsetLeft - card0.offsetLeft;
+      targetScrollLeft = delta > 0 ? delta : index * 270;
+    }
     
     if (behavior === 'instant') {
       container.scrollLeft = targetScrollLeft;
+      updateServicesDots(false);
     } else {
       container.scrollTo({
         left: targetScrollLeft,
-        behavior: behavior
+        behavior: 'smooth'
       });
     }
   }
 }
 
-function updateServicesDots() {
+function updateServicesDots(withTransition = false) {
   const container = document.getElementById('servicesContainer');
   if (!container) return;
 
@@ -791,19 +875,21 @@ function updateServicesDots() {
     Array.from(cards).forEach(card => {
       card.style.transform = '';
       card.style.opacity = '';
-      card.style.filter = '';
       card.style.zIndex = '';
       card.style.transition = '';
+      card.style.boxShadow = '';
     });
     return;
   }
 
-  const containerCenter = container.scrollLeft + (container.offsetWidth / 2);
+  const containerRect = container.getBoundingClientRect();
+  const containerCenter = containerRect.left + (containerRect.width / 2);
   let activeIndex = 0;
   let minDiff = Infinity;
 
   Array.from(cards).forEach((card, idx) => {
-    const cardCenter = card.offsetLeft + (card.offsetWidth / 2);
+    const cardRect = card.getBoundingClientRect();
+    const cardCenter = cardRect.left + (cardRect.width / 2);
     const diff = cardCenter - containerCenter;
     const absDiff = Math.abs(diff);
 
@@ -812,19 +898,27 @@ function updateServicesDots() {
       activeIndex = idx;
     }
 
-    const cardWidth = card.offsetWidth || 300;
+    const cardWidth = cardRect.width || 290;
+    // Normalized distance from viewport center (-1 to 1)
     const progress = Math.max(-1.5, Math.min(1.5, diff / cardWidth));
     const clampedAbs = Math.min(1, Math.abs(progress));
 
-    const scale = 1 - 0.08 * clampedAbs;
-    const opacity = 1 - 0.45 * clampedAbs;
-    const shiftX = -40 * progress;
-    const zIndex = Math.max(1, Math.round(20 - clampedAbs * 15));
+    // Coverflow 3D transformation:
+    // When behind: scaled down (0.90), partially transparent (0.50), slightly rotated on Y axis, shifted inwards
+    const scale = 1 - 0.10 * clampedAbs;
+    const opacity = 1 - 0.50 * clampedAbs;
+    const shiftX = -28 * progress; // moves card slightly towards center underneath
+    const rotateY = -10 * progress; // 3D tilt
+    const zIndex = Math.max(1, Math.round(30 - clampedAbs * 20));
 
-    card.style.transition = 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease';
-    card.style.transform = `translate3d(${shiftX.toFixed(1)}px, 0, 0) scale(${scale.toFixed(3)})`;
+    if (withTransition) {
+      card.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease, z-index 0.4s step-start';
+    } else {
+      card.style.transition = 'none';
+    }
+
+    card.style.transform = `translate3d(${shiftX.toFixed(1)}px, 0, 0) scale(${scale.toFixed(3)}) rotateY(${rotateY.toFixed(1)}deg)`;
     card.style.opacity = opacity.toFixed(2);
-    card.style.filter = '';
     card.style.zIndex = zIndex;
   });
 
@@ -1022,23 +1116,39 @@ function initModalAndToast() {
 function openContactModal() {
   closeMobileMenu();
   const modal = document.getElementById('contactModal');
-  if (modal) modal.classList.add('active');
+  if (modal) {
+    modal.classList.add('active');
+    document.body.classList.add('overflow-hidden');
+  }
 }
 
 function closeContactModal() {
   const modal = document.getElementById('contactModal');
-  if (modal) modal.classList.remove('active');
+  if (modal) {
+    modal.classList.remove('active');
+    if (!document.getElementById('aboutModal')?.classList.contains('active')) {
+      document.body.classList.remove('overflow-hidden');
+    }
+  }
 }
 
 function openAboutModal() {
   closeMobileMenu();
   const modal = document.getElementById('aboutModal');
-  if (modal) modal.classList.add('active');
+  if (modal) {
+    modal.classList.add('active');
+    document.body.classList.add('overflow-hidden');
+  }
 }
 
 function closeAboutModal() {
   const modal = document.getElementById('aboutModal');
-  if (modal) modal.classList.remove('active');
+  if (modal) {
+    modal.classList.remove('active');
+    if (!document.getElementById('contactModal')?.classList.contains('active')) {
+      document.body.classList.remove('overflow-hidden');
+    }
+  }
 }
 
 // --- MOBILE MENU ---
@@ -1142,10 +1252,39 @@ function showToast(msg) {
 }
 
 function copyText(text, toastMsg) {
+  const onSuccess = () => showToast(toastMsg);
+
+  const fallbackCopy = () => {
+    try {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.top = '0';
+      textArea.style.left = '0';
+      textArea.style.width = '2em';
+      textArea.style.height = '2em';
+      textArea.style.padding = '0';
+      textArea.style.border = 'none';
+      textArea.style.outline = 'none';
+      textArea.style.boxShadow = 'none';
+      textArea.style.background = 'transparent';
+      textArea.setAttribute('readonly', '');
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      textArea.setSelectionRange(0, 99999);
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      onSuccess();
+    } catch (err) {
+      onSuccess();
+    }
+  };
+
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).then(() => showToast(toastMsg)).catch(() => showToast(toastMsg));
+    navigator.clipboard.writeText(text).then(onSuccess).catch(fallbackCopy);
   } else {
-    showToast(toastMsg);
+    fallbackCopy();
   }
 }
 
@@ -1259,6 +1398,7 @@ function initMixerFaderScroll() {
   if (!knob) return;
 
   function updateFader() {
+    if (window.innerWidth < 1024) return;
     const scrollTop = window.scrollY || document.documentElement.scrollTop;
     const docHeight = document.documentElement.scrollHeight - window.innerHeight;
     const scrollPercent = docHeight > 0 ? Math.min(Math.max(scrollTop / docHeight, 0), 1) : 0;

@@ -2,28 +2,24 @@
 <html lang="ru" class="dark scroll-smooth">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Nick Rise Studio — Профессиональное сведение & мастеринг</title>
   <meta name="description" content="Премиальное сведение и мастеринг треков от Ника Райза (Nick Rise). Аналоговый звук SSL, Neve, Tube-Tech под стандарты Spotify, Apple Music и Радио.">
 
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            amber: {
-              400: '#FBBF24',
-              500: '#F59E0B',
-              600: '#D97706',
-            }
-          }
-        }
-      }
-    }
-  </script>
+  <!-- OpenGraph / Social Meta Tags -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Nick Rise Studio — Профессиональное сведение & мастеринг">
+  <meta property="og:description" content="Премиальное сведение и мастеринг треков от Ника Райза (Nick Rise). Аналоговый звук SSL, Neve, Tube-Tech под стандарты Spotify, Apple Music и Радио.">
+  <meta property="og:image" content="./image/Logo.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Nick Rise Studio — Профессиональное сведение & мастеринг">
+  <meta name="twitter:description" content="Премиальное сведение и мастеринг треков от Ника Райза (Nick Rise).">
+  <meta name="twitter:image" content="./image/Logo.jpg">
+  <meta name="theme-color" content="#0C0E12">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <!-- Production Tailwind CSS (Compiled via CLI) -->
+  <link rel="stylesheet" href="./tailwind.css">
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -197,8 +193,8 @@
               Специализация: Pop / House / Rock / Metal / Rap / R&B
             </p>
 
-            <p class="text-base sm:text-lg text-gray-300 max-w-2xl leading-relaxed font-normal" data-i18n="hero.usp">
-              Превращаю демо-записи и сырые мультитреки в мощный, объемный и конкурентоспособный звук мирового уровня для радио, Spotify и Apple Music.
+            <p class="text-base sm:text-lg text-gray-300 max-w-2xl leading-relaxed font-normal text-center lg:text-left mx-auto lg:mx-0" data-i18n="hero.usp">
+              Превращаю демо-записи и сырые мультитреки в мощный, объемный и конкурентоспособный звук мирового уровня. От первых тактов до финального мастера — каждый элемент на своем месте, каждая частота под контролем.
             </p>
 
             <div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4">
@@ -219,12 +215,12 @@
           <div class="lg:col-span-5 flex justify-center order-1 lg:order-2">
             <div
               onclick="openAboutModal()"
-              class="hero-mask-container max-w-xs sm:max-w-sm lg:max-w-md w-full cursor-pointer group relative"
+              class="hero-mask-container max-w-xs sm:max-w-sm lg:max-w-md w-full cursor-pointer group relative mx-auto"
               title="Нажмите, чтобы узнать больше обо мне"
             >
               <img src="./image/Main hero.png" alt="Nick Rise Studio Engineer" class="hero-mask-img">
               
-              <div class="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-amber-500 text-slate-950 font-extrabold rounded-full text-xs shadow-lg shadow-amber-500/30 group-hover:bg-amber-400 group-hover:scale-105 transition-all flex items-center gap-1.5 whitespace-nowrap">
+              <div class="hero-about-badge px-4 py-1.5 bg-amber-500 text-slate-950 font-extrabold rounded-full text-xs shadow-lg shadow-amber-500/30 group-hover:bg-amber-400 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap">
                 <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
                 </svg>
@@ -299,7 +295,7 @@
           </h2>
         </div>
 
-        <div id="servicesContainer" class="flex sm:grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-8 items-stretch overflow-x-auto sm:overflow-visible snap-x snap-mandatory py-6 sm:py-2 -mx-4 px-[8vw] sm:mx-0 sm:px-0 no-scrollbar scroll-smooth">
+        <div id="servicesContainer" class="services-carousel-container flex sm:grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8 items-stretch overflow-x-auto sm:overflow-visible snap-x snap-mandatory py-8 sm:py-2 -mx-4 sm:mx-0 no-scrollbar">
           <!-- Dynamically populated by script.js -->
         </div>
 
@@ -368,7 +364,7 @@
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
               </svg>
-              <span class="font-bold text-gray-200 text-sm" data-i18n="contacts.copyTgUsername">Копировать @nickrise</span>
+              <span class="font-bold text-gray-200 text-sm" data-i18n="contacts.copyTgUsername">Копировать @Nick_Rise</span>
             </button>
 
             <button onclick="copyText('nickrisemusic@gmail.com', 'Email copied to clipboard!')" class="p-4 rounded-xl bg-[#1A202C] hover:bg-[#222A3A] border border-gray-700/80 transition-all flex items-center justify-center gap-3 group active:scale-95">
@@ -397,9 +393,9 @@
   </main>
 
   <!-- FOOTER -->
-  <footer class="bg-[#131824] border-t border-gray-800/60 py-8 px-4 sm:px-6 text-center relative z-10">
+  <footer class="bg-[#131824] border-t border-gray-800/60 py-8 sm:py-10 px-4 sm:px-6 text-center relative z-10">
     <div class="max-w-7xl mx-auto flex flex-col items-center justify-center gap-2">
-      <p class="text-xs sm:text-sm text-gray-400 font-medium tracking-wide">
+      <p class="text-xs sm:text-sm text-gray-300 font-medium tracking-wide">
         © 2026 Nick Rise Studio. All rights reserved.
       </p>
     </div>
@@ -441,7 +437,7 @@
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
           </svg>
-          <span class="font-bold text-gray-200 text-sm" data-i18n="contacts.copyTgUsername">Копировать @nickrise</span>
+          <span class="font-bold text-gray-200 text-sm" data-i18n="contacts.copyTgUsername">Копировать @Nick_Rise</span>
         </button>
 
         <button onclick="copyText('nickrisemusic@gmail.com', 'Email copied to clipboard!')" class="p-4 rounded-xl bg-[#1A202C] hover:bg-[#222A3A] border border-gray-700/80 transition-all flex items-center justify-center gap-3 group active:scale-95 cursor-pointer">
@@ -605,16 +601,23 @@
   <!-- 8. STICKY BOTTOM AUDIO PLAYER BAR -->
   <div id="stickyPlayerBar" class="sticky-player-bar transition-all duration-300 transform translate-y-full">
     
-    <!-- Top Progress Line -->
+    <!-- Top Progress / Seek Bar with Expanded Touch Hit Area -->
     <div
+      id="deckSeekHitArea"
       onclick="seekDeckTrack(event)"
-      class="relative w-full h-1.5 bg-gray-900 cursor-pointer overflow-hidden group"
+      class="deck-seek-hitarea relative w-full bg-[#0A0D16] cursor-pointer select-none border-b border-amber-500/20 group"
+      title="Seek track position"
     >
       <div
         id="deckProgressBar"
-        class="h-full bg-gradient-to-r from-amber-600 via-amber-500 to-amber-300 transition-all duration-75"
+        class="h-full bg-gradient-to-r from-amber-600 via-amber-500 to-amber-300 transition-all duration-75 relative shadow-[0_0_8px_rgba(245,158,11,0.5)]"
         style="width: 0%"
-      ></div>
+      >
+        <!-- Glowing Scrubber Knob / Handle strictly centered on progress bar tip -->
+        <div class="deck-scrubber-knob-wrapper">
+          <div class="deck-scrubber-knob"></div>
+        </div>
+      </div>
     </div>
 
     <!-- MOBILE PLAYER BAR (sm:hidden) -->
@@ -785,7 +788,7 @@
         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
         <polyline points="22 4 12 14.01 9 11.01"></polyline>
       </svg>
-      <span id="toastText">Никнейм @nickrise скопирован!</span>
+      <span id="toastText">Никнейм @Nick_Rise скопирован!</span>
     </div>
   </div>
 

@@ -56,7 +56,7 @@ const CONFIG = {
         copyTgUsername: 'Копировать ТГ @Nick_Rise',
         copyEmail: 'Копировать Email',
         instagramBtn: 'Instagram Профиль',
-        toastTgCopied: 'Никнейм @nickrise скопирован!',
+        toastTgCopied: 'Никнейм @Nick_Rise скопирован!',
         toastEmailCopied: 'Email скопирован в буфер обмена!'
       },
       modal: {
@@ -143,7 +143,7 @@ const CONFIG = {
         copyTgUsername: 'Copy TG @Nick_Rise',
         copyEmail: 'Copy Email',
         instagramBtn: 'Instagram Profile',
-        toastTgCopied: 'Username @nickrise copied to clipboard!',
+        toastTgCopied: 'Username @Nick_Rise copied to clipboard!',
         toastEmailCopied: 'Email copied to clipboard!'
       },
       modal: {

@@ -81,7 +81,10 @@ html.nr-booted::after { content: none; display: none; animation: none; }
 /* ═══ 02. ГЛОБАЛЬНАЯ АТМОСФЕРА — «стекло монитора» ════════════════════ */
 
 /* «Облегчённый режим» для слабых машин — см. animations.js */
-html.nr-lite #nr-glass::after { display: none; }
+html.nr-lite #nr-glass::after,
+@media (max-width: 768px) {
+  #nr-glass, #nr-glass::after { display: none !important; }
+}
 
 #nr-glass {
   position: fixed;
@@ -694,7 +697,13 @@ body.nr-src-before .deck-btn-before { box-shadow: 0 0 18px rgba(16, 185, 129, 0.
 
 #servicesContainer > * {
   position: relative;
-  transform-style: preserve-3d;
+  transform-style: flat;
+}
+
+@media (min-width: 640px) {
+  #servicesContainer > * {
+    transform-style: preserve-3d;
+  }
 }
 
 #servicesContainer > *::after {
@@ -707,6 +716,11 @@ body.nr-src-before .deck-btn-before { box-shadow: 0 0 18px rgba(16, 185, 129, 0.
   background-size: 250% 100%;
   background-position: 170% 0;
   transition: background-position 1s var(--nr-ease);
+}
+
+@media (max-width: 639px) {
+  #servicesContainer > *::after { display: none; }
+  .nr-ledstrip { display: none !important; }
 }
 
 #servicesContainer > *:hover::after { background-position: -60% 0; }
@@ -1148,4 +1162,11 @@ body.nr-playing #side-mixer-strip > div:first-child {
 @media (max-width: 640px) {
   #nr-glass { display: none; }
   .nr-scan { display: none; }
+}
+
+footer,
+footer p {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
 }
