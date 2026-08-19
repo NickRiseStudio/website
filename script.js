@@ -110,13 +110,14 @@ function nextTrackPage() {
 function initPlayer() {
   const enabledTracks = getEnabledTracks();
 
-  // Lazy Preload: only first 3 tracks preload metadata to avoid 36 simultaneous HTTP range requests
+  // Full Preload: load all enabled tracks immediately on page start for instant playback & seeking without buffering
   enabledTracks.forEach((track, index) => {
     const audioA = new Audio(track.audioBefore);
     const audioB = new Audio(track.audioAfter);
-    const preloadMode = index < 3 ? 'metadata' : 'none';
-    audioA.preload = preloadMode;
-    audioB.preload = preloadMode;
+    audioA.preload = 'auto';
+    audioB.preload = 'auto';
+    audioA.load();
+    audioB.load();
 
     const handleAudioError = (el, type) => {
       el.addEventListener('error', () => {
@@ -255,14 +256,6 @@ function selectTrack(trackId, shouldPlay = true) {
   const item = trackAudioMap[trackId];
 
   if (item) {
-    if (item.audioA.preload === 'none') {
-      item.audioA.preload = 'metadata';
-      item.audioA.load();
-    }
-    if (item.audioB.preload === 'none') {
-      item.audioB.preload = 'metadata';
-      item.audioB.load();
-    }
     applyAudioVolumes(trackId);
     if (shouldPlay) {
       if (Math.abs(item.audioA.currentTime - item.audioB.currentTime) > 0.05) {
