@@ -42,7 +42,11 @@
 
   /* На слабых машинах отключаем самые тяжёлые фоновые эффекты */
   var LITE = false;
-  try { LITE = (navigator.hardwareConcurrency || 8) <= 4; } catch (e) {}
+  try {
+    LITE = (navigator.hardwareConcurrency || 8) <= 4 ||
+      (navigator.deviceMemory && navigator.deviceMemory < 4) ||
+      (window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
+  } catch (e) {}
   if (LITE) document.documentElement.classList.add('nr-lite');
 
   /* Заставка «включения пульта» живёт целиком в animations.css.
@@ -275,13 +279,14 @@
       { a: isPlaying ? 0.16 : 0.07, amp: 1.0, sp: 1.0, wd: 1.5 },
       { a: isPlaying ? 0.08 : 0.04, amp: 1.3, sp: -0.6, wd: 1.0 }
     ];
+    var waveStep = LITE ? 16 : 8;
 
     for (var li = 0; li < waveLayers.length; li++) {
       var L = waveLayers[li];
       ctx.beginPath();
       ctx.strokeStyle = after ? 'rgba(245,158,11,' + L.a + ')' : 'rgba(148,163,184,' + L.a + ')';
       ctx.lineWidth = L.wd;
-      for (var px = 0; px <= w; px += 8) {
+      for (var px = 0; px <= w; px += waveStep) {
         var u = px / w;
         var env = Math.sin(u * Math.PI);
         var amp = ((isPlaying ? 18 : 6) + lvl * 100) * L.amp * env;
@@ -298,6 +303,22 @@
     var bw = w / NB;
     var maxBarH = Math.min(220, h * 0.30);
 
+    /* Оптимизация: создаём один общий градиент на весь кадр, а не 80 градиентов в цикле */
+    var g = ctx.createLinearGradient(0, h, 0, h - maxBarH);
+    if (after) {
+      g.addColorStop(0, isPlaying ? 'rgba(245,158,11,0.28)' : 'rgba(245,158,11,0.09)');
+      g.addColorStop(0.6, isPlaying ? 'rgba(251,191,36,0.18)' : 'rgba(251,191,36,0.05)');
+      g.addColorStop(1, isPlaying ? 'rgba(255,231,178,0.22)' : 'rgba(255,231,178,0.07)');
+    } else {
+      g.addColorStop(0, isPlaying ? 'rgba(148,163,184,0.16)' : 'rgba(148,163,184,0.05)');
+      g.addColorStop(1, isPlaying ? 'rgba(203,213,225,0.10)' : 'rgba(203,213,225,0.03)');
+    }
+    ctx.fillStyle = g;
+
+    var peakColor = after
+      ? (isPlaying ? 'rgba(255,236,190,0.45)' : 'rgba(255,236,190,0.18)')
+      : (isPlaying ? 'rgba(226,232,240,0.25)' : 'rgba(226,232,240,0.10)');
+
     for (var i = 0; i < NB; i++) {
       var v = Engine.bands[i];
       var bh = Math.max(2, v * maxBarH);
@@ -305,25 +326,14 @@
       var barW = bw * 0.52;
       var posX = bx + bw * 0.24;
 
-      var g = ctx.createLinearGradient(0, h, 0, h - bh);
-      if (after) {
-        g.addColorStop(0, isPlaying ? 'rgba(245,158,11,0.28)' : 'rgba(245,158,11,0.09)');
-        g.addColorStop(0.6, isPlaying ? 'rgba(251,191,36,0.18)' : 'rgba(251,191,36,0.05)');
-        g.addColorStop(1, v > 0.85 ? 'rgba(239,68,68,0.45)' : (isPlaying ? 'rgba(255,231,178,0.22)' : 'rgba(255,231,178,0.07)'));
-      } else {
-        g.addColorStop(0, isPlaying ? 'rgba(148,163,184,0.16)' : 'rgba(148,163,184,0.05)');
-        g.addColorStop(1, isPlaying ? 'rgba(203,213,225,0.10)' : 'rgba(203,213,225,0.03)');
-      }
-      ctx.fillStyle = g;
       ctx.fillRect(posX, h - bh, barW, bh);
 
       /* Пиковый индикатор (peak hold линия) */
       var p = Engine.peaks[i] * maxBarH;
       if (p > 4) {
-        ctx.fillStyle = after
-          ? (isPlaying ? 'rgba(255,236,190,0.45)' : 'rgba(255,236,190,0.18)')
-          : (isPlaying ? 'rgba(226,232,240,0.25)' : 'rgba(226,232,240,0.10)');
+        ctx.fillStyle = peakColor;
         ctx.fillRect(posX, h - p - 1.5, barW, 1.5);
+        ctx.fillStyle = g;
       }
     }
   }
@@ -590,8 +600,17 @@
   /* ═══ 14. БОКОВОЙ ФЕЙДЕР: подсветка во время прокрутки ══════════════ */
 
   var faderTimer = null;
+  var isScrollTicking = false;
 
   function onScroll() {
+    if (!isScrollTicking) {
+      isScrollTicking = true;
+      requestAnimationFrame(handleScrollUpdate);
+    }
+  }
+
+  function handleScrollUpdate() {
+    isScrollTicking = false;
     var doc = document.documentElement;
     var max = doc.scrollHeight - window.innerHeight;
     var p = max > 0 ? Math.min(1, Math.max(0, (window.scrollY || doc.scrollTop) / max)) : 0;
@@ -624,6 +643,17 @@
   /* ═══ 16. СИНХРОНИЗАЦИЯ СОСТОЯНИЙ ══════════════════════════════════ */
 
   var lastPlaying = null, lastSource = null;
+  var beamAngle = 0;
+
+  function updateBeamAngle(dt) {
+    if (!Engine.playing || REDUCED) return;
+    beamAngle = (beamAngle + dt * 130) % 360;
+    var str = beamAngle.toFixed(1) + 'deg';
+    var switches = document.querySelectorAll('.deck-source-switch');
+    for (var i = 0; i < switches.length; i++) {
+      switches[i].style.setProperty('--beam-angle', str);
+    }
+  }
 
   function syncBodyState() {
     if (Engine.playing !== lastPlaying) {
@@ -670,6 +700,7 @@
 
     safe(function () { updateEngine(now, dt); });
     safe(syncBodyState);
+    safe(function () { updateBeamAngle(dt); });
     /* фоновый эквалайзер в секции «Слушай разницу» — 30-40 fps */
     if (now - lastPlayerEq > (LITE ? 50 : 25)) {
       lastPlayerEq = now;

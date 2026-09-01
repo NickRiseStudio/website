@@ -42,32 +42,38 @@
 
   <!-- 0. FIXED STUDIO MIXER FADER (GSAP TRACKED) -->
   <aside id="side-mixer-strip" class="mixer-track-fixed hidden lg:flex" title="Интерактивная полоса микшера SSL">
-  <!-- Верхний VU индикатор -->
-  <div class="text-[8px] font-mono text-gray-400 text-center uppercase tracking-tighter">SSL</div>
+    <!-- Верхний VU индикатор -->
+    <div class="text-[8px] font-mono text-gray-400 text-center uppercase tracking-tighter">SSL</div>
 
-  <div class="flex items-center gap-1.5 my-auto">
-    <!-- Шкала VU индикаторов -->
-    <div class="vu-meter-bar">
-      <div class="side-vu-led vu-led"></div>
-      <div class="side-vu-led vu-led"></div>
-      <div class="side-vu-led vu-led"></div>
-      <div class="side-vu-led vu-led"></div>
-      <div class="side-vu-led vu-led"></div>
-      <div class="side-vu-led vu-led"></div>
-      <div class="side-vu-led vu-led"></div>
-      <div class="side-vu-led vu-led"></div>
-      <div class="side-vu-led vu-led"></div>
-      <div class="side-vu-led vu-led"></div>
+    <div class="flex items-center gap-1.5 my-auto">
+      <!-- Шкала VU индикаторов -->
+      <div class="vu-meter-bar">
+        <div class="side-vu-led vu-led"></div>
+        <div class="side-vu-led vu-led"></div>
+        <div class="side-vu-led vu-led"></div>
+        <div class="side-vu-led vu-led"></div>
+        <div class="side-vu-led vu-led"></div>
+        <div class="side-vu-led vu-led"></div>
+        <div class="side-vu-led vu-led"></div>
+        <div class="side-vu-led vu-led"></div>
+        <div class="side-vu-led vu-led"></div>
+        <div class="side-vu-led vu-led"></div>
+        <div class="side-vu-led vu-led"></div>
+        <div class="side-vu-led vu-led"></div>
+        <div class="side-vu-led vu-led"></div>
+        <div class="side-vu-led vu-led"></div>
+        <div class="side-vu-led vu-led"></div>
+        <div class="side-vu-led vu-led"></div>
+      </div>
+
+      <!-- Металлический рельс и фейдер -->
+      <div class="fader-rail">
+        <div id="side-fader-knob" class="fader-knob" style="top: 0px;"></div>
+      </div>
     </div>
 
-    <!-- Металлический рельс и фейдер -->
-    <div class="fader-rail">
-      <div id="side-fader-knob" class="fader-knob" style="top: 20%;"></div>
-    </div>
-  </div>
-
-  <div id="side-db-label" class="text-[8px] font-mono text-amber-500/80 text-center font-bold">0.0dB</div>
-</aside>
+    <div id="side-db-label" class="text-[8px] font-mono text-amber-500/80 text-center font-bold">0.0dB</div>
+  </aside>
 
 
   <!-- 1. HEADER -->
@@ -76,7 +82,7 @@
       
       <a href="#" class="flex items-center gap-2 sm:gap-3.5 group min-w-0">
         <div class="w-9 h-9 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl overflow-hidden border border-amber-500/30 group-hover:border-amber-500 transition-colors shadow-lg shadow-amber-500/10 flex-shrink-0">
-          <img src="./image/Logo.jpg" alt="Nick Rise Studio Logo" class="w-full h-full object-cover">
+          <img src="./image/Logo.jpg" alt="Nick Rise Studio Logo" class="w-full h-full object-cover" decoding="async" fetchpriority="high">
         </div>
         <div class="flex flex-col min-w-0">
           <span class="font-black text-sm sm:text-lg text-white tracking-tight group-hover:text-amber-400 transition-colors truncate" data-i18n="nav.logoTitle">
@@ -218,7 +224,7 @@
               class="hero-mask-container max-w-xs sm:max-w-sm lg:max-w-md w-full cursor-pointer group relative mx-auto"
               title="Нажмите, чтобы узнать больше обо мне"
             >
-              <img src="./image/Main hero.png" alt="Nick Rise Studio Engineer" class="hero-mask-img">
+              <img src="./image/Main hero.png" alt="Nick Rise Studio Engineer" class="hero-mask-img" decoding="async" fetchpriority="high">
               
               <div class="hero-about-badge px-4 py-1.5 bg-amber-500 text-slate-950 font-extrabold rounded-full text-xs shadow-lg shadow-amber-500/30 group-hover:bg-amber-400 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap">
                 <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
@@ -375,13 +381,11 @@
               <span class="font-bold text-gray-200 text-sm" data-i18n="contacts.copyEmail">Копировать Email</span>
             </button>
 
-            <a href="https://instagram.com/nickrise" target="_blank" rel="noopener noreferrer" class="p-4 rounded-xl bg-[#1A202C] hover:bg-[#222A3A] border border-gray-700/80 transition-all flex items-center justify-center gap-3 group active:scale-95">
-              <svg class="w-5 h-5 stroke-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+            <a href="https://vk.com/nick_rise" target="_blank" rel="noopener noreferrer" class="p-4 rounded-xl bg-[#1A202C] hover:bg-[#222A3A] border border-gray-700/80 transition-all flex items-center justify-center gap-3 group active:scale-95">
+              <svg class="w-6 h-6 fill-amber-400" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5.72 13.52h-1.41c-.53 0-.7-.42-1.65-1.38-.84-.81-1.21-.92-1.42-.92-.29 0-.37.08-.37.48v1.24c0 .34-.11.55-1.01.55-1.49 0-3.14-.9-4.31-2.58-1.75-2.48-2.23-4.34-2.23-4.72 0-.2.08-.39.48-.39h1.41c.36 0 .49.16.63.55.68 1.99 1.83 3.74 2.31 3.74.18 0 .26-.08.26-.53V9.77c-.05-.97-.57-1.05-.57-1.39 0-.16.14-.33.35-.33h2.21c.3 0 .41.15.41.49v2.66c0 .29.12.39.21.39.18 0 .33-.11.66-.44 1.01-1.13 1.73-2.84 1.73-2.84.1-.2.27-.39.63-.39h1.41c.42 0 .52.22.42.52-.18.82-1.9 3.25-1.98 3.37-.16.26-.22.38 0 .68.15.2.66.64 1 1.04.85.96 1.5 1.76 1.68 2.32.09.3-.07.46-.41.46z"/>
               </svg>
-              <span class="font-bold text-gray-200 text-sm" data-i18n="contacts.instagramBtn">Instagram Профиль</span>
+              <span class="font-bold text-gray-200 text-sm" data-i18n="contacts.vkBtn">Профиль ВКонтакте</span>
             </a>
           </div>
 
@@ -448,13 +452,11 @@
           <span class="font-bold text-gray-200 text-sm" data-i18n="contacts.copyEmail">Копировать Email</span>
         </button>
 
-        <a href="https://instagram.com/nickrise" target="_blank" rel="noopener noreferrer" class="p-4 rounded-xl bg-[#1A202C] hover:bg-[#222A3A] border border-gray-700/80 transition-all flex items-center justify-center gap-3 group active:scale-95">
-          <svg class="w-5 h-5 stroke-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-            <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+        <a href="https://vk.com/nick_rise" target="_blank" rel="noopener noreferrer" class="p-4 rounded-xl bg-[#1A202C] hover:bg-[#222A3A] border border-gray-700/80 transition-all flex items-center justify-center gap-3 group active:scale-95">
+          <svg class="w-6 h-6 fill-amber-400" viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5.72 13.52h-1.41c-.53 0-.7-.42-1.65-1.38-.84-.81-1.21-.92-1.42-.92-.29 0-.37.08-.37.48v1.24c0 .34-.11.55-1.01.55-1.49 0-3.14-.9-4.31-2.58-1.75-2.48-2.23-4.34-2.23-4.72 0-.2.08-.39.48-.39h1.41c.36 0 .49.16.63.55.68 1.99 1.83 3.74 2.31 3.74.18 0 .26-.08.26-.53V9.77c-.05-.97-.57-1.05-.57-1.39 0-.16.14-.33.35-.33h2.21c.3 0 .41.15.41.49v2.66c0 .29.12.39.21.39.18 0 .33-.11.66-.44 1.01-1.13 1.73-2.84 1.73-2.84.1-.2.27-.39.63-.39h1.41c.42 0 .52.22.42.52-.18.82-1.9 3.25-1.98 3.37-.16.26-.22.38 0 .68.15.2.66.64 1 1.04.85.96 1.5 1.76 1.68 2.32.09.3-.07.46-.41.46z"/>
           </svg>
-          <span class="font-bold text-gray-200 text-sm" data-i18n="contacts.instagramBtn">Instagram Профиль</span>
+          <span class="font-bold text-gray-200 text-sm" data-i18n="contacts.vkBtn">Профиль ВКонтакте</span>
         </a>
       </div>
     </div>
@@ -482,7 +484,7 @@
       <!-- Engineer Profile Header -->
       <div class="flex flex-col sm:flex-row items-center sm:items-start gap-5 pb-6 border-b border-gray-800/80">
         <div class="relative w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden border-2 border-amber-500/50 shadow-xl flex-shrink-0 group">
-          <img src="./image/Logo.jpg" alt="Nick Rise" class="w-full h-full object-cover">
+          <img src="./image/Logo.jpg" alt="Nick Rise" class="w-full h-full object-cover" loading="lazy" decoding="async">
           <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
           <span class="absolute bottom-2 left-2 flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-sm text-[9px] font-mono text-emerald-400 border border-emerald-500/30">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -663,7 +665,7 @@
       <div class="w-0 flex-1 flex items-center justify-end pl-1">
         <div
           onclick="toggleDeckSource()"
-          class="flex flex-col gap-0.5 bg-[#06070B] p-1 rounded-xl border border-gray-800 shadow-inner cursor-pointer select-none flex-shrink-0"
+          class="deck-source-switch flex flex-col gap-0.5 bg-[#06070B] p-1 rounded-xl border border-gray-800 shadow-inner cursor-pointer select-none flex-shrink-0 relative"
           title="Switch BEFORE / AFTER"
         >
           <button
@@ -739,7 +741,7 @@
       <div class="flex items-center justify-end gap-4 flex-1 flex-shrink-0">
         <div
           onclick="toggleDeckSource()"
-          class="flex items-center gap-1 bg-[#06070B] p-1.5 rounded-2xl border border-gray-800 shadow-inner cursor-pointer select-none flex-shrink-0"
+          class="deck-source-switch flex items-center gap-1 bg-[#06070B] p-1.5 rounded-2xl border border-gray-800 shadow-inner cursor-pointer select-none flex-shrink-0 relative"
           title="Switch BEFORE / AFTER"
         >
           <button

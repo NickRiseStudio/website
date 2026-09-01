@@ -17,7 +17,103 @@ document.addEventListener('DOMContentLoaded', () => {
   initMixerFaderScroll();
 });
 
+// --- AUTOMATIC REGION & LANGUAGE DETECTION ---
+function detectUserLanguage() {
+  // 1. Check if user already manually selected a preferred language
+  try {
+    const saved = localStorage.getItem('nick_rise_lang');
+    if (saved === 'ru' || saved === 'en') {
+      return saved;
+    }
+  } catch (e) {}
+
+  // 2. Check browser languages (navigator.languages or navigator.language)
+  try {
+    const navLangs = (navigator.languages && navigator.languages.length)
+      ? navigator.languages
+      : [navigator.language || navigator.userLanguage || ''];
+
+    const cisLangs = ['ru', 'be', 'kk', 'uk', 'ky', 'tg', 'uz', 'hy', 'az', 'mo'];
+    for (let i = 0; i < navLangs.length; i++) {
+      const l = String(navLangs[i] || '').toLowerCase().trim();
+      if (!l) continue;
+      const base = l.split('-')[0].split('_')[0];
+      if (cisLangs.includes(base)) {
+        return 'ru';
+      }
+    }
+  } catch (e) {}
+
+  // 3. Check timezone as additional regional indicator for CIS countries
+  try {
+    const tz = (Intl.DateTimeFormat().resolvedOptions().timeZone || '').toLowerCase();
+    const cisTimezones = [
+      'moscow', 'minsk', 'kiev', 'kyiv', 'samara', 'yekaterinburg', 'kaliningrad',
+      'volgograd', 'saratov', 'ulyanovsk', 'astrakhan', 'kirov', 'almaty', 'tashkent',
+      'bishkek', 'yerevan', 'baku', 'dushanbe', 'novosibirsk', 'krasnoyarsk', 'irkutsk',
+      'yakutsk', 'vladivostok', 'sakhalin', 'magadan', 'kamchatka', 'omsk', 'barnaul',
+      'tomsk', 'novokuznetsk', 'chita', 'anadyr', 'qyzylorda', 'aqtobe', 'aqtau', 'atyrau', 'oral'
+    ];
+    if (cisTimezones.some(city => tz.includes(city))) {
+      return 'ru';
+    }
+  } catch (e) {}
+
+  // 4. Default to international English for all other regions
+  return 'en';
+}
+
+// --- DEVICE DETECTION & MULTI-SCREEN TEXT RESOLUTION ---
+function getDeviceType() {
+  const w = window.innerWidth;
+  if (w < 768) return 'mobile';
+  if (w < 1024) return 'tablet';
+  return 'desktop';
+}
+
+function resolveDeviceText(val, device = getDeviceType()) {
+  if (val === null || val === undefined) return '';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'number') return String(val);
+
+  if (typeof val === 'object') {
+    // If it's an object with device keys: { desktop: "...", tablet: "...", mobile: "..." }
+    if ('mobile' in val || 'tablet' in val || 'desktop' in val) {
+      if (device === 'mobile') {
+        return val.mobile !== undefined ? val.mobile : (val.tablet !== undefined ? val.tablet : val.desktop || '');
+      }
+      if (device === 'tablet') {
+        return val.tablet !== undefined ? val.tablet : (val.desktop !== undefined ? val.desktop : val.mobile || '');
+      }
+      return val.desktop !== undefined ? val.desktop : (val.tablet !== undefined ? val.tablet : val.mobile || '');
+    }
+  }
+  return val;
+}
+
+function resolveI18nValue(obj, lang = currentLang, device = getDeviceType()) {
+  if (!obj) return '';
+  if (typeof obj === 'string') return obj;
+
+  if (obj[lang] !== undefined) {
+    return resolveDeviceText(obj[lang], device);
+  }
+
+  if ('desktop' in obj || 'tablet' in obj || 'mobile' in obj) {
+    const devVal = resolveDeviceText(obj, device);
+    if (typeof devVal === 'object' && devVal[lang] !== undefined) {
+      return devVal[lang];
+    }
+    return typeof devVal === 'string' ? devVal : '';
+  }
+
+  const fallback = obj.ru !== undefined ? obj.ru : (obj.en !== undefined ? obj.en : Object.values(obj)[0]);
+  return resolveDeviceText(fallback, device);
+}
+
 // --- I18N SYSTEM ---
+let lastDetectedDevice = getDeviceType();
+
 function initI18n() {
   const langToggle = document.getElementById('langToggleContainer');
 
@@ -28,15 +124,40 @@ function initI18n() {
     });
   }
 
-  setLanguage(currentLang);
+  window.addEventListener('resize', () => {
+    const currentDevice = getDeviceType();
+    if (currentDevice !== lastDetectedDevice) {
+      lastDetectedDevice = currentDevice;
+      renderI18nText();
+      renderServices();
+      renderFaq();
+      updateMasterDeckUI();
+      renderTrackList(false);
+    }
+  }, { passive: true });
+
+  const initialLang = detectUserLanguage();
+  setLanguage(initialLang, false);
 }
 
 function toggleLanguage() {
-  setLanguage(currentLang === 'ru' ? 'en' : 'ru');
+  setLanguage(currentLang === 'ru' ? 'en' : 'ru', true);
 }
 
-function setLanguage(lang) {
+function setLanguage(lang, savePreference = true) {
+  if (lang !== 'ru' && lang !== 'en') lang = 'en';
   currentLang = lang;
+
+  if (savePreference) {
+    try {
+      localStorage.setItem('nick_rise_lang', lang);
+    } catch (e) {}
+  }
+
+  try {
+    document.documentElement.lang = lang;
+  } catch (e) {}
+
   const btnRu = document.getElementById('btnLangRu');
   const btnEn = document.getElementById('btnLangEn');
 
@@ -60,19 +181,22 @@ function setLanguage(lang) {
 function renderI18nText() {
   const t = CONFIG.i18n[currentLang];
   if (!t) return;
+  const currentDevice = getDeviceType();
   
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const keyPath = el.getAttribute('data-i18n');
     const parts = keyPath.split('.');
     let val = t;
     parts.forEach(p => {
-      if (val) val = val[p];
+      if (val !== undefined && val !== null) val = val[p];
     });
-    if (val && typeof val === 'string') {
-      if (el.hasAttribute('data-i18n-html') || val.includes('<')) {
-        el.innerHTML = val;
+
+    const finalVal = resolveDeviceText(val, currentDevice);
+    if (finalVal !== undefined && finalVal !== null && typeof finalVal === 'string') {
+      if (el.hasAttribute('data-i18n-html') || finalVal.includes('<')) {
+        el.innerHTML = finalVal;
       } else {
-        el.textContent = val;
+        el.textContent = finalVal;
       }
     }
   });
@@ -93,7 +217,7 @@ function getTracksPerPage() {
 function prevTrackPage() {
   if (currentTrackPage > 0) {
     currentTrackPage--;
-    renderTrackList();
+    renderTrackList(true);
   }
 }
 
@@ -103,14 +227,25 @@ function nextTrackPage() {
   const maxPages = Math.ceil(filtered.length / perPage);
   if (currentTrackPage < maxPages - 1) {
     currentTrackPage++;
-    renderTrackList();
+    renderTrackList(true);
+  }
+}
+
+function ensureTrackLoaded(trackId) {
+  const item = trackAudioMap[trackId];
+  if (!item) return;
+  if (item.audioA.preload !== 'auto') {
+    item.audioA.preload = 'auto';
+    item.audioB.preload = 'auto';
+    item.audioA.load();
+    item.audioB.load();
   }
 }
 
 function initPlayer() {
   const enabledTracks = getEnabledTracks();
 
-  // Full Preload: load all enabled tracks immediately on page start for instant playback & seeking without buffering
+  // Load all enabled tracks immediately on page load so switching is instant without delays
   enabledTracks.forEach((track, index) => {
     const audioA = new Audio(track.audioBefore);
     const audioB = new Audio(track.audioAfter);
@@ -243,7 +378,36 @@ function closeStickyPlayer() {
   renderTrackList();
 }
 
+function toggleTrack(trackId) {
+  ensureTrackLoaded(trackId);
+  if (activeTrackId === trackId) {
+    const item = trackAudioMap[trackId];
+    if (!item) return;
+
+    if (isAudioPlaying(trackId)) {
+      item.audioA.pause();
+      item.audioB.pause();
+    } else {
+      applyAudioVolumes(trackId);
+      if (Math.abs(item.audioA.currentTime - item.audioB.currentTime) > 0.05) {
+        item.audioB.currentTime = item.audioA.currentTime;
+      }
+      const pA = item.audioA.play();
+      if (pA && pA.catch) pA.catch(err => console.warn('Play A:', err));
+      const pB = item.audioB.play();
+      if (pB && pB.catch) pB.catch(err => console.warn('Play B:', err));
+      showStickyPlayer();
+    }
+    updateMasterDeckUI();
+    renderTrackList(false);
+    return;
+  }
+
+  selectTrack(trackId, true);
+}
+
 function selectTrack(trackId, shouldPlay = true) {
+  ensureTrackLoaded(trackId);
   if (activeTrackId && activeTrackId !== trackId) {
     const prevItem = trackAudioMap[activeTrackId];
     if (prevItem) {
@@ -265,12 +429,12 @@ function selectTrack(trackId, shouldPlay = true) {
       if (pA && pA.catch) pA.catch(err => console.warn('Play A:', err));
       const pB = item.audioB.play();
       if (pB && pB.catch) pB.catch(err => console.warn('Play B:', err));
+      showStickyPlayer();
     }
   }
 
-  showStickyPlayer();
   updateMasterDeckUI();
-  renderTrackList();
+  renderTrackList(false);
 }
 
 function isAudioPlaying(trackId) {
@@ -284,6 +448,8 @@ function toggleDeckPlay() {
   if (!activeTrackId && enabledTracks.length > 0) {
     activeTrackId = enabledTracks[0].id;
   }
+  if (!activeTrackId) return;
+  ensureTrackLoaded(activeTrackId);
   const item = trackAudioMap[activeTrackId];
   if (!item) return;
 
@@ -303,7 +469,7 @@ function toggleDeckPlay() {
   }
 
   updateMasterDeckUI();
-  renderTrackList();
+  renderTrackList(false);
 }
 
 function switchDeckSource(src) {
@@ -461,14 +627,17 @@ function updateMasterDeckUI() {
   const track = enabledTracks.find(t => t.id === activeTrackId);
   if (!track) return;
 
+  const currentDevice = getDeviceType();
   const item = trackAudioMap[activeTrackId] || { source: 'after', volume: 0.9 };
   const isPlaying = isAudioPlaying(activeTrackId);
-  const genreText = track.genreLabel[currentLang] || track.genreLabel.ru;
+  const genreText = resolveI18nValue(track.genreLabel, currentLang, currentDevice);
+  const trackTitle = resolveDeviceText(track.title, currentDevice);
+  const trackArtist = resolveDeviceText(track.artist, currentDevice);
   const t = CONFIG.i18n[currentLang];
 
   document.querySelectorAll('.deck-cover').forEach(el => { el.src = track.cover; });
-  document.querySelectorAll('.deck-title').forEach(el => { el.textContent = track.title; });
-  document.querySelectorAll('.deck-artist').forEach(el => { el.textContent = track.artist; });
+  document.querySelectorAll('.deck-title').forEach(el => { el.textContent = trackTitle; });
+  document.querySelectorAll('.deck-artist').forEach(el => { el.textContent = trackArtist; });
   document.querySelectorAll('.deck-genre').forEach(el => { el.textContent = genreText; });
 
   const totalTracks = enabledTracks.length;
@@ -494,7 +663,7 @@ function updateMasterDeckUI() {
     });
     ledsBefore.forEach(el => { el.className = 'deck-led-before w-1.5 h-1.5 sm:w-2.5 sm:h-2.5 rounded-full vu-led-green animate-pulse flex-shrink-0'; });
     ledsAfter.forEach(el => { el.className = 'deck-led-after w-1.5 h-1.5 sm:w-2.5 sm:h-2.5 rounded-full bg-gray-600 flex-shrink-0'; });
-    modeLabels.forEach(el => { el.textContent = t.player.beforeLabel || 'BEFORE (MIX)'; });
+    modeLabels.forEach(el => { el.textContent = resolveDeviceText(t.player.beforeLabel, currentDevice) || 'BEFORE (MIX)'; });
   } else {
     btnsAfter.forEach(el => {
       el.classList.add('bg-amber-500', 'text-slate-950', 'font-black', 'shadow-md');
@@ -506,7 +675,7 @@ function updateMasterDeckUI() {
     });
     ledsAfter.forEach(el => { el.className = 'deck-led-after w-1.5 h-1.5 sm:w-2.5 sm:h-2.5 rounded-full vu-led-green animate-pulse flex-shrink-0'; });
     ledsBefore.forEach(el => { el.className = 'deck-led-before w-1.5 h-1.5 sm:w-2.5 sm:h-2.5 rounded-full bg-gray-600 flex-shrink-0'; });
-    modeLabels.forEach(el => { el.textContent = t.player.afterLabel || 'AFTER (MASTER)'; });
+    modeLabels.forEach(el => { el.textContent = resolveDeviceText(t.player.afterLabel, currentDevice) || 'AFTER (MASTER)'; });
   }
 
   // Play Button & Icons
@@ -554,10 +723,11 @@ function updateDeckProgressUI() {
   if (durText) durText.textContent = formatTime(dur);
 }
 
-function renderTrackList() {
+function renderTrackList(animate = false) {
   const container = document.getElementById('trackListContainer');
   if (!container) return;
 
+  const currentDevice = getDeviceType();
   const perPage = getTracksPerPage();
   const filtered = getEnabledTracks().filter(tr => activeGenre === 'all' || tr.genre === activeGenre);
   const totalItems = filtered.length;
@@ -570,70 +740,134 @@ function renderTrackList() {
   const startIdx = currentTrackPage * perPage;
   const visibleTracks = filtered.slice(startIdx, startIdx + perPage);
 
-  container.innerHTML = '';
+  const existingCards = Array.from(container.children);
+  const existingIds = existingCards.map(c => c.getAttribute('data-track-id'));
+  const targetIds = visibleTracks.map(t => t.id);
 
-  visibleTracks.forEach(track => {
-    const isSelected = activeTrackId === track.id;
-    const isPlaying = isSelected && isAudioPlaying(track.id);
-    const genreText = track.genreLabel[currentLang] || track.genreLabel.ru;
+  const canReuseDOM = existingIds.length === targetIds.length &&
+    existingIds.every((id, idx) => id === targetIds[idx]);
 
-    const itemCard = document.createElement('div');
-    itemCard.id = `track-item-${track.id}`;
-    itemCard.onclick = () => selectTrack(track.id, true);
-    itemCard.className = `p-3.5 rounded-2xl border transition-all duration-300 cursor-pointer flex items-center justify-between gap-3 group ${
-      isSelected 
-        ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10' 
-        : 'bg-[#0B0E15] border-gray-800/80 hover:border-amber-500/40 hover:bg-[#0F131E]'
-    }`;
+  if (canReuseDOM) {
+    visibleTracks.forEach(track => {
+      const isSelected = activeTrackId === track.id;
+      const isPlaying = isSelected && isAudioPlaying(track.id);
+      const genreText = resolveI18nValue(track.genreLabel, currentLang, currentDevice);
+      const trackTitle = resolveDeviceText(track.title, currentDevice);
+      const trackArtist = resolveDeviceText(track.artist, currentDevice);
 
-    itemCard.innerHTML = `
-      <div class="flex items-center gap-3.5 min-w-0 flex-1">
-        <div class="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl overflow-hidden flex-shrink-0 border ${isSelected ? 'border-amber-500' : 'border-gray-800'}">
-          <img src="${track.cover}" alt="${track.title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-          ${isPlaying ? `
-            <div class="absolute inset-0 bg-black/60 flex items-center justify-center">
+      const itemCard = document.getElementById(`track-item-${track.id}`);
+      if (!itemCard) return;
+
+      itemCard.className = `p-3.5 rounded-2xl border transition-all duration-300 cursor-pointer flex items-center justify-between gap-3 group ${
+        isSelected 
+          ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10' 
+          : 'bg-[#0B0E15] border-gray-800/80 hover:border-amber-500/40 hover:bg-[#0F131E]'
+      }`;
+
+      const coverBox = itemCard.querySelector('.track-cover-box');
+      if (coverBox) {
+        coverBox.className = `track-cover-box relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl overflow-hidden flex-shrink-0 border transition-colors duration-300 ${isSelected ? 'border-amber-500' : 'border-gray-800'}`;
+      }
+
+      const liveOverlay = itemCard.querySelector('.track-live-overlay');
+      if (liveOverlay) {
+        liveOverlay.style.display = isPlaying ? 'flex' : 'none';
+      }
+
+      const titleEl = itemCard.querySelector('.track-card-title');
+      if (titleEl) titleEl.textContent = trackTitle;
+
+      const artistEl = itemCard.querySelector('.track-card-artist');
+      if (artistEl) artistEl.textContent = trackArtist;
+
+      const genreBadge = itemCard.querySelector('.track-genre-badge');
+      if (genreBadge) {
+        genreBadge.textContent = genreText;
+        genreBadge.className = `track-genre-badge text-[9px] font-extrabold px-2 py-0.5 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}`;
+      }
+
+      const playBtn = itemCard.querySelector('.track-play-btn');
+      if (playBtn) {
+        playBtn.className = `track-play-btn p-2 sm:p-2.5 rounded-xl transition-all cursor-pointer ${
+          isSelected 
+            ? 'bg-amber-500 text-slate-950 font-black shadow-md' 
+            : 'bg-gray-900 text-gray-300 hover:bg-amber-500 hover:text-slate-950'
+        }`;
+      }
+
+      const playSvgPath = itemCard.querySelector('.track-play-svg path');
+      if (playSvgPath) {
+        playSvgPath.setAttribute('d', isPlaying ? 'M6 19h4V5H6v14zm8-14v14h4V5h-4z' : 'M8 5v14l11-7z');
+      }
+    });
+  } else {
+    container.innerHTML = '';
+
+    visibleTracks.forEach(track => {
+      const isSelected = activeTrackId === track.id;
+      const isPlaying = isSelected && isAudioPlaying(track.id);
+      const genreText = resolveI18nValue(track.genreLabel, currentLang, currentDevice);
+      const trackTitle = resolveDeviceText(track.title, currentDevice);
+      const trackArtist = resolveDeviceText(track.artist, currentDevice);
+
+      const itemCard = document.createElement('div');
+      itemCard.id = `track-item-${track.id}`;
+      itemCard.setAttribute('data-track-id', track.id);
+      itemCard.onclick = () => toggleTrack(track.id);
+      itemCard.className = `p-3.5 rounded-2xl border transition-all duration-300 cursor-pointer flex items-center justify-between gap-3 group ${
+        isSelected 
+          ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10' 
+          : 'bg-[#0B0E15] border-gray-800/80 hover:border-amber-500/40 hover:bg-[#0F131E]'
+      }`;
+
+      itemCard.innerHTML = `
+        <div class="flex items-center gap-3.5 min-w-0 flex-1">
+          <div class="track-cover-box relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl overflow-hidden flex-shrink-0 border transition-colors duration-300 ${isSelected ? 'border-amber-500' : 'border-gray-800'}">
+            <img src="${track.cover}" alt="${trackTitle}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+            <div class="track-live-overlay absolute inset-0 bg-black/60 items-center justify-center" style="display: ${isPlaying ? 'flex' : 'none'};">
               <span class="w-2.5 h-2.5 rounded-full vu-led-green animate-ping"></span>
             </div>
-          ` : ''}
+          </div>
+          <div class="min-w-0 flex-1">
+            <h4 class="track-card-title text-xs sm:text-sm font-extrabold text-white truncate group-hover:text-amber-400 transition-colors">
+              ${trackTitle}
+            </h4>
+            <p class="track-card-artist text-[11px] text-gray-400 truncate mt-0.5">
+              ${trackArtist}
+            </p>
+          </div>
         </div>
-        <div class="min-w-0 flex-1">
-          <h4 class="text-xs sm:text-sm font-extrabold text-white truncate group-hover:text-amber-400 transition-colors">
-            ${track.title}
-          </h4>
-          <p class="text-[11px] text-gray-400 truncate mt-0.5">
-            ${track.artist}
-          </p>
+
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <span class="track-genre-badge text-[9px] font-extrabold px-2 py-0.5 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}">
+            ${genreText}
+          </span>
+          <button
+            type="button"
+            onclick="event.stopPropagation(); toggleTrack('${track.id}')"
+            class="track-play-btn p-2 sm:p-2.5 rounded-xl transition-all cursor-pointer ${
+              isSelected 
+                ? 'bg-amber-500 text-slate-950 font-black shadow-md' 
+                : 'bg-gray-900 text-gray-300 hover:bg-amber-500 hover:text-slate-950'
+            }"
+          >
+            <svg class="track-play-svg w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+              <path d="${isPlaying ? 'M6 19h4V5H6v14zm8-14v14h4V5h-4z' : 'M8 5v14l11-7z'}"/>
+            </svg>
+          </button>
         </div>
-      </div>
+      `;
 
-      <div class="flex items-center gap-2 flex-shrink-0">
-        <span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}">
-          ${genreText}
-        </span>
-        <button
-          onclick="event.stopPropagation(); selectTrack('${track.id}', true)"
-          class="p-2 sm:p-2.5 rounded-xl transition-all cursor-pointer ${
-            isSelected 
-              ? 'bg-amber-500 text-slate-950 font-black shadow-md' 
-              : 'bg-gray-900 text-gray-300 hover:bg-amber-500 hover:text-slate-950'
-          }"
-        >
-          <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-            <path d="${isPlaying ? 'M6 19h4V5H6v14zm8-14v14h4V5h-4z' : 'M8 5v14l11-7z'}"/>
-          </svg>
-        </button>
-      </div>
-    `;
+      container.appendChild(itemCard);
+    });
 
-    container.appendChild(itemCard);
-  });
-
-  if (typeof gsap !== 'undefined' && container.children.length > 0) {
-    gsap.fromTo(
-      container.children,
-      { y: 24, opacity: 0, scale: 0.97 },
-      { y: 0, opacity: 1, scale: 1, duration: 0.65, stagger: 0.07, ease: 'power3.out', clearProps: 'transform,opacity,scale' }
-    );
+    if (animate && typeof gsap !== 'undefined' && container.children.length > 0) {
+      gsap.fromTo(
+        container.children,
+        { opacity: 0, y: 12 },
+        { opacity: 1, y: 0, duration: 0.28, stagger: 0.04, ease: 'power2.out', clearProps: 'transform,opacity' }
+      );
+    }
   }
 
   // Controls UI
@@ -663,7 +897,7 @@ function renderTrackList() {
       dot.className = `h-1.5 rounded-full transition-all duration-300 cursor-pointer ${i === currentTrackPage ? 'bg-amber-500 w-5 shadow-sm shadow-amber-500/50' : 'bg-gray-700 hover:bg-gray-500 w-1.5'}`;
       dot.onclick = () => {
         currentTrackPage = i;
-        renderTrackList();
+        renderTrackList(true);
       };
       dotsContainer.appendChild(dot);
     }
@@ -686,14 +920,22 @@ function renderServices() {
   const container = document.getElementById('servicesContainer');
   if (!container) return;
 
+  const currentDevice = getDeviceType();
   const t = CONFIG.i18n[currentLang];
   container.innerHTML = '';
 
   CONFIG.servicesData.forEach((s, idx) => {
-    const title = currentLang === 'ru' ? s.titleRu : s.titleEn;
-    const desc = currentLang === 'ru' ? s.descRu : s.descEn;
-    const price = currentLang === 'ru' ? s.priceRu : s.priceEn;
-    const features = currentLang === 'ru' ? s.featuresRu : s.featuresEn;
+    const titleRaw = currentLang === 'ru' ? s.titleRu : s.titleEn;
+    const descRaw = currentLang === 'ru' ? s.descRu : s.descEn;
+    const priceRaw = currentLang === 'ru' ? s.priceRu : s.priceEn;
+    const featuresRaw = currentLang === 'ru' ? s.featuresRu : s.featuresEn;
+
+    const title = resolveDeviceText(titleRaw, currentDevice);
+    const desc = resolveDeviceText(descRaw, currentDevice);
+    const price = resolveDeviceText(priceRaw, currentDevice);
+    const features = Array.isArray(featuresRaw)
+      ? featuresRaw.map(f => resolveDeviceText(f, currentDevice))
+      : [resolveDeviceText(featuresRaw, currentDevice)];
 
     const card = document.createElement('div');
     card.className = s.isPopular
@@ -738,8 +980,11 @@ function renderServices() {
       }
     }
 
+    const popularBadgeText = resolveDeviceText(t.services.popularBadge, currentDevice);
+    const orderBtnText = resolveDeviceText(t.services.orderBtn, currentDevice);
+
     card.innerHTML = `
-      ${s.isPopular ? `<div class="absolute -top-3.5 left-1/2 -translate-x-1/2"><span class="popular-badge uppercase tracking-wider">${t.services.popularBadge}</span></div>` : ''}
+      ${s.isPopular ? `<div class="absolute -top-3.5 left-1/2 -translate-x-1/2"><span class="popular-badge uppercase tracking-wider">${popularBadgeText}</span></div>` : ''}
 
       <div>
         <div class="flex justify-between items-center mb-4 opacity-40">
@@ -771,7 +1016,7 @@ function renderServices() {
             onclick="openContactModal()"
             class="py-3 px-6 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl transition-all duration-200 shadow-md shadow-amber-500/20 active:scale-95 text-sm sm:text-base cursor-pointer flex items-center gap-1.5 flex-shrink-0"
           >
-            <span>${t.services.orderBtn}</span>
+            <span>${orderBtnText}</span>
           </button>
         </div>
       </div>
@@ -875,14 +1120,14 @@ function updateServicesDots(withTransition = false) {
     return;
   }
 
-  const containerRect = container.getBoundingClientRect();
-  const containerCenter = containerRect.left + (containerRect.width / 2);
+  const containerWidth = container.clientWidth || window.innerWidth;
+  const containerCenter = container.scrollLeft + (containerWidth / 2);
   let activeIndex = 0;
   let minDiff = Infinity;
 
   Array.from(cards).forEach((card, idx) => {
-    const cardRect = card.getBoundingClientRect();
-    const cardCenter = cardRect.left + (cardRect.width / 2);
+    const cardWidth = card.offsetWidth || 290;
+    const cardCenter = card.offsetLeft + (cardWidth / 2);
     const diff = cardCenter - containerCenter;
     const absDiff = Math.abs(diff);
 
@@ -891,7 +1136,6 @@ function updateServicesDots(withTransition = false) {
       activeIndex = idx;
     }
 
-    const cardWidth = cardRect.width || 290;
     // Normalized distance from viewport center (-1 to 1)
     const progress = Math.max(-1.5, Math.min(1.5, diff / cardWidth));
     const clampedAbs = Math.min(1, Math.abs(progress));
@@ -937,11 +1181,14 @@ function renderFaq() {
   const container = document.getElementById('faqContainer');
   if (!container) return;
 
+  const currentDevice = getDeviceType();
   container.innerHTML = '';
 
   CONFIG.faqData.forEach((item, index) => {
-    const q = currentLang === 'ru' ? item.qRu : item.qEn;
-    const rawA = currentLang === 'ru' ? item.aRu : item.aEn;
+    const qRaw = currentLang === 'ru' ? item.qRu : item.qEn;
+    const aRaw = currentLang === 'ru' ? item.aRu : item.aEn;
+    const q = resolveDeviceText(qRaw, currentDevice);
+    const rawA = resolveDeviceText(aRaw, currentDevice);
     const a = (rawA || '').replace(/\n/g, '<br/>');
     const itemKey = `faq-${index}`;
 
@@ -1388,23 +1635,25 @@ function initGsapAnimations() {
 
 function initMixerFaderScroll() {
   const knob = document.getElementById('side-fader-knob');
-  if (!knob) return;
+  const rail = knob ? knob.closest('.fader-rail') : null;
+  const strip = document.getElementById('side-mixer-strip');
+  if (!knob || !rail) return;
 
-  function updateFader() {
-    if (window.innerWidth < 1024) return;
-    const scrollTop = window.scrollY || document.documentElement.scrollTop;
-    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-    const scrollPercent = docHeight > 0 ? Math.min(Math.max(scrollTop / docHeight, 0), 1) : 0;
+  let isDragging = false;
+  let grabOffsetY = 12;
 
-    const maxTopPct = 91.5;
-    const topPos = scrollPercent * maxTopPct;
-    knob.style.top = `${topPos}%`;
+  function updateFaderUI(scrollPercent) {
+    const railH = rail.clientHeight || 400;
+    const knobH = knob.offsetHeight || 24;
+    const maxTravel = Math.max(0, railH - knobH);
+    const topPx = Math.max(0, Math.min(maxTravel, scrollPercent * maxTravel));
+    knob.style.top = `${topPx}px`;
 
-    const faderLevel = 1 - scrollPercent;
+    const faderLevel = 1 - Math.max(0, Math.min(1, scrollPercent));
 
     const dbLabel = document.getElementById('side-db-label');
     if (dbLabel) {
-      if (faderLevel < 0.05) {
+      if (faderLevel < 0.04) {
         dbLabel.textContent = '-INF';
       } else {
         const dbVal = ((faderLevel - 0.75) * 24).toFixed(1);
@@ -1416,13 +1665,15 @@ function initMixerFaderScroll() {
     const totalLeds = sideLeds.length;
     if (totalLeds > 0) {
       const activeCount = Math.round(faderLevel * totalLeds);
+      const redCount = Math.max(2, Math.round(totalLeds * 0.15));
+      const yellowCount = Math.max(4, Math.round(totalLeds * 0.38));
 
       sideLeds.forEach((led, idx) => {
         const distFromBottom = totalLeds - 1 - idx;
         if (distFromBottom < activeCount) {
-          if (idx <= 1) {
+          if (idx < redCount) {
             led.className = "side-vu-led vu-led active-red";
-          } else if (idx <= 3) {
+          } else if (idx < yellowCount) {
             led.className = "side-vu-led vu-led active-yellow";
           } else {
             led.className = "side-vu-led vu-led active-green";
@@ -1434,7 +1685,98 @@ function initMixerFaderScroll() {
     }
   }
 
-  window.addEventListener('scroll', updateFader, { passive: true });
-  window.addEventListener('resize', updateFader, { passive: true });
-  updateFader();
+  function getScrollMetrics() {
+    const scrollTop = window.scrollY || document.documentElement.scrollTop || 0;
+    const scrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight || 0;
+    const clientHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+    const maxScroll = Math.max(1, scrollHeight - clientHeight);
+    return { scrollTop, maxScroll };
+  }
+
+  let isWindowScrollTicking = false;
+
+  function onWindowScroll() {
+    if (window.innerWidth < 1024 || isDragging) return;
+    if (!isWindowScrollTicking) {
+      isWindowScrollTicking = true;
+      requestAnimationFrame(() => {
+        const { scrollTop, maxScroll } = getScrollMetrics();
+        const scrollPercent = Math.min(Math.max(scrollTop / maxScroll, 0), 1);
+        updateFaderUI(scrollPercent);
+        isWindowScrollTicking = false;
+      });
+    }
+  }
+
+  function applyScrollFromPointerY(clientY) {
+    const railRect = rail.getBoundingClientRect();
+    if (railRect.height <= 0) return;
+
+    const knobH = knob.offsetHeight || 24;
+    const maxTravel = railRect.height - knobH;
+    if (maxTravel <= 0) return;
+
+    const targetTop = Math.max(0, Math.min(maxTravel, clientY - railRect.top - grabOffsetY));
+    const ratio = targetTop / maxTravel;
+
+    const { maxScroll } = getScrollMetrics();
+    const targetScrollY = ratio * maxScroll;
+
+    window.scrollTo(0, targetScrollY);
+    updateFaderUI(ratio);
+  }
+
+  function onPointerDown(e) {
+    if (window.innerWidth < 1024) return;
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+
+    isDragging = true;
+    knob.classList.add('is-dragging');
+    document.body.style.userSelect = 'none';
+    document.documentElement.style.scrollBehavior = 'auto';
+
+    const knobRect = knob.getBoundingClientRect();
+    const knobH = knob.offsetHeight || 24;
+
+    if (e.target === knob || knob.contains(e.target)) {
+      grabOffsetY = Math.max(0, Math.min(knobH, e.clientY - knobRect.top));
+    } else {
+      grabOffsetY = knobH / 2;
+    }
+
+    applyScrollFromPointerY(e.clientY);
+
+    window.addEventListener('pointermove', onPointerMove, { passive: false });
+    window.addEventListener('pointerup', onPointerUp, { passive: false });
+    window.addEventListener('pointercancel', onPointerUp, { passive: false });
+  }
+
+  function onPointerMove(e) {
+    if (!isDragging) return;
+    e.preventDefault();
+    applyScrollFromPointerY(e.clientY);
+  }
+
+  function onPointerUp() {
+    if (!isDragging) return;
+    isDragging = false;
+    knob.classList.remove('is-dragging');
+    document.body.style.userSelect = '';
+    document.documentElement.style.scrollBehavior = '';
+
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', onPointerUp);
+    window.removeEventListener('pointercancel', onPointerUp);
+
+    onWindowScroll();
+  }
+
+  rail.addEventListener('pointerdown', onPointerDown);
+  if (strip) {
+    strip.addEventListener('selectstart', (e) => e.preventDefault());
+  }
+
+  window.addEventListener('scroll', onWindowScroll, { passive: true });
+  window.addEventListener('resize', onWindowScroll, { passive: true });
+  onWindowScroll();
 }
