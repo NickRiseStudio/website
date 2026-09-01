@@ -698,13 +698,17 @@
     var dt = Math.min(0.05, (now - prev) / 1000) || 0.016;
     prev = now;
 
+    var isModalOpen = document.body.classList.contains('modal-open');
+
     safe(function () { updateEngine(now, dt); });
     safe(syncBodyState);
-    safe(function () { updateBeamAngle(dt); });
-    /* фоновый эквалайзер в секции «Слушай разницу» — 30-40 fps */
-    if (now - lastPlayerEq > (LITE ? 50 : 25)) {
-      lastPlayerEq = now;
-      safe(function () { drawPlayerEq(now); });
+    if (!isModalOpen) {
+      safe(function () { updateBeamAngle(dt); });
+      /* фоновый эквалайзер в секции «Слушай разницу» — 30-40 fps */
+      if (now - lastPlayerEq > (LITE ? 60 : 25)) {
+        lastPlayerEq = now;
+        safe(function () { drawPlayerEq(now); });
+      }
     }
     requestAnimationFrame(loop);
   }

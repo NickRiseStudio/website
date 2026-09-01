@@ -1329,6 +1329,47 @@ function closeFaqItem(id) {
   }
 }
 
+// --- MODAL SCROLL LOCK SYSTEM ---
+let savedBodyScrollY = 0;
+let isPageScrollLocked = false;
+
+function lockPageScroll() {
+  if (isPageScrollLocked) return;
+  savedBodyScrollY = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+  isPageScrollLocked = true;
+
+  document.documentElement.classList.add('modal-open');
+  document.body.classList.add('modal-open');
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${savedBodyScrollY}px`;
+  document.body.style.left = '0';
+  document.body.style.right = '0';
+  document.body.style.width = '100%';
+  document.body.style.overflow = 'hidden';
+}
+
+function unlockPageScroll() {
+  const contactActive = document.getElementById('contactModal')?.classList.contains('active');
+  const aboutActive = document.getElementById('aboutModal')?.classList.contains('active');
+  if (contactActive || aboutActive) return;
+
+  if (!isPageScrollLocked) return;
+  isPageScrollLocked = false;
+
+  const topValue = document.body.style.top;
+  document.documentElement.classList.remove('modal-open');
+  document.body.classList.remove('modal-open');
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  document.body.style.width = '';
+  document.body.style.overflow = '';
+
+  const restoreY = topValue ? parseInt(topValue, 10) * -1 : savedBodyScrollY;
+  window.scrollTo(0, restoreY);
+}
+
 // --- MODAL & TOAST HANDLERS ---
 function initModalAndToast() {
   const contactModal = document.getElementById('contactModal');
@@ -1345,6 +1386,24 @@ function initModalAndToast() {
     });
   }
 
+  // Prevent scroll propagation from backdrop area
+  [contactModal, aboutModal].forEach(modalEl => {
+    if (!modalEl) return;
+    modalEl.addEventListener('wheel', (e) => {
+      const content = modalEl.querySelector('.modal-content');
+      if (!content || !content.contains(e.target)) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    modalEl.addEventListener('touchmove', (e) => {
+      const content = modalEl.querySelector('.modal-content');
+      if (!content || !content.contains(e.target)) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+  });
+
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       closeContactModal();
@@ -1358,7 +1417,7 @@ function openContactModal() {
   const modal = document.getElementById('contactModal');
   if (modal) {
     modal.classList.add('active');
-    document.body.classList.add('overflow-hidden');
+    lockPageScroll();
   }
 }
 
@@ -1366,9 +1425,7 @@ function closeContactModal() {
   const modal = document.getElementById('contactModal');
   if (modal) {
     modal.classList.remove('active');
-    if (!document.getElementById('aboutModal')?.classList.contains('active')) {
-      document.body.classList.remove('overflow-hidden');
-    }
+    unlockPageScroll();
   }
 }
 
@@ -1377,7 +1434,7 @@ function openAboutModal() {
   const modal = document.getElementById('aboutModal');
   if (modal) {
     modal.classList.add('active');
-    document.body.classList.add('overflow-hidden');
+    lockPageScroll();
   }
 }
 
@@ -1385,9 +1442,7 @@ function closeAboutModal() {
   const modal = document.getElementById('aboutModal');
   if (modal) {
     modal.classList.remove('active');
-    if (!document.getElementById('contactModal')?.classList.contains('active')) {
-      document.body.classList.remove('overflow-hidden');
-    }
+    unlockPageScroll();
   }
 }
 

@@ -295,14 +295,29 @@ html, body {
 }
 
 /* Modals & Overlays */
+html.modal-open,
+body.modal-open {
+  overflow: hidden !important;
+  height: 100% !important;
+  overscroll-behavior: none !important;
+  touch-action: none !important;
+}
+
 .modal-overlay {
   background: rgba(8, 10, 15, 0.88);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.48s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.38s cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 100;
+  overscroll-behavior: contain;
+  touch-action: none;
+  transform: translate3d(0, 0, 0);
+  -webkit-transform: translate3d(0, 0, 0);
+  will-change: opacity;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .modal-overlay.active {
@@ -311,12 +326,56 @@ html, body {
 }
 
 .modal-content {
-  transform: scale(0.95) translateY(16px);
-  transition: transform 0.48s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.48s ease;
+  transform: translate3d(0, 14px, 0) scale(0.96);
+  -webkit-transform: translate3d(0, 14px, 0) scale(0.96);
+  transition: transform 0.38s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.38s ease;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(245, 158, 11, 0.4) transparent;
+}
+
+/* Mobile optimizations: disable costly full-screen backdrop-filter blur and optimize animations */
+@media (max-width: 768px), (hover: none) {
+  .modal-overlay {
+    background: rgba(8, 10, 15, 0.95);
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    transition: opacity 0.26s ease-out;
+  }
+  .modal-content {
+    transform: translate3d(0, 10px, 0) scale(0.98);
+    -webkit-transform: translate3d(0, 10px, 0) scale(0.98);
+    transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.26s ease-out;
+  }
+}
+
+.modal-content::-webkit-scrollbar {
+  display: block !important;
+  width: 6px !important;
+}
+
+.modal-content::-webkit-scrollbar-track {
+  background: rgba(18, 22, 34, 0.5);
+  border-radius: 6px;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+  background: rgba(245, 158, 11, 0.35);
+  border-radius: 6px;
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(245, 158, 11, 0.7);
 }
 
 .modal-overlay.active .modal-content {
-  transform: scale(1) translateY(0);
+  transform: translate3d(0, 0, 0) scale(1);
+  -webkit-transform: translate3d(0, 0, 0) scale(1);
 }
 
 /* Toast Notifications */

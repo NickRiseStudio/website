@@ -83,9 +83,16 @@ html.nr-booted::after { content: none; display: none; animation: none; }
 /* ═══ 02. ГЛОБАЛЬНАЯ АТМОСФЕРА — «стекло монитора» ════════════════════ */
 
 /* «Облегчённый режим» для слабых машин — см. animations.js */
-html.nr-lite #nr-glass::after,
-@media (max-width: 768px) {
-  #nr-glass, #nr-glass::after { display: none !important; }
+html.nr-lite #nr-glass,
+html.nr-lite #nr-glass::after {
+  display: none !important;
+}
+
+@media (max-width: 768px), (hover: none) {
+  #nr-glass,
+  #nr-glass::after {
+    display: none !important;
+  }
 }
 
 #nr-glass {
