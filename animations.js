@@ -174,7 +174,7 @@
     return state;
   }
 
-  /* ═══ 02. АТМОСФЕРА: стекло + круги от клика ════════════════════════ */
+  /* ═══ 02. АТМОСФЕРА: стекло + круги от клика и скролла ══════════════ */
 
   function initAmbient() {
     if (!REDUCED) document.body.appendChild(Object.assign(el('div'), { id: 'nr-glass' }));
@@ -183,15 +183,193 @@
     fx.id = 'nr-fx';
     document.body.appendChild(fx);
 
-    document.addEventListener('pointerdown', function (e) {
-      if (REDUCED || e.button !== 0) return;
-      if (e.target.closest && e.target.closest('input, .fader-rail, #nr-boot')) return;
+    /* Анимация нажатия по экрану (круги от клика / тапа) */
+    function spawnClickRipple(x, y) {
       for (var i = 1; i <= 3; i++) {
         var r = el('span', 'nr-ripple' + (i > 1 ? ' nr-ripple-' + i : ''));
-        r.style.left = e.clientX + 'px';
-        r.style.top = e.clientY + 'px';
+        r.style.left = Math.round(x) + 'px';
+        r.style.top = Math.round(y) + 'px';
         fx.appendChild(r);
         (function (node) { setTimeout(function () { node.remove(); }, 1200); })(r);
+      }
+    }
+
+    /* Нажатия мышью на десктопе вызывают клик-анимацию сразу */
+    document.addEventListener('pointerdown', function (e) {
+      if (REDUCED || e.button !== 0) return;
+      if (e.pointerType === 'touch') return; // Для тача проверяем скролл/тап отдельно
+      if (e.target.closest && e.target.closest('input, textarea, .fader-rail, #nr-boot')) return;
+      spawnClickRipple(e.clientX, e.clientY);
+    }, { passive: true });
+
+    /* Плавная видимая линия скролла за пальцем (конический оранжевый шлейф) */
+    var touchCanvas = null;
+    var touchCtx = null;
+    var touchPoints = [];
+    var touchRafId = null;
+    var isTouchActive = false;
+    var isTouchScrollGesture = false;
+    var touchStartX = 0;
+    var touchStartY = 0;
+    var touchStartTime = 0;
+    var touchTarget = null;
+    var touchDpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    function initTouchCanvas() {
+      if (touchCanvas) return;
+      touchCanvas = el('canvas');
+      touchCanvas.id = 'nr-touch-canvas';
+      fx.appendChild(touchCanvas);
+      touchCtx = touchCanvas.getContext('2d');
+      resizeTouchCanvas();
+      window.addEventListener('resize', resizeTouchCanvas, { passive: true });
+    }
+
+    function resizeTouchCanvas() {
+      if (!touchCanvas || !touchCtx) return;
+      var w = window.innerWidth;
+      var h = window.innerHeight;
+      touchCanvas.width = Math.round(w * touchDpr);
+      touchCanvas.height = Math.round(h * touchDpr);
+      touchCanvas.style.width = w + 'px';
+      touchCanvas.style.height = h + 'px';
+      touchCtx.setTransform(1, 0, 0, 1, 0, 0);
+      touchCtx.scale(touchDpr, touchDpr);
+    }
+
+    function startTouchRender() {
+      if (touchRafId) return;
+      touchRafId = requestAnimationFrame(renderTouchTrail);
+    }
+
+    function renderTouchTrail() {
+      touchRafId = null;
+      if (!touchCtx || !touchCanvas) return;
+
+      var now = performance.now();
+      var w = window.innerWidth;
+      var h = window.innerHeight;
+
+      // Увеличенное время жизни шлейфа (~420ms при движении, плавное таяние после отпускания)
+      var maxAge = isTouchActive ? 420 : 260;
+      while (touchPoints.length > 0 && (now - touchPoints[touchPoints.length - 1].time) > maxAge) {
+        touchPoints.pop();
+      }
+
+      touchCtx.clearRect(0, 0, w, h);
+
+      // Отображаем шлейф только при наличии жеста скролла
+      var n = touchPoints.length;
+      if (isTouchScrollGesture && n >= 2) {
+        var maxThickness = 13.0; // Достаточная ширина у пальца
+        var minThickness = 1.6;  // Тонкий сужающийся хвост
+
+        // Мягкий янтарный шлейф в стилистике колец клика (без едкого пересвета)
+        for (var i = n - 2; i >= 0; i--) {
+          var p1 = touchPoints[i + 1];
+          var p2 = touchPoints[i];
+
+          // taper: 1 у пальца (i = 0), стремится к 0 у конца хвоста
+          var progress = (i + 0.5) / (n - 1);
+          var taper = Math.max(0, Math.min(1, 1 - progress));
+
+          var strokeW = minThickness + (maxThickness - minThickness) * Math.pow(taper, 1.2);
+          // Умеренная прозрачность ~0.5–0.55 у пальца, аналогичная кольцам клика
+          var alpha = (taper * 0.52 + 0.02) * (isTouchActive ? 1.0 : 0.65);
+
+          if (alpha <= 0.01) continue;
+
+          touchCtx.beginPath();
+          touchCtx.moveTo(p1.x, p1.y);
+          touchCtx.lineTo(p2.x, p2.y);
+          touchCtx.lineWidth = strokeW;
+          touchCtx.lineCap = 'round';
+          touchCtx.lineJoin = 'round';
+          touchCtx.strokeStyle = 'rgba(245, 158, 11, ' + alpha.toFixed(3) + ')';
+          touchCtx.shadowColor = 'rgba(245, 158, 11, ' + (alpha * 0.4).toFixed(3) + ')';
+          touchCtx.shadowBlur = 5;
+          touchCtx.stroke();
+        }
+
+        // Деликатная мягкая янтарная точка у кончика пальца
+        if (isTouchActive && n > 0) {
+          var head = touchPoints[0];
+          touchCtx.beginPath();
+          touchCtx.arc(head.x, head.y, 4.5, 0, Math.PI * 2);
+          touchCtx.fillStyle = 'rgba(245, 158, 11, 0.48)';
+          touchCtx.shadowColor = 'rgba(245, 158, 11, 0.35)';
+          touchCtx.shadowBlur = 4;
+          touchCtx.fill();
+        }
+      }
+
+      if (isTouchActive || touchPoints.length > 0) {
+        touchRafId = requestAnimationFrame(renderTouchTrail);
+      } else {
+        touchCtx.clearRect(0, 0, w, h);
+      }
+    }
+
+    window.addEventListener('touchstart', function (e) {
+      if (REDUCED || !e.touches || !e.touches[0]) return;
+      var t = e.touches[0];
+      touchStartX = t.clientX;
+      touchStartY = t.clientY;
+      touchStartTime = performance.now();
+      isTouchScrollGesture = false;
+      touchTarget = e.target;
+
+      initTouchCanvas();
+      isTouchActive = true;
+      touchPoints = [{ x: t.clientX, y: t.clientY, time: performance.now() }];
+      startTouchRender();
+    }, { passive: true });
+
+    window.addEventListener('touchmove', function (e) {
+      if (REDUCED || !isTouchActive || !e.touches || !e.touches[0]) return;
+      var t = e.touches[0];
+      var now = performance.now();
+
+      // Если палец сдвинулся более чем на 7px — это скролл/свайп (НЕ клик)
+      var distFromStart = Math.hypot(t.clientX - touchStartX, t.clientY - touchStartY);
+      if (distFromStart > 7) {
+        isTouchScrollGesture = true;
+      }
+
+      if (touchPoints.length > 0) {
+        var last = touchPoints[0];
+        var dx = t.clientX - last.x;
+        var dy = t.clientY - last.y;
+        if (dx * dx + dy * dy < 2) return;
+      }
+      touchPoints.unshift({ x: t.clientX, y: t.clientY, time: now });
+      if (touchPoints.length > 45) {
+        touchPoints.pop();
+      }
+      startTouchRender();
+    }, { passive: true });
+
+    window.addEventListener('touchend', function () {
+      isTouchActive = false;
+      var tapDuration = performance.now() - touchStartTime;
+
+      // Если палец не скроллил (перемещение < 7px) — это классический клик/тап!
+      if (!isTouchScrollGesture && tapDuration < 600) {
+        if (!touchTarget || !touchTarget.closest || !touchTarget.closest('input, textarea, .fader-rail, #nr-boot')) {
+          spawnClickRipple(touchStartX, touchStartY);
+        }
+      }
+
+      // При скролле волны клика НЕ появляются — только плавное угасание шлейфа скролла
+      startTouchRender();
+    }, { passive: true });
+
+    window.addEventListener('touchcancel', function () {
+      isTouchActive = false;
+      isTouchScrollGesture = false;
+      touchPoints = [];
+      if (touchCtx && touchCanvas) {
+        touchCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
       }
     }, { passive: true });
   }
@@ -345,22 +523,29 @@
     var frag = document.createDocumentFragment();
     var idx = 0;
 
-    Array.prototype.slice.call(node.childNodes).forEach(function (child) {
-      if (child.nodeType === 3) {
-        child.nodeValue.split(/(\s+)/).forEach(function (part) {
-          if (!part) return;
-          if (/^\s+$/.test(part)) { frag.appendChild(document.createTextNode(part)); return; }
-          var s = el('span', 'nr-w');
-          s.textContent = part;
-          s.style.animationDelay = (0.05 + idx * 0.075).toFixed(3) + 's';
-          idx++;
-          frag.appendChild(s);
-        });
-      } else {
-        frag.appendChild(child.cloneNode(true));
-      }
-    });
+    function processNode(parent, targetFrag) {
+      Array.prototype.slice.call(parent.childNodes).forEach(function (child) {
+        if (child.nodeType === 3) {
+          child.nodeValue.split(/(\s+)/).forEach(function (part) {
+            if (!part) return;
+            if (/^\s+$/.test(part)) { targetFrag.appendChild(document.createTextNode(part)); return; }
+            var s = el('span', 'nr-w');
+            s.textContent = part;
+            s.style.animationDelay = (0.05 + idx * 0.075).toFixed(3) + 's';
+            idx++;
+            targetFrag.appendChild(s);
+          });
+        } else if (child.nodeName === 'BR') {
+          targetFrag.appendChild(child.cloneNode(true));
+        } else {
+          var clone = child.cloneNode(false);
+          processNode(child, clone);
+          targetFrag.appendChild(clone);
+        }
+      });
+    }
 
+    processNode(node, frag);
     node.innerHTML = '';
     node.appendChild(frag);
   }
@@ -371,6 +556,9 @@
     if (h1 && !h1.querySelector('.nr-w')) splitWords(h1);
     else if (h1) { splitWords(h1); }
   }
+
+  window.NickRiseAnimations = window.NickRiseAnimations || {};
+  window.NickRiseAnimations.animateHeroTitle = animateHeroTitle;
 
   /* ═══ 07. КРИВАЯ ЭКВАЛАЙЗЕРА ПОД ЗАГОЛОВКАМИ СЕКЦИЙ ═════════════════ */
 
@@ -597,9 +785,10 @@
     });
   }
 
-  /* ═══ 14. БОКОВОЙ ФЕЙДЕР: подсветка во время прокрутки ══════════════ */
+  /* ═══ 14. СТУДИЙНЫЙ ФЕЙДЕР И СКРОЛЛ ══════════════════════════════════ */
 
   var faderTimer = null;
+  var mobileScrollTimer = null;
   var isScrollTicking = false;
 
   function onScroll() {
@@ -613,19 +802,31 @@
     isScrollTicking = false;
     var doc = document.documentElement;
     var max = doc.scrollHeight - window.innerHeight;
-    var p = max > 0 ? Math.min(1, Math.max(0, (window.scrollY || doc.scrollTop) / max)) : 0;
+    var currentY = window.scrollY || doc.scrollTop || 0;
+    var p = max > 0 ? Math.min(1, Math.max(0, currentY / max)) : 0;
+
     if (scrollLine) {
       scrollLine.style.width = (p * 100).toFixed(2) + '%';
       scrollLine.style.opacity = p > 0.004 ? '1' : '0';
     }
 
-    document.body.classList.toggle('nr-scrolled', (window.scrollY || 0) > 40);
+    document.body.classList.toggle('nr-scrolled', currentY > 40);
 
+    /* Десктопный SSL фейдер */
     document.body.classList.add('nr-faderactive');
     clearTimeout(faderTimer);
     faderTimer = setTimeout(function () {
       document.body.classList.remove('nr-faderactive');
     }, 420);
+
+    /* Анимация скролла для телефонов и планшетов (< 1024px) */
+    if (window.innerWidth < 1024) {
+      document.body.classList.add('nr-mobile-scrolling');
+      clearTimeout(mobileScrollTimer);
+      mobileScrollTimer = setTimeout(function () {
+        document.body.classList.remove('nr-mobile-scrolling');
+      }, 550);
+    }
   }
 
   /* ═══ 15. ЭКОНОМИЯ РЕСУРСОВ ═════════════════════════════════════════ */

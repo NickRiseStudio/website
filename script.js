@@ -200,6 +200,10 @@ function renderI18nText() {
       }
     }
   });
+
+  if (typeof window !== 'undefined' && window.NickRiseAnimations && typeof window.NickRiseAnimations.animateHeroTitle === 'function') {
+    window.NickRiseAnimations.animateHeroTitle();
+  }
 }
 
 // --- PLAYER & MASTER DECK ENGINE ---

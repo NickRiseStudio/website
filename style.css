@@ -426,7 +426,8 @@ body:has(#stickyPlayerBar.active) {
 }
 
 /* Sticky Bottom Player Bar */
-.sticky-player-bar {
+.sticky-player-bar,
+#stickyPlayerBar {
   position: fixed;
   bottom: 0;
   left: 0;
@@ -437,13 +438,19 @@ body:has(#stickyPlayerBar.active) {
   -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid rgba(245, 158, 11, 0.35);
   box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.9);
-  transform: translateY(100%);
-  transition: transform 0.48s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translate3d(0, 100%, 0);
+  -webkit-transform: translate3d(0, 100%, 0);
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.5s ease;
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
 }
 
-.sticky-player-bar.active {
-  transform: translateY(0) !important;
+.sticky-player-bar.active,
+#stickyPlayerBar.active {
+  transform: translate3d(0, 0, 0) !important;
+  -webkit-transform: translate3d(0, 0, 0) !important;
 }
 
 /* Audio Seek Bar with Enhanced Touch Target for Mobile & Tablet */
@@ -533,7 +540,7 @@ body:has(#stickyPlayerBar.active) {
 }
 
 /* Hardware accelerated composition layers */
-#stickyPlayerBar, #mainHeader, .hero-mask-img, .rack-card, .service-mobile-card {
+#mainHeader, .hero-mask-img, .rack-card, .service-mobile-card {
   transform: translateZ(0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
@@ -557,6 +564,33 @@ html.nr-lite .modal-overlay {
   -webkit-backdrop-filter: none !important;
   background-color: rgba(8, 10, 15, 0.96) !important;
 }
+
+/* Hero Title & Genres Single-Line Enforcements */
+#hero h1,
+.hero-title-responsive {
+  letter-spacing: -0.025em;
+  word-break: keep-all;
+}
+
+.hero-genres-line {
+  white-space: nowrap !important;
+  display: inline-block;
+  max-width: 100%;
+}
+
+@media (max-width: 639px) {
+  #hero h1,
+  .hero-title-responsive {
+    font-size: clamp(25px, 7.8vw, 36px) !important;
+    line-height: 1.14 !important;
+  }
+
+  .hero-genres-line {
+    font-size: clamp(13px, 4.35vw, 18px) !important;
+    letter-spacing: -0.02em;
+  }
+}
+
 
 
 

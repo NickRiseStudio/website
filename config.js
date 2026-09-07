@@ -64,9 +64,9 @@ const CONFIG = {
           mobile: 'ANALOG HYBRID MIXING & MASTERING'
         },
         title: {
-          desktop: 'Профессиональное<br>сведение & мастеринг',
-          tablet: 'Профессиональное<br>сведение & мастеринг',
-          mobile: 'Профессиональное<br>сведение & мастеринг'
+          desktop: 'Профессиональное<br>Сведение / мастеринг',
+          tablet: 'Профессиональное<br>Сведение / мастеринг',
+          mobile: 'Профессиональное<br><span class="whitespace-nowrap">Сведение / мастеринг</span>'
         },
         subtitle: {
           desktop: 'Специализация: Pop/House • Rock/Metal • Rap/R&B',
@@ -428,9 +428,9 @@ const CONFIG = {
           mobile: 'ANALOG HYBRID MIXING & MASTERING'
         },
         title: {
-          desktop: 'Professional<br>Mixing & Mastering',
-          tablet: 'Professional<br>Mixing & Mastering',
-          mobile: 'Professional<br>Mixing & Mastering'
+          desktop: 'Professional<br>Mixing / Mastering',
+          tablet: 'Professional<br>Mixing / Mastering',
+          mobile: 'Professional<br><span class="whitespace-nowrap">Mixing / Mastering</span>'
         },
         subtitle: {
           desktop: 'Specialization: Pop/House • Rock/Metal • Rap/R&B',
@@ -1321,9 +1321,9 @@ const CONFIG = {
         mobile: 'Perfect balance, depth, and punch. A mix that sounds premium and is ready for mastering.'
       },
       priceRu: {
-        desktop: 'от 5 000 ₽',
-        tablet: 'от 5 000 ₽',
-        mobile: 'от 5 000 ₽'
+        desktop: 'от 3 500 ₽',
+        tablet: 'от 3 500 ₽',
+        mobile: 'от 3 500 ₽'
       },
       priceEn: {
         desktop: 'from $150',
@@ -1399,9 +1399,9 @@ const CONFIG = {
         mobile: 'From raw multitracks to a release-ready master. All in one package. Loud, balanced track in 3 days.'
       },
       priceRu: {
-        desktop: 'от 7 000 ₽',
-        tablet: 'от 7 000 ₽',
-        mobile: 'от 7 000 ₽'
+        desktop: 'от 5 500 ₽',
+        tablet: 'от 5 500 ₽',
+        mobile: 'от 5 500 ₽'
       },
       priceEn: {
         desktop: 'from $190',
@@ -1477,9 +1477,9 @@ const CONFIG = {
         mobile: 'Final polish. Width, depth, and loudness matched to your reference. Ready for all streaming platforms.'
       },
       priceRu: {
-        desktop: 'от 3 000 ₽',
-        tablet: 'от 3 000 ₽',
-        mobile: 'от 3 000 ₽'
+        desktop: 'от 2 000 ₽',
+        tablet: 'от 2 000 ₽',
+        mobile: 'от 2 000 ₽'
       },
       priceEn: {
         desktop: 'from $50',
@@ -1498,9 +1498,9 @@ const CONFIG = {
           mobile: 'Коррекция частотного баланса и динамики'
         },
         {
-          desktop: 'Проверка фазовой совместимости (Mono check)',
-          tablet: 'Проверка фазовой совместимости (Mono check)',
-          mobile: 'Проверка фазовой совместимости (Mono check)'
+          desktop: 'Контроль Mid-Side составляющей микса',
+          tablet: 'Контроль Mid-Side составляющей микса',
+          mobile: 'Контроль Mid-Side составляющей микса'
         },
         {
           desktop: 'Готовые файлы для всех стримингов',
@@ -1520,9 +1520,9 @@ const CONFIG = {
           mobile: 'Frequency balance & dynamics control'
         },
         {
-          desktop: 'Mono compatibility check',
-          tablet: 'Mono compatibility check',
-          mobile: 'Mono compatibility check'
+          desktop: 'Mid-Side balance monitoring',
+          tablet: 'Mid-Side balance monitoring',
+          mobile: 'Mid-Side balance monitoring'
         },
         {
           desktop: 'Distribution-ready streaming masters',
@@ -1612,9 +1612,9 @@ const CONFIG = {
         mobile: 'Are revisions included in the price?'
       },
       aRu: {
-        desktop: 'Да, в стоимость входит 3 итерации правок.<br/><br/>Это означает, что после получения чернового микса вы можете прислать список замечаний. Я вношу правки, вы слушаете обновлённую версию и при необходимости отправляете новый список. Так до трёх раз.<br/><br/>Важные правила:<br/><br/>1 - Замечания лучше присылать одним общим списком, а не по одному сообщению в день, при надобности указывайте чёткие тайминги, куда нужно вносить правку. Так мы не тратим время зря.<br/><br/>2 - Если после трёх итераций вы всё ещё недовольны — дальнейшие правки оплачиваются отдельно: 1 список правок — 500₽.<div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200/90 text-sm flex items-start sm:items-center gap-3"><svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V6a2 2 0 10-2 2h2zm0 13C10.832 21 2 20 2 15V8a2 2 0 012-2h16a2 2 0 012 2v7c0 5-8.832 6-10 6z"/></svg><span>Вижу вам интересно сотрудничество со мной! Напишите мне в Телеграм <strong class="text-amber-400 font-bold">"NRSDiscount"</strong> и получите скидку на первый заказ в размере <strong class="text-amber-400 font-bold">10%</strong></span></div>',
-        tablet: 'Да, в стоимость входит 3 итерации правок.<br/><br/>Это означает, что после получения чернового микса вы можете прислать список замечаний. Я вношу правки, вы слушаете обновлённую версию и при необходимости отправляете новый список. Так до трёх раз.<br/><br/>Важные правила:<br/><br/>1 - Замечания лучше присылать одним общим списком, а не по одному сообщению в день, при надобности указывайте чёткие тайминги, куда нужно вносить правку. Так мы не тратим время зря.<br/><br/>2 - Если после трёх итераций вы всё ещё недовольны — дальнейшие правки оплачиваются отдельно: 1 список правок — 500₽.<div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200/90 text-sm flex items-start sm:items-center gap-3"><svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V6a2 2 0 10-2 2h2zm0 13C10.832 21 2 20 2 15V8a2 2 0 012-2h16a2 2 0 012 2v7c0 5-8.832 6-10 6z"/></svg><span>Вижу вам интересно сотрудничество со мной! Напишите мне в Телеграм <strong class="text-amber-400 font-bold">"NRSDiscount"</strong> и получите скидку на первый заказ в размере <strong class="text-amber-400 font-bold">10%</strong></span></div>',
-        mobile: 'Да, в стоимость входит 3 итерации правок.<br/><br/>Это означает, что после получения чернового микса вы можете прислать список замечаний. Я вношу правки, вы слушаете обновлённую версию и при необходимости отправляете новый список. Так до трёх раз.<br/><br/>Важные правила:<br/><br/>1 - Замечания лучше присылать одним общим списком, а не по одному сообщению в день, при надобности указывайте чёткие тайминги, куда нужно вносить правку. Так мы не тратим время зря.<br/><br/>2 - Если после трёх итераций вы всё ещё недовольны — дальнейшие правки оплачиваются отдельно: 1 список правок — 500₽.<div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200/90 text-sm flex items-start sm:items-center gap-3"><svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V6a2 2 0 10-2 2h2zm0 13C10.832 21 2 20 2 15V8a2 2 0 012-2h16a2 2 0 012 2v7c0 5-8.832 6-10 6z"/></svg><span>Вижу вам интересно сотрудничество со мной! Напишите мне в Телеграм <strong class="text-amber-400 font-bold">"NRSDiscount"</strong> и получите скидку на первый заказ в размере <strong class="text-amber-400 font-bold">10%</strong></span></div>'
+        desktop: 'Да, в стоимость входит 3 итерации правок.<br/><br/>Это означает, что после получения чернового микса вы можете прислать список замечаний. Я вношу правки, вы слушаете обновлённую версию и при необходимости отправляете новый список. Так до трёх раз.<br/><br/>Важные правила:<br/><br/>1 - Замечания лучше присылать одним общим списком, а не по одному сообщению в день, при надобности указывайте чёткие тайминги, куда нужно вносить правку. Так мы не тратим время зря.<br/><br/>2 - Если после трёх итераций вы всё ещё недовольны — дальнейшие правки оплачиваются отдельно: одна итерация правок — 500₽.<div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200/90 text-sm flex items-start sm:items-center gap-3"><svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V6a2 2 0 10-2 2h2zm0 13C10.832 21 2 20 2 15V8a2 2 0 012-2h16a2 2 0 012 2v7c0 5-8.832 6-10 6z"/></svg><span>Вижу вам интересно сотрудничество со мной! Напишите мне в Телеграм <strong class="text-amber-400 font-bold">"NRSDiscount"</strong> и получите скидку на первый заказ в размере <strong class="text-amber-400 font-bold">10%</strong></span></div>',
+        tablet: 'Да, в стоимость входит 3 итерации правок.<br/><br/>Это означает, что после получения чернового микса вы можете прислать список замечаний. Я вношу правки, вы слушаете обновлённую версию и при необходимости отправляете новый список. Так до трёх раз.<br/><br/>Важные правила:<br/><br/>1 - Замечания лучше присылать одним общим списком, а не по одному сообщению в день, при надобности указывайте чёткие тайминги, куда нужно вносить правку. Так мы не тратим время зря.<br/><br/>2 - Если после трёх итераций вы всё ещё недовольны — дальнейшие правки оплачиваются отдельно: одна итерация правок — 500₽.<div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200/90 text-sm flex items-start sm:items-center gap-3"><svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V6a2 2 0 10-2 2h2zm0 13C10.832 21 2 20 2 15V8a2 2 0 012-2h16a2 2 0 012 2v7c0 5-8.832 6-10 6z"/></svg><span>Вижу вам интересно сотрудничество со мной! Напишите мне в Телеграм <strong class="text-amber-400 font-bold">"NRSDiscount"</strong> и получите скидку на первый заказ в размере <strong class="text-amber-400 font-bold">10%</strong></span></div>',
+        mobile: 'Да, в стоимость входит 3 итерации правок.<br/><br/>Это означает, что после получения чернового микса вы можете прислать список замечаний. Я вношу правки, вы слушаете обновлённую версию и при необходимости отправляете новый список. Так до трёх раз.<br/><br/>Важные правила:<br/><br/>1 - Замечания лучше присылать одним общим списком, а не по одному сообщению в день, при надобности указывайте чёткие тайминги, куда нужно вносить правку. Так мы не тратим время зря.<br/><br/>2 - Если после трёх итераций вы всё ещё недовольны — дальнейшие правки оплачиваются отдельно: одна итерация правок — 500₽.<div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200/90 text-sm flex items-start sm:items-center gap-3"><svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V6a2 2 0 10-2 2h2zm0 13C10.832 21 2 20 2 15V8a2 2 0 012-2h16a2 2 0 012 2v7c0 5-8.832 6-10 6z"/></svg><span>Вижу вам интересно сотрудничество со мной! Напишите мне в Телеграм <strong class="text-amber-400 font-bold">"NRSDiscount"</strong> и получите скидку на первый заказ в размере <strong class="text-amber-400 font-bold">10%</strong></span></div>'
       },
       aEn: {
         desktop: 'Yes, the price includes up to 3 rounds of revisions.<br/><br/>This means after receiving the initial draft, you can send a list of feedback. I update the mix, you review the new version, and if necessary, submit another list — up to three times.<br/><br/>Important Guidelines:<br/><br/>1 - Please consolidate your feedback into a single organized list (with specific timestamps where adjustments are needed) rather than sending separate messages daily. This saves valuable time.<br/><br/>2 - If additional revisions are needed after 3 rounds, further changes are billed separately at $10 per revision round.<div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200/90 text-sm flex items-start sm:items-center gap-3"><svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V6a2 2 0 10-2 2h2zm0 13C10.832 21 2 20 2 15V8a2 2 0 012-2h16a2 2 0 012 2v7c0 5-8.832 6-10 6z"/></svg><span>I see you\'re interested in working together! Message me <strong class="text-amber-400 font-bold">"NRSDiscount"</strong> on Telegram to get <strong class="text-amber-400 font-bold">10% off</strong> your first order.</span></div>',
