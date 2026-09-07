@@ -93,6 +93,12 @@ html.nr-lite #nr-glass::after {
   #nr-glass::after {
     display: none !important;
   }
+
+  /* Ускорение скролла: браузер не рассчитывает разметку удалённых секций до их приближения */
+  #faq, #contacts, footer {
+    content-visibility: auto;
+    contain-intrinsic-size: 1px 400px;
+  }
 }
 
 #nr-glass {
@@ -158,6 +164,7 @@ html.nr-lite #nr-glass::after {
   height: 100%;
   pointer-events: none;
   z-index: 10;
+  will-change: transform;
 }
 
 /* ═══ 03. HEADER — линия сигнала, логотип, навигация ══════════════════ */
@@ -169,11 +176,14 @@ html.nr-lite #nr-glass::after {
   left: 0;
   bottom: -1px;
   height: 2px;
-  width: 0%;
+  width: 100%;
+  transform-origin: left center;
+  transform: scaleX(0);
   background: linear-gradient(90deg, var(--nr-amber-dk), var(--nr-amber-lt));
-  box-shadow: 0 0 10px rgba(245, 158, 11, 0.75);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
   pointer-events: none;
-  transition: width 0.1s linear, height 0.2s ease, box-shadow 0.2s ease;
+  will-change: transform;
+  transition: opacity 0.2s ease;
 }
 
 /* Скрыта на компьютерной версии (от 1024px), доступна на мобильных и планшетах */
@@ -192,20 +202,7 @@ html.nr-lite #nr-glass::after {
   height: 6px;
   border-radius: 50%;
   background: var(--nr-amber-lt);
-  box-shadow: 0 0 12px 2px rgba(245, 158, 11, 0.9);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-/* Анимация линии при активном скролле на телефонах и планшетах */
-body.nr-mobile-scrolling #nr-scrollline {
-  height: 3px;
-  box-shadow: 0 0 14px rgba(245, 158, 11, 0.95), 0 0 24px rgba(245, 158, 11, 0.5);
-  background: linear-gradient(90deg, var(--nr-amber-dk), #FDE68A, var(--nr-amber-lt));
-}
-
-body.nr-mobile-scrolling #nr-scrollline::after {
-  transform: scale(1.6);
-  box-shadow: 0 0 16px 3px rgba(245, 158, 11, 1), 0 0 24px rgba(251, 191, 36, 0.8);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.8);
 }
 
 body.nr-scrolled #mainHeader {

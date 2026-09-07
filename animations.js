@@ -202,7 +202,7 @@
       spawnClickRipple(e.clientX, e.clientY);
     }, { passive: true });
 
-    /* Плавная видимая линия скролла за пальцем (конический оранжевый шлейф) */
+    /* Плавная непрерывная линия скролла за пальцем (сверхбыстрый монолитный шлейф) */
     var touchCanvas = null;
     var touchCtx = null;
     var touchPoints = [];
@@ -213,14 +213,17 @@
     var touchStartY = 0;
     var touchStartTime = 0;
     var touchTarget = null;
-    var touchDpr = Math.min(window.devicePixelRatio || 1, 2);
+    // Оптимальный DPR 1.5 на мобильных: чётко, но в 2-4 раза меньше пикселей для GPU
+    var touchDpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    var canvasW = 0;
+    var canvasH = 0;
 
     function initTouchCanvas() {
       if (touchCanvas) return;
       touchCanvas = el('canvas');
       touchCanvas.id = 'nr-touch-canvas';
       fx.appendChild(touchCanvas);
-      touchCtx = touchCanvas.getContext('2d');
+      touchCtx = touchCanvas.getContext('2d', { alpha: true });
       resizeTouchCanvas();
       window.addEventListener('resize', resizeTouchCanvas, { passive: true });
     }
@@ -229,6 +232,9 @@
       if (!touchCanvas || !touchCtx) return;
       var w = window.innerWidth;
       var h = window.innerHeight;
+      if (canvasW === w && Math.abs(canvasH - h) < 60) return;
+      canvasW = w;
+      canvasH = h;
       touchCanvas.width = Math.round(w * touchDpr);
       touchCanvas.height = Math.round(h * touchDpr);
       touchCanvas.style.width = w + 'px';
@@ -247,58 +253,95 @@
       if (!touchCtx || !touchCanvas) return;
 
       var now = performance.now();
-      var w = window.innerWidth;
-      var h = window.innerHeight;
+      var w = canvasW || window.innerWidth;
+      var h = canvasH || window.innerHeight;
 
-      // Увеличенное время жизни шлейфа (~420ms при движении, плавное таяние после отпускания)
-      var maxAge = isTouchActive ? 420 : 260;
+      // Время жизни шлейфа: ~380ms при движении, ~220ms при отпускании
+      var maxAge = isTouchActive ? 380 : 220;
       while (touchPoints.length > 0 && (now - touchPoints[touchPoints.length - 1].time) > maxAge) {
         touchPoints.pop();
       }
 
       touchCtx.clearRect(0, 0, w, h);
 
-      // Отображаем шлейф только при наличии жеста скролла
       var n = touchPoints.length;
-      if (isTouchScrollGesture && n >= 2) {
-        var maxThickness = 13.0; // Достаточная ширина у пальца
-        var minThickness = 1.6;  // Тонкий сужающийся хвост
+      if (isTouchScrollGesture && n >= 3) {
+        var headRadius = 6.2; // Толщина ~12.4px у пальца
+        var tailRadius = 0.8; // Тонкий хвост ~1.6px
 
-        // Мягкий янтарный шлейф в стилистике колец клика (без едкого пересвета)
-        for (var i = n - 2; i >= 0; i--) {
-          var p1 = touchPoints[i + 1];
-          var p2 = touchPoints[i];
+        // Вычисляем нормали и боковые контуры для гладкой ленты
+        var leftEdge = [];
+        var rightEdge = [];
 
-          // taper: 1 у пальца (i = 0), стремится к 0 у конца хвоста
-          var progress = (i + 0.5) / (n - 1);
-          var taper = Math.max(0, Math.min(1, 1 - progress));
+        for (var i = 0; i < n; i++) {
+          var p = touchPoints[i];
+          var progress = i / (n - 1);
+          var taper = Math.max(0, 1 - progress);
+          var r = tailRadius + (headRadius - tailRadius) * Math.pow(taper, 1.25);
 
-          var strokeW = minThickness + (maxThickness - minThickness) * Math.pow(taper, 1.2);
-          // Умеренная прозрачность ~0.5–0.55 у пальца, аналогичная кольцам клика
-          var alpha = (taper * 0.52 + 0.02) * (isTouchActive ? 1.0 : 0.65);
+          var dx = 0, dy = 0;
+          if (i === 0) {
+            dx = touchPoints[0].x - touchPoints[1].x;
+            dy = touchPoints[0].y - touchPoints[1].y;
+          } else if (i === n - 1) {
+            dx = touchPoints[n - 2].x - touchPoints[n - 1].x;
+            dy = touchPoints[n - 2].y - touchPoints[n - 1].y;
+          } else {
+            dx = touchPoints[i - 1].x - touchPoints[i + 1].x;
+            dy = touchPoints[i - 1].y - touchPoints[i + 1].y;
+          }
+          var len = Math.hypot(dx, dy) || 1;
+          var nx = -dy / len;
+          var ny = dx / len;
 
-          if (alpha <= 0.01) continue;
-
-          touchCtx.beginPath();
-          touchCtx.moveTo(p1.x, p1.y);
-          touchCtx.lineTo(p2.x, p2.y);
-          touchCtx.lineWidth = strokeW;
-          touchCtx.lineCap = 'round';
-          touchCtx.lineJoin = 'round';
-          touchCtx.strokeStyle = 'rgba(245, 158, 11, ' + alpha.toFixed(3) + ')';
-          touchCtx.shadowColor = 'rgba(245, 158, 11, ' + (alpha * 0.4).toFixed(3) + ')';
-          touchCtx.shadowBlur = 5;
-          touchCtx.stroke();
+          leftEdge.push({ x: p.x + nx * r, y: p.y + ny * r });
+          rightEdge.push({ x: p.x - nx * r, y: p.y - ny * r });
         }
 
-        // Деликатная мягкая янтарная точка у кончика пальца
-        if (isTouchActive && n > 0) {
-          var head = touchPoints[0];
+        // Построение единого монолитного гладкого контура
+        touchCtx.beginPath();
+        var head = touchPoints[0];
+        var tail = touchPoints[n - 1];
+
+        // 1. Закругление у пальца
+        touchCtx.arc(head.x, head.y, headRadius, 0, Math.PI * 2);
+
+        // 2. Левая граница ленты (гладкие кривые Безье через середины точек)
+        touchCtx.moveTo(leftEdge[0].x, leftEdge[0].y);
+        for (var li = 0; li < leftEdge.length - 1; li++) {
+          var mxL = (leftEdge[li].x + leftEdge[li + 1].x) * 0.5;
+          var myL = (leftEdge[li].y + leftEdge[li + 1].y) * 0.5;
+          touchCtx.quadraticCurveTo(leftEdge[li].x, leftEdge[li].y, mxL, myL);
+        }
+        touchCtx.lineTo(leftEdge[leftEdge.length - 1].x, leftEdge[leftEdge.length - 1].y);
+
+        // 3. Закругление у кончика хвоста
+        touchCtx.arc(tail.x, tail.y, tailRadius, 0, Math.PI * 2);
+
+        // 4. Правая граница ленты обратно к пальцу
+        touchCtx.moveTo(rightEdge[rightEdge.length - 1].x, rightEdge[rightEdge.length - 1].y);
+        for (var ri = rightEdge.length - 1; ri > 0; ri--) {
+          var mxR = (rightEdge[ri].x + rightEdge[ri - 1].x) * 0.5;
+          var myR = (rightEdge[ri].y + rightEdge[ri - 1].y) * 0.5;
+          touchCtx.quadraticCurveTo(rightEdge[ri].x, rightEdge[ri].y, mxR, myR);
+        }
+        touchCtx.lineTo(rightEdge[0].x, rightEdge[0].y);
+
+        // Заливка единым мягким янтарным градиентом БЕЗ shadowBlur (максимальный FPS на смартфонах)
+        var grad = touchCtx.createLinearGradient(head.x, head.y, tail.x, tail.y);
+        var baseAlpha = isTouchActive ? 0.50 : 0.32;
+        grad.addColorStop(0, 'rgba(245, 158, 11, ' + baseAlpha.toFixed(3) + ')');
+        grad.addColorStop(0.45, 'rgba(245, 158, 11, ' + (baseAlpha * 0.55).toFixed(3) + ')');
+        grad.addColorStop(1, 'rgba(245, 158, 11, 0)');
+
+        touchCtx.fillStyle = grad;
+        touchCtx.fill();
+
+        // Ненавязчивая светящаяся точка в месте касания
+        if (isTouchActive) {
           touchCtx.beginPath();
-          touchCtx.arc(head.x, head.y, 4.5, 0, Math.PI * 2);
-          touchCtx.fillStyle = 'rgba(245, 158, 11, 0.48)';
-          touchCtx.shadowColor = 'rgba(245, 158, 11, 0.35)';
-          touchCtx.shadowBlur = 4;
+          touchCtx.arc(head.x, head.y, 3.6, 0, Math.PI * 2);
+          touchCtx.fillStyle = 'rgba(254, 243, 199, 0.45)';
           touchCtx.fill();
         }
       }
@@ -336,16 +379,40 @@
         isTouchScrollGesture = true;
       }
 
+      var curX = t.clientX;
+      var curY = t.clientY;
+
       if (touchPoints.length > 0) {
         var last = touchPoints[0];
-        var dx = t.clientX - last.x;
-        var dy = t.clientY - last.y;
-        if (dx * dx + dy * dy < 2) return;
+        var dx = curX - last.x;
+        var dy = curY - last.y;
+        var dist = Math.hypot(dx, dy);
+
+        if (dist < 1.5) return;
+
+        // КЛЮЧЕВАЯ ОПТИМИЗАЦИЯ: Плотная интерполяция промежуточных точек (шаг ~7px).
+        // На реальных телефонах события скролла приходят рывками через 40–80px.
+        // Автоматическая разбивка исключает разрывы и превращение в «отрывистые полоски».
+        var stepDist = 7;
+        if (dist > stepDist) {
+          var steps = Math.min(10, Math.floor(dist / stepDist));
+          for (var s = 1; s <= steps; s++) {
+            var frac = s / (steps + 1);
+            touchPoints.unshift({
+              x: last.x + dx * frac,
+              y: last.y + dy * frac,
+              time: last.time + (now - last.time) * frac
+            });
+          }
+        }
       }
-      touchPoints.unshift({ x: t.clientX, y: t.clientY, time: now });
-      if (touchPoints.length > 45) {
-        touchPoints.pop();
+
+      touchPoints.unshift({ x: curX, y: curY, time: now });
+
+      if (touchPoints.length > 48) {
+        touchPoints.length = 48;
       }
+
       startTouchRender();
     }, { passive: true });
 
@@ -478,8 +545,10 @@
     }
 
     /* Нижний эквалайзер: разреженные полосы спектра частот с градиентом и peak-hold */
-    var bw = w / NB;
+    var barCount = LITE ? 36 : NB;
+    var bw = w / barCount;
     var maxBarH = Math.min(220, h * 0.30);
+    var stepRatio = NB / barCount;
 
     /* Оптимизация: создаём один общий градиент на весь кадр, а не 80 градиентов в цикле */
     var g = ctx.createLinearGradient(0, h, 0, h - maxBarH);
@@ -497,8 +566,9 @@
       ? (isPlaying ? 'rgba(255,236,190,0.45)' : 'rgba(255,236,190,0.18)')
       : (isPlaying ? 'rgba(226,232,240,0.25)' : 'rgba(226,232,240,0.10)');
 
-    for (var i = 0; i < NB; i++) {
-      var v = Engine.bands[i];
+    for (var i = 0; i < barCount; i++) {
+      var srcIdx = Math.min(NB - 1, Math.floor(i * stepRatio));
+      var v = Engine.bands[srcIdx];
       var bh = Math.max(2, v * maxBarH);
       var bx = i * bw;
       var barW = bw * 0.52;
@@ -507,7 +577,7 @@
       ctx.fillRect(posX, h - bh, barW, bh);
 
       /* Пиковый индикатор (peak hold линия) */
-      var p = Engine.peaks[i] * maxBarH;
+      var p = Engine.peaks[srcIdx] * maxBarH;
       if (p > 4) {
         ctx.fillStyle = peakColor;
         ctx.fillRect(posX, h - p - 1.5, barW, 1.5);
@@ -788,8 +858,8 @@
   /* ═══ 14. СТУДИЙНЫЙ ФЕЙДЕР И СКРОЛЛ ══════════════════════════════════ */
 
   var faderTimer = null;
-  var mobileScrollTimer = null;
   var isScrollTicking = false;
+  var wasScrolled = false;
 
   function onScroll() {
     if (!isScrollTicking) {
@@ -806,26 +876,23 @@
     var p = max > 0 ? Math.min(1, Math.max(0, currentY / max)) : 0;
 
     if (scrollLine) {
-      scrollLine.style.width = (p * 100).toFixed(2) + '%';
+      scrollLine.style.transform = 'scaleX(' + p.toFixed(4) + ')';
       scrollLine.style.opacity = p > 0.004 ? '1' : '0';
     }
 
-    document.body.classList.toggle('nr-scrolled', currentY > 40);
+    var isScrolled = currentY > 40;
+    if (isScrolled !== wasScrolled) {
+      wasScrolled = isScrolled;
+      document.body.classList.toggle('nr-scrolled', isScrolled);
+    }
 
-    /* Десктопный SSL фейдер */
-    document.body.classList.add('nr-faderactive');
-    clearTimeout(faderTimer);
-    faderTimer = setTimeout(function () {
-      document.body.classList.remove('nr-faderactive');
-    }, 420);
-
-    /* Анимация скролла для телефонов и планшетов (< 1024px) */
-    if (window.innerWidth < 1024) {
-      document.body.classList.add('nr-mobile-scrolling');
-      clearTimeout(mobileScrollTimer);
-      mobileScrollTimer = setTimeout(function () {
-        document.body.classList.remove('nr-mobile-scrolling');
-      }, 550);
+    /* Десктопный SSL фейдер — активен только на экранах от 1024px */
+    if (window.innerWidth >= 1024) {
+      document.body.classList.add('nr-faderactive');
+      clearTimeout(faderTimer);
+      faderTimer = setTimeout(function () {
+        document.body.classList.remove('nr-faderactive');
+      }, 420);
     }
   }
 
