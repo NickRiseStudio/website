@@ -891,17 +891,6 @@ body.nr-src-before .deck-btn-before { box-shadow: 0 0 18px rgba(16, 185, 129, 0.
 
 #servicesContainer li.nr-in svg polyline { animation: nrDraw 0.5s ease forwards; }
 
-#servicesContainer li {
-  opacity: 0;
-  transform: translateX(-8px);
-}
-
-#servicesContainer li.nr-in {
-  animation: nrLiIn 0.55s var(--nr-ease) forwards;
-}
-
-@keyframes nrLiIn { to { opacity: 1; transform: none; } }
-
 /* Цена — блик по градиенту */
 #servicesContainer .bg-clip-text { background-size: 220% 100%; }
 
@@ -1061,14 +1050,7 @@ body.nr-src-before .deck-btn-before { box-shadow: 0 0 18px rgba(16, 185, 129, 0.
   to   { transform: scaleX(0); }
 }
 
-/* ═══ 13. МОДАЛЬНЫЕ ОКНА — «рэк въезжает в стойку» ════════════════════ */
-
-.modal-overlay.active .modal-content { animation: nrModalIn 0.6s var(--nr-ease); }
-
-@keyframes nrModalIn {
-  0%   { transform: scale(0.9) translateY(30px) rotateX(6deg); filter: blur(8px); }
-  100% { transform: scale(1) translateY(0) rotateX(0); filter: blur(0); }
-}
+/* ═══ 13. МОДАЛЬНЫЕ ОКНА — плавное кинематографичное открытие/закрытие ═════ */
 
 .modal-content { position: relative; }
 
@@ -1082,7 +1064,7 @@ body.nr-src-before .deck-btn-before { box-shadow: 0 0 18px rgba(16, 185, 129, 0.
   background-size: 260% 100%;
   background-position: 175% 0;
   opacity: 1;
-  animation: nrModalSheen 1.5s var(--nr-ease) 0.15s forwards;
+  animation: nrModalSheen 2.2s var(--nr-ease) 0.25s forwards;
 }
 
 @keyframes nrModalSheen {
@@ -1091,7 +1073,7 @@ body.nr-src-before .deck-btn-before { box-shadow: 0 0 18px rgba(16, 185, 129, 0.
   100% { background-position: -70% 0; opacity: 0.75; }
 }
 
-.modal-overlay.active .rack-bolt { animation: nrBoltSpin 0.9s var(--nr-snap); }
+.modal-overlay.active .rack-bolt { animation: nrBoltSpin 1.2s var(--nr-snap); }
 
 @keyframes nrBoltSpin {
   from { transform: rotate(-180deg); }

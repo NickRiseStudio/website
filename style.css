@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;700&display=swap');
 
 html {
-  scroll-behavior: smooth;
+  scroll-behavior: auto !important;
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: #0B0D12;
   color: #F3F4F6;
@@ -110,13 +110,12 @@ html, body {
 
 @media (min-width: 640px) {
   .rack-card {
-    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.5s ease, box-shadow 0.5s ease, background-color 0.5s ease;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
   }
 }
 
 .rack-card:hover {
   border-color: rgba(245, 158, 11, 0.35);
-  transform: translateY(-5px);
   box-shadow: 0 28px 55px rgba(0, 0, 0, 0.8), 0 0 28px rgba(245, 158, 11, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
@@ -135,18 +134,17 @@ html, body {
   box-shadow: 0 0 20px rgba(245, 158, 11, 0.22), 0 10px 24px rgba(0, 0, 0, 0.65), inset 0 0 16px rgba(245, 158, 11, 0.08);
   border-radius: 18px;
   position: relative;
-  transition: box-shadow 0.3s ease;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 @media (min-width: 640px) {
   .popular-rack-card {
-    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.5s ease;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
   }
 }
 
 .popular-rack-card:hover {
   box-shadow: 0 0 35px rgba(245, 158, 11, 0.45), 0 18px 36px rgba(0, 0, 0, 0.8), inset 0 0 28px rgba(245, 158, 11, 0.16);
-  transform: translateY(-6px);
 }
 
 .popular-badge {
@@ -298,41 +296,52 @@ html, body {
 html.modal-open,
 body.modal-open {
   overflow: hidden !important;
-  height: 100% !important;
-  overscroll-behavior: none !important;
-  touch-action: none !important;
+  overscroll-behavior: contain !important;
 }
 
 .modal-overlay {
-  background: rgba(8, 10, 15, 0.88);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(8, 10, 15, 0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
-  transition: opacity 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.28s cubic-bezier(0.25, 1, 0.5, 1),
+              visibility 0.28s step-end,
+              backdrop-filter 0.28s cubic-bezier(0.25, 1, 0.5, 1),
+              -webkit-backdrop-filter 0.28s cubic-bezier(0.25, 1, 0.5, 1);
   z-index: 100;
   overscroll-behavior: contain;
   touch-action: none;
   transform: translate3d(0, 0, 0);
   -webkit-transform: translate3d(0, 0, 0);
-  will-change: opacity;
+  will-change: opacity, backdrop-filter;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
 
 .modal-overlay.active {
   opacity: 1;
+  visibility: visible;
   pointer-events: auto;
+  transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+              visibility 0s linear,
+              backdrop-filter 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+              -webkit-backdrop-filter 0.45s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .modal-content {
-  transform: translate3d(0, 14px, 0) scale(0.96);
-  -webkit-transform: translate3d(0, 14px, 0) scale(0.96);
-  transition: transform 0.38s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.38s ease;
+  transform: translate3d(0, 22px, 0) scale(0.96);
+  -webkit-transform: translate3d(0, 22px, 0) scale(0.96);
+  opacity: 0;
+  filter: blur(4px);
+  transition: transform 0.28s cubic-bezier(0.25, 1, 0.5, 1),
+              opacity 0.24s cubic-bezier(0.25, 1, 0.5, 1),
+              filter 0.24s cubic-bezier(0.25, 1, 0.5, 1);
   overscroll-behavior: contain;
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
-  will-change: transform, opacity;
+  will-change: transform, opacity, filter;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   scrollbar-width: thin;
@@ -342,15 +351,27 @@ body.modal-open {
 /* Mobile optimizations: disable costly full-screen backdrop-filter blur and optimize animations */
 @media (max-width: 768px), (hover: none) {
   .modal-overlay {
-    background: rgba(8, 10, 15, 0.95);
+    background: rgba(8, 10, 15, 0.94);
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    transition: opacity 0.26s ease-out;
+    transition: opacity 0.26s cubic-bezier(0.25, 1, 0.5, 1),
+                visibility 0.26s step-end;
+  }
+  .modal-overlay.active {
+    transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+                visibility 0s linear;
   }
   .modal-content {
-    transform: translate3d(0, 10px, 0) scale(0.98);
-    -webkit-transform: translate3d(0, 10px, 0) scale(0.98);
-    transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.26s ease-out;
+    transform: translate3d(0, 16px, 0) scale(0.97);
+    -webkit-transform: translate3d(0, 16px, 0) scale(0.97);
+    filter: none;
+    transition: transform 0.26s cubic-bezier(0.25, 1, 0.5, 1),
+                opacity 0.24s cubic-bezier(0.25, 1, 0.5, 1);
+  }
+  .modal-overlay.active .modal-content {
+    filter: none;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+                opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   }
 }
 
@@ -376,6 +397,8 @@ body.modal-open {
 .modal-overlay.active .modal-content {
   transform: translate3d(0, 0, 0) scale(1);
   -webkit-transform: translate3d(0, 0, 0) scale(1);
+  opacity: 1;
+  filter: blur(0px);
 }
 
 /* Toast Notifications */
@@ -410,7 +433,7 @@ body.modal-open {
 }
 
 body {
-  transition: padding-bottom 0.48s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: padding-bottom 0.95s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 body.has-sticky-player,
@@ -437,11 +460,14 @@ body:has(#stickyPlayerBar.active) {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid rgba(245, 158, 11, 0.35);
-  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.9);
-  transform: translate3d(0, 100%, 0);
-  -webkit-transform: translate3d(0, 100%, 0);
-  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.5s ease;
-  will-change: transform;
+  box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  transform: translate3d(0, calc(100% + 24px), 0);
+  -webkit-transform: translate3d(0, calc(100% + 24px), 0);
+  opacity: 0.8;
+  transition: transform 0.95s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.95s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.95s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, box-shadow, opacity;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
@@ -451,6 +477,8 @@ body:has(#stickyPlayerBar.active) {
 #stickyPlayerBar.active {
   transform: translate3d(0, 0, 0) !important;
   -webkit-transform: translate3d(0, 0, 0) !important;
+  opacity: 1;
+  box-shadow: 0 -10px 45px rgba(0, 0, 0, 0.95), 0 -2px 16px rgba(245, 158, 11, 0.14);
 }
 
 /* Audio Seek Bar with Enhanced Touch Target for Mobile & Tablet */

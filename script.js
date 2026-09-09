@@ -15,6 +15,13 @@ document.addEventListener('DOMContentLoaded', () => {
   initModalAndToast();
   initGsapAnimations();
   initMixerFaderScroll();
+  initSmoothAnchorNavigation();
+});
+
+window.addEventListener('load', () => {
+  if (typeof ScrollTrigger !== 'undefined') {
+    ScrollTrigger.refresh();
+  }
 });
 
 // --- AUTOMATIC REGION & LANGUAGE DETECTION ---
@@ -943,8 +950,8 @@ function renderServices() {
 
     const card = document.createElement('div');
     card.className = s.isPopular
-      ? 'service-mobile-card popular-rack-card p-6 md:p-8 flex flex-col justify-between sm:transition-all sm:duration-300 transform w-[78vw] max-w-[310px] sm:w-auto sm:max-w-none flex-shrink-0 snap-center cursor-pointer select-none'
-      : 'service-mobile-card rack-card p-6 md:p-8 flex flex-col justify-between sm:transition-all sm:duration-300 transform w-[78vw] max-w-[310px] sm:w-auto sm:max-w-none flex-shrink-0 snap-center cursor-pointer select-none';
+      ? 'service-mobile-card popular-rack-card p-6 md:p-8 flex flex-col justify-between transition-colors duration-200 w-[78vw] max-w-[310px] sm:w-auto sm:max-w-none flex-shrink-0 snap-center cursor-pointer select-none'
+      : 'service-mobile-card rack-card p-6 md:p-8 flex flex-col justify-between transition-colors duration-200 w-[78vw] max-w-[310px] sm:w-auto sm:max-w-none flex-shrink-0 snap-center cursor-pointer select-none';
 
     // Set initial custom attribute
     card.setAttribute('data-card-index', idx);
@@ -1050,16 +1057,9 @@ function renderServices() {
   setTimeout(initMobileServicesPosition, 200);
   setTimeout(initMobileServicesPosition, 500);
 
-  // Ensure card 1 is centered when user scrolls to services section
-  if ('IntersectionObserver' in window) {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting && !userInteractedServices && window.innerWidth < 640) {
-          scrollToServiceCard(1, 'instant');
-        }
-      });
-    }, { threshold: 0.1 });
-    observer.observe(container);
+  // Refresh ScrollTrigger after cards are rendered
+  if (typeof ScrollTrigger !== 'undefined') {
+    ScrollTrigger.refresh();
   }
 }
 
@@ -1114,13 +1114,6 @@ function updateServicesDots(withTransition = false) {
   if (!cards.length) return;
 
   if (window.innerWidth >= 640) {
-    Array.from(cards).forEach(card => {
-      card.style.transform = '';
-      card.style.opacity = '';
-      card.style.zIndex = '';
-      card.style.transition = '';
-      card.style.boxShadow = '';
-    });
     return;
   }
 
@@ -1222,6 +1215,15 @@ function renderFaq() {
     `;
     container.appendChild(el);
   });
+
+  setTimeout(() => {
+    if (typeof initFaqGsapAnimation === 'function') {
+      initFaqGsapAnimation();
+    }
+    if (typeof ScrollTrigger !== 'undefined') {
+      ScrollTrigger.refresh();
+    }
+  }, 50);
 }
 
 function toggleFaq(id) {
@@ -1283,12 +1285,14 @@ function openFaqItem(id) {
         ease: 'power3.out',
         onComplete: () => {
           body.style.height = 'auto';
+          if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
         }
       }
     );
   } else {
     body.style.height = 'auto';
     body.style.opacity = '1';
+    if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
   }
 }
 
@@ -1324,32 +1328,34 @@ function closeFaqItem(id) {
       ease: 'power3.inOut',
       onComplete: () => {
         body.style.display = 'none';
+        if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
       }
     });
   } else {
     body.style.height = '0px';
     body.style.opacity = '0';
     body.style.display = 'none';
+    if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
   }
 }
 
 // --- MODAL SCROLL LOCK SYSTEM ---
-let savedBodyScrollY = 0;
 let isPageScrollLocked = false;
 
 function lockPageScroll() {
   if (isPageScrollLocked) return;
-  savedBodyScrollY = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
   isPageScrollLocked = true;
+
+  // Prevent scrollbar layout shift on desktop without altering document scroll position
+  const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+  if (scrollbarWidth > 0) {
+    document.body.style.paddingRight = `${scrollbarWidth}px`;
+    const header = document.querySelector('header');
+    if (header) header.style.paddingRight = `${scrollbarWidth}px`;
+  }
 
   document.documentElement.classList.add('modal-open');
   document.body.classList.add('modal-open');
-  document.body.style.position = 'fixed';
-  document.body.style.top = `-${savedBodyScrollY}px`;
-  document.body.style.left = '0';
-  document.body.style.right = '0';
-  document.body.style.width = '100%';
-  document.body.style.overflow = 'hidden';
 }
 
 function unlockPageScroll() {
@@ -1360,18 +1366,11 @@ function unlockPageScroll() {
   if (!isPageScrollLocked) return;
   isPageScrollLocked = false;
 
-  const topValue = document.body.style.top;
   document.documentElement.classList.remove('modal-open');
   document.body.classList.remove('modal-open');
-  document.body.style.position = '';
-  document.body.style.top = '';
-  document.body.style.left = '';
-  document.body.style.right = '';
-  document.body.style.width = '';
-  document.body.style.overflow = '';
-
-  const restoreY = topValue ? parseInt(topValue, 10) * -1 : savedBodyScrollY;
-  window.scrollTo(0, restoreY);
+  document.body.style.paddingRight = '';
+  const header = document.querySelector('header');
+  if (header) header.style.paddingRight = '';
 }
 
 // --- MODAL & TOAST HANDLERS ---
@@ -1427,7 +1426,7 @@ function openContactModal() {
 
 function closeContactModal() {
   const modal = document.getElementById('contactModal');
-  if (modal) {
+  if (modal && modal.classList.contains('active')) {
     modal.classList.remove('active');
     unlockPageScroll();
   }
@@ -1444,7 +1443,7 @@ function openAboutModal() {
 
 function closeAboutModal() {
   const modal = document.getElementById('aboutModal');
-  if (modal) {
+  if (modal && modal.classList.contains('active')) {
     modal.classList.remove('active');
     unlockPageScroll();
   }
@@ -1526,11 +1525,171 @@ function closeMobileMenu() {
   }, 300);
 }
 
+// --- SMOOTH & LUXURIOUS ANCHOR NAVIGATION (Header buttons & in-page anchors) ---
+let activeScrollTween = null;
+
+function smoothScrollTo(targetY, customDuration) {
+  const startY = window.pageYOffset || document.documentElement.scrollTop || 0;
+  const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+  const clampedTargetY = Math.min(Math.max(0, targetY), maxScroll);
+  const distance = Math.abs(clampedTargetY - startY);
+
+  if (distance < 3) return;
+
+  if (activeScrollTween) {
+    activeScrollTween.kill();
+    activeScrollTween = null;
+  }
+
+  // Ensure html scroll-behavior is auto so browser doesn't fight GSAP/JS on every frame
+  document.documentElement.style.scrollBehavior = 'auto';
+
+  // Smooth, gradual duration based on distance (1.1s for short, up to 1.55s for long distances)
+  const animDuration = customDuration || Math.min(1.55, Math.max(1.1, 0.95 + (distance / 3800) * 0.6));
+
+  // Allow a short 220ms grace window after click so trackpad/mouse lift momentum never aborts scroll
+  let allowInterrupt = false;
+  const graceTimer = setTimeout(() => {
+    allowInterrupt = true;
+  }, 220);
+
+  function onUserInterrupt(e) {
+    if (!allowInterrupt) return;
+    // Ignore micro-jitters from high-precision trackpads or mouse clicks
+    if (e.type === 'wheel' && Math.abs(e.deltaY) < 6 && Math.abs(e.deltaX) < 6) return;
+
+    if (activeScrollTween) {
+      activeScrollTween.kill();
+      activeScrollTween = null;
+    }
+    cleanup();
+  }
+
+  function cleanup() {
+    clearTimeout(graceTimer);
+    window.removeEventListener('wheel', onUserInterrupt);
+    window.removeEventListener('touchmove', onUserInterrupt);
+    window.removeEventListener('keydown', onUserInterrupt);
+  }
+
+  window.addEventListener('wheel', onUserInterrupt, { passive: true });
+  window.addEventListener('touchmove', onUserInterrupt, { passive: true });
+  window.addEventListener('keydown', onUserInterrupt, { passive: true });
+
+  if (typeof gsap !== 'undefined' && typeof ScrollToPlugin !== 'undefined') {
+    activeScrollTween = gsap.to(window, {
+      duration: animDuration,
+      scrollTo: {
+        y: clampedTargetY,
+        autoKill: false
+      },
+      ease: "power2.inOut",
+      overwrite: "auto",
+      onComplete: () => {
+        cleanup();
+        activeScrollTween = null;
+      },
+      onInterrupt: () => {
+        cleanup();
+        activeScrollTween = null;
+      }
+    });
+  } else if (typeof gsap !== 'undefined') {
+    const scrollProxy = { y: startY };
+    activeScrollTween = gsap.to(scrollProxy, {
+      y: clampedTargetY,
+      duration: animDuration,
+      ease: "power2.inOut",
+      overwrite: "auto",
+      onUpdate: () => {
+        window.scrollTo(0, scrollProxy.y);
+      },
+      onComplete: () => {
+        cleanup();
+        activeScrollTween = null;
+      },
+      onInterrupt: () => {
+        cleanup();
+        activeScrollTween = null;
+      }
+    });
+  } else {
+    const startTime = performance.now();
+    function easeInOutCubic(t) {
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+    function step(now) {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / (animDuration * 1000), 1);
+      const ease = easeInOutCubic(progress);
+      window.scrollTo(0, startY + (clampedTargetY - startY) * ease);
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      } else {
+        cleanup();
+      }
+    }
+    requestAnimationFrame(step);
+  }
+}
+
+function initSmoothAnchorNavigation() {
+  if (typeof gsap !== 'undefined' && typeof ScrollToPlugin !== 'undefined') {
+    gsap.registerPlugin(ScrollToPlugin);
+  }
+
+  document.addEventListener('click', (e) => {
+    if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+
+    const anchor = e.target.closest('a[href^="#"]');
+    if (!anchor) return;
+
+    const href = anchor.getAttribute('href');
+    if (!href) return;
+
+    if (href === '#' || href === '#top') {
+      e.preventDefault();
+      smoothScrollTo(0);
+      return;
+    }
+
+    try {
+      const targetEl = document.querySelector(href);
+      if (targetEl) {
+        e.preventDefault();
+        const header = document.querySelector('header');
+        const headerH = header ? header.offsetHeight : 72;
+        const extraOffset = 14;
+        const rect = targetEl.getBoundingClientRect();
+        const currentY = window.pageYOffset || document.documentElement.scrollTop || 0;
+        const targetY = currentY + rect.top - headerH - extraOffset;
+
+        if (typeof closeMobileMenu === 'function') {
+          closeMobileMenu();
+        }
+
+        smoothScrollTo(targetY);
+
+        if (history.pushState) {
+          history.pushState(null, '', href);
+        }
+      }
+    } catch (err) {
+      // Ignore invalid selectors
+    }
+  });
+}
+
 function goToFaqItem(faqIndex) {
   closeAboutModal();
   const faqSection = document.getElementById('faq');
   if (faqSection) {
-    faqSection.scrollIntoView({ behavior: 'smooth' });
+    const header = document.querySelector('header');
+    const headerH = header ? header.offsetHeight : 72;
+    const rect = faqSection.getBoundingClientRect();
+    const currentY = window.pageYOffset || document.documentElement.scrollTop || 0;
+    const targetY = Math.max(0, currentY + rect.top - headerH - 18);
+    smoothScrollTo(targetY, 1.2);
   }
   const itemKey = `faq-${faqIndex}`;
   setTimeout(() => {
@@ -1588,6 +1747,229 @@ function copyText(text, toastMsg) {
 }
 
 // --- GSAP ANIMATIONS ---
+// --- GSAP ANIMATIONS ---
+function animateScrollBlock(selectorOrEls, options = {}) {
+  const els = typeof selectorOrEls === 'string' ? document.querySelectorAll(selectorOrEls) : selectorOrEls;
+  if (!els || els.length === 0) return;
+
+  const yVal = options.y !== undefined ? options.y : 22;
+  const openDuration = options.duration || 0.52;
+  const closeDuration = options.closeDuration || 0.36;
+  const openStart = options.start || 'top 82%';
+  const closeStart = options.closeStart || 'top 60%';
+  const ease = options.ease || 'power2.out';
+  const closeEase = options.closeEase || 'power2.in';
+  const stagger = options.stagger || 0;
+  const delay = options.delay || 0;
+  const trigger = options.trigger || null;
+
+  els.forEach((el, idx) => {
+    // Kill any existing triggers for this element
+    ScrollTrigger.getAll().forEach(st => {
+      if (st.vars && st.vars.trigger === el) {
+        st.kill();
+      }
+    });
+
+    // Set initial hidden position
+    gsap.set(el, { y: yVal, opacity: 0 });
+
+    const trigEl = trigger ? (typeof trigger === 'string' ? document.querySelector(trigger) : trigger) : el;
+    if (!trigEl) return;
+
+    const itemDelay = delay + (stagger > 0 ? idx * stagger : 0);
+
+    // 1. OPEN TRIGGER: plays when scrolling DOWN and element enters the viewport
+    ScrollTrigger.create({
+      trigger: trigEl,
+      start: openStart,
+      onEnter: () => {
+        gsap.to(el, {
+          y: 0,
+          opacity: 1,
+          duration: openDuration,
+          delay: itemDelay,
+          ease: ease,
+          overwrite: 'auto'
+        });
+      },
+      onEnterBack: () => {
+        gsap.to(el, {
+          y: 0,
+          opacity: 1,
+          duration: openDuration,
+          ease: ease,
+          overwrite: 'auto'
+        });
+      }
+    });
+
+    // 2. CLOSE TRIGGER: visibly closes when scrolling UP while element is in clear view
+    ScrollTrigger.create({
+      trigger: trigEl,
+      start: closeStart,
+      onLeaveBack: () => {
+        gsap.to(el, {
+          y: yVal,
+          opacity: 0,
+          duration: closeDuration,
+          ease: closeEase,
+          overwrite: 'auto'
+        });
+      },
+      onEnter: () => {
+        gsap.to(el, {
+          y: 0,
+          opacity: 1,
+          duration: openDuration,
+          ease: ease,
+          overwrite: 'auto'
+        });
+      }
+    });
+  });
+}
+
+function initFaqGsapAnimation() {
+  if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') return;
+
+  // Kill previous triggers attached to FAQ items
+  ScrollTrigger.getAll().forEach(st => {
+    if (st.vars && st.vars.trigger) {
+      const tr = st.vars.trigger;
+      if (typeof tr === 'object' && tr.closest && tr.closest('#faqContainer')) {
+        st.kill();
+      }
+    }
+  });
+
+  const faqItems = document.querySelectorAll('#faqContainer > *');
+  if (!faqItems.length) return;
+
+  faqItems.forEach((item) => {
+    // Initial hidden state
+    gsap.set(item, { y: 20, opacity: 0 });
+
+    // Open when scrolling down
+    ScrollTrigger.create({
+      trigger: item,
+      start: 'top 82%',
+      onEnter: () => {
+        gsap.to(item, {
+          y: 0,
+          opacity: 1,
+          duration: 0.48,
+          ease: 'power2.out',
+          overwrite: 'auto'
+        });
+      },
+      onEnterBack: () => {
+        gsap.to(item, {
+          y: 0,
+          opacity: 1,
+          duration: 0.48,
+          ease: 'power2.out',
+          overwrite: 'auto'
+        });
+      }
+    });
+
+    // Close when scrolling up: triggered at top 65% so closing happens in full view
+    ScrollTrigger.create({
+      trigger: item,
+      start: 'top 65%',
+      onLeaveBack: () => {
+        gsap.to(item, {
+          y: 20,
+          opacity: 0,
+          duration: 0.35,
+          ease: 'power2.in',
+          overwrite: 'auto'
+        });
+      },
+      onEnter: () => {
+        gsap.to(item, {
+          y: 0,
+          opacity: 1,
+          duration: 0.48,
+          ease: 'power2.out',
+          overwrite: 'auto'
+        });
+      }
+    });
+  });
+}
+
+function initContactsGsapAnimation() {
+  if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') return;
+
+  const contactButtons = document.querySelectorAll('#contactsGrid > *');
+  if (!contactButtons.length) return;
+
+  ScrollTrigger.getAll().forEach(st => {
+    if (st.vars && st.vars.trigger) {
+      const tr = st.vars.trigger;
+      if (typeof tr === 'object' && tr.closest && tr.closest('#contactsGrid')) {
+        st.kill();
+      } else if (tr === '#contactsGrid') {
+        st.kill();
+      }
+    }
+  });
+
+  // Each contact button floats in sequentially with a crisp stagger and closes in clear view
+  contactButtons.forEach((btn, idx) => {
+    gsap.set(btn, { y: 18, opacity: 0 });
+
+    ScrollTrigger.create({
+      trigger: btn,
+      start: 'top 82%',
+      onEnter: () => {
+        gsap.to(btn, {
+          y: 0,
+          opacity: 1,
+          duration: 0.45,
+          delay: idx * 0.06,
+          ease: 'power2.out',
+          overwrite: 'auto'
+        });
+      },
+      onEnterBack: () => {
+        gsap.to(btn, {
+          y: 0,
+          opacity: 1,
+          duration: 0.45,
+          ease: 'power2.out',
+          overwrite: 'auto'
+        });
+      }
+    });
+
+    ScrollTrigger.create({
+      trigger: btn,
+      start: 'top 65%',
+      onLeaveBack: () => {
+        gsap.to(btn, {
+          y: 18,
+          opacity: 0,
+          duration: 0.32,
+          ease: 'power2.in',
+          overwrite: 'auto'
+        });
+      },
+      onEnter: () => {
+        gsap.to(btn, {
+          y: 0,
+          opacity: 1,
+          duration: 0.45,
+          ease: 'power2.out',
+          overwrite: 'auto'
+        });
+      }
+    });
+  });
+}
+
 function initGsapAnimations() {
   if (typeof gsap === 'undefined') return;
 
@@ -1595,101 +1977,49 @@ function initGsapAnimations() {
     gsap.registerPlugin(ScrollTrigger);
   }
 
-  gsap.from('#hero .space-y-6 > *', {
-    y: 30,
-    opacity: 0,
-    duration: 1.1,
-    stagger: 0.12,
-    ease: 'power3.out'
-  });
-
-  gsap.from('#hero .hero-mask-container', {
-    y: 25,
-    opacity: 0,
-    duration: 1.1,
-    ease: 'power3.out',
-    delay: 0.15,
-    clearProps: 'transform'
-  });
-
-  const animateScrollBlock = (selectorOrEls, options = {}) => {
-    const els = typeof selectorOrEls === 'string' ? document.querySelectorAll(selectorOrEls) : selectorOrEls;
-    if (!els || els.length === 0) return;
-
-    const yVal = options.y !== undefined ? options.y : 30;
-    const duration = options.duration || 0.9;
-    const stagger = options.stagger || 0;
-    const delay = options.delay || 0;
-    const trigger = options.trigger || null;
-
-    if (stagger > 0) {
-      gsap.fromTo(
-        els,
-        { y: yVal, opacity: 0, scale: 0.97 },
-        {
-          y: 0,
-          opacity: 1,
-          scale: 1,
-          duration: duration,
-          stagger: stagger,
-          delay: delay,
-          ease: 'power3.out',
-          clearProps: 'transform,opacity,scale',
-          scrollTrigger: {
-            trigger: trigger || els[0],
-            start: 'top 90%',
-            toggleActions: 'play none none none',
-            once: true
-          }
-        }
-      );
-    } else {
-      els.forEach(el => {
-        gsap.fromTo(
-          el,
-          { y: yVal, opacity: 0, scale: 0.97 },
-          {
-            y: 0,
-            opacity: 1,
-            scale: 1,
-            duration: duration,
-            delay: delay,
-            ease: 'power3.out',
-            clearProps: 'transform,opacity,scale',
-            scrollTrigger: {
-              trigger: el,
-              start: 'top 90%',
-              toggleActions: 'play none none none',
-              once: true
-            }
-          }
-        );
-      });
+  // Hero Section: smooth entrance on load, stable at top
+  gsap.fromTo(
+    '#hero .space-y-6 > *',
+    { y: 24, opacity: 0 },
+    {
+      y: 0,
+      opacity: 1,
+      duration: 0.9,
+      stagger: 0.1,
+      ease: 'power2.out'
     }
-  };
+  );
 
-  animateScrollBlock('#player .text-center', { duration: 0.95 });
-  animateScrollBlock('#player .genre-filter-btn', { y: 20, stagger: 0.06, duration: 0.85, trigger: '#player .flex.flex-wrap' });
-  animateScrollBlock('#trackListContainer', { y: 28, duration: 0.95 });
-
-  animateScrollBlock('#services .text-center', { duration: 0.95 });
-  if (window.innerWidth >= 640) {
-    const serviceCards = document.querySelectorAll('#servicesContainer > *');
-    if (serviceCards.length > 0) {
-      animateScrollBlock(serviceCards, { y: 32, stagger: 0.1, duration: 0.95, trigger: '#servicesContainer' });
+  gsap.fromTo(
+    '#hero .hero-mask-container',
+    { y: 20, opacity: 0 },
+    {
+      y: 0,
+      opacity: 1,
+      duration: 0.9,
+      ease: 'power2.out'
     }
-  } else {
-    animateScrollBlock('#servicesContainer', { y: 24, duration: 0.85 });
-  }
+  );
 
-  animateScrollBlock('#faq .text-center', { duration: 0.95 });
-  const faqItems = document.querySelectorAll('#faqContainer > *');
-  if (faqItems.length > 0) {
-    animateScrollBlock(faqItems, { y: 24, stagger: 0.08, duration: 0.85, trigger: '#faqContainer' });
-  }
+  // Player Section: headings at 88% / close at 68%, content triggers at 80% / closes at 50%
+  animateScrollBlock('#player .text-center', { duration: 0.6, y: 20, start: 'top 88%', closeStart: 'top 68%' });
+  animateScrollBlock('#playerContentContainer', { duration: 0.5, y: 22, start: 'top 80%', closeStart: 'top 50%' });
 
-  animateScrollBlock('#contacts .text-center', { duration: 0.95 });
-  animateScrollBlock('#contacts .rack-card', { y: 32, duration: 0.95 });
+  // Services Section: headings at 88% / close at 68%, rack cards trigger at 80% / close at 50%
+  animateScrollBlock('#services .text-center', { duration: 0.6, y: 20, start: 'top 88%', closeStart: 'top 68%' });
+  animateScrollBlock('#servicesContainer', { duration: 0.52, y: 22, start: 'top 80%', closeStart: 'top 50%' });
+
+  // FAQ Section: heading at 88% / close at 68%, individual questions at 82% / close at 65%
+  animateScrollBlock('#faq .text-center', { duration: 0.6, y: 20, start: 'top 88%', closeStart: 'top 68%' });
+  initFaqGsapAnimation();
+
+  // Contacts Section: heading at 88% / close at 68%, rack container and button cascade at 82% / close at 52%
+  animateScrollBlock('#contacts .text-center', { duration: 0.6, y: 20, start: 'top 88%', closeStart: 'top 68%' });
+  animateScrollBlock('#contacts .rack-card', { duration: 0.5, y: 18, start: 'top 82%', closeStart: 'top 50%' });
+  initContactsGsapAnimation();
+
+  // Footer Section
+  animateScrollBlock('footer', { y: 16, duration: 0.55, start: 'top 90%', closeStart: 'top 70%' });
 }
 
 function initMixerFaderScroll() {

@@ -470,10 +470,11 @@
     if (!revealObserver) {
       revealObserver = new IntersectionObserver(function (ents) {
         ents.forEach(function (en) {
-          if (!en.isIntersecting) return;
-          en.target.classList.add('nr-in');
-          revealObserver.unobserve(en.target);
-          if (en.target.dataset && en.target.dataset.nrCount) countUp(en.target);
+          if (en.isIntersecting) {
+            en.target.classList.add('nr-in');
+          } else {
+            en.target.classList.remove('nr-in');
+          }
         });
       }, { rootMargin: '0px 0px -8% 0px', threshold: 0.15 });
     }
@@ -530,33 +531,6 @@
     Array.prototype.slice.call(cont.children).forEach(function (card) {
       if (!$('.nr-ledstrip', card) && !REDUCED && !isMobile) {
         card.appendChild(el('span', 'nr-ledstrip', new Array(9).join('<i></i>')));
-      }
-
-      $$('li', card).forEach(function (li, i) {
-        li.style.animationDelay = (0.1 + i * 0.09).toFixed(2) + 's';
-        observeReveal(li);
-      });
-
-      var price = $('.bg-clip-text', card);
-      if (price && !isMobile) {
-        price.dataset.nrCount = '1';
-        price.dataset.nrDone = '';
-        observeReveal(price);
-      }
-
-      if (!card.dataset.nrTilt) {
-        card.dataset.nrTilt = '1';
-        card.addEventListener('pointermove', function (e) {
-          if (REDUCED || window.innerWidth < 640) return;
-          var r = card.getBoundingClientRect();
-          var px = (e.clientX - r.left) / r.width - 0.5;
-          var py = (e.clientY - r.top) / r.height - 0.5;
-          card.style.transform = 'perspective(1100px) rotateY(' + (px * 6).toFixed(2) +
-            'deg) rotateX(' + (-py * 6).toFixed(2) + 'deg) translateY(-6px)';
-        });
-        card.addEventListener('pointerleave', function () {
-          if (window.innerWidth >= 640) card.style.transform = '';
-        });
       }
     });
   }
@@ -671,6 +645,7 @@
     var doc = document.documentElement;
     var max = doc.scrollHeight - window.innerHeight;
     var currentY = window.scrollY || doc.scrollTop || 0;
+
     var p = max > 0 ? Math.min(1, Math.max(0, currentY / max)) : 0;
 
     if (scrollLine) {
@@ -703,7 +678,7 @@
         en.target.classList.toggle('nr-off', !en.isIntersecting);
       });
     }, { rootMargin: '140px 0px' });
-    $$('#hero, #player, #services, #faq, #contacts, footer').forEach(function (n) { io.observe(n); });
+    $$('#hero, #player, #faq, #contacts, footer').forEach(function (n) { io.observe(n); });
   }
 
   /* ═══ 16. СИНХРОНИЗАЦИЯ СОСТОЯНИЙ ══════════════════════════════════ */
