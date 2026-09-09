@@ -155,18 +155,6 @@ html.nr-lite #nr-glass::after {
   100% { transform: scale(9); opacity: 0; }
 }
 
-/* Плавный оранжевый след (шлейф) при скролле пальцем на телефоне и планшете */
-#nr-touch-canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 10;
-  will-change: transform;
-}
-
 /* ═══ 03. HEADER — линия сигнала, логотип, навигация ══════════════════ */
 
 #mainHeader { will-change: background-color, border-color; }

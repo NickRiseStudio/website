@@ -326,9 +326,9 @@ const CONFIG = {
           mobile: 'С радостью готов поработать с тобой!'
         },
         stat1Num: {
-          desktop: '150+',
-          tablet: '150+',
-          mobile: '150+'
+          desktop: '200+',
+          tablet: '200+',
+          mobile: '200+'
         },
         stat1Text: {
           desktop: 'Завершенных треков',
@@ -690,9 +690,9 @@ const CONFIG = {
           mobile: 'I would be happy to work with you!'
         },
         stat1Num: {
-          desktop: '150+',
-          tablet: '150+',
-          mobile: '150+'
+          desktop: '200+',
+          tablet: '200+',
+          mobile: '200+'
         },
         stat1Text: {
           desktop: 'Tracks Mixed & Mastered',
@@ -1326,9 +1326,9 @@ const CONFIG = {
         mobile: 'от 3 500 ₽'
       },
       priceEn: {
-        desktop: 'from $150',
-        tablet: 'from $150',
-        mobile: 'from $150'
+        desktop: 'from $120',
+        tablet: 'from $120',
+        mobile: 'from $120'
       },
       featuresRu: [
         {
@@ -1404,9 +1404,9 @@ const CONFIG = {
         mobile: 'от 5 500 ₽'
       },
       priceEn: {
-        desktop: 'from $190',
-        tablet: 'from $190',
-        mobile: 'from $190'
+        desktop: 'from $150',
+        tablet: 'from $150',
+        mobile: 'from $150'
       },
       featuresRu: [
         {
@@ -1482,9 +1482,9 @@ const CONFIG = {
         mobile: 'от 2 000 ₽'
       },
       priceEn: {
-        desktop: 'from $50',
-        tablet: 'from $50',
-        mobile: 'from $50'
+        desktop: 'from $40',
+        tablet: 'from $40',
+        mobile: 'from $40'
       },
       featuresRu: [
         {

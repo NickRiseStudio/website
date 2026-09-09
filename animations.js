@@ -202,156 +202,12 @@
       spawnClickRipple(e.clientX, e.clientY);
     }, { passive: true });
 
-    /* Плавная непрерывная линия скролла за пальцем (сверхбыстрый монолитный шлейф) */
-    var touchCanvas = null;
-    var touchCtx = null;
-    var touchPoints = [];
-    var touchRafId = null;
-    var isTouchActive = false;
-    var isTouchScrollGesture = false;
+    /* Обработка тапа на мобильных устройствах (только клик, без скролла) */
     var touchStartX = 0;
     var touchStartY = 0;
     var touchStartTime = 0;
+    var isTouchMoved = false;
     var touchTarget = null;
-    // Оптимальный DPR 1.5 на мобильных: чётко, но в 2-4 раза меньше пикселей для GPU
-    var touchDpr = Math.min(window.devicePixelRatio || 1, 1.5);
-    var canvasW = 0;
-    var canvasH = 0;
-
-    function initTouchCanvas() {
-      if (touchCanvas) return;
-      touchCanvas = el('canvas');
-      touchCanvas.id = 'nr-touch-canvas';
-      fx.appendChild(touchCanvas);
-      touchCtx = touchCanvas.getContext('2d', { alpha: true });
-      resizeTouchCanvas();
-      window.addEventListener('resize', resizeTouchCanvas, { passive: true });
-    }
-
-    function resizeTouchCanvas() {
-      if (!touchCanvas || !touchCtx) return;
-      var w = window.innerWidth;
-      var h = window.innerHeight;
-      if (canvasW === w && Math.abs(canvasH - h) < 60) return;
-      canvasW = w;
-      canvasH = h;
-      touchCanvas.width = Math.round(w * touchDpr);
-      touchCanvas.height = Math.round(h * touchDpr);
-      touchCanvas.style.width = w + 'px';
-      touchCanvas.style.height = h + 'px';
-      touchCtx.setTransform(1, 0, 0, 1, 0, 0);
-      touchCtx.scale(touchDpr, touchDpr);
-    }
-
-    function startTouchRender() {
-      if (touchRafId) return;
-      touchRafId = requestAnimationFrame(renderTouchTrail);
-    }
-
-    function renderTouchTrail() {
-      touchRafId = null;
-      if (!touchCtx || !touchCanvas) return;
-
-      var now = performance.now();
-      var w = canvasW || window.innerWidth;
-      var h = canvasH || window.innerHeight;
-
-      // Время жизни шлейфа: ~380ms при движении, ~220ms при отпускании
-      var maxAge = isTouchActive ? 380 : 220;
-      while (touchPoints.length > 0 && (now - touchPoints[touchPoints.length - 1].time) > maxAge) {
-        touchPoints.pop();
-      }
-
-      touchCtx.clearRect(0, 0, w, h);
-
-      var n = touchPoints.length;
-      if (isTouchScrollGesture && n >= 3) {
-        var headRadius = 6.2; // Толщина ~12.4px у пальца
-        var tailRadius = 0.8; // Тонкий хвост ~1.6px
-
-        // Вычисляем нормали и боковые контуры для гладкой ленты
-        var leftEdge = [];
-        var rightEdge = [];
-
-        for (var i = 0; i < n; i++) {
-          var p = touchPoints[i];
-          var progress = i / (n - 1);
-          var taper = Math.max(0, 1 - progress);
-          var r = tailRadius + (headRadius - tailRadius) * Math.pow(taper, 1.25);
-
-          var dx = 0, dy = 0;
-          if (i === 0) {
-            dx = touchPoints[0].x - touchPoints[1].x;
-            dy = touchPoints[0].y - touchPoints[1].y;
-          } else if (i === n - 1) {
-            dx = touchPoints[n - 2].x - touchPoints[n - 1].x;
-            dy = touchPoints[n - 2].y - touchPoints[n - 1].y;
-          } else {
-            dx = touchPoints[i - 1].x - touchPoints[i + 1].x;
-            dy = touchPoints[i - 1].y - touchPoints[i + 1].y;
-          }
-          var len = Math.hypot(dx, dy) || 1;
-          var nx = -dy / len;
-          var ny = dx / len;
-
-          leftEdge.push({ x: p.x + nx * r, y: p.y + ny * r });
-          rightEdge.push({ x: p.x - nx * r, y: p.y - ny * r });
-        }
-
-        // Построение единого монолитного гладкого контура
-        touchCtx.beginPath();
-        var head = touchPoints[0];
-        var tail = touchPoints[n - 1];
-
-        // 1. Закругление у пальца
-        touchCtx.arc(head.x, head.y, headRadius, 0, Math.PI * 2);
-
-        // 2. Левая граница ленты (гладкие кривые Безье через середины точек)
-        touchCtx.moveTo(leftEdge[0].x, leftEdge[0].y);
-        for (var li = 0; li < leftEdge.length - 1; li++) {
-          var mxL = (leftEdge[li].x + leftEdge[li + 1].x) * 0.5;
-          var myL = (leftEdge[li].y + leftEdge[li + 1].y) * 0.5;
-          touchCtx.quadraticCurveTo(leftEdge[li].x, leftEdge[li].y, mxL, myL);
-        }
-        touchCtx.lineTo(leftEdge[leftEdge.length - 1].x, leftEdge[leftEdge.length - 1].y);
-
-        // 3. Закругление у кончика хвоста
-        touchCtx.arc(tail.x, tail.y, tailRadius, 0, Math.PI * 2);
-
-        // 4. Правая граница ленты обратно к пальцу
-        touchCtx.moveTo(rightEdge[rightEdge.length - 1].x, rightEdge[rightEdge.length - 1].y);
-        for (var ri = rightEdge.length - 1; ri > 0; ri--) {
-          var mxR = (rightEdge[ri].x + rightEdge[ri - 1].x) * 0.5;
-          var myR = (rightEdge[ri].y + rightEdge[ri - 1].y) * 0.5;
-          touchCtx.quadraticCurveTo(rightEdge[ri].x, rightEdge[ri].y, mxR, myR);
-        }
-        touchCtx.lineTo(rightEdge[0].x, rightEdge[0].y);
-
-        // Заливка единым мягким янтарным градиентом БЕЗ shadowBlur (максимальный FPS на смартфонах)
-        var grad = touchCtx.createLinearGradient(head.x, head.y, tail.x, tail.y);
-        var baseAlpha = isTouchActive ? 0.50 : 0.32;
-        grad.addColorStop(0, 'rgba(245, 158, 11, ' + baseAlpha.toFixed(3) + ')');
-        grad.addColorStop(0.45, 'rgba(245, 158, 11, ' + (baseAlpha * 0.55).toFixed(3) + ')');
-        grad.addColorStop(1, 'rgba(245, 158, 11, 0)');
-
-        touchCtx.fillStyle = grad;
-        touchCtx.fill();
-
-        // Ненавязчивая светящаяся точка в месте касания
-        if (isTouchActive) {
-          touchCtx.beginPath();
-          touchCtx.arc(head.x, head.y, 3.6, 0, Math.PI * 2);
-          touchCtx.fillStyle = 'rgba(254, 243, 199, 0.45)';
-          touchCtx.fill();
-        }
-      }
-
-      if (isTouchActive || touchPoints.length > 0) {
-        touchRafId = requestAnimationFrame(renderTouchTrail);
-      } else {
-        touchCtx.clearRect(0, 0, w, h);
-      }
-    }
 
     window.addEventListener('touchstart', function (e) {
       if (REDUCED || !e.touches || !e.touches[0]) return;
@@ -359,84 +215,26 @@
       touchStartX = t.clientX;
       touchStartY = t.clientY;
       touchStartTime = performance.now();
-      isTouchScrollGesture = false;
+      isTouchMoved = false;
       touchTarget = e.target;
-
-      initTouchCanvas();
-      isTouchActive = true;
-      touchPoints = [{ x: t.clientX, y: t.clientY, time: performance.now() }];
-      startTouchRender();
     }, { passive: true });
 
     window.addEventListener('touchmove', function (e) {
-      if (REDUCED || !isTouchActive || !e.touches || !e.touches[0]) return;
+      if (isTouchMoved || !e.touches || !e.touches[0]) return;
       var t = e.touches[0];
-      var now = performance.now();
-
-      // Если палец сдвинулся более чем на 7px — это скролл/свайп (НЕ клик)
-      var distFromStart = Math.hypot(t.clientX - touchStartX, t.clientY - touchStartY);
-      if (distFromStart > 7) {
-        isTouchScrollGesture = true;
+      var dist = Math.hypot(t.clientX - touchStartX, t.clientY - touchStartY);
+      if (dist > 8) {
+        isTouchMoved = true;
       }
-
-      var curX = t.clientX;
-      var curY = t.clientY;
-
-      if (touchPoints.length > 0) {
-        var last = touchPoints[0];
-        var dx = curX - last.x;
-        var dy = curY - last.y;
-        var dist = Math.hypot(dx, dy);
-
-        if (dist < 1.5) return;
-
-        // КЛЮЧЕВАЯ ОПТИМИЗАЦИЯ: Плотная интерполяция промежуточных точек (шаг ~7px).
-        // На реальных телефонах события скролла приходят рывками через 40–80px.
-        // Автоматическая разбивка исключает разрывы и превращение в «отрывистые полоски».
-        var stepDist = 7;
-        if (dist > stepDist) {
-          var steps = Math.min(10, Math.floor(dist / stepDist));
-          for (var s = 1; s <= steps; s++) {
-            var frac = s / (steps + 1);
-            touchPoints.unshift({
-              x: last.x + dx * frac,
-              y: last.y + dy * frac,
-              time: last.time + (now - last.time) * frac
-            });
-          }
-        }
-      }
-
-      touchPoints.unshift({ x: curX, y: curY, time: now });
-
-      if (touchPoints.length > 48) {
-        touchPoints.length = 48;
-      }
-
-      startTouchRender();
     }, { passive: true });
 
     window.addEventListener('touchend', function () {
-      isTouchActive = false;
       var tapDuration = performance.now() - touchStartTime;
-
-      // Если палец не скроллил (перемещение < 7px) — это классический клик/тап!
-      if (!isTouchScrollGesture && tapDuration < 600) {
+      // Если палец не сдвигался (быстрый тап/клик) — создаём акустические круги клика
+      if (!isTouchMoved && tapDuration < 500) {
         if (!touchTarget || !touchTarget.closest || !touchTarget.closest('input, textarea, .fader-rail, #nr-boot')) {
           spawnClickRipple(touchStartX, touchStartY);
         }
-      }
-
-      // При скролле волны клика НЕ появляются — только плавное угасание шлейфа скролла
-      startTouchRender();
-    }, { passive: true });
-
-    window.addEventListener('touchcancel', function () {
-      isTouchActive = false;
-      isTouchScrollGesture = false;
-      touchPoints = [];
-      if (touchCtx && touchCanvas) {
-        touchCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
       }
     }, { passive: true });
   }
