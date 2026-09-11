@@ -808,7 +808,7 @@ const CONFIG = {
       },
       audioBefore: './audio/pophouse_1_before.mp3',
       audioAfter: './audio/pophouse_1_after.mp3',
-      cover: './image/cover4.jpg'
+      cover: './image/cover4.webp'
     },
     {
       id: 'track-3',
@@ -838,7 +838,7 @@ const CONFIG = {
       },
       audioBefore: './audio/pophouse_1_before.mp3',
       audioAfter: './audio/pophouse_1_after.mp3',
-      cover: './image/cover1.jpg'
+      cover: './image/cover1.webp'
     },
     {
       id: 'track-4',
@@ -868,7 +868,7 @@ const CONFIG = {
       },
       audioBefore: './audio/pophouse_1_before.mp3',
       audioAfter: './audio/pophouse_1_after.mp3',
-      cover: './image/cover2.jpg'
+      cover: './image/cover2.webp'
     },
     {
       id: 'track-5',
@@ -898,7 +898,7 @@ const CONFIG = {
       },
       audioBefore: './audio/pophouse_1_before.mp3',
       audioAfter: './audio/pophouse_1_after.mp3',
-      cover: './image/cover3.jpg'
+      cover: './image/cover3.webp'
     },
     {
       id: 'track-6',
@@ -928,7 +928,7 @@ const CONFIG = {
       },
       audioBefore: './audio/pophouse_1_before.mp3',
       audioAfter: './audio/pophouse_1_after.mp3',
-      cover: './image/cover1.jpg'
+      cover: './image/cover1.webp'
     },
 
     // --- ROCK / METAL (6 tracks) ---
@@ -1020,7 +1020,7 @@ const CONFIG = {
       },
       audioBefore: './audio/rockmetal_1_before.mp3',
       audioAfter: './audio/rockmetal_1_after.mp3',
-      cover: './image/cover3.jpg'
+      cover: './image/cover3.webp'
     },
     {
       id: 'track-10',
@@ -1050,7 +1050,7 @@ const CONFIG = {
       },
       audioBefore: './audio/rockmetal_1_before.mp3',
       audioAfter: './audio/rockmetal_1_after.mp3',
-      cover: './image/cover1.jpg'
+      cover: './image/cover1.webp'
     },
     {
       id: 'track-11',
@@ -1080,7 +1080,7 @@ const CONFIG = {
       },
       audioBefore: './audio/rockmetal_1_before.mp3',
       audioAfter: './audio/rockmetal_1_after.mp3',
-      cover: './image/cover4.jpg'
+      cover: './image/cover4.webp'
     },
     {
       id: 'track-12',
@@ -1110,7 +1110,7 @@ const CONFIG = {
       },
       audioBefore: './audio/rockmetal_1_before.mp3',
       audioAfter: './audio/rockmetal_1_after.mp3',
-      cover: './image/cover2.jpg'
+      cover: './image/cover2.webp'
     },
 
     // --- RAP / R&B (6 tracks) ---
@@ -1172,7 +1172,7 @@ const CONFIG = {
       },
       audioBefore: './audio/traphiphop_1_before.mp3',
       audioAfter: './audio/traphiphop_1_after.mp3',
-      cover: './image/cover3.jpg'
+      cover: './image/cover3.webp'
     },
     {
       id: 'track-15',
@@ -1202,7 +1202,7 @@ const CONFIG = {
       },
       audioBefore: './audio/traphiphop_1_before.mp3',
       audioAfter: './audio/traphiphop_1_after.mp3',
-      cover: './image/cover2.jpg'
+      cover: './image/cover2.webp'
     },
     {
       id: 'track-16',
@@ -1232,7 +1232,7 @@ const CONFIG = {
       },
       audioBefore: './audio/traphiphop_1_before.mp3',
       audioAfter: './audio/traphiphop_1_after.mp3',
-      cover: './image/cover4.jpg'
+      cover: './image/cover4.webp'
     },
     {
       id: 'track-17',
@@ -1262,7 +1262,7 @@ const CONFIG = {
       },
       audioBefore: './audio/traphiphop_1_before.mp3',
       audioAfter: './audio/traphiphop_1_after.mp3',
-      cover: './image/cover3.jpg'
+      cover: './image/cover3.webp'
     },
     {
       id: 'track-18',
@@ -1292,7 +1292,7 @@ const CONFIG = {
       },
       audioBefore: './audio/traphiphop_1_before.mp3',
       audioAfter: './audio/traphiphop_1_after.mp3',
-      cover: './image/cover1.jpg'
+      cover: './image/cover1.webp'
     }
   ],
 

@@ -781,12 +781,12 @@ body.nr-src-before .deck-btn-before { box-shadow: 0 0 18px rgba(16, 185, 129, 0.
 
 #servicesContainer > * {
   position: relative;
-  transform-style: flat;
+  transform-style: flat !important;
 }
 
 @media (min-width: 640px) {
   #servicesContainer > * {
-    transform-style: preserve-3d;
+    transform-style: flat !important;
   }
 }
 
@@ -901,13 +901,27 @@ body.nr-src-before .deck-btn-before { box-shadow: 0 0 18px rgba(16, 185, 129, 0.
   85%, 100% { background-position: -70% 0; }
 }
 
-/* Галочки списка — прорисовка */
-#servicesContainer li svg polyline {
-  stroke-dasharray: 26;
-  stroke-dashoffset: 26;
+/* Галочки списка — яркий изумрудный студийный акцент */
+#servicesContainer li svg,
+#servicesContainer .service-check-icon {
+  color: #34D399 !important;
+  stroke: #34D399 !important;
+  filter: drop-shadow(0 0 5px rgba(52, 211, 153, 0.45));
+  overflow: visible;
+  flex-shrink: 0;
 }
 
-#servicesContainer li.nr-in svg polyline { animation: nrDraw 0.5s ease forwards; }
+#servicesContainer li svg polyline,
+#servicesContainer .service-check-icon polyline {
+  stroke: #34D399 !important;
+  stroke-dasharray: 26;
+  stroke-dashoffset: 0 !important;
+  transition: stroke-dashoffset 0.4s ease;
+}
+
+#servicesContainer li.nr-in svg polyline {
+  stroke-dashoffset: 0 !important;
+}
 
 /* Цена — блик по градиенту */
 #servicesContainer .bg-clip-text { background-size: 220% 100%; }

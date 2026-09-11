@@ -265,14 +265,12 @@ function ensureTrackLoaded(trackId) {
 function initPlayer() {
   const enabledTracks = getEnabledTracks();
 
-  // Load all enabled tracks immediately on page load so switching is instant without delays
+  // Set metadata preload initially so page load doesn't download 12MB of audio upfront
   enabledTracks.forEach((track, index) => {
     const audioA = new Audio(track.audioBefore);
     const audioB = new Audio(track.audioAfter);
-    audioA.preload = 'auto';
-    audioB.preload = 'auto';
-    audioA.load();
-    audioB.load();
+    audioA.preload = 'metadata';
+    audioB.preload = 'metadata';
 
     const handleAudioError = (el, type) => {
       el.addEventListener('error', () => {
@@ -322,6 +320,30 @@ function initPlayer() {
 
   if (enabledTracks.length > 0) {
     activeTrackId = enabledTracks[0].id;
+  }
+
+  // Preload active track when user scrolls near player or hovers over it
+  const triggerPreloadActive = () => {
+    if (activeTrackId) ensureTrackLoaded(activeTrackId);
+  };
+
+  if ('IntersectionObserver' in window) {
+    const playerSec = document.getElementById('player');
+    if (playerSec) {
+      const ioPlayer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) {
+          triggerPreloadActive();
+          ioPlayer.disconnect();
+        }
+      }, { rootMargin: '350px 0px' });
+      ioPlayer.observe(playerSec);
+    }
+  }
+
+  const pSec = document.getElementById('player');
+  if (pSec) {
+    pSec.addEventListener('pointerenter', triggerPreloadActive, { once: true, passive: true });
+    pSec.addEventListener('touchstart', triggerPreloadActive, { once: true, passive: true });
   }
 
   // Filter Buttons
@@ -494,6 +516,16 @@ function selectTrack(trackId, shouldPlay = true) {
       const pB = item.audioB.play();
       if (pB && pB.catch) pB.catch(err => console.warn('Play B:', err));
       showStickyPlayer();
+
+      // Background prefetch adjacent track for zero delay
+      setTimeout(() => {
+        const enabled = getEnabledTracks();
+        const currIdx = enabled.findIndex(t => t.id === trackId);
+        if (currIdx >= 0 && enabled.length > 1) {
+          const nextTr = enabled[(currIdx + 1) % enabled.length];
+          if (nextTr) ensureTrackLoaded(nextTr.id);
+        }
+      }, 1500);
     }
   }
 
@@ -530,6 +562,16 @@ function toggleDeckPlay() {
     const pB = item.audioB.play();
     if (pB && pB.catch) pB.catch(err => console.warn('Play B:', err));
     showStickyPlayer();
+
+    // Background prefetch adjacent track for zero delay
+    setTimeout(() => {
+      const enabled = getEnabledTracks();
+      const currIdx = enabled.findIndex(t => t.id === activeTrackId);
+      if (currIdx >= 0 && enabled.length > 1) {
+        const nextTr = enabled[(currIdx + 1) % enabled.length];
+        if (nextTr) ensureTrackLoaded(nextTr.id);
+      }
+    }, 1500);
   }
 
   updateMasterDeckUI();
@@ -919,7 +961,7 @@ function renderTrackList(animate = false) {
       itemCard.innerHTML = `
         <div class="flex items-center gap-3.5 min-w-0 flex-1">
           <div class="track-cover-box relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl overflow-hidden flex-shrink-0 border transition-colors duration-300 ${isSelected ? 'border-amber-500' : 'border-gray-800'}">
-            <img src="${track.cover}" alt="${trackTitle}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+            <img src="${track.cover}" alt="${trackTitle}" loading="lazy" decoding="async" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onerror="if(this.src!=='./image/cover1.webp')this.src='./image/cover1.webp'" />
             <div class="track-live-overlay absolute inset-0 bg-black/60 items-center justify-center" style="display: ${isPlaying ? 'flex' : 'none'};">
               <span class="w-2.5 h-2.5 rounded-full vu-led-green animate-ping"></span>
             </div>
@@ -998,6 +1040,10 @@ function renderTrackList(animate = false) {
       dotsContainer.appendChild(dot);
     }
   }
+
+  if (typeof initPlayerTrackCardsTimeline === 'function') {
+    initPlayerTrackCardsTimeline(false);
+  }
 }
 
 function formatTime(secs) {
@@ -1049,11 +1095,11 @@ function renderServices() {
     });
 
     let featuresHtml = features.map(f => `
-      <li class="flex items-start gap-3 text-sm text-gray-300">
-        <svg class="w-4 h-4 text-emerald-400 flex-shrink-0 mt-1" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+      <li class="service-feature-item flex items-start gap-3 text-sm text-gray-300">
+        <svg class="service-check-icon w-4 h-4 text-emerald-400 flex-shrink-0 mt-1 drop-shadow-[0_0_6px_rgba(52,211,153,0.5)]" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
           <polyline points="20 6 9 17 4 12"></polyline>
         </svg>
-        <span>${f}</span>
+        <span class="service-feature-text leading-relaxed">${f}</span>
       </li>
     `).join('');
 
@@ -1080,10 +1126,10 @@ function renderServices() {
     const orderBtnText = resolveDeviceText(t.services.orderBtn, currentDevice);
 
     card.innerHTML = `
-      ${s.isPopular ? `<div class="absolute -top-3.5 left-1/2 -translate-x-1/2"><span class="popular-badge uppercase tracking-wider">${popularBadgeText}</span></div>` : ''}
+      ${s.isPopular ? `<div class="service-card-popular absolute -top-3.5 inset-x-0 flex justify-center pointer-events-none z-10"><span class="popular-badge uppercase tracking-wider pointer-events-auto">${popularBadgeText}</span></div>` : ''}
 
-      <div>
-        <div class="flex justify-between items-center mb-4 opacity-40">
+      <div class="service-card-top flex flex-col">
+        <div class="service-card-meta flex justify-between items-center mb-4 opacity-40">
           <div class="rack-bolt"></div>
           <div class="text-[10px] font-mono text-gray-400 tracking-widest uppercase">
             ${rackUnitText}
@@ -1091,26 +1137,26 @@ function renderServices() {
           <div class="rack-bolt"></div>
         </div>
 
-        <h3 class="text-2xl font-extrabold text-white mb-2 tracking-tight">${title}</h3>
+        <h3 class="service-card-title text-2xl font-extrabold text-white mb-2 tracking-tight">${title}</h3>
         <p class="service-card-desc text-sm text-gray-400 mb-6 leading-relaxed sm:max-lg:text-center">${desc}</p>
 
-        <ul class="space-y-3 mb-6">
+        <ul class="service-card-features space-y-3 mb-6">
           ${featuresHtml}
         </ul>
       </div>
 
-      <div>
-        <div class="h-px bg-gray-800/80 my-6"></div>
+      <div class="service-card-bottom">
+        <div class="service-card-divider h-px bg-gray-800/80 my-6"></div>
 
-        <div class="flex items-center justify-between gap-4">
-          <div class="flex flex-col">
-            <span class="text-xs font-mono text-gray-400 uppercase tracking-wider">${fromLabel}</span>
-            <span class="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-amber-200 via-amber-400 to-amber-500 bg-clip-text text-transparent tracking-tight">${displayPrice}</span>
+        <div class="service-card-pricing flex items-center justify-between gap-4">
+          <div class="service-card-price-group flex flex-col">
+            <span class="service-card-from text-xs font-mono text-gray-400 uppercase tracking-wider">${fromLabel}</span>
+            <span class="service-card-price text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-amber-200 via-amber-400 to-amber-500 bg-clip-text text-transparent tracking-tight" data-target-price="${displayPrice}">${displayPrice}</span>
           </div>
 
           <button
             onclick="openContactModal()"
-            class="py-3 px-6 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl transition-all duration-200 shadow-md shadow-amber-500/20 active:scale-95 text-sm sm:text-base cursor-pointer flex items-center gap-1.5 flex-shrink-0"
+            class="service-card-order-btn py-3 px-6 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl transition-all duration-200 shadow-md shadow-amber-500/20 active:scale-95 text-sm sm:text-base cursor-pointer flex items-center gap-1.5 flex-shrink-0"
           >
             <span>${orderBtnText}</span>
           </button>
@@ -2110,47 +2156,531 @@ function animateScrollBlock(selectorOrEls, options = {}) {
   });
 }
 
-function initServicesGsapAnimation() {
+let playerTimelines = [];
+let playerTracksTimeline = null;
+
+function initPlayerGsapAnimation() {
   if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') return;
 
-  const cards = document.querySelectorAll('#servicesContainer > *');
-  if (!cards.length) return;
+  const section = document.getElementById('player');
+  if (!section) return;
 
-  // Kill previous triggers attached to service cards or container
+  const sectionHeader = section.querySelector('.text-center');
+  const filtersContainer = section.querySelector('#playerContentContainer .flex.flex-wrap');
+  const paginationContainer = section.querySelector('#playerContentContainer .border-t');
+
+  // Clean up previous timelines or triggers attached to player
+  if (playerTimelines && playerTimelines.length) {
+    playerTimelines.forEach(tl => {
+      try { tl.kill(); } catch (e) {}
+    });
+    playerTimelines = [];
+  }
+
   ScrollTrigger.getAll().forEach(st => {
     if (st.vars && st.vars.trigger) {
       const tr = st.vars.trigger;
-      if (typeof tr === 'object' && tr.closest && tr.closest('#servicesContainer')) {
-        st.kill();
-      } else if (tr === '#servicesContainer') {
+      if (
+        tr === '#player' ||
+        tr === '#playerContentContainer' ||
+        tr === '#player .text-center' ||
+        tr === '#trackListContainer' ||
+        (typeof tr === 'object' && (tr === section || (tr.closest && tr.closest('#player'))))
+      ) {
         st.kill();
       }
     }
   });
 
-  // Services cards: closed by default, cascade in sequentially when section arrives
-  cards.forEach((card, idx) => {
-    gsap.set(card, { y: 22, opacity: 0 });
+  const filterBtns = filtersContainer ? filtersContainer.querySelectorAll('.genre-filter-btn') : [];
+  const trackContainer = document.getElementById('trackListContainer');
+  const trackCards = trackContainer ? trackContainer.querySelectorAll(':scope > *') : [];
 
-    gsap.fromTo(
-      card,
-      { y: 22, opacity: 0 },
-      {
-        y: 0,
-        opacity: 1,
-        duration: 0.48,
-        delay: idx * 0.08,
-        ease: 'power2.out',
-        overwrite: 'auto',
-        scrollTrigger: {
-          trigger: '#servicesContainer',
-          start: computeDynamicStart(84),
-          end: 'bottom top',
-          toggleActions: 'play none none reverse'
+  // Respect prefers-reduced-motion
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (sectionHeader) gsap.set(sectionHeader, { opacity: 1, y: 0 });
+    if (filterBtns.length) gsap.set(filterBtns, { opacity: 1, y: 0, scale: 1 });
+    trackCards.forEach(card => gsap.set(card, { opacity: 1, y: 0 }));
+    if (paginationContainer) gsap.set(paginationContainer, { opacity: 1, y: 0 });
+    return;
+  }
+
+  // Pre-hide elements if not already scrolled into view
+  const vh = window.innerHeight || 800;
+  const secRect = section.getBoundingClientRect();
+  const isPlayerInView = secRect.top < vh * 0.88 && secRect.bottom > 0;
+
+  if (!isPlayerInView) {
+    if (sectionHeader) gsap.set(sectionHeader, { y: 24, opacity: 0 });
+    if (filterBtns.length) gsap.set(filterBtns, { y: 14, opacity: 0, scale: 0.95 });
+    trackCards.forEach(card => gsap.set(card, { y: 26, opacity: 0 }));
+    if (paginationContainer) gsap.set(paginationContainer, { y: 16, opacity: 0 });
+  }
+
+  // 1. SECTION HEADER TIMELINE (Title "Слушай разницу")
+  // Enters at 88%, reverses visibly when scrolling up past 88%
+  if (sectionHeader) {
+    const headerTl = gsap.timeline({
+      scrollTrigger: {
+        trigger: sectionHeader,
+        start: computeDynamicStart(88),
+        end: 'bottom top',
+        toggleActions: 'play none none reverse',
+        onLeaveBack: () => {
+          headerTl.timeScale(1.6).reverse();
+        },
+        onEnter: () => {
+          headerTl.timeScale(1.0).play();
         }
       }
+    });
+
+    headerTl.fromTo(
+      sectionHeader,
+      { y: 24, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.45, ease: 'power2.out' },
+      0
     );
+    playerTimelines.push(headerTl);
+  }
+
+  // 2. GENRE FILTERS TIMELINE (Buttons "Все жанры", "Pop/House", "Rock/Metal", "Rap/R&B")
+  // Enters at 86%, reverses visibly when scrolling up past 86%
+  if (filtersContainer && filterBtns.length) {
+    const filtersTl = gsap.timeline({
+      scrollTrigger: {
+        trigger: filtersContainer,
+        start: computeDynamicStart(86),
+        end: 'bottom top',
+        toggleActions: 'play none none reverse',
+        onLeaveBack: () => {
+          filtersTl.timeScale(1.6).reverse();
+        },
+        onEnter: () => {
+          filtersTl.timeScale(1.0).play();
+        }
+      }
+    });
+
+    filtersTl.fromTo(
+      filterBtns,
+      { y: 14, opacity: 0, scale: 0.95 },
+      { y: 0, opacity: 1, scale: 1, duration: 0.38, stagger: 0.05, ease: 'back.out(1.4)' },
+      0
+    );
+    playerTimelines.push(filtersTl);
+  }
+
+  // 3. TRACK LIST GRID TIMELINE (Individual track cards with cover art and play buttons)
+  // Enters at 83%, reverses visibly when scrolling up past 83%
+  initPlayerTrackCardsTimeline(true);
+
+  // 4. PAGINATION CONTROLS TIMELINE (Prev/Next buttons + Page info / Dots)
+  // Enters at 80%, reverses visibly when scrolling up past 80%
+  if (paginationContainer) {
+    const paginationTl = gsap.timeline({
+      scrollTrigger: {
+        trigger: paginationContainer,
+        start: computeDynamicStart(80),
+        end: 'bottom top',
+        toggleActions: 'play none none reverse',
+        onLeaveBack: () => {
+          paginationTl.timeScale(1.8).reverse();
+        },
+        onEnter: () => {
+          paginationTl.timeScale(1.0).play();
+        }
+      }
+    });
+
+    paginationTl.fromTo(
+      paginationContainer,
+      { y: 16, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.45, ease: 'power2.out' },
+      0
+    );
+    playerTimelines.push(paginationTl);
+  }
+}
+
+function initPlayerTrackCardsTimeline(initialPreHide = true) {
+  if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') return;
+
+  const trackContainer = document.getElementById('trackListContainer');
+  if (!trackContainer) return;
+
+  const trackCards = trackContainer.querySelectorAll(':scope > *');
+  if (!trackCards.length) return;
+
+  if (playerTracksTimeline) {
+    try { playerTracksTimeline.kill(); } catch (e) {}
+    playerTracksTimeline = null;
+  }
+
+  ScrollTrigger.getAll().forEach(st => {
+    if (st.vars && st.vars.trigger === '#trackListContainer') {
+      st.kill();
+    }
   });
+
+  const rect = trackContainer.getBoundingClientRect();
+  const vh = window.innerHeight || 800;
+  const isAlreadyInView = rect.top < vh * 0.83 && rect.bottom > 0;
+
+  if (initialPreHide && !isAlreadyInView) {
+    gsap.set(trackCards, { y: 26, opacity: 0 });
+  }
+
+  playerTracksTimeline = gsap.timeline({
+    scrollTrigger: {
+      trigger: '#trackListContainer',
+      start: computeDynamicStart(83),
+      end: 'bottom top',
+      toggleActions: 'play none none reverse',
+      onLeaveBack: () => {
+        playerTracksTimeline.timeScale(1.6).reverse();
+      },
+      onEnter: () => {
+        playerTracksTimeline.timeScale(1.0).play();
+      }
+    }
+  });
+
+  playerTracksTimeline.fromTo(
+    trackCards,
+    { y: 26, opacity: 0 },
+    { y: 0, opacity: 1, duration: 0.45, stagger: 0.07, ease: 'power2.out' },
+    0
+  );
+
+  if (isAlreadyInView) {
+    playerTracksTimeline.progress(1);
+  }
+
+  if (playerTimelines && !playerTimelines.includes(playerTracksTimeline)) {
+    playerTimelines.push(playerTracksTimeline);
+  }
+}
+
+let servicesTimelines = [];
+
+function initServicesGsapAnimation() {
+  if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') return;
+
+  const section = document.getElementById('services');
+  if (!section) return;
+
+  const sectionHeader = section.querySelector('.text-center');
+  const cards = document.querySelectorAll('#servicesContainer > *');
+  if (!cards.length) return;
+
+  // Clean up previous timelines or triggers attached to services
+  if (servicesTimelines && servicesTimelines.length) {
+    servicesTimelines.forEach(tl => {
+      try { tl.kill(); } catch (e) {}
+    });
+    servicesTimelines = [];
+  }
+
+  ScrollTrigger.getAll().forEach(st => {
+    if (st.vars && st.vars.trigger) {
+      const tr = st.vars.trigger;
+      if (
+        tr === '#services' ||
+        tr === '#servicesContainer' ||
+        tr === '#services .text-center' ||
+        tr === '.service-card-bottom' ||
+        tr === '.service-card-features' ||
+        (typeof tr === 'object' && (tr === section || (tr.closest && tr.closest('#services'))))
+      ) {
+        st.kill();
+      }
+    }
+  });
+
+  // Extract price data for number count-up animation
+  const priceData = [];
+  cards.forEach(card => {
+    const priceEl = card.querySelector('.service-card-price');
+    if (!priceEl) return;
+    const targetText = priceEl.getAttribute('data-target-price') || priceEl.textContent;
+    const match = targetText.match(/\d[\d\s\u00A0.,]*\d|\d/);
+    if (!match) return;
+
+    const raw = match[0];
+    const sep = /[\s\u00A0]/.test(raw) ? raw.match(/[\s\u00A0]/)[0] : (raw.indexOf(',') > -1 ? ',' : '');
+    const targetVal = parseInt(raw.replace(/[^\d]/g, ''), 10);
+    if (isNaN(targetVal) || targetVal <= 0) return;
+
+    priceData.push({
+      el: priceEl,
+      targetText: targetText,
+      raw: raw,
+      sep: sep,
+      targetVal: targetVal
+    });
+  });
+
+  // Respect prefers-reduced-motion
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (sectionHeader) gsap.set(sectionHeader, { opacity: 1, y: 0 });
+    cards.forEach(card => {
+      gsap.set(card, { opacity: 1, y: 0 });
+      gsap.set(card.querySelectorAll('.service-feature-item'), { opacity: 1, x: 0 });
+      gsap.set(card.querySelectorAll('.service-check-icon'), { opacity: 1, scale: 1 });
+      gsap.set(card.querySelectorAll('.service-card-top, .service-card-bottom, .service-card-divider, .service-card-pricing, .service-card-order-btn, .service-card-price-group'), { opacity: 1, y: 0, scaleX: 1 });
+    });
+    priceData.forEach(p => { p.el.textContent = p.targetText; });
+    return;
+  }
+
+  // Pre-hide all elements to prepare for sequenced emergence
+  if (sectionHeader) gsap.set(sectionHeader, { y: 24, opacity: 0 });
+
+  const allMainText = [];
+  const allDividers = [];
+  const allBottoms = [];
+
+  cards.forEach(card => {
+    gsap.set(card, { y: 30, opacity: 0 });
+
+    const popularBadge = card.querySelector('.popular-badge') || card.querySelector('.service-card-popular');
+    const metaBar = card.querySelector('.service-card-meta');
+    const title = card.querySelector('.service-card-title');
+    const desc = card.querySelector('.service-card-desc');
+    const divider = card.querySelector('.service-card-divider');
+    const priceGroup = card.querySelector('.service-card-price-group');
+    const orderBtn = card.querySelector('.service-card-order-btn');
+
+    const topItems = [metaBar, title, desc, popularBadge].filter(Boolean);
+    topItems.forEach(el => allMainText.push(el));
+    if (topItems.length) gsap.set(topItems, { y: 16, opacity: 0 });
+
+    const featureItems = card.querySelectorAll('.service-feature-item');
+    const checkIcons = card.querySelectorAll('.service-check-icon');
+    if (featureItems.length) gsap.set(featureItems, { x: -30, opacity: 0 });
+    if (checkIcons.length) gsap.set(checkIcons, { scale: 0.2, opacity: 0 });
+
+    if (divider) {
+      allDividers.push(divider);
+      gsap.set(divider, { scaleX: 0, opacity: 0 });
+    }
+    const bottomGroup = [priceGroup, orderBtn].filter(Boolean);
+    bottomGroup.forEach(el => allBottoms.push(el));
+    if (bottomGroup.length) gsap.set(bottomGroup, { y: 16, opacity: 0 });
+  });
+
+  // Calculate maximum number of features across all cards
+  let maxFeatures = 0;
+  cards.forEach(card => {
+    const count = card.querySelectorAll('.service-feature-item').length;
+    if (count > maxFeatures) maxFeatures = count;
+  });
+
+  // Initialize prices to 0 so count-up starts cleanly
+  priceData.forEach(p => {
+    p.el.textContent = p.targetText.replace(p.raw, '0');
+  });
+
+  const featuresContainer = document.querySelector('#servicesContainer .service-card-features') || '#servicesContainer';
+  const bottomContainer = document.querySelector('#servicesContainer .service-card-bottom') || '#servicesContainer';
+
+  // 1. HEADER TIMELINE (Title "Услуги и Стоимость")
+  // Enters at 88%, reverses visibly when scrolling up past 88%
+  if (sectionHeader) {
+    const headerTl = gsap.timeline({
+      scrollTrigger: {
+        trigger: sectionHeader,
+        start: computeDynamicStart(88),
+        end: 'bottom top',
+        toggleActions: 'play none none reverse',
+        onLeaveBack: () => {
+          headerTl.timeScale(1.6).reverse();
+        },
+        onEnter: () => {
+          headerTl.timeScale(1.0).play();
+        }
+      }
+    });
+
+    headerTl.fromTo(
+      sectionHeader,
+      { y: 24, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.45, ease: 'power2.out', clearProps: 'transform' },
+      0
+    );
+    servicesTimelines.push(headerTl);
+  }
+
+  // 2. CARDS & MAIN TEXT TIMELINE (3 card shells + titles, descriptions, badges)
+  // Enters at 85%, reverses visibly when scrolling up past 85%
+  const cardsTl = gsap.timeline({
+    scrollTrigger: {
+      trigger: '#servicesContainer',
+      start: computeDynamicStart(85),
+      end: 'bottom top',
+      toggleActions: 'play none none reverse',
+      onLeaveBack: () => {
+        cardsTl.timeScale(1.6).reverse();
+      },
+      onEnter: () => {
+        cardsTl.timeScale(1.0).play();
+      }
+    }
+  });
+
+  cardsTl.fromTo(
+    cards,
+    { y: 30, opacity: 0 },
+    { y: 0, opacity: 1, duration: 0.45, stagger: 0.08, ease: 'power2.out', clearProps: 'transform' },
+    0
+  );
+
+  if (allMainText.length) {
+    cardsTl.fromTo(
+      allMainText,
+      { y: 16, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.42, stagger: 0.05, ease: 'power2.out', clearProps: 'transform' },
+      0.14
+    );
+  }
+  servicesTimelines.push(cardsTl);
+
+  // 3. FEATURES & CHECKMARKS TIMELINE (Checkmarks float in row-by-row with emerald glow)
+  // Enters at 83%, reverses visibly row-by-row when scrolling up past 83%
+  const featuresTl = gsap.timeline({
+    scrollTrigger: {
+      trigger: featuresContainer,
+      start: computeDynamicStart(83),
+      end: 'bottom top',
+      toggleActions: 'play none none reverse',
+      onLeaveBack: () => {
+        featuresTl.timeScale(1.6).reverse();
+      },
+      onEnter: () => {
+        featuresTl.timeScale(1.0).play();
+      }
+    }
+  });
+
+  for (let r = 0; r < maxFeatures; r++) {
+    const rowItems = [];
+    const rowIcons = [];
+    cards.forEach(card => {
+      const items = card.querySelectorAll('.service-feature-item');
+      if (items[r]) {
+        rowItems.push(items[r]);
+        const ic = items[r].querySelector('.service-check-icon');
+        if (ic) rowIcons.push(ic);
+      }
+    });
+
+    if (rowItems.length) {
+      featuresTl.fromTo(
+        rowItems,
+        { x: -30, opacity: 0 },
+        { x: 0, opacity: 1, duration: 0.42, stagger: 0.06, ease: 'back.out(1.3)' },
+        r * 0.16
+      );
+    }
+    if (rowIcons.length) {
+      featuresTl.fromTo(
+        rowIcons,
+        { scale: 0.2, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.42, stagger: 0.06, ease: 'back.out(1.8)' },
+        r * 0.16
+      );
+    }
+  }
+  servicesTimelines.push(featuresTl);
+
+  // 4. BOTTOM PRICING & ORDER BUTTONS TIMELINE (Divider, Order Buttons, Price count-up)
+  // Enters at 80%, reverses visibly when scrolling up past 80%
+  // On scroll down: elements fade/slide in, numbers count up smoothly from 0 to target
+  // On scroll up: elements simply fade/slide down and hide like FAQ (no countdown/decrease)
+  let priceCountTween = null;
+  const counterProxy = { progress: 0 };
+
+  function startPriceCountUp() {
+    if (priceCountTween) {
+      priceCountTween.kill();
+      priceCountTween = null;
+    }
+    counterProxy.progress = 0;
+    priceCountTween = gsap.to(counterProxy, {
+      progress: 1,
+      duration: 1.25,
+      delay: 0.08,
+      ease: 'power2.out',
+      onUpdate: () => {
+        const pr = counterProxy.progress;
+        priceData.forEach(p => {
+          if (pr <= 0.01) {
+            p.el.textContent = p.targetText.replace(p.raw, '0');
+          } else if (pr >= 0.99) {
+            p.el.textContent = p.targetText;
+          } else {
+            const currentVal = Math.round(p.targetVal * pr);
+            const formatted = p.sep === ','
+              ? String(currentVal).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+              : String(currentVal).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00A0');
+            p.el.textContent = p.targetText.replace(p.raw, formatted);
+          }
+        });
+      },
+      onComplete: () => {
+        priceData.forEach(p => {
+          p.el.textContent = p.targetText;
+        });
+      }
+    });
+  }
+
+  const bottomTl = gsap.timeline({
+    scrollTrigger: {
+      trigger: bottomContainer,
+      start: computeDynamicStart(80),
+      end: 'bottom top',
+      toggleActions: 'play none none reverse',
+      onLeaveBack: () => {
+        // Smoothly fade down and hide prices and buttons (identical to FAQ exit)
+        bottomTl.timeScale(1.8).reverse();
+        if (priceCountTween) {
+          priceCountTween.kill();
+          priceCountTween = null;
+        }
+        // Keep target price text intact during reverse fade, then reset to 0 in background
+        gsap.delayedCall(0.35, () => {
+          priceData.forEach(p => {
+            p.el.textContent = p.targetText.replace(p.raw, '0');
+          });
+        });
+      },
+      onEnter: () => {
+        bottomTl.timeScale(1.0).play();
+        startPriceCountUp();
+      }
+    }
+  });
+
+  if (allDividers.length) {
+    bottomTl.fromTo(
+      allDividers,
+      { scaleX: 0, opacity: 0 },
+      { scaleX: 1, opacity: 1, duration: 0.35, ease: 'power2.out' },
+      0
+    );
+  }
+
+  if (allBottoms.length) {
+    bottomTl.fromTo(
+      allBottoms,
+      { y: 16, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.45, stagger: 0.06, ease: 'power2.out' },
+      0.06
+    );
+  }
+  servicesTimelines.push(bottomTl);
 }
 
 function initFaqGsapAnimation() {
@@ -2266,12 +2796,10 @@ function initGsapAnimations() {
     }
   );
 
-  // 1. Player Section: Phrase/header first at 88%, player content container at 82%
-  animateScrollBlock('#player .text-center', { duration: 0.5, y: 20, start: 'top 88%' });
-  animateScrollBlock('#playerContentContainer', { duration: 0.5, y: 22, start: 'top 82%' });
+  // 1. Player Section: Unified scroll-driven sequence (Header -> Genre Filters -> Track Cards -> Pagination Controls)
+  initPlayerGsapAnimation();
 
-  // 2. Services Section: Phrase/header first at 88%, service cards cascade at 84%
-  animateScrollBlock('#services .text-center', { duration: 0.5, y: 20, start: 'top 88%' });
+  // 2. Services Section: Unified scroll-driven sequence (Header -> Cards -> Main Text -> Checkmarks -> Prices & Buttons)
   initServicesGsapAnimation();
 
   // 3. FAQ Section: Phrase/header first at 88%, individual questions strictly by their position at 86%

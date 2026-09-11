@@ -784,8 +784,9 @@
     safe(syncBodyState);
     if (!isModalOpen) {
       safe(function () { updateBeamAngle(dt); });
-      /* фоновый эквалайзер в секции «Слушай разницу» — 30-40 fps */
-      if (now - lastPlayerEq > (LITE ? 60 : 25)) {
+      /* фоновый эквалайзер в секции «Слушай разницу» — энергосберегающий режим в паузе */
+      var eqInterval = !Engine.playing ? 65 : (LITE ? 50 : 25);
+      if (now - lastPlayerEq > eqInterval) {
         lastPlayerEq = now;
         safe(function () { drawPlayerEq(now); });
       }
