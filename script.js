@@ -16,6 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initGsapAnimations();
   initMixerFaderScroll();
   initSmoothAnchorNavigation();
+  initScrollSpy();
+  initScrollToTop();
 });
 
 window.addEventListener('load', () => {
@@ -23,6 +25,15 @@ window.addEventListener('load', () => {
     ScrollTrigger.refresh();
   }
 });
+
+// Ensure ScrollTrigger recalibrates when web fonts finish downloading
+if (typeof document !== 'undefined' && document.fonts && document.fonts.ready) {
+  document.fonts.ready.then(() => {
+    if (typeof ScrollTrigger !== 'undefined') {
+      ScrollTrigger.refresh();
+    }
+  });
+}
 
 // --- AUTOMATIC REGION & LANGUAGE DETECTION ---
 function detectUserLanguage() {
@@ -123,11 +134,16 @@ let lastDetectedDevice = getDeviceType();
 
 function initI18n() {
   const langToggle = document.getElementById('langToggleContainer');
-
   if (langToggle) {
     langToggle.addEventListener('click', (e) => {
       e.preventDefault();
       toggleLanguage();
+    });
+    langToggle.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleLanguage();
+      }
     });
   }
 
@@ -148,7 +164,8 @@ function initI18n() {
 }
 
 function toggleLanguage() {
-  setLanguage(currentLang === 'ru' ? 'en' : 'ru', true);
+  const nextLang = currentLang === 'ru' ? 'en' : 'ru';
+  setLanguage(nextLang, true);
 }
 
 function setLanguage(lang, savePreference = true) {
@@ -165,24 +182,16 @@ function setLanguage(lang, savePreference = true) {
     document.documentElement.lang = lang;
   } catch (e) {}
 
-  const btnRu = document.getElementById('btnLangRu');
-  const btnEn = document.getElementById('btnLangEn');
-
-  if (btnRu && btnEn) {
-    if (lang === 'ru') {
-      btnRu.className = 'px-2 sm:px-3 py-1 text-xs font-bold rounded-md sm:rounded-lg transition-all bg-amber-500 text-slate-950 font-extrabold pointer-events-none';
-      btnEn.className = 'px-2 sm:px-3 py-1 text-xs font-bold rounded-md sm:rounded-lg transition-all text-gray-400 hover:text-white pointer-events-none';
-    } else {
-      btnEn.className = 'px-2 sm:px-3 py-1 text-xs font-bold rounded-md sm:rounded-lg transition-all bg-amber-500 text-slate-950 font-extrabold pointer-events-none';
-      btnRu.className = 'px-2 sm:px-3 py-1 text-xs font-bold rounded-md sm:rounded-lg transition-all text-gray-400 hover:text-white pointer-events-none';
-    }
+  const langToggle = document.getElementById('langToggleContainer');
+  if (langToggle) {
+    langToggle.setAttribute('data-lang', lang);
   }
 
   renderI18nText();
   renderServices();
   renderFaq();
   updateMasterDeckUI();
-  renderTrackList();
+  renderTrackList(false);
 }
 
 function renderI18nText() {
@@ -368,6 +377,30 @@ function showStickyPlayer() {
     playerBar.classList.remove('translate-y-full');
     playerBar.classList.add('translate-y-0');
     document.body.classList.add('has-sticky-player');
+
+    const barHeight = playerBar.offsetHeight;
+    if (barHeight > 0) {
+      document.documentElement.style.setProperty('--sticky-player-height', barHeight + 'px');
+    }
+
+    if (typeof ScrollTrigger !== 'undefined') {
+      ScrollTrigger.refresh();
+    }
+    if (window.NickRiseAnimations && window.NickRiseAnimations.updateRevealObserver) {
+      window.NickRiseAnimations.updateRevealObserver();
+    }
+    setTimeout(() => {
+      if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
+      if (window.NickRiseAnimations && window.NickRiseAnimations.updateRevealObserver) {
+        window.NickRiseAnimations.updateRevealObserver();
+      }
+    }, 300);
+    setTimeout(() => {
+      if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
+      if (window.NickRiseAnimations && window.NickRiseAnimations.updateRevealObserver) {
+        window.NickRiseAnimations.updateRevealObserver();
+      }
+    }, 960);
   }
 }
 
@@ -385,6 +418,26 @@ function closeStickyPlayer() {
     playerBar.classList.remove('translate-y-0');
     playerBar.classList.add('translate-y-full');
     document.body.classList.remove('has-sticky-player');
+    document.documentElement.style.removeProperty('--sticky-player-height');
+
+    if (typeof ScrollTrigger !== 'undefined') {
+      ScrollTrigger.refresh();
+    }
+    if (window.NickRiseAnimations && window.NickRiseAnimations.updateRevealObserver) {
+      window.NickRiseAnimations.updateRevealObserver();
+    }
+    setTimeout(() => {
+      if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
+      if (window.NickRiseAnimations && window.NickRiseAnimations.updateRevealObserver) {
+        window.NickRiseAnimations.updateRevealObserver();
+      }
+    }, 300);
+    setTimeout(() => {
+      if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
+      if (window.NickRiseAnimations && window.NickRiseAnimations.updateRevealObserver) {
+        window.NickRiseAnimations.updateRevealObserver();
+      }
+    }, 960);
   }
   renderTrackList();
 }
@@ -496,11 +549,16 @@ function switchDeckSource(src) {
     item.audioB.currentTime = item.audioA.currentTime;
   }
 
-  applyAudioVolumes(activeTrackId);
+  applyAudioVolumes(activeTrackId, true);
   updateMasterDeckUI();
 }
 
 function toggleDeckSource() {
+  const enabledTracks = getEnabledTracks();
+  if (!activeTrackId && enabledTracks.length > 0) {
+    activeTrackId = enabledTracks[0].id;
+    ensureTrackLoaded(activeTrackId);
+  }
   if (!activeTrackId) return;
   const item = trackAudioMap[activeTrackId];
   if (!item) return;
@@ -515,20 +573,58 @@ function changeDeckVolume(val) {
   if (!item) return;
 
   item.volume = parseFloat(val);
-  applyAudioVolumes(activeTrackId);
+  applyAudioVolumes(activeTrackId, false);
 }
 
-function applyAudioVolumes(trackId) {
+let audioCrossfadeTimer = null;
+
+function applyAudioVolumes(trackId, smooth = false) {
   const item = trackAudioMap[trackId];
   if (!item) return;
 
-  if (item.source === 'before') {
-    item.audioA.volume = item.volume;
-    item.audioB.volume = 0;
-  } else {
-    item.audioA.volume = 0;
-    item.audioB.volume = item.volume;
+  const targetVolA = item.source === 'before' ? item.volume : 0;
+  const targetVolB = item.source === 'after' ? item.volume : 0;
+
+  // Immediate switch if audio is paused or smooth mode not requested
+  if (!smooth || (item.audioA.paused && item.audioB.paused)) {
+    if (audioCrossfadeTimer) {
+      clearInterval(audioCrossfadeTimer);
+      audioCrossfadeTimer = null;
+    }
+    item.audioA.volume = targetVolA;
+    item.audioB.volume = targetVolB;
+    return;
   }
+
+  // Soft analog studio crossfade over 280ms
+  if (audioCrossfadeTimer) {
+    clearInterval(audioCrossfadeTimer);
+  }
+
+  const startA = item.audioA.volume;
+  const startB = item.audioB.volume;
+  const steps = 22;
+  const stepTime = 13; // ~280ms total duration
+  let step = 0;
+
+  audioCrossfadeTimer = setInterval(() => {
+    step++;
+    const progress = Math.min(1, step / steps);
+    // Smooth S-curve sinusoidal curve for transparent studio transition
+    const ease = 0.5 - Math.cos(progress * Math.PI) / 2;
+
+    try {
+      item.audioA.volume = Math.max(0, Math.min(1, startA + (targetVolA - startA) * ease));
+      item.audioB.volume = Math.max(0, Math.min(1, startB + (targetVolB - startB) * ease));
+    } catch (e) {}
+
+    if (step >= steps) {
+      clearInterval(audioCrossfadeTimer);
+      audioCrossfadeTimer = null;
+      item.audioA.volume = targetVolA;
+      item.audioB.volume = targetVolB;
+    }
+  }, stepTime);
 }
 
 function seekDeckTrack(e) {
@@ -656,38 +752,27 @@ function updateMasterDeckUI() {
   const trackNum = (currentIdx >= 0 ? currentIdx + 1 : 1).toString().padStart(2, '0');
   document.querySelectorAll('.deck-index').forEach(el => { el.textContent = `${trackNum} / ${totalTracks}`; });
 
-  // Source Buttons & LEDs
-  const btnsBefore = document.querySelectorAll('.deck-btn-before');
-  const btnsAfter = document.querySelectorAll('.deck-btn-after');
-  const ledsBefore = document.querySelectorAll('.deck-led-before');
-  const ledsAfter = document.querySelectorAll('.deck-led-after');
-  const modeLabels = document.querySelectorAll('.deck-mode-label');
+  // Source Switches & Mode Labels
+  document.querySelectorAll('.deck-source-switch').forEach(sw => {
+    sw.setAttribute('data-source', item.source);
+  });
 
-  if (item.source === 'before') {
-    btnsBefore.forEach(el => {
-      el.classList.add('bg-amber-500', 'text-slate-950', 'font-black', 'shadow-md');
-      el.classList.remove('text-gray-400', 'hover:text-white', 'bg-transparent');
-    });
-    btnsAfter.forEach(el => {
-      el.classList.remove('bg-amber-500', 'text-slate-950', 'font-black', 'shadow-md');
-      el.classList.add('text-gray-400', 'hover:text-white', 'bg-transparent');
-    });
-    ledsBefore.forEach(el => { el.className = 'deck-led-before w-1.5 h-1.5 sm:w-2.5 sm:h-2.5 rounded-full vu-led-green animate-pulse flex-shrink-0'; });
-    ledsAfter.forEach(el => { el.className = 'deck-led-after w-1.5 h-1.5 sm:w-2.5 sm:h-2.5 rounded-full bg-gray-600 flex-shrink-0'; });
-    modeLabels.forEach(el => { el.textContent = resolveDeviceText(t.player.beforeLabel, currentDevice) || 'BEFORE (MIX)'; });
-  } else {
-    btnsAfter.forEach(el => {
-      el.classList.add('bg-amber-500', 'text-slate-950', 'font-black', 'shadow-md');
-      el.classList.remove('text-gray-400', 'hover:text-white', 'bg-transparent');
-    });
-    btnsBefore.forEach(el => {
-      el.classList.remove('bg-amber-500', 'text-slate-950', 'font-black', 'shadow-md');
-      el.classList.add('text-gray-400', 'hover:text-white', 'bg-transparent');
-    });
-    ledsAfter.forEach(el => { el.className = 'deck-led-after w-1.5 h-1.5 sm:w-2.5 sm:h-2.5 rounded-full vu-led-green animate-pulse flex-shrink-0'; });
-    ledsBefore.forEach(el => { el.className = 'deck-led-before w-1.5 h-1.5 sm:w-2.5 sm:h-2.5 rounded-full bg-gray-600 flex-shrink-0'; });
-    modeLabels.forEach(el => { el.textContent = resolveDeviceText(t.player.afterLabel, currentDevice) || 'AFTER (MASTER)'; });
-  }
+  const modeLabels = document.querySelectorAll('.deck-mode-label');
+  const targetLabelText = item.source === 'before' 
+    ? (resolveDeviceText(t.player.beforeLabel, currentDevice) || 'BEFORE (MIX)')
+    : (resolveDeviceText(t.player.afterLabel, currentDevice) || 'AFTER (MASTER)');
+
+  modeLabels.forEach(el => {
+    if (el.textContent !== targetLabelText) {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(2px)';
+      setTimeout(() => {
+        el.textContent = targetLabelText;
+        el.style.opacity = '1';
+        el.style.transform = 'translateY(0)';
+      }, 150);
+    }
+  });
 
   // Play Button & Icons
   const playIcons = document.querySelectorAll('.deck-play-icon');
@@ -1057,7 +1142,10 @@ function renderServices() {
   setTimeout(initMobileServicesPosition, 200);
   setTimeout(initMobileServicesPosition, 500);
 
-  // Refresh ScrollTrigger after cards are rendered
+  // Refresh ScrollTrigger and animations after cards are rendered
+  if (typeof initServicesGsapAnimation === 'function') {
+    initServicesGsapAnimation();
+  }
   if (typeof ScrollTrigger !== 'undefined') {
     ScrollTrigger.refresh();
   }
@@ -1450,16 +1538,16 @@ function closeAboutModal() {
 }
 
 // --- MOBILE MENU ---
+let mobileMenuCloseTimer = null;
+
 function toggleMobileMenu() {
   const drawer = document.getElementById('mobileMenuDrawer');
   if (!drawer) return;
 
-  const isClosed = drawer.classList.contains('hidden') || drawer.classList.contains('opacity-0');
-
-  if (isClosed) {
-    openMobileMenu();
-  } else {
+  if (drawer.classList.contains('is-open')) {
     closeMobileMenu();
+  } else {
+    openMobileMenu();
   }
 }
 
@@ -1468,19 +1556,17 @@ function openMobileMenu() {
   const overlay = document.getElementById('mobileMenuOverlay');
   const hamIcon = document.getElementById('hamburgerIcon');
   const closeIcon = document.getElementById('closeMenuIcon');
+  const header = document.getElementById('mainHeader');
   if (!drawer) return;
 
-  drawer.classList.remove('hidden');
-  if (overlay) {
-    overlay.classList.remove('hidden');
-    void overlay.offsetWidth;
-    overlay.classList.remove('opacity-0', 'pointer-events-none');
-    overlay.classList.add('opacity-100', 'pointer-events-auto');
+  if (mobileMenuCloseTimer) {
+    clearTimeout(mobileMenuCloseTimer);
+    mobileMenuCloseTimer = null;
   }
 
-  void drawer.offsetWidth;
-  drawer.classList.remove('-translate-y-4', 'opacity-0', 'scale-[0.98]');
-  drawer.classList.add('translate-y-0', 'opacity-100', 'scale-100');
+  if (header) header.classList.add('mobile-menu-active');
+  drawer.classList.add('is-open');
+  if (overlay) overlay.classList.add('is-open');
 
   if (hamIcon) {
     hamIcon.classList.add('scale-50', 'opacity-0', '-rotate-90');
@@ -1496,15 +1582,16 @@ function closeMobileMenu() {
   const overlay = document.getElementById('mobileMenuOverlay');
   const hamIcon = document.getElementById('hamburgerIcon');
   const closeIcon = document.getElementById('closeMenuIcon');
+  const header = document.getElementById('mainHeader');
   if (!drawer) return;
 
-  drawer.classList.remove('translate-y-0', 'opacity-100', 'scale-100');
-  drawer.classList.add('-translate-y-4', 'opacity-0', 'scale-[0.98]');
-
-  if (overlay) {
-    overlay.classList.remove('opacity-100', 'pointer-events-auto');
-    overlay.classList.add('opacity-0', 'pointer-events-none');
+  if (mobileMenuCloseTimer) {
+    clearTimeout(mobileMenuCloseTimer);
+    mobileMenuCloseTimer = null;
   }
+
+  drawer.classList.remove('is-open');
+  if (overlay) overlay.classList.remove('is-open');
 
   if (hamIcon) {
     hamIcon.classList.remove('scale-50', 'opacity-0', '-rotate-90');
@@ -1514,15 +1601,15 @@ function closeMobileMenu() {
     closeIcon.classList.add('scale-50', 'opacity-0', 'rotate-90');
   }
 
-  setTimeout(() => {
-    if (drawer && drawer.classList.contains('opacity-0')) {
-      drawer.classList.add('hidden');
-      if (closeIcon) closeIcon.classList.add('hidden');
+  mobileMenuCloseTimer = setTimeout(() => {
+    if (header && !drawer.classList.contains('is-open')) {
+      header.classList.remove('mobile-menu-active');
     }
-    if (overlay && overlay.classList.contains('opacity-0')) {
-      overlay.classList.add('hidden');
+    if (closeIcon && !drawer.classList.contains('is-open')) {
+      closeIcon.classList.add('hidden');
     }
-  }, 300);
+    mobileMenuCloseTimer = null;
+  }, 1220);
 }
 
 // --- SMOOTH & LUXURIOUS ANCHOR NAVIGATION (Header buttons & in-page anchors) ---
@@ -1633,6 +1720,152 @@ function smoothScrollTo(targetY, customDuration) {
   }
 }
 
+let currentActiveNavSection = undefined;
+let scrollSpyClickLockTimer = null;
+let lastScrollSpyY = typeof window !== 'undefined' ? (window.pageYOffset || document.documentElement.scrollTop || 0) : 0;
+let scrollSpyDirection = 'down';
+
+function isDesktopNavActive() {
+  if (typeof getDeviceType === 'function') {
+    return getDeviceType() === 'desktop';
+  }
+  return window.innerWidth >= 1024;
+}
+
+function setActiveNavSection(sectionId) {
+  // На телефонах и планшетах подсветка разделов в навигации отключена
+  if (!isDesktopNavActive()) {
+    sectionId = null;
+  }
+
+  if (currentActiveNavSection === sectionId) return;
+  currentActiveNavSection = sectionId;
+
+  // Desktop header nav links
+  const desktopNavLinks = document.querySelectorAll('#mainHeader nav a[href^="#"]');
+  desktopNavLinks.forEach(link => {
+    const href = link.getAttribute('href');
+    const target = href ? href.replace(/^#/, '') : '';
+    if (sectionId && target === sectionId) {
+      link.classList.add('nav-active');
+    } else {
+      link.classList.remove('nav-active');
+    }
+  });
+
+  // На мобильных устройствах и планшетах меню остаётся чистым без принудительной подсветки
+  const mobileNavLinks = document.querySelectorAll('#mobileMenuDrawer a[href^="#"]');
+  mobileNavLinks.forEach(link => {
+    link.classList.remove('nav-active');
+  });
+}
+
+function getSectionAnchorTop(el) {
+  if (!el) return null;
+  // Ищем заголовок раздела (h2, h1 или специализированный класс)
+  // Если заголовок найден — ориентируемся на него как на смысловой центр раздела
+  // Если верстка изменится или заголовка нет — плавно ориентируемся на верхний край контейнера
+  const heading = el.querySelector('h2, h1, [data-section-title], .section-title');
+  if (heading) {
+    const headingRect = heading.getBoundingClientRect();
+    if (headingRect.height > 0 || headingRect.width > 0) {
+      return headingRect.top;
+    }
+  }
+  return el.getBoundingClientRect().top;
+}
+
+function updateActiveNavSection() {
+  // На телефонах и планшетах полностью отключаем scrollspy-подсветку
+  if (!isDesktopNavActive()) {
+    setActiveNavSection(null);
+    return;
+  }
+
+  if (scrollSpyClickLockTimer) return;
+
+  const scrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+  const windowHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+  const documentHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+
+  // Определение направления скролла с фильтрацией микро-колебаний
+  const scrollDelta = scrollY - lastScrollSpyY;
+  if (Math.abs(scrollDelta) >= 3) {
+    scrollSpyDirection = scrollDelta > 0 ? 'down' : 'up';
+    lastScrollSpyY = scrollY;
+  }
+
+  // Если прокрутили до самого низа страницы — гарантированно активны Контакты
+  if (scrollY + windowHeight >= documentHeight - 50) {
+    setActiveNavSection('contacts');
+    return;
+  }
+
+  const header = document.querySelector('header');
+  const headerH = header ? header.offsetHeight : 72;
+
+  // Оптический центр видимой зоны экрана (между фиксированной шапкой и низом вьюпорта):
+  // При скролле ВНИЗ: заголовок следующего раздела доходит до центра экрана (~47% видимой высоты) -> активируется этот раздел.
+  // При скролле ВВЕРХ: заголовок нижнего раздела должен опуститься до ~72% (70-75% высоты экрана), прежде чем подсветка перейдёт на верхний раздел.
+  const visibleHeight = windowHeight - headerH;
+  const visibleCenter = headerH + visibleHeight * 0.47;
+  const triggerY = scrollSpyDirection === 'down'
+    ? visibleCenter
+    : headerH + Math.round(visibleHeight * 0.72);
+
+  const NAV_SECTIONS = ['player', 'services', 'faq', 'contacts'];
+
+  // Зона Hero: если заголовок первого раздела (player) ещё не поднялся до центра экрана,
+  // значит внимание пользователя на главном экране — подсветка выключена
+  const firstSection = document.getElementById(NAV_SECTIONS[0]);
+  const firstAnchorTop = getSectionAnchorTop(firstSection);
+  if (firstAnchorTop !== null && firstAnchorTop > triggerY) {
+    setActiveNavSection(null);
+    return;
+  }
+  if (scrollY < 120) {
+    setActiveNavSection(null);
+    return;
+  }
+
+  // Проверяем секции в обратном порядке (снизу вверх: contacts -> faq -> services -> player):
+  // Первая секция снизу, чей заголовок/якорь пересёк линию центра экрана, становится активной
+  let activeSection = null;
+  for (let i = NAV_SECTIONS.length - 1; i >= 0; i--) {
+    const id = NAV_SECTIONS[i];
+    const el = document.getElementById(id);
+    if (!el) continue;
+    const anchorTop = getSectionAnchorTop(el);
+    if (anchorTop !== null && anchorTop <= triggerY) {
+      activeSection = id;
+      break;
+    }
+  }
+
+  setActiveNavSection(activeSection);
+}
+
+function initScrollSpy() {
+  let isScrollSpyTicking = false;
+
+  function onScrollOrResize() {
+    if (!isScrollSpyTicking) {
+      isScrollSpyTicking = true;
+      requestAnimationFrame(() => {
+        updateActiveNavSection();
+        updateScrollToTopVisibility();
+        isScrollSpyTicking = false;
+      });
+    }
+  }
+
+  window.addEventListener('scroll', onScrollOrResize, { passive: true });
+  window.addEventListener('resize', onScrollOrResize, { passive: true });
+
+  // Recalculate on initial render
+  updateActiveNavSection();
+}
+
 function initSmoothAnchorNavigation() {
   if (typeof gsap !== 'undefined' && typeof ScrollToPlugin !== 'undefined') {
     gsap.registerPlugin(ScrollToPlugin);
@@ -1649,6 +1882,7 @@ function initSmoothAnchorNavigation() {
 
     if (href === '#' || href === '#top') {
       e.preventDefault();
+      setActiveNavSection(null);
       smoothScrollTo(0);
       return;
     }
@@ -1663,6 +1897,16 @@ function initSmoothAnchorNavigation() {
         const rect = targetEl.getBoundingClientRect();
         const currentY = window.pageYOffset || document.documentElement.scrollTop || 0;
         const targetY = currentY + rect.top - headerH - extraOffset;
+
+        const targetId = href.startsWith('#') ? href.slice(1) : null;
+        if (targetId && ['player', 'services', 'faq', 'contacts'].includes(targetId)) {
+          setActiveNavSection(targetId);
+          if (scrollSpyClickLockTimer) clearTimeout(scrollSpyClickLockTimer);
+          scrollSpyClickLockTimer = setTimeout(() => {
+            scrollSpyClickLockTimer = null;
+            updateActiveNavSection();
+          }, 1300);
+        }
 
         if (typeof closeMobileMenu === 'function') {
           closeMobileMenu();
@@ -1680,8 +1924,42 @@ function initSmoothAnchorNavigation() {
   });
 }
 
+// --- SCROLL TO TOP FLOATING BUTTON (CENTER BOTTOM) ---
+function scrollToTop() {
+  setActiveNavSection(null);
+  smoothScrollTo(0);
+}
+
+function updateScrollToTopVisibility() {
+  const btn = document.getElementById('scrollToTopBtn');
+  if (!btn) return;
+  const scrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+  if (scrollY > 260) {
+    btn.classList.add('visible');
+  } else {
+    btn.classList.remove('visible');
+  }
+}
+
+function initScrollToTop() {
+  const btn = document.getElementById('scrollToTopBtn');
+  if (!btn) return;
+  btn.addEventListener('click', (e) => {
+    e.preventDefault();
+    scrollToTop();
+  });
+  updateScrollToTopVisibility();
+}
+
 function goToFaqItem(faqIndex) {
   closeAboutModal();
+  setActiveNavSection('faq');
+  if (scrollSpyClickLockTimer) clearTimeout(scrollSpyClickLockTimer);
+  scrollSpyClickLockTimer = setTimeout(() => {
+    scrollSpyClickLockTimer = null;
+    updateActiveNavSection();
+  }, 1300);
+
   const faqSection = document.getElementById('faq');
   if (faqSection) {
     const header = document.querySelector('header');
@@ -1746,32 +2024,63 @@ function copyText(text, toastMsg) {
   }
 }
 
-// --- GSAP ANIMATIONS ---
-// --- GSAP ANIMATIONS ---
+// --- GSAP ANIMATIONS: STRICT POSITION-BOUND CASCADE WITH DYNAMIC PLAYER BAR OFFSET ---
+function getStickyPlayerHeight() {
+  const bar = document.getElementById('stickyPlayerBar');
+  const isActive = bar && (bar.classList.contains('active') || document.body.classList.contains('has-sticky-player'));
+  if (isActive) {
+    const h = bar.offsetHeight;
+    if (h && h > 0) return h;
+    return window.innerWidth >= 640 ? 96 : 84;
+  }
+  return 0;
+}
+
+function computeDynamicStart(percentOrStr = 86) {
+  let percent = 86;
+  if (typeof percentOrStr === 'number') {
+    percent = percentOrStr;
+  } else if (typeof percentOrStr === 'string') {
+    const m = percentOrStr.match(/(\d+)%/);
+    if (m) {
+      percent = parseFloat(m[1]);
+    }
+  }
+
+  return () => {
+    const bottomBarHeight = getStickyPlayerHeight();
+    if (bottomBarHeight > 0) {
+      // Visible viewport above the bottom sticky player bar
+      const effectiveViewportHeight = window.innerHeight - bottomBarHeight;
+      const triggerY = Math.round(effectiveViewportHeight * (percent / 100));
+      return `top ${triggerY}px`;
+    }
+    return `top ${percent}%`;
+  };
+}
+
 function animateScrollBlock(selectorOrEls, options = {}) {
   const els = typeof selectorOrEls === 'string' ? document.querySelectorAll(selectorOrEls) : selectorOrEls;
   if (!els || els.length === 0) return;
 
   const yVal = options.y !== undefined ? options.y : 22;
-  const openDuration = options.duration || 0.52;
-  const closeDuration = options.closeDuration || 0.36;
-  const openStart = options.start || 'top 82%';
-  const closeStart = options.closeStart || 'top 60%';
+  const duration = options.duration || 0.48;
+  const rawStart = options.start || 'top 86%';
+  const dynamicStart = typeof rawStart === 'function' ? rawStart : computeDynamicStart(rawStart);
   const ease = options.ease || 'power2.out';
-  const closeEase = options.closeEase || 'power2.in';
   const stagger = options.stagger || 0;
   const delay = options.delay || 0;
   const trigger = options.trigger || null;
 
   els.forEach((el, idx) => {
-    // Kill any existing triggers for this element
+    // Kill existing triggers for this element
     ScrollTrigger.getAll().forEach(st => {
       if (st.vars && st.vars.trigger === el) {
         st.kill();
       }
     });
 
-    // Set initial hidden position
+    // Strictly closed by default
     gsap.set(el, { y: yVal, opacity: 0 });
 
     const trigEl = trigger ? (typeof trigger === 'string' ? document.querySelector(trigger) : trigger) : el;
@@ -1779,59 +2088,76 @@ function animateScrollBlock(selectorOrEls, options = {}) {
 
     const itemDelay = delay + (stagger > 0 ? idx * stagger : 0);
 
-    // 1. OPEN TRIGGER: plays when scrolling DOWN and element enters the viewport
-    ScrollTrigger.create({
-      trigger: trigEl,
-      start: openStart,
-      onEnter: () => {
-        gsap.to(el, {
-          y: 0,
-          opacity: 1,
-          duration: openDuration,
-          delay: itemDelay,
-          ease: ease,
-          overwrite: 'auto'
-        });
-      },
-      onEnterBack: () => {
-        gsap.to(el, {
-          y: 0,
-          opacity: 1,
-          duration: openDuration,
-          ease: ease,
-          overwrite: 'auto'
-        });
+    // Position-bound trigger: opens when crossing into viewport from below, closes when leaving viewport downward
+    gsap.fromTo(
+      el,
+      { y: yVal, opacity: 0 },
+      {
+        y: 0,
+        opacity: 1,
+        duration: duration,
+        delay: itemDelay,
+        ease: ease,
+        overwrite: 'auto',
+        scrollTrigger: {
+          trigger: trigEl,
+          start: dynamicStart,
+          end: 'bottom top',
+          toggleActions: 'play none none reverse'
+        }
       }
-    });
+    );
+  });
+}
 
-    // 2. CLOSE TRIGGER: visibly closes when scrolling UP while element is in clear view
-    ScrollTrigger.create({
-      trigger: trigEl,
-      start: closeStart,
-      onLeaveBack: () => {
-        gsap.to(el, {
-          y: yVal,
-          opacity: 0,
-          duration: closeDuration,
-          ease: closeEase,
-          overwrite: 'auto'
-        });
-      },
-      onEnter: () => {
-        gsap.to(el, {
-          y: 0,
-          opacity: 1,
-          duration: openDuration,
-          ease: ease,
-          overwrite: 'auto'
-        });
+function initServicesGsapAnimation() {
+  if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') return;
+
+  const cards = document.querySelectorAll('#servicesContainer > *');
+  if (!cards.length) return;
+
+  // Kill previous triggers attached to service cards or container
+  ScrollTrigger.getAll().forEach(st => {
+    if (st.vars && st.vars.trigger) {
+      const tr = st.vars.trigger;
+      if (typeof tr === 'object' && tr.closest && tr.closest('#servicesContainer')) {
+        st.kill();
+      } else if (tr === '#servicesContainer') {
+        st.kill();
       }
-    });
+    }
+  });
+
+  // Services cards: closed by default, cascade in sequentially when section arrives
+  cards.forEach((card, idx) => {
+    gsap.set(card, { y: 22, opacity: 0 });
+
+    gsap.fromTo(
+      card,
+      { y: 22, opacity: 0 },
+      {
+        y: 0,
+        opacity: 1,
+        duration: 0.48,
+        delay: idx * 0.08,
+        ease: 'power2.out',
+        overwrite: 'auto',
+        scrollTrigger: {
+          trigger: '#servicesContainer',
+          start: computeDynamicStart(84),
+          end: 'bottom top',
+          toggleActions: 'play none none reverse'
+        }
+      }
+    );
   });
 }
 
 function initFaqGsapAnimation() {
   if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') return;
+
+  const faqItems = document.querySelectorAll('#faqContainer > *');
+  if (!faqItems.length) return;
 
   // Kill previous triggers attached to FAQ items
   ScrollTrigger.getAll().forEach(st => {
@@ -1843,60 +2169,28 @@ function initFaqGsapAnimation() {
     }
   });
 
-  const faqItems = document.querySelectorAll('#faqContainer > *');
-  if (!faqItems.length) return;
-
+  // Each FAQ question is an independent object strictly bound to its own viewport position
   faqItems.forEach((item) => {
-    // Initial hidden state
+    // Strictly closed by default
     gsap.set(item, { y: 20, opacity: 0 });
 
-    // Open when scrolling down
-    ScrollTrigger.create({
-      trigger: item,
-      start: 'top 82%',
-      onEnter: () => {
-        gsap.to(item, {
-          y: 0,
-          opacity: 1,
-          duration: 0.48,
-          ease: 'power2.out',
-          overwrite: 'auto'
-        });
-      },
-      onEnterBack: () => {
-        gsap.to(item, {
-          y: 0,
-          opacity: 1,
-          duration: 0.48,
-          ease: 'power2.out',
-          overwrite: 'auto'
-        });
+    gsap.fromTo(
+      item,
+      { y: 20, opacity: 0 },
+      {
+        y: 0,
+        opacity: 1,
+        duration: 0.45,
+        ease: 'power2.out',
+        overwrite: 'auto',
+        scrollTrigger: {
+          trigger: item,
+          start: computeDynamicStart(86),
+          end: 'bottom top',
+          toggleActions: 'play none none reverse'
+        }
       }
-    });
-
-    // Close when scrolling up: triggered at top 65% so closing happens in full view
-    ScrollTrigger.create({
-      trigger: item,
-      start: 'top 65%',
-      onLeaveBack: () => {
-        gsap.to(item, {
-          y: 20,
-          opacity: 0,
-          duration: 0.35,
-          ease: 'power2.in',
-          overwrite: 'auto'
-        });
-      },
-      onEnter: () => {
-        gsap.to(item, {
-          y: 0,
-          opacity: 1,
-          duration: 0.48,
-          ease: 'power2.out',
-          overwrite: 'auto'
-        });
-      }
-    });
+    );
   });
 }
 
@@ -1917,56 +2211,27 @@ function initContactsGsapAnimation() {
     }
   });
 
-  // Each contact button floats in sequentially with a crisp stagger and closes in clear view
   contactButtons.forEach((btn, idx) => {
     gsap.set(btn, { y: 18, opacity: 0 });
 
-    ScrollTrigger.create({
-      trigger: btn,
-      start: 'top 82%',
-      onEnter: () => {
-        gsap.to(btn, {
-          y: 0,
-          opacity: 1,
-          duration: 0.45,
-          delay: idx * 0.06,
-          ease: 'power2.out',
-          overwrite: 'auto'
-        });
-      },
-      onEnterBack: () => {
-        gsap.to(btn, {
-          y: 0,
-          opacity: 1,
-          duration: 0.45,
-          ease: 'power2.out',
-          overwrite: 'auto'
-        });
+    gsap.fromTo(
+      btn,
+      { y: 18, opacity: 0 },
+      {
+        y: 0,
+        opacity: 1,
+        duration: 0.42,
+        delay: idx * 0.05,
+        ease: 'power2.out',
+        overwrite: 'auto',
+        scrollTrigger: {
+          trigger: '#contactsGrid',
+          start: computeDynamicStart(85),
+          end: 'bottom top',
+          toggleActions: 'play none none reverse'
+        }
       }
-    });
-
-    ScrollTrigger.create({
-      trigger: btn,
-      start: 'top 65%',
-      onLeaveBack: () => {
-        gsap.to(btn, {
-          y: 18,
-          opacity: 0,
-          duration: 0.32,
-          ease: 'power2.in',
-          overwrite: 'auto'
-        });
-      },
-      onEnter: () => {
-        gsap.to(btn, {
-          y: 0,
-          opacity: 1,
-          duration: 0.45,
-          ease: 'power2.out',
-          overwrite: 'auto'
-        });
-      }
-    });
+    );
   });
 }
 
@@ -1984,8 +2249,8 @@ function initGsapAnimations() {
     {
       y: 0,
       opacity: 1,
-      duration: 0.9,
-      stagger: 0.1,
+      duration: 0.85,
+      stagger: 0.08,
       ease: 'power2.out'
     }
   );
@@ -1996,30 +2261,30 @@ function initGsapAnimations() {
     {
       y: 0,
       opacity: 1,
-      duration: 0.9,
+      duration: 0.85,
       ease: 'power2.out'
     }
   );
 
-  // Player Section: headings at 88% / close at 68%, content triggers at 80% / closes at 50%
-  animateScrollBlock('#player .text-center', { duration: 0.6, y: 20, start: 'top 88%', closeStart: 'top 68%' });
-  animateScrollBlock('#playerContentContainer', { duration: 0.5, y: 22, start: 'top 80%', closeStart: 'top 50%' });
+  // 1. Player Section: Phrase/header first at 88%, player content container at 82%
+  animateScrollBlock('#player .text-center', { duration: 0.5, y: 20, start: 'top 88%' });
+  animateScrollBlock('#playerContentContainer', { duration: 0.5, y: 22, start: 'top 82%' });
 
-  // Services Section: headings at 88% / close at 68%, rack cards trigger at 80% / close at 50%
-  animateScrollBlock('#services .text-center', { duration: 0.6, y: 20, start: 'top 88%', closeStart: 'top 68%' });
-  animateScrollBlock('#servicesContainer', { duration: 0.52, y: 22, start: 'top 80%', closeStart: 'top 50%' });
+  // 2. Services Section: Phrase/header first at 88%, service cards cascade at 84%
+  animateScrollBlock('#services .text-center', { duration: 0.5, y: 20, start: 'top 88%' });
+  initServicesGsapAnimation();
 
-  // FAQ Section: heading at 88% / close at 68%, individual questions at 82% / close at 65%
-  animateScrollBlock('#faq .text-center', { duration: 0.6, y: 20, start: 'top 88%', closeStart: 'top 68%' });
+  // 3. FAQ Section: Phrase/header first at 88%, individual questions strictly by their position at 86%
+  animateScrollBlock('#faq .text-center', { duration: 0.5, y: 20, start: 'top 88%' });
   initFaqGsapAnimation();
 
-  // Contacts Section: heading at 88% / close at 68%, rack container and button cascade at 82% / close at 52%
-  animateScrollBlock('#contacts .text-center', { duration: 0.6, y: 20, start: 'top 88%', closeStart: 'top 68%' });
-  animateScrollBlock('#contacts .rack-card', { duration: 0.5, y: 18, start: 'top 82%', closeStart: 'top 50%' });
+  // 4. Contacts Section: Phrase/header first at 88%, rack card container at 85%, buttons cascade at 85%
+  animateScrollBlock('#contacts .text-center', { duration: 0.5, y: 20, start: 'top 88%' });
+  animateScrollBlock('#contacts .rack-card', { duration: 0.5, y: 18, start: 'top 85%' });
   initContactsGsapAnimation();
 
-  // Footer Section
-  animateScrollBlock('footer', { y: 16, duration: 0.55, start: 'top 90%', closeStart: 'top 70%' });
+  // 5. Footer Section: Opens at 92%
+  animateScrollBlock('footer', { y: 16, duration: 0.5, start: 'top 92%' });
 }
 
 function initMixerFaderScroll() {
@@ -2031,6 +2296,13 @@ function initMixerFaderScroll() {
   let isDragging = false;
   let grabOffsetY = 12;
 
+  // Cache static DOM lookups once to avoid layout/query thrashing on scroll frames
+  const dbLabel = document.getElementById('side-db-label');
+  const sideLeds = Array.from(document.querySelectorAll('.side-vu-led'));
+  const totalLeds = sideLeds.length;
+  const redCount = Math.max(2, Math.round(totalLeds * 0.15));
+  const yellowCount = Math.max(4, Math.round(totalLeds * 0.38));
+
   function updateFaderUI(scrollPercent) {
     const railH = rail.clientHeight || 400;
     const knobH = knob.offsetHeight || 24;
@@ -2040,7 +2312,6 @@ function initMixerFaderScroll() {
 
     const faderLevel = 1 - Math.max(0, Math.min(1, scrollPercent));
 
-    const dbLabel = document.getElementById('side-db-label');
     if (dbLabel) {
       if (faderLevel < 0.04) {
         dbLabel.textContent = '-INF';
@@ -2050,12 +2321,8 @@ function initMixerFaderScroll() {
       }
     }
 
-    const sideLeds = document.querySelectorAll('.side-vu-led');
-    const totalLeds = sideLeds.length;
     if (totalLeds > 0) {
       const activeCount = Math.round(faderLevel * totalLeds);
-      const redCount = Math.max(2, Math.round(totalLeds * 0.15));
-      const yellowCount = Math.max(4, Math.round(totalLeds * 0.38));
 
       sideLeds.forEach((led, idx) => {
         const distFromBottom = totalLeds - 1 - idx;

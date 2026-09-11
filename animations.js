@@ -106,6 +106,12 @@
     Engine.source = st.source;
     Engine.time = st.time;
 
+    // Skip heavy trigonometric spectrum calculation if player canvas is off-screen and audio is idle
+    if (!playerVisible && !st.playing) {
+      Engine.level = 0;
+      return;
+    }
+
     var t = st.time;
     var after = st.source !== 'before';
     var gain = st.playing ? (after ? 1 : 0.6) : 0.13;
@@ -198,7 +204,7 @@
     document.addEventListener('pointerdown', function (e) {
       if (REDUCED || e.button !== 0) return;
       if (e.pointerType === 'touch') return; // Для тача проверяем скролл/тап отдельно
-      if (e.target.closest && e.target.closest('input, textarea, .fader-rail, #nr-boot')) return;
+      if (e.target.closest && e.target.closest('input, textarea, .fader-rail, #nr-boot, #mobileMenuToggle, #mobileMenuDrawer, #mobileMenuOverlay')) return;
       spawnClickRipple(e.clientX, e.clientY);
     }, { passive: true });
 
@@ -232,7 +238,7 @@
       var tapDuration = performance.now() - touchStartTime;
       // Если палец не сдвигался (быстрый тап/клик) — создаём акустические круги клика
       if (!isTouchMoved && tapDuration < 500) {
-        if (!touchTarget || !touchTarget.closest || !touchTarget.closest('input, textarea, .fader-rail, #nr-boot')) {
+        if (!touchTarget || !touchTarget.closest || !touchTarget.closest('input, textarea, .fader-rail, #nr-boot, #mainHeader, #mobileMenuToggle, #mobileMenuDrawer, #mobileMenuOverlay')) {
           spawnClickRipple(touchStartX, touchStartY);
         }
       }
@@ -463,23 +469,56 @@
   /* ═══ 08. ПОЯВЛЕНИЕ ПРИ ПРОКРУТКЕ ═══════════════════════════════════ */
 
   var revealObserver = null;
+  var revealNodes = [];
+
+  function getRevealRootMargin() {
+    var bar = document.getElementById('stickyPlayerBar');
+    var isActive = bar && (bar.classList.contains('active') || document.body.classList.contains('has-sticky-player'));
+    if (isActive) {
+      var h = bar.offsetHeight || (window.innerWidth >= 640 ? 96 : 84);
+      return '0px 0px -' + Math.round(h + 20) + 'px 0px';
+    }
+    return '0px 0px -8% 0px';
+  }
+
+  function updateRevealObserver() {
+    if (!('IntersectionObserver' in window)) return;
+    if (revealObserver) {
+      revealObserver.disconnect();
+    }
+    revealObserver = new IntersectionObserver(function (ents) {
+      ents.forEach(function (en) {
+        if (en.isIntersecting) {
+          en.target.classList.add('nr-in');
+        } else {
+          en.target.classList.remove('nr-in');
+        }
+      });
+    }, { rootMargin: getRevealRootMargin(), threshold: 0.15 });
+
+    for (var i = 0; i < revealNodes.length; i++) {
+      var node = revealNodes[i];
+      if (node && node.isConnected) {
+        revealObserver.observe(node);
+      }
+    }
+  }
 
   function observeReveal(node) {
     if (!node) return;
     if (REDUCED || !('IntersectionObserver' in window)) { node.classList.add('nr-in'); return; }
-    if (!revealObserver) {
-      revealObserver = new IntersectionObserver(function (ents) {
-        ents.forEach(function (en) {
-          if (en.isIntersecting) {
-            en.target.classList.add('nr-in');
-          } else {
-            en.target.classList.remove('nr-in');
-          }
-        });
-      }, { rootMargin: '0px 0px -8% 0px', threshold: 0.15 });
+    if (revealNodes.indexOf(node) === -1) {
+      revealNodes.push(node);
     }
-    revealObserver.observe(node);
+    if (!revealObserver) {
+      updateRevealObserver();
+    } else {
+      revealObserver.observe(node);
+    }
   }
+
+  window.NickRiseAnimations = window.NickRiseAnimations || {};
+  window.NickRiseAnimations.updateRevealObserver = updateRevealObserver;
 
   function initReveal() {
     $$('#contacts .grid > a, #contacts .grid > button').forEach(function (n, i) {
@@ -780,11 +819,17 @@
   });
   hook('openMobileMenu', function () {
     var d = $('#mobileMenuDrawer');
-    if (d) { d.classList.remove('nr-open'); void d.offsetWidth; d.classList.add('nr-open'); }
+    if (d) { d.classList.add('nr-open'); }
   });
   hook('closeMobileMenu', function () {
     var d = $('#mobileMenuDrawer');
-    if (d) d.classList.remove('nr-open');
+    if (d) {
+      setTimeout(function () {
+        if (d && !d.classList.contains('is-open')) {
+          d.classList.remove('nr-open');
+        }
+      }, 1220);
+    }
   });
 
   /* ═══ 19. СТАРТ ═════════════════════════════════════════════════════ */

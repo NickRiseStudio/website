@@ -81,7 +81,7 @@
   <header id="mainHeader" class="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-[#0C0E12]/80 border-b border-gray-800/60 transition-all duration-300">
     <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
       
-      <a href="#" class="flex items-center gap-2 sm:gap-3.5 group min-w-0">
+      <button id="headerLogoBtn" type="button" onclick="openAboutModal()" class="flex items-center gap-2 sm:gap-3.5 group min-w-0 text-left cursor-pointer focus:outline-none" title="Обо мне // Nick Rise" aria-label="Обо мне - Nick Rise Studio">
         <div class="w-9 h-9 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl overflow-hidden border border-amber-500/30 group-hover:border-amber-500 transition-colors shadow-lg shadow-amber-500/10 flex-shrink-0">
           <img src="./image/Logo.jpg" alt="Nick Rise Studio Logo" class="w-full h-full object-cover" decoding="async" fetchpriority="high">
         </div>
@@ -91,25 +91,20 @@
           </span>
           <span class="text-[8px] sm:text-[10px] font-mono text-amber-500 uppercase tracking-wider sm:tracking-widest truncate">Nick Rise - One Rise</span>
         </div>
-      </a>
+      </button>
 
       <nav class="hidden lg:flex items-center gap-3 xl:gap-6 text-xs lg:text-sm font-semibold text-gray-300">
-        <button onclick="openAboutModal()" class="px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:text-amber-300 hover:bg-amber-500/20 hover:border-amber-500/50 font-bold transition-all cursor-pointer text-left focus:outline-none flex items-center gap-1.5 shadow-sm shadow-amber-500/10 active:scale-95">
-          <svg class="w-3.5 h-3.5 fill-current text-amber-400" viewBox="0 0 24 24">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
-          </svg>
-          <span data-i18n="nav.about">Обо мне</span>
-        </button>
-        <a href="#player" class="hover:text-amber-400 transition-colors whitespace-nowrap" data-i18n="nav.abPlayer">Примеры A/B</a>
-        <a href="#services" class="hover:text-amber-400 transition-colors whitespace-nowrap" data-i18n="nav.services">Услуги</a>
-        <a href="#faq" class="hover:text-amber-400 transition-colors whitespace-nowrap" data-i18n="nav.faq">FAQ</a>
-        <a href="#contacts" class="hover:text-amber-400 transition-colors whitespace-nowrap" data-i18n="nav.contacts">Контакты</a>
+        <a href="#player" class="hover:text-amber-400 transition-colors whitespace-nowrap" data-nav-section="player" data-i18n="nav.abPlayer">Примеры A/B</a>
+        <a href="#services" class="hover:text-amber-400 transition-colors whitespace-nowrap" data-nav-section="services" data-i18n="nav.services">Услуги</a>
+        <a href="#faq" class="hover:text-amber-400 transition-colors whitespace-nowrap" data-nav-section="faq" data-i18n="nav.faq">FAQ</a>
+        <a href="#contacts" class="hover:text-amber-400 transition-colors whitespace-nowrap" data-nav-section="contacts" data-i18n="nav.contacts">Контакты</a>
       </nav>
 
       <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-        <div id="langToggleContainer" class="flex items-center bg-[#14171F] p-0.5 sm:p-1 rounded-lg sm:rounded-xl border border-gray-800 cursor-pointer select-none hover:border-amber-500/40 transition-colors active:scale-95">
-          <button id="btnLangRu" class="px-2 sm:px-3 py-1 text-xs font-bold rounded-md sm:rounded-lg transition-all text-gray-400 hover:text-white pointer-events-none">RU</button>
-          <button id="btnLangEn" class="px-2 sm:px-3 py-1 text-xs font-bold rounded-md sm:rounded-lg transition-all bg-amber-500 text-slate-950 font-extrabold pointer-events-none">EN</button>
+        <div id="langToggleContainer" class="relative inline-flex items-center bg-[#0d1017] p-0.5 sm:p-1 rounded-lg sm:rounded-xl border border-gray-800 cursor-pointer select-none hover:border-amber-500/40 transition-colors" data-lang="ru" role="button" tabindex="0" aria-label="Toggle language">
+          <div id="langSlidePill" class="lang-slider-pill pointer-events-none"></div>
+          <span id="btnLangRu" class="relative z-10 px-2 sm:px-3 py-1 text-xs font-extrabold rounded-md sm:rounded-lg pointer-events-none">RU</span>
+          <span id="btnLangEn" class="relative z-10 px-2 sm:px-3 py-1 text-xs font-extrabold rounded-md sm:rounded-lg pointer-events-none">EN</span>
         </div>
 
         <button onclick="openContactModal()" class="hidden sm:flex items-center gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold rounded-xl transition-all shadow-lg shadow-amber-500/20 active:scale-95 text-xs sm:text-sm">
@@ -120,65 +115,55 @@
         </button>
 
         <!-- Mobile/Tablet Menu Toggle Button -->
-        <button id="mobileMenuToggle" onclick="toggleMobileMenu()" aria-label="Toggle mobile menu" class="lg:hidden w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-[#14171F] border border-gray-800 flex items-center justify-center text-gray-300 hover:text-white hover:border-amber-500/40 transition-all active:scale-95 focus:outline-none relative overflow-hidden">
-          <svg id="hamburgerIcon" class="w-5 h-5 fill-current text-amber-400 transition-all duration-300 transform" viewBox="0 0 24 24">
+        <button id="mobileMenuToggle" onclick="toggleMobileMenu()" aria-label="Toggle mobile menu" class="lg:hidden w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-[#14171F] border border-gray-800 flex items-center justify-center text-gray-300 hover:text-white hover:border-amber-500/40 transition-all duration-300 active:scale-95 focus:outline-none relative overflow-hidden">
+          <svg id="hamburgerIcon" class="w-5 h-5 fill-current text-amber-400 transition-all duration-[1200ms] ease-[cubic-bezier(0.16,1,0.3,1)] transform" viewBox="0 0 24 24">
             <path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/>
           </svg>
-          <svg id="closeMenuIcon" class="w-5 h-5 fill-current text-amber-400 transition-all duration-300 transform absolute hidden scale-50 opacity-0 rotate-90" viewBox="0 0 24 24">
+          <svg id="closeMenuIcon" class="w-5 h-5 fill-current text-amber-400 transition-all duration-[1200ms] ease-[cubic-bezier(0.16,1,0.3,1)] transform absolute hidden scale-50 opacity-0 rotate-90" viewBox="0 0 24 24">
             <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
           </svg>
         </button>
       </div>
 
     </div>
-
-    <!-- Mobile/Tablet Navigation Drawer -->
-    <div id="mobileMenuDrawer" class="hidden lg:hidden bg-[#0C0E12] border-b border-gray-800/80 px-4 py-5 shadow-2xl transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] origin-top transform -translate-y-4 opacity-0 scale-[0.98]">
-      <div class="flex flex-col space-y-2 text-base font-semibold text-gray-200">
-        
-        <button onclick="openAboutModal(); closeMobileMenu();" class="w-full text-left px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:text-amber-300 font-bold transition-all flex items-center justify-between active:scale-[0.98]">
-          <div class="flex items-center gap-2.5">
-            <svg class="w-4 h-4 fill-current text-amber-400" viewBox="0 0 24 24">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
-            </svg>
-            <span data-i18n="nav.about">Обо мне</span>
-          </div>
-          <svg class="w-4 h-4 text-amber-500/70" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
-        </button>
-
-        <a href="#player" onclick="closeMobileMenu()" class="px-4 py-3 rounded-xl bg-[#12151D] border border-gray-800/60 hover:bg-[#1A1F2B] hover:text-amber-400 transition-all flex items-center justify-between">
-          <span data-i18n="nav.abPlayer">Примеры A/B</span>
-          <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
-        </a>
-
-        <a href="#services" onclick="closeMobileMenu()" class="px-4 py-3 rounded-xl bg-[#12151D] border border-gray-800/60 hover:bg-[#1A1F2B] hover:text-amber-400 transition-all flex items-center justify-between">
-          <span data-i18n="nav.services">Услуги</span>
-          <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
-        </a>
-
-        <a href="#faq" onclick="closeMobileMenu()" class="px-4 py-3 rounded-xl bg-[#12151D] border border-gray-800/60 hover:bg-[#1A1F2B] hover:text-amber-400 transition-all flex items-center justify-between">
-          <span data-i18n="nav.faq">FAQ</span>
-          <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
-        </a>
-
-        <a href="#contacts" onclick="closeMobileMenu()" class="px-4 py-3 rounded-xl bg-[#12151D] border border-gray-800/60 hover:bg-[#1A1F2B] hover:text-amber-400 transition-all flex items-center justify-between">
-          <span data-i18n="nav.contacts">Контакты</span>
-          <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
-        </a>
-
-        <button onclick="openContactModal(); closeMobileMenu();" class="mt-2 w-full flex items-center justify-center gap-2 px-5 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold rounded-xl transition-all shadow-lg shadow-amber-500/20 active:scale-95 text-base">
-          <span data-i18n="nav.contactBtn">Связаться</span>
-          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
-            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-          </svg>
-        </button>
-
-      </div>
-    </div>
   </header>
 
   <!-- Mobile/Tablet Backdrop Overlay -->
-  <div id="mobileMenuOverlay" onclick="closeMobileMenu()" class="fixed inset-0 z-40 bg-black/70 backdrop-blur-md opacity-0 pointer-events-none transition-all duration-300 lg:hidden hidden"></div>
+  <div id="mobileMenuOverlay" onclick="closeMobileMenu()" class="lg:hidden fixed inset-0 z-30 bg-black/75"></div>
+
+  <!-- Mobile/Tablet Navigation Drawer (Slides smoothly out from under header) -->
+  <div id="mobileMenuDrawer" class="lg:hidden fixed top-16 sm:top-20 left-0 right-0 z-40 bg-[#0C0E12] border-b border-gray-800/80 px-4 sm:px-6 py-5 shadow-2xl max-h-[calc(100vh-4rem)] sm:max-h-[calc(100vh-5rem)] overflow-y-auto overscroll-contain">
+    <div class="max-w-7xl mx-auto flex flex-col space-y-2 text-base font-semibold text-gray-200">
+      
+      <a href="#player" onclick="closeMobileMenu()" class="mobile-drawer-item nav-drawer-link px-4 py-3 rounded-xl bg-[#12151D] border border-gray-800/60 hover:bg-[#1A1F2B] hover:text-amber-400 transition-all flex items-center justify-between" data-nav-section="player">
+        <span data-i18n="nav.abPlayer">Примеры A/B</span>
+        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+      </a>
+
+      <a href="#services" onclick="closeMobileMenu()" class="mobile-drawer-item nav-drawer-link px-4 py-3 rounded-xl bg-[#12151D] border border-gray-800/60 hover:bg-[#1A1F2B] hover:text-amber-400 transition-all flex items-center justify-between" data-nav-section="services">
+        <span data-i18n="nav.services">Услуги</span>
+        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+      </a>
+
+      <a href="#faq" onclick="closeMobileMenu()" class="mobile-drawer-item nav-drawer-link px-4 py-3 rounded-xl bg-[#12151D] border border-gray-800/60 hover:bg-[#1A1F2B] hover:text-amber-400 transition-all flex items-center justify-between" data-nav-section="faq">
+        <span data-i18n="nav.faq">FAQ</span>
+        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+      </a>
+
+      <a href="#contacts" onclick="closeMobileMenu()" class="mobile-drawer-item nav-drawer-link px-4 py-3 rounded-xl bg-[#12151D] border border-gray-800/60 hover:bg-[#1A1F2B] hover:text-amber-400 transition-all flex items-center justify-between" data-nav-section="contacts">
+        <span data-i18n="nav.contacts">Контакты</span>
+        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+      </a>
+
+      <button onclick="openContactModal(); closeMobileMenu();" class="mobile-drawer-item mt-2 w-full flex items-center justify-center gap-2 px-5 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold rounded-xl transition-all shadow-lg shadow-amber-500/20 active:scale-95 text-base">
+        <span data-i18n="nav.contactBtn">Связаться</span>
+        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+        </svg>
+      </button>
+
+    </div>
+  </div>
 
   <!-- MAIN CONTENT -->
   <main class="pt-16 lg:pt-0 space-y-8 sm:space-y-16 lg:space-y-20">
@@ -666,24 +651,24 @@
       <div class="w-0 flex-1 flex items-center justify-end pl-1">
         <div
           onclick="toggleDeckSource()"
-          class="deck-source-switch flex flex-col gap-0.5 bg-[#06070B] p-1 rounded-xl border border-gray-800 shadow-inner cursor-pointer select-none flex-shrink-0 relative"
+          data-source="after"
+          class="deck-source-switch deck-source-mobile relative flex flex-col bg-[#06070B] p-1 rounded-xl border border-gray-800 shadow-inner cursor-pointer select-none flex-shrink-0 overflow-hidden min-w-[86px]"
           title="Switch BEFORE / AFTER"
+          role="button"
+          tabindex="0"
         >
-          <button
-            type="button"
-            class="deck-btn-before py-1 px-2 text-[9px] font-extrabold rounded-md transition-all text-gray-400 hover:text-white flex items-center justify-between gap-1.5 cursor-pointer w-full"
-          >
-            <span class="deck-led-before w-1.5 h-1.5 rounded-full bg-gray-600 flex-shrink-0"></span>
-            <span>BEFORE</span>
-          </button>
+          <!-- Smooth Sliding Amber Pill for Mobile (Vertical) -->
+          <div class="deck-slider-pill deck-slider-pill-mobile pointer-events-none"></div>
 
-          <button
-            type="button"
-            class="deck-btn-after py-1 px-2 text-[9px] font-extrabold rounded-md transition-all bg-amber-500 text-slate-950 font-black shadow-md flex items-center justify-between gap-1.5 cursor-pointer w-full"
-          >
-            <span class="deck-led-after w-1.5 h-1.5 rounded-full vu-led-green animate-pulse flex-shrink-0"></span>
-            <span>AFTER</span>
-          </button>
+          <div class="deck-btn-before relative z-10 py-1 px-2 text-[9px] font-extrabold rounded-md flex items-center justify-between gap-1.5 w-full pointer-events-none">
+            <span class="deck-led-before w-1.5 h-1.5 rounded-full bg-gray-600 flex-shrink-0"></span>
+            <span class="deck-text-before">BEFORE</span>
+          </div>
+
+          <div class="deck-btn-after relative z-10 py-1 px-2 text-[9px] font-extrabold rounded-md flex items-center justify-between gap-1.5 w-full pointer-events-none">
+            <span class="deck-led-after w-1.5 h-1.5 rounded-full bg-gray-600 flex-shrink-0"></span>
+            <span class="deck-text-after">AFTER</span>
+          </div>
         </div>
       </div>
     </div>
@@ -742,24 +727,24 @@
       <div class="flex items-center justify-end gap-4 flex-1 flex-shrink-0">
         <div
           onclick="toggleDeckSource()"
-          class="deck-source-switch flex items-center gap-1 bg-[#06070B] p-1.5 rounded-2xl border border-gray-800 shadow-inner cursor-pointer select-none flex-shrink-0 relative"
+          data-source="after"
+          class="deck-source-switch deck-source-desktop relative flex items-center bg-[#06070B] p-1.5 rounded-2xl border border-gray-800 shadow-inner cursor-pointer select-none flex-shrink-0 overflow-hidden"
           title="Switch BEFORE / AFTER"
+          role="button"
+          tabindex="0"
         >
-          <button
-            type="button"
-            class="deck-btn-before py-2 px-5 text-xs font-black tracking-wide rounded-xl transition-all text-gray-400 hover:text-white flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <span class="deck-led-before w-2.5 h-2.5 rounded-full bg-gray-600 flex-shrink-0"></span>
-            <span>BEFORE</span>
-          </button>
+          <!-- Smooth Sliding Amber Pill for Desktop (Horizontal) -->
+          <div class="deck-slider-pill deck-slider-pill-desktop pointer-events-none"></div>
 
-          <button
-            type="button"
-            class="deck-btn-after py-2 px-5 text-xs font-black tracking-wide rounded-xl transition-all bg-amber-500 text-slate-950 font-black shadow-md flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <span class="deck-led-after w-2.5 h-2.5 rounded-full vu-led-green animate-pulse flex-shrink-0"></span>
-            <span>AFTER</span>
-          </button>
+          <div class="deck-btn-before relative z-10 flex-1 min-w-[104px] py-2 px-3 text-xs font-black tracking-wide rounded-xl flex items-center justify-center gap-2 pointer-events-none">
+            <span class="deck-led-before w-2.5 h-2.5 rounded-full bg-gray-600 flex-shrink-0"></span>
+            <span class="deck-text-before">BEFORE</span>
+          </div>
+
+          <div class="deck-btn-after relative z-10 flex-1 min-w-[104px] py-2 px-3 text-xs font-black tracking-wide rounded-xl flex items-center justify-center gap-2 pointer-events-none">
+            <span class="deck-led-after w-2.5 h-2.5 rounded-full bg-gray-600 flex-shrink-0"></span>
+            <span class="deck-text-after">AFTER</span>
+          </div>
         </div>
 
         <!-- Volume (visible on desktop) -->
@@ -783,6 +768,20 @@
 
     </div>
   </div>
+
+  <!-- 8.5 SCROLL TO TOP FLOATING BUTTON (CENTER BOTTOM) -->
+  <button
+    id="scrollToTopBtn"
+    onclick="scrollToTop()"
+    type="button"
+    class="scroll-to-top-btn group flex items-center justify-center cursor-pointer focus:outline-none"
+    aria-label="Вернуться наверх"
+    title="Вернуться наверх"
+  >
+    <svg class="scroll-to-top-arrow w-6 h-6 sm:w-7 sm:h-7 transition-transform duration-200 group-hover:-translate-y-0.5 group-active:translate-y-0 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M5.5 17.5L14 9L22.5 17.5" stroke="currentColor" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
 
   <!-- TOAST NOTIFICATION -->
   <div class="toast-container">
@@ -821,13 +820,25 @@
       };
 
       function applySmoothScroll() {
-        var isDesktop = window.innerWidth >= 1024 && !('ontouchstart' in window && window.matchMedia && window.matchMedia('(hover: none)').matches);
-        if (typeof SmoothScroll === 'function') {
-          if (isDesktop) {
-            SmoothScroll(smoothConfig);
-          } else if (typeof SmoothScroll.destroy === 'function') {
-            SmoothScroll.destroy();
+        // Pure touch-only mobile devices without pointer/mouse
+        var isTouchOnly = ('ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0)) &&
+                          window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+        var isDesktop = !isTouchOnly || window.innerWidth >= 1024;
+
+        try {
+          if (typeof SmoothScroll === 'function') {
+            if (isDesktop) {
+              if (typeof SmoothScroll.enable === 'function') {
+                SmoothScroll.enable(smoothConfig);
+              } else {
+                SmoothScroll(smoothConfig);
+              }
+            } else if (typeof SmoothScroll.destroy === 'function') {
+              SmoothScroll.destroy();
+            }
           }
+        } catch (err) {
+          console.warn('SmoothScroll init/destroy error caught safely:', err);
         }
       }
 
@@ -838,6 +849,7 @@
       }
 
       window.addEventListener('resize', applySmoothScroll, { passive: true });
+      window.addEventListener('orientationchange', applySmoothScroll, { passive: true });
     })();
   </script>
   <script src="./script.js"></script>
