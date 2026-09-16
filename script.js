@@ -806,24 +806,49 @@ function switchDeckSource(src) {
 
   const nextEl = src === 'before' ? item.audioA : item.audioB;
   const prevEl = src === 'before' ? item.audioB : item.audioA;
-  const isPlaying = !prevEl.paused && !nextEl.paused;
+  const prevPlaying = !prevEl.paused;
+  const nextPlaying = !nextEl.paused;
 
-  // Интерфейс переключается мгновенно, звук — мягким кроссфейдом.
+  // Логика и интерфейс переключаются мгновенно, звук — микро-фейдом
   item.source = src;
   updateDeckSourceUI();
+  cancelPendingSwitch();
+  item.seekPending = false;
 
-  if (isPlaying) {
-    // ВАЖНО: во время воспроизведения currentTime не трогаем вовсе — любой seek
-    // даёт провал в звуке. Обе дорожки идут параллельно, расхождение копеечное,
-    // добираем его микро-коррекцией скорости уже после переключения.
+  if (prevPlaying && nextPlaying) {
+    const drift = prevEl.currentTime - nextEl.currentTime;
+    const nextIsSilent = nextEl.volume <= 0.01;
+
+    if (!nextIsSilent || Math.abs(drift) <= AUDIO_SWITCH_ALIGN) {
+      // Дорожки уже стоят в одной точке — переключаем сразу, без задержки.
+      // (Если вторая дорожка сейчас слышна — предыдущий переход в процессе:
+      // seek по ней дал бы щелчок, поэтому просто продолжаем микро-фейд.)
+      nextEl.playbackRate = 1;
+      applyAudioVolumes(activeTrackId, true);
+      return;
+    }
+
+    // Разошлись (буферизация, только что начали играть): подводим неслышимую
+    // дорожку seek'ом и стартуем фейд, как только она встала на место, — иначе
+    // при переходе «повторится» кусок фразы, звучавшей до переключения.
     nextEl.playbackRate = 1;
-    syncAudioPair(item, true);
-  } else {
-    // На паузе жёсткое выравнивание неслышно — можно сразу.
-    prepareAudioPair(item);
+    const onSeeked = () => finishPendingSwitch();
+    pendingSwitch = { item, nextEl, prevEl, src, onSeeked };
+    nextEl.addEventListener('seeked', onSeeked, { once: true });
+    nextEl.currentTime = prevEl.currentTime;
+    pendingSwitchTimer = setTimeout(finishPendingSwitch, AUDIO_SWITCH_ALIGN_TIMEOUT);
+    return;
   }
 
-  applyAudioVolumes(activeTrackId, true);
+  // Одна из дорожек не играет (пауза или браузер не дал автозапуск): эталон —
+  // та дорожка, которую пользователь только что слушал, выравнивание неслышно,
+  // а переключение делаем мгновенным — без «дыры» в звуке.
+  alignPairTo(item, prevEl);
+  if (prevPlaying && !nextPlaying) {
+    const p = nextEl.play();
+    if (p && p.catch) p.catch(() => {});
+  }
+  applyAudioVolumes(activeTrackId, false);
 }
 
 function toggleDeckSource() {
@@ -849,20 +874,30 @@ function changeDeckVolume(val) {
   applyAudioVolumes(activeTrackId, false);
 }
 
-/* ══ ПЛАВНОЕ ПЕРЕКЛЮЧЕНИЕ BEFORE / AFTER ══════════════════════════════
-   На каждый трек параллельно идут ОБА файла: звучит только тот, чья громкость
-   больше нуля. Поэтому переключение — это чистый кроссфейд громкости: без
-   подгрузки, без смены источника и без seek. Вторая («тихая») дорожка держится
-   в синхроне микро-коррекцией скорости, а звучащая не трогается вообще — щелчки,
-   провалы и подтормаживания в этот момент невозможны.
+/* ══ ПЕРЕКЛЮЧЕНИЕ BEFORE / AFTER БЕЗ АРТЕФАКТОВ ═══════════════════════
+   На каждый трек параллельно идут ОБА файла: слышен тот, у которого громкость
+   больше нуля. Переключение — короткий микро-фейд (40 мс, без щелчка), а не
+   длинный кроссфейд: при длинном кроссфейде обе дорожки звучат одновременно, и
+   если их позиции расходятся хотя бы на десятки миллисекунд, окончание фразы
+   слышится дважды. Поэтому:
+     1. позиция «тихой» дорожки постоянно удерживается в одной точке со звучащей
+        (коррекция скорости — её не слышно, громкость = 0);
+     2. в момент клика позиции не перематываются: если дорожки уже совпадают,
+        фейд стартует мгновенно; если разошлись — тихую (неслышимую) дорожку
+        подводим seek'ом и стартуем фейд, как только она встала на место.
    ══════════════════════════════════════════════════════════════════════ */
 
-const AUDIO_SYNC_TOLERANCE = 0.015; // расхождение, которое уже не слышно (15 мс)
-const AUDIO_SYNC_RATE_MAX = 0.06;   // максимум коррекции скорости (6 %)
-const AUDIO_SYNC_HARD = 0.12;       // больше — выравниваем позицией тихую дорожку
-const AUDIO_CROSSFADE_MS = 220;     // длительность студийного кроссфейда
+const AUDIO_SYNC_TOLERANCE = 0.004;     // мёртвая зона синхронизации (4 мс)
+const AUDIO_SYNC_GAIN = 4;              // усиление коррекции скорости
+const AUDIO_SYNC_RATE_MAX = 0.12;       // предел коррекции скорости (±12 %)
+const AUDIO_SYNC_HARD = 0.2;            // больше — выравниваем позицией
+const AUDIO_FADE_MS = 40;               // микро-фейд переключения
+const AUDIO_SWITCH_ALIGN = 0.015;       // с какого расхождения нужна подводка
+const AUDIO_SWITCH_ALIGN_TIMEOUT = 140; // максимум ожидания подводки, мс
 
-let audioCrossfadeRAF = null;
+let audioFadeRAF = null;
+let pendingSwitch = null;
+let pendingSwitchTimer = null;
 
 /* Какая из двух дорожек звучит сейчас, а какая идёт рядом на нулевой громкости */
 function getAudiblePair(item) {
@@ -873,51 +908,78 @@ function getAudiblePair(item) {
   };
 }
 
-/* Синхронизация пары: instant = true — сразу выровнять позицией (тихая дорожка),
-   иначе мягко подтянуть скорость тихой дорожки, не касаясь звучащей. */
-function syncAudioPair(item, instant = false) {
+/* Дорожка реально слышна: играет и громкость больше нуля */
+function isAudioAudible(el) {
+  return !el.paused && el.volume > 0.005;
+}
+
+/* Синхронизация в обычном воспроизведении: трогаем ТОЛЬКО неслышимую дорожку.
+   Звучащая — эталон, её позицию и скорость не меняем никогда. */
+function syncAudioPair(item) {
   if (!item) return;
+  if (pendingSwitch || audioFadeRAF !== null) return; // идёт переход — не вмешиваемся
+
   const { audible, silent } = getAudiblePair(item);
+  if (!isAudioAudible(audible)) return;
 
   // Пользователь тянет полосу прокрутки: пока браузер не закончил seek звучащей
   // дорожки, вторую не трогаем — двойной seek как раз и давал рывок в звуке.
-  if (item.seekPending && !instant) {
+  if (item.seekPending) {
     if (audible.seeking) return;
+    if (Math.abs(audible.currentTime - silent.currentTime) > AUDIO_SYNC_TOLERANCE) {
+      silent.playbackRate = 1;
+      silent.currentTime = audible.currentTime;
+    }
     item.seekPending = false;
-  }
-
-  const drift = audible.currentTime - silent.currentTime;
-
-  if (instant || Math.abs(drift) > AUDIO_SYNC_HARD) {
-    silent.playbackRate = 1;
-    if (Math.abs(drift) > 0.05) silent.currentTime = audible.currentTime;
     return;
   }
 
-  if (Math.abs(drift) < AUDIO_SYNC_TOLERANCE) {
+  if (isAudioAudible(silent)) return; // ещё затухает после перехода — не трогаем
+
+  const drift = audible.currentTime - silent.currentTime;
+  const absDrift = Math.abs(drift);
+
+  // Большое расхождение (буферизация, скачок) — выравниваем позицией тихой дорожки
+  if (absDrift > AUDIO_SYNC_HARD) {
+    silent.playbackRate = 1;
+    silent.currentTime = audible.currentTime;
+    return;
+  }
+
+  if (absDrift < AUDIO_SYNC_TOLERANCE) {
     if (silent.playbackRate !== 1) silent.playbackRate = 1;
     return;
   }
 
-  const rate = 1 + Math.max(-AUDIO_SYNC_RATE_MAX, Math.min(AUDIO_SYNC_RATE_MAX, drift * 1.5));
+  // Мягкая догонка скоростью: на неслышимой дорожке это незаметно
+  const rate = 1 + Math.max(-AUDIO_SYNC_RATE_MAX, Math.min(AUDIO_SYNC_RATE_MAX, drift * AUDIO_SYNC_GAIN));
   if (Math.abs(silent.playbackRate - rate) > 0.002) silent.playbackRate = rate;
 }
 
-/* Подготовка пары к старту/паузе: тихую дорожку выравниваем по позиции */
+/* Подготовка пары к старту/паузе: на паузе выравнивание позицией неслышно.
+   Эталон — звучащая дорожка (по текущему item.source). */
 function prepareAudioPair(item) {
   if (!item) return;
-  const { audible, silent } = getAudiblePair(item);
-  silent.playbackRate = 1;
-  if (Math.abs(audible.currentTime - silent.currentTime) > 0.03) {
-    silent.currentTime = audible.currentTime;
-  }
+  cancelPendingSwitch();
+  const { audible } = getAudiblePair(item);
+  alignPairTo(item, audible);
   item.seekPending = false;
 }
 
-function stopAudioCrossfade() {
-  if (audioCrossfadeRAF !== null) {
-    cancelAnimationFrame(audioCrossfadeRAF);
-    audioCrossfadeRAF = null;
+/* Выравнивает «вторую» дорожку по указанной (эталон не трогаем) */
+function alignPairTo(item, referenceEl) {
+  if (!item || !referenceEl) return;
+  const other = referenceEl === item.audioA ? item.audioB : item.audioA;
+  other.playbackRate = 1;
+  if (Math.abs(referenceEl.currentTime - other.currentTime) > AUDIO_SYNC_TOLERANCE) {
+    other.currentTime = referenceEl.currentTime;
+  }
+}
+
+function stopAudioFade() {
+  if (audioFadeRAF !== null) {
+    cancelAnimationFrame(audioFadeRAF);
+    audioFadeRAF = null;
   }
 }
 
@@ -930,37 +992,63 @@ function applyAudioVolumes(trackId, smooth = false) {
 
   // Мгновенно: пауза, скрытая вкладка или режим без сглаживания
   if (!smooth || document.hidden || (item.audioA.paused && item.audioB.paused)) {
-    stopAudioCrossfade();
+    stopAudioFade();
     item.audioA.volume = targetVolA;
     item.audioB.volume = targetVolB;
     return;
   }
 
-  // Студийный кроссфейд по S-кривой считается покадрово, а не таймером:
-  // так переход не даёт «ступенек» и не зависит от загрузки главного потока.
-  stopAudioCrossfade();
+  // Микро-фейд по S-кривой считается покадрово: без «ступенек» и без таймеров,
+  // поэтому переход не зависит от загрузки главного потока.
+  stopAudioFade();
 
   const startA = item.audioA.volume;
   const startB = item.audioB.volume;
   const t0 = performance.now();
 
   const step = (now) => {
-    const k = Math.min(1, (now - t0) / AUDIO_CROSSFADE_MS);
+    const k = Math.min(1, (now - t0) / AUDIO_FADE_MS);
     const ease = 0.5 - Math.cos(k * Math.PI) / 2;
 
     item.audioA.volume = Math.max(0, Math.min(1, startA + (targetVolA - startA) * ease));
     item.audioB.volume = Math.max(0, Math.min(1, startB + (targetVolB - startB) * ease));
 
     if (k < 1) {
-      audioCrossfadeRAF = requestAnimationFrame(step);
+      audioFadeRAF = requestAnimationFrame(step);
     } else {
-      audioCrossfadeRAF = null;
+      audioFadeRAF = null;
       item.audioA.volume = targetVolA;
       item.audioB.volume = targetVolB;
     }
   };
 
-  audioCrossfadeRAF = requestAnimationFrame(step);
+  audioFadeRAF = requestAnimationFrame(step);
+}
+
+/* ── Подводка дорожек перед переходом ──────────────────────────────── */
+
+function cancelPendingSwitch() {
+  if (pendingSwitch && pendingSwitch.onSeeked) {
+    try { pendingSwitch.nextEl.removeEventListener('seeked', pendingSwitch.onSeeked); } catch (e) {}
+  }
+  if (pendingSwitchTimer) {
+    clearTimeout(pendingSwitchTimer);
+    pendingSwitchTimer = null;
+  }
+  pendingSwitch = null;
+}
+
+/* Дорожка встала на место (либо вышло время ожидания) — запускаем микро-фейд */
+function finishPendingSwitch() {
+  const p = pendingSwitch;
+  if (!p) return;
+  cancelPendingSwitch();
+
+  const stillActive = activeTrackId && trackAudioMap[activeTrackId] === p.item && p.item.source === p.src;
+  if (!stillActive) return;
+
+  p.nextEl.playbackRate = 1;
+  applyAudioVolumes(activeTrackId, true);
 }
 
 function seekDeckTrack(e) {
@@ -1654,28 +1742,18 @@ function renderServices() {
 
   container.removeEventListener('scroll', onServicesScroll);
   container.addEventListener('scroll', onServicesScroll, { passive: true });
-  container.addEventListener('touchstart', () => { userInteractedServices = true; }, { passive: true });
-  container.addEventListener('pointerdown', () => { userInteractedServices = true; }, { passive: true });
   window.removeEventListener('resize', onServicesResize);
   window.addEventListener('resize', onServicesResize, { passive: true });
 
-  const initMobileServicesPosition = () => {
-    if (window.innerWidth < 640 && !userInteractedServices) {
-      scrollToServiceCard(1, 'instant');
-    }
-    updateServicesDots(true);
-  };
+  // Раскладываем телефонную карусель сразу и включаем coverflow. Раскладка в этот
+  // момент может быть ещё не готова (нулевые размеры) — тогда пробуем снова
+  // в следующем кадре, а также по load/шрифтам/изменению размеров контейнера,
+  // чтобы карточки НИКОГДА не оставались в неправильном положении.
+  resetServicesCarouselState();
+  scheduleMobileServicesAlignment();
 
-  // Run immediately and after fonts/layout settle
-  initMobileServicesPosition();
-  requestAnimationFrame(initMobileServicesPosition);
-  setTimeout(initMobileServicesPosition, 60);
-  setTimeout(initMobileServicesPosition, 200);
-  setTimeout(initMobileServicesPosition, 500);
-
-  // Подстраховка для телефона: как только секция услуг появляется на экране,
-  // coverflow карточек пересчитывается заново. Без этого после анимации
-  // появления карточки могли остаться «плоскими» до первого пролистывания.
+  // Подстраховка: как только секция услуг появляется на экране, положение и
+  // coverflow пересчитываются ещё раз (быстро, без видимых скачков).
   if (servicesCarouselObserver) {
     servicesCarouselObserver.disconnect();
     servicesCarouselObserver = null;
@@ -1683,10 +1761,25 @@ function renderServices() {
   if ('IntersectionObserver' in window) {
     servicesCarouselObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
-        if (entry.isIntersecting) updateServicesDots(false);
+        if (entry.isIntersecting) applyMobileServicesPosition();
       });
     }, { threshold: 0.06 });
     servicesCarouselObserver.observe(container);
+  }
+
+  window.removeEventListener('load', onServicesLayoutSettled);
+  window.addEventListener('load', onServicesLayoutSettled);
+
+  window.removeEventListener('scroll', onServicesPageScroll);
+  window.addEventListener('scroll', onServicesPageScroll, { passive: true });
+
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => onServicesLayoutSettled());
+  }
+
+  if (!servicesContainerObserver && 'ResizeObserver' in window) {
+    servicesContainerObserver = new ResizeObserver(() => onServicesLayoutSettled());
+    servicesContainerObserver.observe(container);
   }
 
   // Refresh ScrollTrigger and animations after cards are rendered
@@ -1698,17 +1791,98 @@ function renderServices() {
   }
 }
 
-let userInteractedServices = false;
-let servicesCarouselObserver = null;
+/* ── Телефонная карусель услуг: стартовое положение ───────────────────
+   «Главная» (популярная) карточка стоит по центру, соседние — за ней по краям
+   и чуть под наклоном (coverflow из updateServicesDots). Раскладка считается
+   только когда размеры уже реальные, поэтому применяем положение в первом же
+   кадре, где это возможно, и повторяем по load / шрифтам / resize, пока не
+   получится. */
+
+const SERVICES_START_INDEX = 1; // индекс популярной карточки
+
+let servicesCarouselObserver = null;   // IntersectionObserver на секцию
+let servicesContainerObserver = null;  // ResizeObserver на контейнер
+let servicesAutoCentered = false;      // стартовое положение уже применено
+let servicesUserScrolled = false;      // пользователь сам пролистал карусель
+let servicesAppliedScrollLeft = null;  // последняя позиция, которую выставили мы
+let isServicesScrollTicking = false;
+
+function resetServicesCarouselState() {
+  servicesAutoCentered = false;
+  servicesUserScrolled = false;
+  servicesAppliedScrollLeft = null;
+}
+
+/* Раскладка готова: у контейнера и карточек есть реальные размеры */
+function isServicesLayoutReady(container) {
+  const first = container.children[0];
+  return !!first && container.clientWidth > 0 && first.offsetWidth > 0;
+}
+
+/* Ставит карусель в стартовое положение и включает coverflow.
+   Возвращает true, если состояние уже применено (можно не повторять). */
+function applyMobileServicesPosition() {
+  const container = document.getElementById('servicesContainer');
+  if (!container || !container.children.length) return true; // нечего выравнивать
+
+  if (window.innerWidth >= 640) {
+    updateServicesDots(false);
+    return true;
+  }
+
+  if (!isServicesLayoutReady(container)) return false; // раскладка ещё не готова — повторим
+
+  if (!servicesAutoCentered && !servicesUserScrolled) {
+    scrollToServiceCard(SERVICES_START_INDEX, 'instant'); // сначала позиция…
+    servicesAutoCentered = true;                          // …потом coverflow
+  }
+  updateServicesDots(false);
+  return true;
+}
+
+/* Пробуем применить положение в каждом кадре, пока раскладка не будет готова */
+function scheduleMobileServicesAlignment() {
+  let tries = 0;
+  const tick = () => {
+    let done = false;
+    try {
+      done = applyMobileServicesPosition();
+    } catch (e) {
+      done = true; // эффекты не должны ломать сайт
+    }
+    if (done || ++tries > 120) return; // не больше ~2 секунд
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+function onServicesLayoutSettled() {
+  try { applyMobileServicesPosition(); } catch (e) {}
+}
+
+/* Подстраховка: если по какой-то причине стартовое положение ещё не применилось,
+   оно применится при первой же прокрутке страницы — до того, как секция попадёт
+   на экран. После успешного применения это просто проверка одного флага. */
+function onServicesPageScroll() {
+  if (servicesAutoCentered || servicesUserScrolled) return;
+  try { applyMobileServicesPosition(); } catch (e) {}
+}
 
 function onServicesResize() {
   updateServicesDots(true);
+  onServicesLayoutSettled();
 }
 
-let isServicesScrollTicking = false;
 function onServicesScroll() {
   if (!isServicesScrollTicking) {
     requestAnimationFrame(() => {
+      const container = document.getElementById('servicesContainer');
+      // Позиция, которую выставили не мы, — значит карусель листает пользователь:
+      // после этого стартовое положение уже не навязываем.
+      if (container && servicesAppliedScrollLeft !== null &&
+          Math.abs(container.scrollLeft - servicesAppliedScrollLeft) > 6) {
+        servicesUserScrolled = true;
+      }
       updateServicesDots(false);
       isServicesScrollTicking = false;
     });
@@ -1743,8 +1917,10 @@ function scrollToServiceCard(index, behavior = 'smooth') {
 
   if (behavior === 'instant') {
     container.scrollTo({ left: targetScrollLeft, behavior: 'auto' });
+    servicesAppliedScrollLeft = targetScrollLeft;
     updateServicesDots(false);
   } else {
+    servicesAppliedScrollLeft = targetScrollLeft;
     container.scrollTo({
       left: targetScrollLeft,
       behavior: 'smooth'
