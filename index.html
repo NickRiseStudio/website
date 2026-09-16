@@ -10,13 +10,28 @@
   <meta property="og:type" content="website">
   <meta property="og:title" content="Nick Rise Studio — Профессиональное сведение & мастеринг">
   <meta property="og:description" content="Премиальное сведение и мастеринг треков от Ника Райза (Nick Rise). Аналоговый звук SSL, Neve, Tube-Tech под стандарты Spotify, Apple Music и Радио.">
-  <meta property="og:image" content="./image/Logo.jpg">
-  <meta name="twitter:card" content="summary_large_image">
+  <meta property="og:site_name" content="Nick Rise Studio">
+  <meta property="og:url" content="https://nickrisestudio.github.io/website/">
+  <meta property="og:locale" content="ru_RU">
+  <meta property="og:locale:alternate" content="en_US">
+  <!-- og:image - лёгкий WebP 600x600 (21 КБ вместо 2 МБ JPEG). URL абсолютный: скраперы Telegram/VK/WhatsApp не понимают относительные пути -->
+  <meta property="og:image" content="https://nickrisestudio.github.io/website/image/Logo.webp">
+  <meta property="og:image:type" content="image/webp">
+  <meta property="og:image:width" content="600">
+  <meta property="og:image:height" content="600">
+  <meta property="og:image:alt" content="Nick Rise - One Rise. Сведение и мастеринг">
+  <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Nick Rise Studio — Профессиональное сведение & мастеринг">
   <meta name="twitter:description" content="Премиальное сведение и мастеринг треков от Ника Райза (Nick Rise).">
-  <meta name="twitter:image" content="./image/Logo.jpg">
+  <meta name="twitter:image" content="https://nickrisestudio.github.io/website/image/Logo.webp">
   <meta name="theme-color" content="#0C0E12">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Nick Rise Studio">
+  <link rel="canonical" href="https://nickrisestudio.github.io/website/">
+
+  <!-- Favicon / иконки для устройств (WebP 600x600, 21 КБ) -->
+  <link rel="icon" type="image/webp" sizes="600x600" href="./image/Logo.webp">
+  <link rel="apple-touch-icon" sizes="180x180" href="./image/Logo.webp">
 
   <!-- Production Tailwind CSS (Compiled via CLI) -->
   <link rel="stylesheet" href="./tailwind.css">
@@ -103,10 +118,10 @@
       </button>
 
       <nav class="hidden lg:flex items-center gap-3 xl:gap-6 text-xs lg:text-sm font-semibold text-gray-300">
-        <a href="#player" class="hover:text-amber-400 transition-colors whitespace-nowrap" data-nav-section="player" data-i18n="nav.abPlayer">Примеры A/B</a>
-        <a href="#services" class="hover:text-amber-400 transition-colors whitespace-nowrap" data-nav-section="services" data-i18n="nav.services">Услуги</a>
-        <a href="#faq" class="hover:text-amber-400 transition-colors whitespace-nowrap" data-nav-section="faq" data-i18n="nav.faq">FAQ</a>
-        <a href="#contacts" class="hover:text-amber-400 transition-colors whitespace-nowrap" data-nav-section="contacts" data-i18n="nav.contacts">Контакты</a>
+        <a href="#player" class="hover:text-amber-400 transition-colors whitespace-nowrap" data-nav-section="player"><span data-i18n="nav.abPlayer">Примеры A/B</span></a>
+        <a href="#services" class="hover:text-amber-400 transition-colors whitespace-nowrap" data-nav-section="services"><span data-i18n="nav.services">Услуги</span></a>
+        <a href="#faq" class="hover:text-amber-400 transition-colors whitespace-nowrap" data-nav-section="faq"><span data-i18n="nav.faq">FAQ</span></a>
+        <a href="#contacts" class="hover:text-amber-400 transition-colors whitespace-nowrap" data-nav-section="contacts"><span data-i18n="nav.contacts">Контакты</span></a>
       </nav>
 
       <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
@@ -116,9 +131,9 @@
           <span id="btnLangEn" class="relative z-10 px-2 sm:px-3 py-1 text-xs font-extrabold rounded-md sm:rounded-lg pointer-events-none">EN</span>
         </div>
 
-        <button onclick="openContactModal()" class="hidden sm:flex items-center gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold rounded-xl transition-all shadow-lg shadow-amber-500/20 active:scale-95 text-xs sm:text-sm">
+        <button onclick="openContactModal()" class="hidden sm:flex items-center justify-center w-[120px] sm:w-[136px] gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold rounded-xl transition-all shadow-lg shadow-amber-500/20 active:scale-95 text-xs sm:text-sm whitespace-nowrap">
           <span data-i18n="nav.contactBtn">Связаться</span>
-          <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current" viewBox="0 0 24 24">
+          <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current flex-shrink-0" viewBox="0 0 24 24">
             <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
           </svg>
         </button>
@@ -186,8 +201,8 @@
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-12 items-center">
           
           <div class="lg:col-span-7 space-y-6 text-center lg:text-left order-2 lg:order-1">
-            <h1 class="hero-title-responsive text-[26px] min-[360px]:text-[30px] min-[390px]:text-[34px] min-[420px]:text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.14]" data-i18n="hero.title">
-              Профессиональное<br><span class="whitespace-nowrap">Сведение / мастеринг</span>
+            <h1 class="hero-title-responsive text-[26px] min-[360px]:text-[30px] min-[390px]:text-[34px] min-[420px]:text-4xl sm:text-5xl lg:text-[40px] xl:text-[48px] font-black text-white tracking-tight leading-[1.14]" data-i18n="hero.title">
+              Профессиональное<br><span class="whitespace-nowrap">Сведение / Мастеринг</span>
             </h1>
 
             <p class="hero-genres-line text-sm min-[360px]:text-[15px] min-[390px]:text-base sm:text-lg lg:text-xl font-bold text-amber-500 font-mono whitespace-nowrap tracking-tight sm:tracking-normal overflow-hidden" data-i18n="hero.subtitle">
@@ -199,14 +214,14 @@
             </p>
 
             <div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4">
-              <a href="#player" class="w-full sm:w-auto px-8 py-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl transition-all shadow-xl shadow-amber-500/25 flex items-center justify-center gap-3 text-base active:scale-95">
-                <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+              <a href="#player" class="w-full sm:w-auto sm:min-w-[245px] px-8 py-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl transition-all shadow-xl shadow-amber-500/25 flex items-center justify-center gap-3 text-base active:scale-95 whitespace-nowrap">
+                <svg class="w-5 h-5 fill-current flex-shrink-0" viewBox="0 0 24 24">
                   <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
                 </svg>
                 <span data-i18n="hero.btnPlayer">Примеры работ (A/B)</span>
               </a>
 
-              <a href="#contacts" class="w-full sm:w-auto px-8 py-4 bg-[#14171F] hover:bg-[#1C212E] text-white font-extrabold rounded-xl border border-gray-800 transition-all flex items-center justify-center gap-3 text-base active:scale-95">
+              <a href="#contacts" class="w-full sm:w-auto sm:min-w-[145px] px-8 py-4 bg-[#14171F] hover:bg-[#1C212E] text-white font-extrabold rounded-xl border border-gray-800 transition-all flex items-center justify-center gap-3 text-base active:scale-95 whitespace-nowrap">
                 <span data-i18n="hero.btnContact">Контакты</span>
               </a>
             </div>
@@ -221,8 +236,8 @@
             >
               <img src="./image/Main hero.webp" alt="Nick Rise Studio Engineer" class="hero-mask-img" decoding="async" fetchpriority="high">
               
-              <div class="hero-about-badge px-4 py-1.5 bg-amber-500 text-slate-950 font-extrabold rounded-full text-xs shadow-lg shadow-amber-500/30 group-hover:bg-amber-400 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap">
-                <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+              <div class="hero-about-badge min-w-[96px] px-4 py-1.5 bg-amber-500 text-slate-950 font-extrabold rounded-full text-xs shadow-lg shadow-amber-500/30 group-hover:bg-amber-400 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap">
+                <svg class="w-3.5 h-3.5 fill-current flex-shrink-0" viewBox="0 0 24 24">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
                 </svg>
                 <span data-i18n="hero.aboutPhotoBadge">Обо мне</span>
@@ -246,23 +261,47 @@
 
         <!-- TRACK SELECTOR SECTION -->
         <div id="playerContentContainer" class="space-y-6">
+          <!-- Audio Language Switch (EN / RU) -->
+          <div class="flex items-center justify-center">
+            <div id="trackLangSwitcher" class="flex flex-row flex-nowrap items-center p-1 bg-[#090C12] border border-gray-800/80 rounded-2xl shadow-inner gap-1.5">
+              <button
+                type="button"
+                id="trackLangEnBtn"
+                data-track-lang="en"
+                class="track-lang-btn is-active py-2 px-4 text-xs font-bold rounded-xl transition-all bg-amber-500 text-slate-950 border border-amber-500 shadow-md shadow-amber-500/20 cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap flex-shrink-0"
+              >
+                <span class="track-lang-dot w-2 h-2 rounded-full bg-slate-950 flex-shrink-0"></span>
+                <span data-i18n="player.langEnBtn">На английском</span>
+              </button>
+              <button
+                type="button"
+                id="trackLangRuBtn"
+                data-track-lang="ru"
+                class="track-lang-btn py-2 px-4 text-xs font-bold rounded-xl transition-all bg-[#090C12] border border-gray-800/80 text-gray-400 hover:text-white cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap flex-shrink-0"
+              >
+                <span class="track-lang-dot w-2 h-2 rounded-full bg-transparent flex-shrink-0"></span>
+                <span data-i18n="player.langRuBtn">На русском</span>
+              </button>
+            </div>
+          </div>
+
           <!-- Genre Filters -->
           <div class="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
-            <button data-genre="all" class="genre-filter-btn px-3.5 py-2 text-xs font-bold rounded-xl transition-all bg-amber-500 text-slate-950 font-black" data-i18n="player.filterAll">Все жанры</button>
-            <button data-genre="pop-house" class="genre-filter-btn px-3.5 py-2 text-xs font-bold rounded-xl transition-all bg-[#090C12] border border-gray-800/80 text-gray-400 hover:text-white" data-i18n="player.filterPopHouse">Pop / House</button>
-            <button data-genre="rock-metal" class="genre-filter-btn px-3.5 py-2 text-xs font-bold rounded-xl transition-all bg-[#090C12] border border-gray-800/80 text-gray-400 hover:text-white" data-i18n="player.filterRockMetal">Rock / Metal</button>
-            <button data-genre="rap-rnb" class="genre-filter-btn px-3.5 py-2 text-xs font-bold rounded-xl transition-all bg-[#090C12] border border-gray-800/80 text-gray-400 hover:text-white" data-i18n="player.filterRapRnB">Rap / R&B</button>
+            <button data-genre="all" class="genre-filter-btn min-w-[92px] sm:min-w-[100px] px-3.5 py-2 text-xs font-bold rounded-xl transition-all bg-amber-500 text-slate-950 border border-amber-500 shadow-md shadow-amber-500/20 cursor-pointer flex items-center justify-center"><span data-i18n="player.filterAll">Все жанры</span></button>
+            <button data-genre="pop-house" class="genre-filter-btn px-3.5 py-2 text-xs font-bold rounded-xl transition-all bg-[#090C12] border border-gray-800/80 text-gray-400 hover:text-white cursor-pointer"><span data-i18n="player.filterPopHouse">Pop / House</span></button>
+            <button data-genre="rock-metal" class="genre-filter-btn px-3.5 py-2 text-xs font-bold rounded-xl transition-all bg-[#090C12] border border-gray-800/80 text-gray-400 hover:text-white cursor-pointer"><span data-i18n="player.filterRockMetal">Rock / Metal</span></button>
+            <button data-genre="rap-rnb" class="genre-filter-btn px-3.5 py-2 text-xs font-bold rounded-xl transition-all bg-[#090C12] border border-gray-800/80 text-gray-400 hover:text-white cursor-pointer"><span data-i18n="player.filterRapRnB">Rap / R&B</span></button>
           </div>
 
           <!-- TRACK LIST GRID -->
-          <div id="trackListContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div id="trackListContainer" class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
             <!-- Dynamically populated by script.js -->
           </div>
 
           <!-- CAROUSEL / LIST PAGINATION -->
           <div class="flex items-center justify-between gap-4 pt-4 border-t border-gray-800/80 max-w-xl mx-auto">
-            <button id="btnPrevPage" onclick="prevTrackPage()" class="flex items-center gap-1.5 px-4 py-2 bg-[#14171F] hover:bg-amber-500 hover:text-slate-950 text-gray-300 font-bold text-xs rounded-xl border border-gray-800 transition-all shadow-md active:scale-95 disabled:opacity-30 disabled:pointer-events-none">
-              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+            <button id="btnPrevPage" onclick="prevTrackPage()" class="flex items-center justify-center min-w-[92px] sm:min-w-[102px] gap-1.5 px-4 py-2 bg-[#14171F] hover:bg-amber-500 hover:text-slate-950 text-gray-300 font-bold text-xs rounded-xl border border-gray-800 transition-all shadow-md active:scale-95 disabled:opacity-30 disabled:pointer-events-none whitespace-nowrap">
+              <svg class="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
               <span data-i18n="player.prevBtn">Назад</span>
             </button>
 
@@ -275,9 +314,9 @@
               </div>
             </div>
 
-            <button id="btnNextPage" onclick="nextTrackPage()" class="flex items-center gap-2 px-4 py-2 bg-[#14171F] hover:bg-amber-500 hover:text-slate-950 text-gray-300 font-bold text-xs rounded-xl border border-gray-800 transition-all shadow-md active:scale-95 disabled:opacity-30 disabled:pointer-events-none">
+            <button id="btnNextPage" onclick="nextTrackPage()" class="flex items-center justify-center min-w-[92px] sm:min-w-[102px] gap-2 px-4 py-2 bg-[#14171F] hover:bg-amber-500 hover:text-slate-950 text-gray-300 font-bold text-xs rounded-xl border border-gray-800 transition-all shadow-md active:scale-95 disabled:opacity-30 disabled:pointer-events-none whitespace-nowrap">
               <span data-i18n="player.nextBtn">Вперед</span>
-              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+              <svg class="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
             </button>
           </div>
 
@@ -489,10 +528,10 @@
 
         <div class="flex-1 text-center sm:text-left space-y-1">
           <div class="inline-block px-2.5 py-1 bg-amber-500/10 border border-amber-500/30 rounded-full text-xs font-mono text-amber-400 font-bold mb-1" data-i18n="aboutModal.experience">
-            8+ лет в индустрии
+            6+ лет в индустрии
           </div>
           <h3 class="text-2xl sm:text-3xl font-black text-white tracking-tight" data-i18n="aboutModal.title">
-            Ник Райз (Nick Rise)
+            Александр (Nick Rise)
           </h3>
           <p class="text-sm sm:text-base font-semibold text-gray-400" data-i18n="aboutModal.subtitle">
             Звукорежиссер, саундпродюсер & инжиниринг сведения
@@ -503,11 +542,11 @@
       <!-- Stats Banner -->
       <div class="grid grid-cols-3 gap-2 sm:gap-4 my-6 p-3 sm:p-4 bg-[#090C12] border border-gray-800/80 rounded-2xl text-center">
         <div>
-          <div class="text-xl sm:text-2xl font-black text-amber-400 font-mono" data-i18n="aboutModal.stat1Num">500+</div>
+          <div class="text-xl sm:text-2xl font-black text-amber-400 font-mono" data-i18n="aboutModal.stat1Num">200+</div>
           <div class="text-[10px] sm:text-xs text-gray-400 font-medium leading-tight mt-0.5" data-i18n="aboutModal.stat1Text">Завершенных треков</div>
         </div>
         <div class="border-x border-gray-800/80">
-          <div class="text-xl sm:text-2xl font-black text-amber-400 font-mono" data-i18n="aboutModal.stat2Num">8+ лет</div>
+          <div class="text-xl sm:text-2xl font-black text-amber-400 font-mono" data-i18n="aboutModal.stat2Num">6+ лет</div>
           <div class="text-[10px] sm:text-xs text-gray-400 font-medium leading-tight mt-0.5" data-i18n="aboutModal.stat2Text">Студийного опыта</div>
         </div>
         <div>
@@ -622,10 +661,10 @@
       <!-- Left: Track Title & Artist (w-0 flex-1 for symmetric centering) -->
       <div class="w-0 flex-1 min-w-0 pr-1">
         <h4 class="deck-title text-xs font-black text-white truncate tracking-tight">
-          Neon Nights
+          Masochist
         </h4>
         <p class="deck-artist text-[10px] text-gray-400 truncate font-medium mt-0.5">
-          The Electronic Wave
+          Ellise
         </p>
       </div>
 
@@ -693,14 +732,14 @@
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-1.5 mb-0.5">
             <h4 class="deck-title text-base font-black text-white truncate tracking-tight">
-              Neon Nights
+              Masochist
             </h4>
             <span class="deck-genre inline-block px-2 py-0.5 text-[10px] font-extrabold text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-full flex-shrink-0">
-              Pop / House
+              Pop Dark
             </span>
           </div>
           <p class="deck-artist text-xs text-gray-400 truncate font-medium">
-            The Electronic Wave
+            Ellise
           </p>
         </div>
       </div>

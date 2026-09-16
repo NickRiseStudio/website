@@ -15,107 +15,19 @@
   --nr-snap: cubic-bezier(0.34, 1.4, 0.64, 1);
 }
 
-/* ═══ 01. BOOT SEQUENCE — «включение пульта» ══════════════════════════
-   Полностью на CSS: заставка рисуется с самого первого кадра, ещё до
-   того, как отработают Tailwind/GSAP, и сама убирается анимацией.
-   Даже если JS не выполнится — экран не залипнет, она уедет сама.
-   Показывается один раз за сессию вкладки (класс .nr-booted).
+/* ═══ 01. BOOT SEQUENCE ══════════════════════════════════════════════════
+   Отключено для мгновенного и чистого отображения контента
 ═════════════════════════════════════════════════════════════════════ */
-
-html::before {
-  content: 'NICK RISE';
-  position: fixed;
-  inset: 0;
-  z-index: 9998;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: radial-gradient(circle at 50% 46%, #10131C 0%, #06070B 72%);
-  font-family: 'Space Grotesk', ui-monospace, monospace;
-  font-weight: 700;
-  font-size: clamp(1.2rem, 5vw, 2.1rem);
-  color: #F3F4F6;
-  letter-spacing: 0.34em;
-  text-indent: 0.34em;
-  pointer-events: none;
-  animation: nrBootPanel 1.7s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
+html::before,
 html::after {
-  content: '';
-  position: fixed;
-  z-index: 9999;
-  left: 50%;
-  top: calc(50% + 36px);
-  width: 0;
-  height: 2px;
-  border-radius: 2px;
-  background: linear-gradient(90deg, #D97706, #FBBF24);
-  box-shadow: 0 0 16px rgba(245, 158, 11, 0.9);
-  transform: translateX(-50%);
-  pointer-events: none;
-  animation: nrBootLine 1.7s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-html.nr-booted::before,
-html.nr-booted::after { content: none; display: none; animation: none; }
-
-@keyframes nrBootPanel {
-  0%   { opacity: 1; letter-spacing: 0.78em; text-indent: 0.78em; filter: blur(2px); }
-  25%  { opacity: 1; letter-spacing: 0.34em; text-indent: 0.34em; filter: blur(0); }
-  80%  { opacity: 1; letter-spacing: 0.34em; text-indent: 0.34em; }
-  100% { opacity: 0; visibility: hidden; letter-spacing: 0.2em; text-indent: 0.2em; filter: blur(1px); }
-}
-
-@keyframes nrBootLine {
-  0%   { width: 0; opacity: 1; }
-  15%  { width: 30px; opacity: 1; }
-  75%  { width: min(240px, 58vw); opacity: 1; }
-  88%  { width: min(240px, 58vw); opacity: 0.9; }
-  100% { width: min(240px, 58vw); opacity: 0; visibility: hidden; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html::before, html::after { content: none; display: none; }
-}
-
-
-/* ═══ 02. ГЛОБАЛЬНАЯ АТМОСФЕРА — «стекло монитора» ════════════════════ */
-
-/* «Облегчённый режим» для слабых машин — см. animations.js */
-html.nr-lite #nr-glass,
-html.nr-lite #nr-glass::after {
+  content: none !important;
   display: none !important;
 }
 
-@media (max-width: 768px), (hover: none) {
-  #nr-glass,
-  #nr-glass::after {
-    display: none !important;
-  }
-}
-
-#nr-glass {
-  position: fixed;
-  inset: 0;
-  z-index: 45;
-  pointer-events: none;
-  transform: translateZ(0);
-  background:
-    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 4px),
-    radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.38) 100%);
-}
-
+/* ═══ 02. ГЛОБАЛЬНАЯ АТМОСФЕРА ═════════════════════════════════════════ */
+#nr-glass,
 #nr-glass::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 22vh;
-  top: -22vh;
-  background: linear-gradient(180deg, transparent, rgba(245, 158, 11, 0.035), transparent);
-  animation: nrScanSweep 16s linear infinite;
-  will-change: transform;
+  display: none !important;
 }
 
 @keyframes nrScanSweep {
@@ -337,20 +249,10 @@ body.nr-playing #headerLogoBtn > div:first-child {
   overflow: hidden;
   pointer-events: none;
   z-index: 2;
-  /* Для браузеров с Webkit, чтобы border-radius точно обрезал дочерние элементы */
-  -webkit-mask-image: -webkit-radial-gradient(white, black);
-  mask-image: radial-gradient(white, black);
 }
 
 .nr-scan {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 20%;
-  top: -20%;
-  background: linear-gradient(180deg, transparent, rgba(245, 158, 11, 0.16), transparent);
-  pointer-events: none;
-  animation: nrScanImg 7s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+  display: none !important;
 }
 
 @keyframes nrScanImg {
@@ -531,10 +433,8 @@ body.nr-playing .nr-rings i:nth-child(3) { animation-delay: 1.6s; }
 
 #trackListContainer > div:hover::after { background-position: -55% 0; }
 
-/* Обложка активного трека медленно вращается, как винил */
-#trackListContainer > div.nr-live img { animation: nrSpin 14s linear infinite; }
-
-@keyframes nrSpin { to { transform: rotate(360deg); } }
+/* Активный трек */
+#trackListContainer > div.nr-live img { transform: none; }
 
 /* Пульсирующая рамка активного трека */
 #trackListContainer > div.nr-current { animation: nrCurrentGlow 3s ease-in-out infinite; }
@@ -970,18 +870,30 @@ body.nr-src-before .deck-btn-before { box-shadow: 0 0 18px rgba(16, 185, 129, 0.
 
 #faqContainer > div.nr-faq-open { box-shadow: 0 0 34px rgba(245, 158, 11, 0.10), inset 0 0 24px rgba(245, 158, 11, 0.04); }
 
-#faqContainer [id^="faq-icon-"] { transition: all 0.42s var(--nr-snap) !important; }
+#faqContainer [id^="faq-icon-"] {
+  transition: transform 0.42s var(--nr-snap), background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease !important;
+  transform-origin: center center;
+  will-change: transform;
+}
 
-#faqContainer > div.nr-faq-open [id^="faq-icon-"] { transform: rotate(180deg) scale(1.08); }
+#faqContainer > div.nr-faq-open [id^="faq-icon-"] { transform: rotate(180deg) scale(1.04); }
 
 .faq-content-wrapper > div { position: relative; }
 
-#faqContainer > div.nr-faq-open .faq-content-wrapper p {
-  animation: nrFaqText 0.7s var(--nr-ease) 0.1s both;
+#faqContainer > div.nr-faq-open:not(.nr-faq-lang-switched) .faq-content-wrapper p {
+  animation: nrFaqText 0.6s var(--nr-ease) 0.05s both;
+}
+
+#faqContainer > div.nr-faq-open .faq-content-wrapper p.lang-vapor-out,
+#faqContainer > div.nr-faq-open .faq-content-wrapper p.lang-vapor-in,
+#faqContainer > div.nr-faq-open .faq-content-wrapper p.lang-stable {
+  animation: none !important;
+  transform: none !important;
+  filter: none !important;
 }
 
 @keyframes nrFaqText {
-  from { opacity: 0; transform: translateY(10px); filter: blur(3px); }
+  from { opacity: 0; transform: translateY(8px); filter: blur(2px); }
   to   { opacity: 1; transform: none; filter: blur(0); }
 }
 

@@ -1,0 +1,15 @@
+# --- Служебное (не деплоится на GitHub Pages) ---
+node_modules/
+npm-debug.log*
+package-lock.json
+
+# --- ОС и мусор ---
+.DS_Store
+Thumbs.db
+desktop.ini
+*.tmp
+*.log
+
+# --- Архивы (бэкапы держим вне репозитория) ---
+*.rar
+*.zip

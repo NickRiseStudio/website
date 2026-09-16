@@ -806,9 +806,10 @@
   hook('seekDeckTrack', seekPulse);
   hook('showToast', restartToastMeter);
   hook('openAboutModal', function () { setTimeout(countModalStats, 220); });
-  hook('setLanguage', function () {
-    animateHeroTitle();
-    setTimeout(function () { safe(decorateServices); safe(decorateTracks); }, 0);
+  hook('setLanguage', function (lang, savePref, animate) {
+    // Keep hero title stable on language toggle - run decoration after language render
+    var delay = animate ? 330 : 0;
+    setTimeout(function () { safe(decorateServices); safe(decorateTracks); }, delay);
   });
   hook('openFaqItem', function (id) {
     var c = faqCard(id);

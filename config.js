@@ -64,9 +64,9 @@ const CONFIG = {
           mobile: 'ANALOG HYBRID MIXING & MASTERING'
         },
         title: {
-          desktop: 'Профессиональное<br>Сведение / мастеринг',
-          tablet: 'Профессиональное<br>Сведение / мастеринг',
-          mobile: 'Профессиональное<br><span class="whitespace-nowrap">Сведение / мастеринг</span>'
+          desktop: 'Профессиональное<br><span class="whitespace-nowrap">Сведение / Мастеринг</span>',
+          tablet: 'Профессиональное<br><span class="whitespace-nowrap">Сведение / Мастеринг</span>',
+          mobile: 'Профессиональное<br><span class="whitespace-nowrap">Сведение / Мастеринг</span>'
         },
         subtitle: {
           desktop: 'Специализация: Pop/House • Rock/Metal • Rap/R&B',
@@ -134,6 +134,16 @@ const CONFIG = {
           desktop: 'Rap / R&B',
           tablet: 'Rap / R&B',
           mobile: 'Rap / R&B'
+        },
+        langRuBtn: {
+          desktop: 'На русском',
+          tablet: 'На русском',
+          mobile: 'На русском'
+        },
+        langEnBtn: {
+          desktop: 'На английском',
+          tablet: 'На английском',
+          mobile: 'На английском'
         },
         beforeLabel: {
           desktop: 'BEFORE (MIX)',
@@ -348,7 +358,7 @@ const CONFIG = {
         stat3Num: {
           desktop: '100%',
           tablet: '100%',
-          mobile: '100+'
+          mobile: '100%'
         },
         stat3Text: {
           desktop: 'Готовность к радио & стримингам',
@@ -428,8 +438,8 @@ const CONFIG = {
           mobile: 'ANALOG HYBRID MIXING & MASTERING'
         },
         title: {
-          desktop: 'Professional<br>Mixing / Mastering',
-          tablet: 'Professional<br>Mixing / Mastering',
+          desktop: 'Professional<br><span class="whitespace-nowrap">Mixing / Mastering</span>',
+          tablet: 'Professional<br><span class="whitespace-nowrap">Mixing / Mastering</span>',
           mobile: 'Professional<br><span class="whitespace-nowrap">Mixing / Mastering</span>'
         },
         subtitle: {
@@ -498,6 +508,16 @@ const CONFIG = {
           desktop: 'Rap / R&B',
           tablet: 'Rap / R&B',
           mobile: 'Rap / R&B'
+        },
+        langRuBtn: {
+          desktop: 'In Russian',
+          tablet: 'In Russian',
+          mobile: 'In Russian'
+        },
+        langEnBtn: {
+          desktop: 'In English',
+          tablet: 'In English',
+          mobile: 'In English'
         },
         beforeLabel: {
           desktop: 'BEFORE (MIX)',
@@ -749,9 +769,20 @@ const CONFIG = {
   },
 
   tracks: [
-    // --- POP / HOUSE (6 tracks) ---
+    // ВАЖНО: заглушки './audio/rockmetal_1_*.mp3' и './audio/traphiphop_1_*.mp3'
+    // физически отсутствуют в папке audio/ — они проставлены у треков с enabled: false.
+    // Перед включением такого трека (enabled: true) подставь реальные файлы:
+    // иначе сработает onerror-фолбэк в script.js и в режиме BEFORE/AFTER
+    // зазвучит демо './audio/pophouse_1_*.mp3' вместо нужного трека.
+
+    // ==========================================
+    // --- ENGLISH TRACKS (EN) - 18 tracks ---
+    // ==========================================
+
+    // --- POP / HOUSE (EN) ---
     {
       id: 'track-1',
+      lang: 'en',
       enabled: true,
       title: {
         desktop: 'Masochist',
@@ -776,12 +807,13 @@ const CONFIG = {
           mobile: 'Pop Dark'
         }
       },
-      audioBefore: './audio/(P)PopDark_before (Ellise - Masochist).mp3',
-      audioAfter: './audio/(P)PopDark_after (Ellise - Masochist).mp3',
+      audioBefore: './audio/en/(P) Pop Dark before (Ellise - Masochist).mp3',
+      audioAfter: './audio/en/(P) Pop Dark after (Ellise - Masochist).mp3',
       cover: './image/image_Ellise_Masochist.jpg'
     },
     {
       id: 'track-2',
+      lang: 'en',
       enabled: false,
       title: {
         desktop: 'Velvet Sound',
@@ -808,10 +840,11 @@ const CONFIG = {
       },
       audioBefore: './audio/pophouse_1_before.mp3',
       audioAfter: './audio/pophouse_1_after.mp3',
-      cover: './image/cover4.webp'
+      cover: './image/Logo.webp'
     },
     {
       id: 'track-3',
+      lang: 'en',
       enabled: false,
       title: {
         desktop: 'Midnight Groove',
@@ -838,10 +871,11 @@ const CONFIG = {
       },
       audioBefore: './audio/pophouse_1_before.mp3',
       audioAfter: './audio/pophouse_1_after.mp3',
-      cover: './image/cover1.webp'
+      cover: './image/Logo.webp'
     },
     {
       id: 'track-4',
+      lang: 'en',
       enabled: false,
       title: {
         desktop: 'Solar Flare',
@@ -849,9 +883,9 @@ const CONFIG = {
         mobile: 'Solar Flare'
       },
       artist: {
-        desktop: 'High Pulse',
-        tablet: 'High Pulse',
-        mobile: 'High Pulse'
+        desktop: 'Deep Horizon',
+        tablet: 'Deep Horizon',
+        mobile: 'Deep Horizon'
       },
       genre: 'pop-house',
       genreLabel: {
@@ -868,20 +902,21 @@ const CONFIG = {
       },
       audioBefore: './audio/pophouse_1_before.mp3',
       audioAfter: './audio/pophouse_1_after.mp3',
-      cover: './image/cover2.webp'
+      cover: './image/Logo.webp'
     },
     {
       id: 'track-5',
+      lang: 'en',
       enabled: false,
       title: {
-        desktop: 'Electric Heart',
-        tablet: 'Electric Heart',
-        mobile: 'Electric Heart'
+        desktop: 'Neon Beats',
+        tablet: 'Neon Beats',
+        mobile: 'Neon Beats'
       },
       artist: {
-        desktop: 'Disco Knights',
-        tablet: 'Disco Knights',
-        mobile: 'Disco Knights'
+        desktop: 'Future Pulse',
+        tablet: 'Future Pulse',
+        mobile: 'Future Pulse'
       },
       genre: 'pop-house',
       genreLabel: {
@@ -898,20 +933,21 @@ const CONFIG = {
       },
       audioBefore: './audio/pophouse_1_before.mp3',
       audioAfter: './audio/pophouse_1_after.mp3',
-      cover: './image/cover3.webp'
+      cover: './image/Logo.webp'
     },
     {
       id: 'track-6',
+      lang: 'en',
       enabled: false,
       title: {
-        desktop: 'Deep Aura',
-        tablet: 'Deep Aura',
-        mobile: 'Deep Aura'
+        desktop: 'Crystal Wave',
+        tablet: 'Crystal Wave',
+        mobile: 'Crystal Wave'
       },
       artist: {
-        desktop: 'Synth Odyssey',
-        tablet: 'Synth Odyssey',
-        mobile: 'Synth Odyssey'
+        desktop: 'Ocean Drive',
+        tablet: 'Ocean Drive',
+        mobile: 'Ocean Drive'
       },
       genre: 'pop-house',
       genreLabel: {
@@ -928,12 +964,16 @@ const CONFIG = {
       },
       audioBefore: './audio/pophouse_1_before.mp3',
       audioAfter: './audio/pophouse_1_after.mp3',
-      cover: './image/cover1.webp'
+      cover: './image/Logo.webp'
     },
 
-    // --- ROCK / METAL (6 tracks) ---
+    // --- ROCK / METAL (EN) ---
+    // ВНИМАНИЕ: у выключенных (enabled: false) треков ниже указаны файлы-заготовки
+    // ./audio/rockmetal_1_before.mp3 и _after.mp3, которых пока нет в репозитории.
+    // При включении трека подставьте реальный BEFORE/AFTER — иначе сработает фолбэк на pophouse_1.
     {
       id: 'track-7',
+      lang: 'en',
       enabled: true,
       title: {
         desktop: 'Into The Fire',
@@ -958,12 +998,13 @@ const CONFIG = {
           mobile: 'Metal'
         }
       },
-      audioBefore: './audio/(M)Metal_1_before (Asking Alexandria - Into The Fire).mp3',
-      audioAfter: './audio/(M)Metal_1_after (Asking Alexandria - Into The Fire).mp3',
-      cover: './image/Image_IntoTheFire_AskingAlexandria.jpeg'
+      audioBefore: './audio/en/(M) Metal before (Asking Alexandria - Into The Fire).mp3',
+      audioAfter: './audio/en/(M) Metal after (Asking Alexandria - Into The Fire).mp3',
+      cover: './image/Image_AskingAlexandria_IntoTheFire.jpeg'
     },
     {
       id: 'track-8',
+      lang: 'en',
       enabled: true,
       title: {
         desktop: 'Dark Horses',
@@ -988,12 +1029,13 @@ const CONFIG = {
           mobile: 'Rock Country'
         }
       },
-      audioBefore: './audio/(M)RockCountry_2_before (The Long Wait - Dark Horses).mp3',
-      audioAfter: './audio/(M)RockCountry_2_after (The Long Wait - Dark Horses).mp3',
+      audioBefore: './audio/en/(M) Rock Country before (The Long Wait - Dark Horses).mp3',
+      audioAfter: './audio/en/(M) Rock Country after (The Long Wait - Dark Horses).mp3',
       cover: './image/image_TheLongWait_DarkHorses.jpg'
     },
     {
       id: 'track-9',
+      lang: 'en',
       enabled: false,
       title: {
         desktop: 'Iron Pulse',
@@ -1001,9 +1043,9 @@ const CONFIG = {
         mobile: 'Iron Pulse'
       },
       artist: {
-        desktop: 'Void Screamer',
-        tablet: 'Void Screamer',
-        mobile: 'Void Screamer'
+        desktop: 'Black Horizon',
+        tablet: 'Black Horizon',
+        mobile: 'Black Horizon'
       },
       genre: 'rock-metal',
       genreLabel: {
@@ -1020,20 +1062,21 @@ const CONFIG = {
       },
       audioBefore: './audio/rockmetal_1_before.mp3',
       audioAfter: './audio/rockmetal_1_after.mp3',
-      cover: './image/cover3.webp'
+      cover: './image/Logo.webp'
     },
     {
       id: 'track-10',
+      lang: 'en',
       enabled: false,
       title: {
-        desktop: 'Bleeding Steel',
-        tablet: 'Bleeding Steel',
-        mobile: 'Bleeding Steel'
+        desktop: 'Echoes of Silence',
+        tablet: 'Echoes of Silence',
+        mobile: 'Echoes of Silence'
       },
       artist: {
-        desktop: 'Crimson Peak',
-        tablet: 'Crimson Peak',
-        mobile: 'Crimson Peak'
+        desktop: 'Redemption',
+        tablet: 'Redemption',
+        mobile: 'Redemption'
       },
       genre: 'rock-metal',
       genreLabel: {
@@ -1050,20 +1093,21 @@ const CONFIG = {
       },
       audioBefore: './audio/rockmetal_1_before.mp3',
       audioAfter: './audio/rockmetal_1_after.mp3',
-      cover: './image/cover1.webp'
+      cover: './image/Logo.webp'
     },
     {
       id: 'track-11',
+      lang: 'en',
       enabled: false,
       title: {
-        desktop: 'Titanium Roar',
-        tablet: 'Titanium Roar',
-        mobile: 'Titanium Roar'
+        desktop: 'Thunderstrike',
+        tablet: 'Thunderstrike',
+        mobile: 'Thunderstrike'
       },
       artist: {
-        desktop: 'Black Engine',
-        tablet: 'Black Engine',
-        mobile: 'Black Engine'
+        desktop: 'Stormborn',
+        tablet: 'Stormborn',
+        mobile: 'Stormborn'
       },
       genre: 'rock-metal',
       genreLabel: {
@@ -1080,20 +1124,21 @@ const CONFIG = {
       },
       audioBefore: './audio/rockmetal_1_before.mp3',
       audioAfter: './audio/rockmetal_1_after.mp3',
-      cover: './image/cover4.webp'
+      cover: './image/Logo.webp'
     },
     {
       id: 'track-12',
+      lang: 'en',
       enabled: false,
       title: {
-        desktop: 'Rebel Horizon',
-        tablet: 'Rebel Horizon',
-        mobile: 'Rebel Horizon'
+        desktop: 'Shadowfall',
+        tablet: 'Shadowfall',
+        mobile: 'Shadowfall'
       },
       artist: {
-        desktop: 'Riot Protocol',
-        tablet: 'Riot Protocol',
-        mobile: 'Riot Protocol'
+        desktop: 'Dark Reign',
+        tablet: 'Dark Reign',
+        mobile: 'Dark Reign'
       },
       genre: 'rock-metal',
       genreLabel: {
@@ -1110,12 +1155,16 @@ const CONFIG = {
       },
       audioBefore: './audio/rockmetal_1_before.mp3',
       audioAfter: './audio/rockmetal_1_after.mp3',
-      cover: './image/cover2.webp'
+      cover: './image/Logo.webp'
     },
 
-    // --- RAP / R&B (6 tracks) ---
+    // --- RAP / R&B (EN) ---
+    // ВНИМАНИЕ: у выключенных (enabled: false) треков ниже указаны файлы-заготовки
+    // ./audio/traphiphop_1_before.mp3 и _after.mp3, которых пока нет в репозитории.
+    // При включении трека подставьте реальный BEFORE/AFTER — иначе сработает фолбэк на pophouse_1.
     {
       id: 'track-13',
+      lang: 'en',
       enabled: true,
       title: {
         desktop: 'Teleport',
@@ -1140,12 +1189,13 @@ const CONFIG = {
           mobile: 'Rap'
         }
       },
-      audioBefore: './audio/(R)Rap_1_before (TytillidieXXollin - Teleport).mp3',
-      audioAfter: './audio/(R)Rap_1_after (TytillidieXXollin - Teleport).mp3',
+      audioBefore: './audio/en/(R) Rap before (TytillidieXXollin - Teleport).mp3',
+      audioAfter: './audio/en/(R) Rap after (TytillidieXXollin - Teleport).mp3',
       cover: './image/image_TytillidieXXollin_Teleport.jpg'
     },
     {
       id: 'track-14',
+      lang: 'en',
       enabled: false,
       title: {
         desktop: 'Midnight Hustle',
@@ -1172,10 +1222,11 @@ const CONFIG = {
       },
       audioBefore: './audio/traphiphop_1_before.mp3',
       audioAfter: './audio/traphiphop_1_after.mp3',
-      cover: './image/cover3.webp'
+      cover: './image/Logo.webp'
     },
     {
       id: 'track-15',
+      lang: 'en',
       enabled: false,
       title: {
         desktop: 'Night City',
@@ -1202,10 +1253,11 @@ const CONFIG = {
       },
       audioBefore: './audio/traphiphop_1_before.mp3',
       audioAfter: './audio/traphiphop_1_after.mp3',
-      cover: './image/cover2.webp'
+      cover: './image/Logo.webp'
     },
     {
       id: 'track-16',
+      lang: 'en',
       enabled: false,
       title: {
         desktop: 'Underground Kings',
@@ -1232,10 +1284,11 @@ const CONFIG = {
       },
       audioBefore: './audio/traphiphop_1_before.mp3',
       audioAfter: './audio/traphiphop_1_after.mp3',
-      cover: './image/cover4.webp'
+      cover: './image/Logo.webp'
     },
     {
       id: 'track-17',
+      lang: 'en',
       enabled: false,
       title: {
         desktop: 'Golden Flow',
@@ -1262,10 +1315,11 @@ const CONFIG = {
       },
       audioBefore: './audio/traphiphop_1_before.mp3',
       audioAfter: './audio/traphiphop_1_after.mp3',
-      cover: './image/cover3.webp'
+      cover: './image/Logo.webp'
     },
     {
       id: 'track-18',
+      lang: 'en',
       enabled: false,
       title: {
         desktop: '808 Eclipse',
@@ -1292,7 +1346,581 @@ const CONFIG = {
       },
       audioBefore: './audio/traphiphop_1_before.mp3',
       audioAfter: './audio/traphiphop_1_after.mp3',
-      cover: './image/cover1.webp'
+      cover: './image/Logo.webp'
+    },
+
+    // ==========================================
+    // --- RUSSIAN TRACKS (RU) - 18 tracks ---
+    // ==========================================
+
+    // --- POP / HOUSE (RU) ---
+    {
+      id: 'track-ru-1',
+      lang: 'ru',
+      enabled: true,
+      title: {
+        desktop: 'Последняя мятная',
+        tablet: 'Последняя мятная',
+        mobile: 'Последняя мятная'
+      },
+      artist: {
+        desktop: 'SIMA',
+        tablet: 'SIMA',
+        mobile: 'SIMA'
+      },
+      genre: 'pop-house',
+      genreLabel: {
+        ru: {
+          desktop: 'Pop Lyric',
+          tablet: 'Pop Lyric',
+          mobile: 'Pop Lyric'
+        },
+        en: {
+          desktop: 'Pop Lyric',
+          tablet: 'Pop Lyric',
+          mobile: 'Pop Lyric'
+        }
+      },
+      audioBefore: './audio/ru/(P) Pop Lyric before (SIMA - Последняя мятная).mp3',
+      audioAfter: './audio/ru/(P) Pop Lyric after (SIMA - Последняя мятная).mp3',
+      cover: './image/image_SIMA_ПоследняяМятная.jpg'
+    },
+    {
+      id: 'track-ru-2',
+      lang: 'ru',
+      enabled: true,
+      title: {
+        desktop: 'Lets Go',
+        tablet: 'Lets Go',
+        mobile: 'Lets Go'
+      },
+      artist: {
+        desktop: 'None',
+        tablet: 'None',
+        mobile: 'None'
+      },
+      genre: 'pop-house',
+      genreLabel: {
+        ru: {
+          desktop: 'Pop UK',
+          tablet: 'Pop UK',
+          mobile: 'Pop UK'
+        },
+        en: {
+          desktop: 'Pop UK',
+          tablet: 'Pop UK',
+          mobile: 'Pop UK'
+        }
+      },
+      audioBefore: './audio/ru/(P) Pop UK before (None - Lets Go).mp3',
+      audioAfter: './audio/ru/(P) Pop UK after (None - Lets Go).mp3',
+      cover: './image/!image_none.jpg'
+    },
+    {
+      id: 'track-ru-3',
+      lang: 'ru',
+      enabled: false,
+      title: {
+        desktop: 'Бархатный Звук',
+        tablet: 'Бархатный Звук',
+        mobile: 'Бархатный Звук'
+      },
+      artist: {
+        desktop: 'Acoustic Dreams',
+        tablet: 'Acoustic Dreams',
+        mobile: 'Acoustic Dreams'
+      },
+      genre: 'pop-house',
+      genreLabel: {
+        ru: {
+          desktop: 'Pop / House',
+          tablet: 'Pop / House',
+          mobile: 'Pop / House'
+        },
+        en: {
+          desktop: 'Pop / House',
+          tablet: 'Pop / House',
+          mobile: 'Pop / House'
+        }
+      },
+      audioBefore: './audio/pophouse_1_before.mp3',
+      audioAfter: './audio/pophouse_1_after.mp3',
+      cover: './image/Logo.webp'
+    },
+    {
+      id: 'track-ru-4',
+      lang: 'ru',
+      enabled: false,
+      title: {
+        desktop: 'Midnight Groove',
+        tablet: 'Midnight Groove',
+        mobile: 'Midnight Groove'
+      },
+      artist: {
+        desktop: 'Sunset Club',
+        tablet: 'Sunset Club',
+        mobile: 'Sunset Club'
+      },
+      genre: 'pop-house',
+      genreLabel: {
+        ru: {
+          desktop: 'Pop / House',
+          tablet: 'Pop / House',
+          mobile: 'Pop / House'
+        },
+        en: {
+          desktop: 'Pop / House',
+          tablet: 'Pop / House',
+          mobile: 'Pop / House'
+        }
+      },
+      audioBefore: './audio/pophouse_1_before.mp3',
+      audioAfter: './audio/pophouse_1_after.mp3',
+      cover: './image/Logo.webp'
+    },
+    {
+      id: 'track-ru-5',
+      lang: 'ru',
+      enabled: false,
+      title: {
+        desktop: 'Solar Flare',
+        tablet: 'Solar Flare',
+        mobile: 'Solar Flare'
+      },
+      artist: {
+        desktop: 'Deep Horizon',
+        tablet: 'Deep Horizon',
+        mobile: 'Deep Horizon'
+      },
+      genre: 'pop-house',
+      genreLabel: {
+        ru: {
+          desktop: 'Pop / House',
+          tablet: 'Pop / House',
+          mobile: 'Pop / House'
+        },
+        en: {
+          desktop: 'Pop / House',
+          tablet: 'Pop / House',
+          mobile: 'Pop / House'
+        }
+      },
+      audioBefore: './audio/pophouse_1_before.mp3',
+      audioAfter: './audio/pophouse_1_after.mp3',
+      cover: './image/Logo.webp'
+    },
+    {
+      id: 'track-ru-6',
+      lang: 'ru',
+      enabled: false,
+      title: {
+        desktop: 'Neon Beats',
+        tablet: 'Neon Beats',
+        mobile: 'Neon Beats'
+      },
+      artist: {
+        desktop: 'Future Pulse',
+        tablet: 'Future Pulse',
+        mobile: 'Future Pulse'
+      },
+      genre: 'pop-house',
+      genreLabel: {
+        ru: {
+          desktop: 'Pop / House',
+          tablet: 'Pop / House',
+          mobile: 'Pop / House'
+        },
+        en: {
+          desktop: 'Pop / House',
+          tablet: 'Pop / House',
+          mobile: 'Pop / House'
+        }
+      },
+      audioBefore: './audio/pophouse_1_before.mp3',
+      audioAfter: './audio/pophouse_1_after.mp3',
+      cover: './image/Logo.webp'
+    },
+
+    // --- ROCK / METAL (RU) ---
+    // ВНИМАНИЕ: у выключенных (enabled: false) треков ниже указаны файлы-заготовки
+    // ./audio/rockmetal_1_before.mp3 и _after.mp3, которых пока нет в репозитории.
+    // При включении трека подставьте реальный BEFORE/AFTER — иначе сработает фолбэк на pophouse_1.
+    {
+      id: 'track-ru-7',
+      lang: 'ru',
+      enabled: false,
+      title: {
+        desktop: 'Стальной Пульс',
+        tablet: 'Стальной Пульс',
+        mobile: 'Стальной Пульс'
+      },
+      artist: {
+        desktop: 'Северный Ветер',
+        tablet: 'Северный Ветер',
+        mobile: 'Северный Ветер'
+      },
+      genre: 'rock-metal',
+      genreLabel: {
+        ru: {
+          desktop: 'Rock / Metal',
+          tablet: 'Rock / Metal',
+          mobile: 'Rock / Metal'
+        },
+        en: {
+          desktop: 'Rock / Metal',
+          tablet: 'Rock / Metal',
+          mobile: 'Rock / Metal'
+        }
+      },
+      audioBefore: './audio/rockmetal_1_before.mp3',
+      audioAfter: './audio/rockmetal_1_after.mp3',
+      cover: './image/Logo.webp'
+    },
+    {
+      id: 'track-ru-8',
+      lang: 'ru',
+      enabled: false,
+      title: {
+        desktop: 'Эхо Тишины',
+        tablet: 'Эхо Тишины',
+        mobile: 'Эхо Тишины'
+      },
+      artist: {
+        desktop: 'Горизонт',
+        tablet: 'Горизонт',
+        mobile: 'Горизонт'
+      },
+      genre: 'rock-metal',
+      genreLabel: {
+        ru: {
+          desktop: 'Rock / Metal',
+          tablet: 'Rock / Metal',
+          mobile: 'Rock / Metal'
+        },
+        en: {
+          desktop: 'Rock / Metal',
+          tablet: 'Rock / Metal',
+          mobile: 'Rock / Metal'
+        }
+      },
+      audioBefore: './audio/rockmetal_1_before.mp3',
+      audioAfter: './audio/rockmetal_1_after.mp3',
+      cover: './image/Logo.webp'
+    },
+    {
+      id: 'track-ru-9',
+      lang: 'ru',
+      enabled: false,
+      title: {
+        desktop: 'Грозовой Шторм',
+        tablet: 'Грозовой Шторм',
+        mobile: 'Грозовой Шторм'
+      },
+      artist: {
+        desktop: 'Монолит',
+        tablet: 'Монолит',
+        mobile: 'Монолит'
+      },
+      genre: 'rock-metal',
+      genreLabel: {
+        ru: {
+          desktop: 'Rock / Metal',
+          tablet: 'Rock / Metal',
+          mobile: 'Rock / Metal'
+        },
+        en: {
+          desktop: 'Rock / Metal',
+          tablet: 'Rock / Metal',
+          mobile: 'Rock / Metal'
+        }
+      },
+      audioBefore: './audio/rockmetal_1_before.mp3',
+      audioAfter: './audio/rockmetal_1_after.mp3',
+      cover: './image/Logo.webp'
+    },
+    {
+      id: 'track-ru-10',
+      lang: 'ru',
+      enabled: false,
+      title: {
+        desktop: 'Темный Всадник',
+        tablet: 'Темный Всадник',
+        mobile: 'Темный Всадник'
+      },
+      artist: {
+        desktop: 'Авалон',
+        tablet: 'Авалон',
+        mobile: 'Авалон'
+      },
+      genre: 'rock-metal',
+      genreLabel: {
+        ru: {
+          desktop: 'Rock / Metal',
+          tablet: 'Rock / Metal',
+          mobile: 'Rock / Metal'
+        },
+        en: {
+          desktop: 'Rock / Metal',
+          tablet: 'Rock / Metal',
+          mobile: 'Rock / Metal'
+        }
+      },
+      audioBefore: './audio/rockmetal_1_before.mp3',
+      audioAfter: './audio/rockmetal_1_after.mp3',
+      cover: './image/Logo.webp'
+    },
+    {
+      id: 'track-ru-11',
+      lang: 'ru',
+      enabled: false,
+      title: {
+        desktop: 'Пламя и Лед',
+        tablet: 'Пламя и Лед',
+        mobile: 'Пламя и Лед'
+      },
+      artist: {
+        desktop: 'Стихия',
+        tablet: 'Стихия',
+        mobile: 'Стихия'
+      },
+      genre: 'rock-metal',
+      genreLabel: {
+        ru: {
+          desktop: 'Rock / Metal',
+          tablet: 'Rock / Metal',
+          mobile: 'Rock / Metal'
+        },
+        en: {
+          desktop: 'Rock / Metal',
+          tablet: 'Rock / Metal',
+          mobile: 'Rock / Metal'
+        }
+      },
+      audioBefore: './audio/rockmetal_1_before.mp3',
+      audioAfter: './audio/rockmetal_1_after.mp3',
+      cover: './image/Logo.webp'
+    },
+    {
+      id: 'track-ru-12',
+      lang: 'ru',
+      enabled: false,
+      title: {
+        desktop: 'Рассвет',
+        tablet: 'Рассвет',
+        mobile: 'Рассвет'
+      },
+      artist: {
+        desktop: 'Пульсар',
+        tablet: 'Пульсар',
+        mobile: 'Пульсар'
+      },
+      genre: 'rock-metal',
+      genreLabel: {
+        ru: {
+          desktop: 'Rock / Metal',
+          tablet: 'Rock / Metal',
+          mobile: 'Rock / Metal'
+        },
+        en: {
+          desktop: 'Rock / Metal',
+          tablet: 'Rock / Metal',
+          mobile: 'Rock / Metal'
+        }
+      },
+      audioBefore: './audio/rockmetal_1_before.mp3',
+      audioAfter: './audio/rockmetal_1_after.mp3',
+      cover: './image/Logo.webp'
+    },
+
+    // --- RAP / R&B (RU) ---
+    // ВНИМАНИЕ: у выключенных (enabled: false) треков ниже указаны файлы-заготовки
+    // ./audio/traphiphop_1_before.mp3 и _after.mp3, которых пока нет в репозитории.
+    // При включении трека подставьте реальный BEFORE/AFTER — иначе сработает фолбэк на pophouse_1.
+    {
+      id: 'track-ru-13',
+      lang: 'ru',
+      enabled: true,
+      title: {
+        desktop: 'Титры',
+        tablet: 'Титры',
+        mobile: 'Титры'
+      },
+      artist: {
+        desktop: 'Solvada',
+        tablet: 'Solvada',
+        mobile: 'Solvada'
+      },
+      genre: 'rap-rnb',
+      genreLabel: {
+        ru: {
+          desktop: 'Rap',
+          tablet: 'Rap',
+          mobile: 'Rap'
+        },
+        en: {
+          desktop: 'Rap',
+          tablet: 'Rap',
+          mobile: 'Rap'
+        }
+      },
+      audioBefore: './audio/ru/(R) Rap before (Solvada - Титры).mp3',
+      audioAfter: './audio/ru/(R) Rap after (Solvada - Титры).mp3',
+      cover: './image/Logo.webp'
+    },
+    {
+      id: 'track-ru-14',
+      lang: 'ru',
+      enabled: true,
+      title: {
+        desktop: 'Savage',
+        tablet: 'Savage',
+        mobile: 'Savage'
+      },
+      artist: {
+        desktop: 'None',
+        tablet: 'None',
+        mobile: 'None'
+      },
+      genre: 'rap-rnb',
+      genreLabel: {
+        ru: {
+          desktop: 'Rap Lyric',
+          tablet: 'Rap Lyric',
+          mobile: 'Rap Lyric'
+        },
+        en: {
+          desktop: 'Rap Lyric',
+          tablet: 'Rap Lyric',
+          mobile: 'Rap Lyric'
+        }
+      },
+      audioBefore: './audio/ru/(R) Rap Lyric before (None - Savage).mp3',
+      audioAfter: './audio/ru/(R) Rap Lyric after (None - Savage).mp3',
+      cover: './image/!image_none.jpg'
+    },
+    {
+      id: 'track-ru-15',
+      lang: 'ru',
+      enabled: false,
+      title: {
+        desktop: 'Ночной Город',
+        tablet: 'Ночной Город',
+        mobile: 'Ночной Город'
+      },
+      artist: {
+        desktop: 'Trap Flow',
+        tablet: 'Trap Flow',
+        mobile: 'Trap Flow'
+      },
+      genre: 'rap-rnb',
+      genreLabel: {
+        ru: {
+          desktop: 'Rap / R&B',
+          tablet: 'Rap / R&B',
+          mobile: 'Rap / R&B'
+        },
+        en: {
+          desktop: 'Rap / R&B',
+          tablet: 'Rap / R&B',
+          mobile: 'Rap / R&B'
+        }
+      },
+      audioBefore: './audio/traphiphop_1_before.mp3',
+      audioAfter: './audio/traphiphop_1_after.mp3',
+      cover: './image/Logo.webp'
+    },
+    {
+      id: 'track-ru-16',
+      lang: 'ru',
+      enabled: false,
+      title: {
+        desktop: 'Битва Районов',
+        tablet: 'Битва Районов',
+        mobile: 'Битва Районов'
+      },
+      artist: {
+        desktop: 'Street Code',
+        tablet: 'Street Code',
+        mobile: 'Street Code'
+      },
+      genre: 'rap-rnb',
+      genreLabel: {
+        ru: {
+          desktop: 'Rap / R&B',
+          tablet: 'Rap / R&B',
+          mobile: 'Rap / R&B'
+        },
+        en: {
+          desktop: 'Rap / R&B',
+          tablet: 'Rap / R&B',
+          mobile: 'Rap / R&B'
+        }
+      },
+      audioBefore: './audio/traphiphop_1_before.mp3',
+      audioAfter: './audio/traphiphop_1_after.mp3',
+      cover: './image/Logo.webp'
+    },
+    {
+      id: 'track-ru-17',
+      lang: 'ru',
+      enabled: false,
+      title: {
+        desktop: 'Золотой Флоу',
+        tablet: 'Золотой Флоу',
+        mobile: 'Золотой Флоу'
+      },
+      artist: {
+        desktop: 'Metro Beat',
+        tablet: 'Metro Beat',
+        mobile: 'Metro Beat'
+      },
+      genre: 'rap-rnb',
+      genreLabel: {
+        ru: {
+          desktop: 'Rap / R&B',
+          tablet: 'Rap / R&B',
+          mobile: 'Rap / R&B'
+        },
+        en: {
+          desktop: 'Rap / R&B',
+          tablet: 'Rap / R&B',
+          mobile: 'Rap / R&B'
+        }
+      },
+      audioBefore: './audio/traphiphop_1_before.mp3',
+      audioAfter: './audio/traphiphop_1_after.mp3',
+      cover: './image/Logo.webp'
+    },
+    {
+      id: 'track-ru-18',
+      lang: 'ru',
+      enabled: false,
+      title: {
+        desktop: '808 Импульс',
+        tablet: '808 Импульс',
+        mobile: '808 Импульс'
+      },
+      artist: {
+        desktop: 'Phonk Mafia',
+        tablet: 'Phonk Mafia',
+        mobile: 'Phonk Mafia'
+      },
+      genre: 'rap-rnb',
+      genreLabel: {
+        ru: {
+          desktop: 'Rap / R&B',
+          tablet: 'Rap / R&B',
+          mobile: 'Rap / R&B'
+        },
+        en: {
+          desktop: 'Rap / R&B',
+          tablet: 'Rap / R&B',
+          mobile: 'Rap / R&B'
+        }
+      },
+      audioBefore: './audio/traphiphop_1_before.mp3',
+      audioAfter: './audio/traphiphop_1_after.mp3',
+      cover: './image/Logo.webp'
     }
   ],
 

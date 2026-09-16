@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Страница не найдена — 404 | Nick Rise Studio</title>
+  <meta name="robots" content="noindex, follow">
+  <meta name="theme-color" content="#0C0E12">
+  <link rel="icon" type="image/webp" sizes="600x600" href="./image/Logo.webp">
+  <link rel="stylesheet" href="./tailwind.css">
+  <link rel="stylesheet" href="./style.css">
+  <style>
+    /* Минимум собственного CSS: страница не зависит от анимационного слоя */
+    body { font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif; }
+    .err-code { font-family: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif; }
+    .err-link { transition: transform .25s ease, box-shadow .25s ease, background-color .25s ease; }
+    .err-link:hover { transform: translateY(-2px); }
+  </style>
+</head>
+<body class="bg-[#0C0E12] text-[#F3F4F6] min-h-screen flex items-center justify-center px-6 antialiased">
+
+  <main class="w-full max-w-xl text-center">
+    <a href="./index.html" class="inline-block mb-10" aria-label="Nick Rise Studio — на главную">
+      <img src="./image/Logo.webp" alt="Nick Rise - One Rise" width="120" height="120" class="w-[120px] h-auto mx-auto rounded-full">
+    </a>
+
+    <p class="err-code text-amber-500 tracking-[0.3em] text-sm mb-3">SIGNAL LOST</p>
+    <h1 class="err-code text-6xl sm:text-7xl font-bold mb-4">404</h1>
+
+    <p class="text-lg text-slate-300 mb-2">Такой страницы нет — как и этого трека в сессии.</p>
+    <p class="text-sm text-slate-500 mb-10">Страница не найдена или была перемещена.</p>
+
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+      <a href="./index.html" class="err-link w-full sm:w-auto inline-flex items-center justify-center px-7 h-12 rounded-lg bg-amber-500 text-black font-semibold hover:bg-amber-400">
+        Вернуться на главную
+      </a>
+      <a href="https://t.me/Nick_Rise" target="_blank" rel="noopener" class="err-link w-full sm:w-auto inline-flex items-center justify-center px-7 h-12 rounded-lg border border-slate-600 text-slate-200 hover:bg-slate-800">
+        Написать в Telegram
+      </a>
+    </div>
+
+    <p class="mt-12 text-xs text-slate-600">© 2026 Nick Rise Studio. All rights reserved.</p>
+  </main>
+
+</body>
+</html>

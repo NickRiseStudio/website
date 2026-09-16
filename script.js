@@ -1,5 +1,6 @@
 // State variables
 let currentLang = 'en';
+let activeTrackLang = 'en';
 let activeGenre = 'all';
 let activeTrackId = null;
 let currentTrackPage = 0;
@@ -163,14 +164,76 @@ function initI18n() {
   setLanguage(initialLang, false);
 }
 
-function toggleLanguage() {
-  const nextLang = currentLang === 'ru' ? 'en' : 'ru';
-  setLanguage(nextLang, true);
+let isSwitchingLanguage = false;
+
+function getI18nValue(lang, keyPath, device) {
+  const t = CONFIG.i18n && CONFIG.i18n[lang];
+  if (!t) return null;
+  const parts = keyPath.split('.');
+  let val = t;
+  for (let i = 0; i < parts.length; i++) {
+    if (val === undefined || val === null) return null;
+    val = val[parts[i]];
+  }
+  return resolveDeviceText(val, device);
 }
 
-function setLanguage(lang, savePreference = true) {
+function getI18nAnimatedElements() {
+  const elements = [];
+  const currentDevice = getDeviceType();
+
+  // 1. All [data-i18n] elements (excluding language switch container & strings that don't differ)
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    if (el.closest('#langToggleContainer')) return;
+    const keyPath = el.getAttribute('data-i18n');
+    if (keyPath) {
+      const ruVal = getI18nValue('ru', keyPath, currentDevice);
+      const enVal = getI18nValue('en', keyPath, currentDevice);
+      // If the translated string is identical in both languages, skip animating to keep UI rock-solid
+      if (ruVal && enVal && ruVal === enVal) return;
+    }
+    elements.push(el);
+  });
+
+  // 2. Services section dynamic texts: badge, title, desc, bullet list, price prefix, button text
+  document.querySelectorAll(
+    '#servicesContainer .popular-badge, ' +
+    '#servicesContainer .service-card-title, ' +
+    '#servicesContainer .service-card-desc, ' +
+    '#servicesContainer .service-card-features, ' +
+    '#servicesContainer .service-card-from, ' +
+    '#servicesContainer .service-card-order-btn span'
+  ).forEach(el => {
+    if (!elements.includes(el)) elements.push(el);
+  });
+
+  // 3. Dynamic FAQ texts (only target the question text container, not plus icons or entire buttons)
+  document.querySelectorAll(
+    '#faqContainer .faq-q-text, ' +
+    '#faqContainer .faq-content-wrapper p'
+  ).forEach(el => {
+    if (!elements.includes(el)) elements.push(el);
+  });
+
+  // Filter out any elements whose ancestor is already in the list to avoid nested blurs
+  return elements.filter(el => {
+    let parent = el.parentElement;
+    while (parent) {
+      if (elements.includes(parent)) return false;
+      parent = parent.parentElement;
+    }
+    return true;
+  });
+}
+
+function toggleLanguage() {
+  if (isSwitchingLanguage) return;
+  const nextLang = currentLang === 'ru' ? 'en' : 'ru';
+  setLanguage(nextLang, true, true);
+}
+
+function setLanguage(lang, savePreference = true, animate = false) {
   if (lang !== 'ru' && lang !== 'en') lang = 'en';
-  currentLang = lang;
 
   if (savePreference) {
     try {
@@ -178,20 +241,59 @@ function setLanguage(lang, savePreference = true) {
     } catch (e) {}
   }
 
-  try {
-    document.documentElement.lang = lang;
-  } catch (e) {}
-
   const langToggle = document.getElementById('langToggleContainer');
   if (langToggle) {
     langToggle.setAttribute('data-lang', lang);
   }
 
-  renderI18nText();
-  renderServices();
-  renderFaq();
-  updateMasterDeckUI();
-  renderTrackList(false);
+  if (!animate) {
+    currentLang = lang;
+    try {
+      document.documentElement.lang = lang;
+    } catch (e) {}
+    renderI18nText();
+    renderServices();
+    renderFaq();
+    updateMasterDeckUI();
+    renderTrackList(false);
+    return;
+  }
+
+  isSwitchingLanguage = true;
+  const oldEls = getI18nAnimatedElements();
+  oldEls.forEach(el => {
+    el.classList.remove('lang-vapor-in');
+    el.classList.add('lang-vapor-out');
+  });
+
+  setTimeout(() => {
+    currentLang = lang;
+    try {
+      document.documentElement.lang = lang;
+    } catch (e) {}
+
+    renderI18nText();
+    renderServices();
+    renderFaq();
+    updateMasterDeckUI();
+    renderTrackList(false);
+
+    const newEls = getI18nAnimatedElements();
+    oldEls.forEach(el => el.classList.remove('lang-vapor-out'));
+    newEls.forEach(el => {
+      el.classList.remove('lang-vapor-out');
+      void el.offsetWidth;
+      el.classList.add('lang-vapor-in');
+    });
+
+    setTimeout(() => {
+      newEls.forEach(el => el.classList.remove('lang-vapor-in'));
+      document.querySelectorAll('.nr-faq-lang-switched').forEach(c => {
+        c.classList.remove('nr-faq-lang-switched');
+      });
+      isSwitchingLanguage = false;
+    }, 480);
+  }, 320);
 }
 
 function renderI18nText() {
@@ -217,15 +319,78 @@ function renderI18nText() {
     }
   });
 
-  if (typeof window !== 'undefined' && window.NickRiseAnimations && typeof window.NickRiseAnimations.animateHeroTitle === 'function') {
-    window.NickRiseAnimations.animateHeroTitle();
-  }
+  // Do not call animateHeroTitle on language toggle to prevent visual jitter/layout shift
 }
 
 // --- PLAYER & MASTER DECK ENGINE ---
 function getEnabledTracks() {
   if (!CONFIG || !CONFIG.tracks) return [];
-  return CONFIG.tracks.filter(tr => tr.enabled !== false && tr.active !== false && tr.visible !== false);
+  return CONFIG.tracks.filter(tr => 
+    tr.enabled !== false && 
+    tr.active !== false && 
+    tr.visible !== false &&
+    (!tr.lang || tr.lang === activeTrackLang)
+  );
+}
+
+function updateTrackLangButtonsUI() {
+  const ruBtn = document.getElementById('trackLangRuBtn');
+  const enBtn = document.getElementById('trackLangEnBtn');
+  const baseClasses = 'track-lang-btn py-2 px-4 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap flex-shrink-0';
+  const activeClasses = `${baseClasses} is-active bg-amber-500 text-slate-950 border border-amber-500 shadow-md shadow-amber-500/20`;
+  const inactiveClasses = `${baseClasses} bg-[#090C12] border border-gray-800/80 text-gray-400 hover:text-white`;
+
+  if (ruBtn) {
+    ruBtn.className = activeTrackLang === 'ru' ? activeClasses : inactiveClasses;
+    const dot = ruBtn.querySelector('.track-lang-dot');
+    if (dot) dot.className = `track-lang-dot w-2 h-2 rounded-full flex-shrink-0 ${activeTrackLang === 'ru' ? 'bg-slate-950' : 'bg-transparent'}`;
+  }
+  if (enBtn) {
+    enBtn.className = activeTrackLang === 'en' ? activeClasses : inactiveClasses;
+    const dot = enBtn.querySelector('.track-lang-dot');
+    if (dot) dot.className = `track-lang-dot w-2 h-2 rounded-full flex-shrink-0 ${activeTrackLang === 'en' ? 'bg-slate-950' : 'bg-transparent'}`;
+  }
+}
+
+function setTrackLanguage(targetLang) {
+  if (targetLang !== 'ru' && targetLang !== 'en') return;
+  if (targetLang === activeTrackLang) return;
+  activeTrackLang = targetLang;
+
+  currentTrackPage = 0;
+  updateTrackLangButtonsUI();
+
+  const isPlaying = activeTrackId && isAudioPlaying(activeTrackId);
+  const enabled = getEnabledTracks();
+
+  // If NOT currently playing, update deck selection to the new language
+  if (!isPlaying) {
+    const matchingGenre = enabled.filter(tr => activeGenre === 'all' || tr.genre === activeGenre);
+    if (matchingGenre.length === 0) {
+      activeGenre = 'all';
+      const filterBtns = document.querySelectorAll('.genre-filter-btn');
+      filterBtns.forEach(b => {
+        const isAll = b.getAttribute('data-genre') === 'all';
+        const allMinW = isAll ? 'min-w-[92px] sm:min-w-[100px] flex items-center justify-center ' : '';
+        if (isAll) {
+          b.className = `${allMinW}genre-filter-btn px-3.5 py-2 text-xs font-bold rounded-xl transition-all bg-amber-500 text-slate-950 border border-amber-500 cursor-pointer shadow-md shadow-amber-500/20`;
+        } else {
+          b.className = `${allMinW}genre-filter-btn px-3.5 py-2 text-xs font-bold rounded-xl transition-all bg-[#090C12] border border-gray-800/80 text-gray-400 hover:text-white cursor-pointer`;
+        }
+      });
+    }
+
+    const tracksToPick = enabled.filter(tr => activeGenre === 'all' || tr.genre === activeGenre);
+    if (tracksToPick.length > 0) {
+      selectTrack(tracksToPick[0].id, false);
+    } else if (enabled.length > 0) {
+      selectTrack(enabled[0].id, false);
+    }
+  }
+
+  // Smooth entrance animation exclusively for track cards
+  renderTrackList(true);
+  updateMasterDeckUI();
 }
 
 function getTracksPerPage() {
@@ -263,10 +428,11 @@ function ensureTrackLoaded(trackId) {
 }
 
 function initPlayer() {
-  const enabledTracks = getEnabledTracks();
+  const allTracks = CONFIG && CONFIG.tracks ? CONFIG.tracks.filter(tr => tr.enabled !== false && tr.active !== false && tr.visible !== false) : [];
 
-  // Set metadata preload initially so page load doesn't download 12MB of audio upfront
-  enabledTracks.forEach((track, index) => {
+  // Set metadata preload initially so page load doesn't download audio upfront
+  allTracks.forEach((track, index) => {
+    if (trackAudioMap[track.id]) return;
     const audioA = new Audio(track.audioBefore);
     const audioB = new Audio(track.audioAfter);
     audioA.preload = 'metadata';
@@ -318,6 +484,19 @@ function initPlayer() {
     });
   });
 
+  // Track Audio Language Switch (RU / EN)
+  const trackLangBtns = document.querySelectorAll('.track-lang-btn');
+  trackLangBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetLang = btn.getAttribute('data-track-lang');
+      if (targetLang && targetLang !== activeTrackLang) {
+        setTrackLanguage(targetLang);
+      }
+    });
+  });
+  updateTrackLangButtonsUI();
+
+  const enabledTracks = getEnabledTracks();
   if (enabledTracks.length > 0) {
     activeTrackId = enabledTracks[0].id;
   }
@@ -350,13 +529,20 @@ function initPlayer() {
   const filterBtns = document.querySelectorAll('.genre-filter-btn');
   filterBtns.forEach(btn => {
     btn.addEventListener('click', () => {
-      filterBtns.forEach(b => b.className = 'genre-filter-btn px-3 py-1.5 sm:px-4 sm:py-2 text-xs font-bold rounded-xl transition-all bg-[#090C12] border border-gray-800/80 text-gray-400 hover:text-white cursor-pointer');
-      btn.className = 'genre-filter-btn px-3 py-1.5 sm:px-4 sm:py-2 text-xs font-bold rounded-xl transition-all bg-amber-500 text-slate-950 font-black cursor-pointer shadow-md shadow-amber-500/20';
+      filterBtns.forEach(b => {
+        const isAll = b.getAttribute('data-genre') === 'all';
+        const allMinW = isAll ? 'min-w-[92px] sm:min-w-[100px] flex items-center justify-center ' : '';
+        b.className = `${allMinW}genre-filter-btn px-3.5 py-2 text-xs font-bold rounded-xl transition-all bg-[#090C12] border border-gray-800/80 text-gray-400 hover:text-white cursor-pointer`;
+      });
+      const isTargetAll = btn.getAttribute('data-genre') === 'all';
+      const targetMinW = isTargetAll ? 'min-w-[92px] sm:min-w-[100px] flex items-center justify-center ' : '';
+      btn.className = `${targetMinW}genre-filter-btn px-3.5 py-2 text-xs font-bold rounded-xl transition-all bg-amber-500 text-slate-950 border border-amber-500 cursor-pointer shadow-md shadow-amber-500/20`;
       activeGenre = btn.getAttribute('data-genre');
       currentTrackPage = 0;
       
+      const isPlaying = activeTrackId && isAudioPlaying(activeTrackId);
       const filtered = getEnabledTracks().filter(tr => activeGenre === 'all' || tr.genre === activeGenre);
-      if (filtered.length > 0 && !filtered.some(t => t.id === activeTrackId)) {
+      if (!isPlaying && filtered.length > 0 && !filtered.some(t => t.id === activeTrackId)) {
         selectTrack(filtered[0].id, false);
       } else {
         renderTrackList();
@@ -773,7 +959,9 @@ function nextDeckTrack() {
 
 function updateMasterDeckUI() {
   const enabledTracks = getEnabledTracks();
-  const track = enabledTracks.find(t => t.id === activeTrackId);
+  const track = (CONFIG && CONFIG.tracks) 
+    ? (CONFIG.tracks.find(t => t.id === activeTrackId) || enabledTracks.find(t => t.id === activeTrackId)) 
+    : enabledTracks.find(t => t.id === activeTrackId);
   if (!track) return;
 
   const currentDevice = getDeviceType();
@@ -782,52 +970,25 @@ function updateMasterDeckUI() {
   const genreText = resolveI18nValue(track.genreLabel, currentLang, currentDevice);
   const trackTitle = resolveDeviceText(track.title, currentDevice);
   const trackArtist = resolveDeviceText(track.artist, currentDevice);
-  const t = CONFIG.i18n[currentLang];
 
   document.querySelectorAll('.deck-cover').forEach(el => { el.src = track.cover; });
   document.querySelectorAll('.deck-title').forEach(el => { el.textContent = trackTitle; });
   document.querySelectorAll('.deck-artist').forEach(el => { el.textContent = trackArtist; });
   document.querySelectorAll('.deck-genre').forEach(el => { el.textContent = genreText; });
 
-  const totalTracks = enabledTracks.length;
-  const currentIdx = enabledTracks.findIndex(t => t.id === activeTrackId);
-  const trackNum = (currentIdx >= 0 ? currentIdx + 1 : 1).toString().padStart(2, '0');
-  document.querySelectorAll('.deck-index').forEach(el => { el.textContent = `${trackNum} / ${totalTracks}`; });
-
-  // Source Switches & Mode Labels
+  // Source Switches (BEFORE / AFTER)
   document.querySelectorAll('.deck-source-switch').forEach(sw => {
     sw.setAttribute('data-source', item.source);
   });
 
-  const modeLabels = document.querySelectorAll('.deck-mode-label');
-  const targetLabelText = item.source === 'before' 
-    ? (resolveDeviceText(t.player.beforeLabel, currentDevice) || 'BEFORE (MIX)')
-    : (resolveDeviceText(t.player.afterLabel, currentDevice) || 'AFTER (MASTER)');
-
-  modeLabels.forEach(el => {
-    if (el.textContent !== targetLabelText) {
-      el.style.opacity = '0';
-      el.style.transform = 'translateY(2px)';
-      setTimeout(() => {
-        el.textContent = targetLabelText;
-        el.style.opacity = '1';
-        el.style.transform = 'translateY(0)';
-      }, 150);
-    }
-  });
-
   // Play Button & Icons
   const playIcons = document.querySelectorAll('.deck-play-icon');
-  const playTexts = document.querySelectorAll('.deck-play-text');
   const playBtns = document.querySelectorAll('.deck-play-btn');
 
   playIcons.forEach(el => {
     el.innerHTML = isPlaying 
       ? '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>' 
       : '<path d="M8 5v14l11-7z"/>';
-  });
-  playTexts.forEach(el => {
-    el.textContent = isPlaying ? 'PAUSE' : 'PLAY';
   });
   playBtns.forEach(el => {
     if (isPlaying) {
@@ -853,12 +1014,7 @@ function updateDeckProgressUI() {
   const pct = dur > 0 ? (cur / dur) * 100 : 0;
 
   const progressBar = document.getElementById('deckProgressBar');
-  const curText = document.getElementById('deckCurTime');
-  const durText = document.getElementById('deckDurTime');
-
   if (progressBar) progressBar.style.width = `${pct}%`;
-  if (curText) curText.textContent = formatTime(cur);
-  if (durText) durText.textContent = formatTime(dur);
 }
 
 function renderTrackList(animate = false) {
@@ -938,8 +1094,36 @@ function renderTrackList(animate = false) {
         playSvgPath.setAttribute('d', isPlaying ? 'M6 19h4V5H6v14zm8-14v14h4V5h-4z' : 'M8 5v14l11-7z');
       }
     });
+
+    if (animate && typeof gsap !== 'undefined' && container.children.length > 0) {
+      gsap.killTweensOf(container.children);
+      gsap.fromTo(
+        container.children,
+        { opacity: 0, y: 26 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.45,
+          stagger: 0.07,
+          ease: 'power2.out',
+          clearProps: 'transform,opacity',
+          onComplete: () => {
+            if (typeof initPlayerTrackCardsTimeline === 'function') {
+              initPlayerTrackCardsTimeline(false, true);
+            }
+          }
+        }
+      );
+    }
   } else {
     container.innerHTML = '';
+
+    if (visibleTracks.length === 0) {
+      const emptyDiv = document.createElement('div');
+      emptyDiv.className = 'col-span-full py-12 text-center text-gray-500 text-xs sm:text-sm font-medium';
+      emptyDiv.textContent = currentLang === 'ru' ? 'В этом жанре пока нет доступных треков' : 'No tracks available in this genre yet';
+      container.appendChild(emptyDiv);
+    }
 
     visibleTracks.forEach(track => {
       const isSelected = activeTrackId === track.id;
@@ -961,7 +1145,7 @@ function renderTrackList(animate = false) {
       itemCard.innerHTML = `
         <div class="flex items-center gap-3.5 min-w-0 flex-1">
           <div class="track-cover-box relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl overflow-hidden flex-shrink-0 border transition-colors duration-300 ${isSelected ? 'border-amber-500' : 'border-gray-800'}">
-            <img src="${track.cover}" alt="${trackTitle}" loading="lazy" decoding="async" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onerror="if(this.src!=='./image/cover1.webp')this.src='./image/cover1.webp'" />
+            <img src="${track.cover}" alt="${trackTitle}" loading="lazy" decoding="async" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onerror="this.onerror=null;this.src='./image/cover1.webp'" />
             <div class="track-live-overlay absolute inset-0 bg-black/60 items-center justify-center" style="display: ${isPlaying ? 'flex' : 'none'};">
               <span class="w-2.5 h-2.5 rounded-full vu-led-green animate-ping"></span>
             </div>
@@ -1000,10 +1184,23 @@ function renderTrackList(animate = false) {
     });
 
     if (animate && typeof gsap !== 'undefined' && container.children.length > 0) {
+      gsap.killTweensOf(container.children);
       gsap.fromTo(
         container.children,
-        { opacity: 0, y: 12 },
-        { opacity: 1, y: 0, duration: 0.28, stagger: 0.04, ease: 'power2.out', clearProps: 'transform,opacity' }
+        { opacity: 0, y: 26 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.45,
+          stagger: 0.07,
+          ease: 'power2.out',
+          clearProps: 'transform,opacity',
+          onComplete: () => {
+            if (typeof initPlayerTrackCardsTimeline === 'function') {
+              initPlayerTrackCardsTimeline(false, true);
+            }
+          }
+        }
       );
     }
   }
@@ -1041,7 +1238,7 @@ function renderTrackList(animate = false) {
     }
   }
 
-  if (typeof initPlayerTrackCardsTimeline === 'function') {
+  if (!animate && typeof initPlayerTrackCardsTimeline === 'function') {
     initPlayerTrackCardsTimeline(false);
   }
 }
@@ -1064,6 +1261,71 @@ function renderServices() {
 
   const currentDevice = getDeviceType();
   const t = CONFIG.i18n[currentLang];
+
+  // In-place update to prevent DOM destruction, layout jitter, and scroll reset on language toggle
+  const existingCards = container.querySelectorAll('.service-mobile-card');
+  if (existingCards.length === CONFIG.servicesData.length) {
+    CONFIG.servicesData.forEach((s, idx) => {
+      const card = existingCards[idx];
+      const titleRaw = currentLang === 'ru' ? s.titleRu : s.titleEn;
+      const descRaw = currentLang === 'ru' ? s.descRu : s.descEn;
+      const priceRaw = currentLang === 'ru' ? s.priceRu : s.priceEn;
+      const featuresRaw = currentLang === 'ru' ? s.featuresRu : s.featuresEn;
+
+      const title = resolveDeviceText(titleRaw, currentDevice);
+      const desc = resolveDeviceText(descRaw, currentDevice);
+      const price = resolveDeviceText(priceRaw, currentDevice);
+      const features = Array.isArray(featuresRaw)
+        ? featuresRaw.map(f => resolveDeviceText(f, currentDevice))
+        : [resolveDeviceText(featuresRaw, currentDevice)];
+
+      let fromLabel = currentLang === 'ru' ? 'от' : 'from';
+      let displayPrice = price;
+
+      if (typeof price === 'string') {
+        if (price.toLowerCase().startsWith('от ')) {
+          fromLabel = 'от';
+          displayPrice = price.slice(3).trim();
+        } else if (price.toLowerCase().startsWith('from ')) {
+          fromLabel = 'from';
+          displayPrice = price.slice(5).trim();
+        }
+      }
+
+      const popularBadgeText = resolveDeviceText(t.services.popularBadge, currentDevice);
+      const orderBtnText = resolveDeviceText(t.services.orderBtn, currentDevice);
+
+      const popEl = card.querySelector('.popular-badge');
+      if (popEl) popEl.textContent = popularBadgeText;
+
+      const titleEl = card.querySelector('.service-card-title');
+      if (titleEl) titleEl.textContent = title;
+
+      const descEl = card.querySelector('.service-card-desc');
+      if (descEl) descEl.textContent = desc;
+
+      const featEls = card.querySelectorAll('.service-feature-text');
+      features.forEach((fText, fIdx) => {
+        if (featEls[fIdx]) featEls[fIdx].textContent = fText;
+      });
+
+      const fromEl = card.querySelector('.service-card-from');
+      if (fromEl) fromEl.textContent = fromLabel;
+
+      const priceEl = card.querySelector('.service-card-price');
+      if (priceEl) {
+        priceEl.textContent = displayPrice;
+        priceEl.setAttribute('data-target-price', displayPrice);
+      }
+
+      const btnSpan = card.querySelector('.service-card-order-btn span');
+      if (btnSpan) btnSpan.textContent = orderBtnText;
+    });
+
+    updateServicesDots(false);
+    return;
+  }
+
   container.innerHTML = '';
 
   CONFIG.servicesData.forEach((s, idx) => {
@@ -1313,6 +1575,35 @@ function renderFaq() {
   if (!container) return;
 
   const currentDevice = getDeviceType();
+
+  // In-place update to prevent layout jumps and DOM destruction on language toggle
+  const existingCards = container.querySelectorAll('.rack-card');
+  if (existingCards.length === CONFIG.faqData.length) {
+    CONFIG.faqData.forEach((item, index) => {
+      const card = existingCards[index];
+      const qRaw = currentLang === 'ru' ? item.qRu : item.qEn;
+      const aRaw = currentLang === 'ru' ? item.aRu : item.aEn;
+      const q = resolveDeviceText(qRaw, currentDevice);
+      const rawA = resolveDeviceText(aRaw, currentDevice);
+      const a = (rawA || '').replace(/\n/g, '<br/>');
+
+      const qSpan = card.querySelector('.faq-q-text') || card.querySelector('button > span');
+      if (qSpan) qSpan.textContent = q;
+
+      const aP = card.querySelector('.faq-content-wrapper p');
+      if (aP) aP.innerHTML = a;
+
+      const body = card.querySelector('.faq-content-wrapper');
+      if (body && body.getAttribute('data-open') === 'true') {
+        body.style.display = 'block';
+        body.style.height = 'auto';
+        body.style.opacity = '1';
+        card.classList.add('nr-faq-lang-switched');
+      }
+    });
+    return;
+  }
+
   container.innerHTML = '';
 
   CONFIG.faqData.forEach((item, index) => {
@@ -1324,14 +1615,14 @@ function renderFaq() {
     const itemKey = `faq-${index}`;
 
     const el = document.createElement('div');
-    el.className = 'rack-card overflow-hidden transition-all duration-300 border border-gray-800/80';
+    el.className = 'rack-card faq-card overflow-hidden border border-gray-800/80 transition-colors duration-300';
     el.innerHTML = `
       <button
         onclick="toggleFaq('${itemKey}')"
         class="w-full p-5 sm:p-6 text-left flex justify-between items-center gap-4 group focus:outline-none cursor-pointer select-none"
         aria-expanded="false"
       >
-        <span class="text-base sm:text-lg font-bold text-gray-100 group-hover:text-amber-400 transition-colors">
+        <span class="faq-q-text flex-1 min-w-0 text-base sm:text-lg font-bold text-gray-100 group-hover:text-amber-400 transition-colors">
           ${q}
         </span>
         <span id="faq-icon-${itemKey}" class="w-8 h-8 rounded-full bg-gray-900 border border-gray-800 flex items-center justify-center text-amber-500 font-bold transition-all duration-300 flex-shrink-0 group-hover:border-amber-500/50 group-hover:bg-amber-500/10">
@@ -1405,7 +1696,7 @@ function openFaqItem(id) {
 
   body.style.display = 'block';
   body.style.height = 'auto';
-  const targetHeight = body.offsetHeight;
+  const targetHeight = Math.ceil(body.scrollHeight || body.offsetHeight);
   body.style.height = '0px';
 
   if (typeof gsap !== 'undefined') {
@@ -1415,18 +1706,22 @@ function openFaqItem(id) {
       {
         height: targetHeight,
         opacity: 1,
-        duration: 0.55,
+        duration: 0.45,
         ease: 'power3.out',
         onComplete: () => {
           body.style.height = 'auto';
-          if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
+          requestAnimationFrame(() => {
+            if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
+          });
         }
       }
     );
   } else {
     body.style.height = 'auto';
     body.style.opacity = '1';
-    if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
+    requestAnimationFrame(() => {
+      if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
+    });
   }
 }
 
@@ -1458,18 +1753,23 @@ function closeFaqItem(id) {
     gsap.to(body, {
       height: 0,
       opacity: 0,
-      duration: 0.42,
+      duration: 0.35,
       ease: 'power3.inOut',
       onComplete: () => {
         body.style.display = 'none';
-        if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
+        body.style.height = '0px';
+        requestAnimationFrame(() => {
+          if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
+        });
       }
     });
   } else {
     body.style.height = '0px';
     body.style.opacity = '0';
     body.style.display = 'none';
-    if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
+    requestAnimationFrame(() => {
+      if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
+    });
   }
 }
 
@@ -2033,8 +2333,23 @@ function showToast(msg) {
   }
 }
 
+function getLocalizedCopyToast(text, fallbackMsg) {
+  const t = (typeof CONFIG !== 'undefined' && CONFIG && CONFIG.i18n) ? CONFIG.i18n[currentLang] : null;
+  const contacts = t && t.contacts ? t.contacts : null;
+  if (!contacts) return fallbackMsg;
+
+  const value = String(text || '');
+  const atIdx = value.indexOf('@');
+  const isEmail = atIdx > 0 && value.indexOf('.') > atIdx;
+  const key = isEmail ? 'toastEmailCopied' : 'toastTgCopied';
+  const resolved = resolveDeviceText(contacts[key], getDeviceType());
+
+  return (typeof resolved === 'string' && resolved) ? resolved : fallbackMsg;
+}
+
 function copyText(text, toastMsg) {
-  const onSuccess = () => showToast(toastMsg);
+  const resolvedToastMsg = getLocalizedCopyToast(text, toastMsg);
+  const onSuccess = () => showToast(resolvedToastMsg);
 
   const fallbackCopy = () => {
     try {
@@ -2303,7 +2618,7 @@ function initPlayerGsapAnimation() {
   }
 }
 
-function initPlayerTrackCardsTimeline(initialPreHide = true) {
+function initPlayerTrackCardsTimeline(initialPreHide = true, alreadyAnimated = false) {
   if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') return;
 
   const trackContainer = document.getElementById('trackListContainer');
@@ -2327,7 +2642,7 @@ function initPlayerTrackCardsTimeline(initialPreHide = true) {
   const vh = window.innerHeight || 800;
   const isAlreadyInView = rect.top < vh * 0.83 && rect.bottom > 0;
 
-  if (initialPreHide && !isAlreadyInView) {
+  if (initialPreHide && !isAlreadyInView && !alreadyAnimated) {
     gsap.set(trackCards, { y: 26, opacity: 0 });
   }
 
@@ -2353,7 +2668,7 @@ function initPlayerTrackCardsTimeline(initialPreHide = true) {
     0
   );
 
-  if (isAlreadyInView) {
+  if (isAlreadyInView || alreadyAnimated) {
     playerTracksTimeline.progress(1);
   }
 
