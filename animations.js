@@ -576,6 +576,20 @@
 
   /* ═══ 11. ТРЕК-ЛИСТ: отметка активного/играющего трека ══════════════ */
 
+  /* Число полосок эквалайзера поверх обложки играющего трека.
+     Телефон: обложка — крупный квадрат, поэтому полосок много и они образуют
+     низкую широкую «волну» (см. медиазапрос в animations.css, раздел 07).
+     Планшет/десктоп: прежние четыре вертикальные полоски. */
+  function eqBarsCount() {
+    return window.innerWidth < 640 ? 12 : 4;
+  }
+
+  function eqBarsHTML(count) {
+    var html = '';
+    for (var i = 0; i < count; i++) html += '<i></i>';
+    return html;
+  }
+
   function decorateTracks() {
     var cont = $('#trackListContainer');
     if (!cont) return;
@@ -601,8 +615,17 @@
 
     cur.classList.add('nr-live');
     var overlay = $('.absolute.inset-0', cur);
-    if (overlay && !$('.nr-eqbars', overlay) && !REDUCED) {
-      overlay.appendChild(el('span', 'nr-eqbars', '<i></i><i></i><i></i><i></i>'));
+    if (overlay && !REDUCED) {
+      var need = eqBarsCount();
+      var bars = $('.nr-eqbars', overlay);
+      /* Смена вида mobile ⇄ desktop меняет число полосок: старый набор убираем. */
+      if (bars && bars.children.length !== need) {
+        bars.parentNode.removeChild(bars);
+        bars = null;
+      }
+      if (!bars) {
+        overlay.appendChild(el('span', 'nr-eqbars', eqBarsHTML(need)));
+      }
     }
   }
 

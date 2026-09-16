@@ -1104,7 +1104,9 @@ function renderTrackList(animate = false) {
       const playBtn = itemCard.querySelector('.track-play-btn');
       if (playBtn) {
         playBtn.className = (isMobileView
-          ? `track-play-btn absolute inset-0 z-10 m-auto w-11 h-11 rounded-full flex items-center justify-center transition-transform duration-300 group-hover:scale-110 cursor-pointer ${
+          // Кнопка-контейнер крупнее (64px) — сам треугольник внутри теперь 48px,
+          // его хорошо видно на большом квадратном фото.
+          ? `track-play-btn absolute inset-0 z-10 m-auto w-16 h-16 rounded-full flex items-center justify-center transition-transform duration-300 group-hover:scale-110 cursor-pointer ${
               isSelected
                 ? 'text-amber-400 hover:text-amber-300'
                 : 'text-white hover:text-amber-400'
@@ -1234,12 +1236,14 @@ function renderTrackList(animate = false) {
         playBtn.type = 'button';
         playBtn.setAttribute('aria-label', isPlaying ? 'Pause' : 'Play');
         playBtn.onclick = (ev) => { ev.stopPropagation(); toggleTrack(track.id); };
-        playBtn.className = `track-play-btn absolute inset-0 z-10 m-auto w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-110 cursor-pointer ${
+        // Кнопка-контейнер крупнее (64px) — сам треугольник внутри теперь 48px,
+        // плюс плотная тень: на светлых обложках его стало хорошо видно.
+        playBtn.className = `track-play-btn absolute inset-0 z-10 m-auto w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-110 cursor-pointer ${
           isSelected
             ? 'text-amber-400 hover:text-amber-300'
             : 'text-white hover:text-amber-400'
         } active:scale-95`;
-        playBtn.innerHTML = `<svg class="track-play-svg w-5 h-5 fill-current drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] pointer-events-none mx-auto" viewBox="0 0 24 24"><path d="${isPlaying ? 'M6 19h4V5H6v14zm8-14v14h4V5h-4z' : 'M8 5v14l11-7z'}"/></svg>`;
+        playBtn.innerHTML = `<svg class="track-play-svg w-12 h-12 fill-current drop-shadow-[0_4px_12px_rgba(0,0,0,0.85)] pointer-events-none mx-auto" viewBox="0 0 24 24"><path d="${isPlaying ? 'M6 19h4V5H6v14zm8-14v14h4V5h-4z' : 'M8 5v14l11-7z'}"/></svg>`;
         trackCoverBox.appendChild(playBtn);
 
         meta.className = 'min-w-0 flex-1 flex-col';
