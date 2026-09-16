@@ -1308,8 +1308,9 @@ function renderTrackList(animate = false) {
       if (genreBadge) {
         genreBadge.textContent = genreText;
         genreBadge.className = (isMobileView
-          ? `track-genre-badge self-start text-[10px] font-bold px-2.5 py-1 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}`
-          : `track-genre-badge text-[9px] font-extrabold px-2 py-0.5 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}`
+          // Жанр по центру и чуть крупнее, чтобы проще было заметить жанр трека.
+          ? `track-genre-badge self-center text-[11px] font-bold px-3 py-1 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}`
+          : `track-genre-badge text-[11px] font-extrabold px-3 py-1 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}`
         );
       }
 
@@ -1433,8 +1434,9 @@ function renderTrackList(animate = false) {
 
       const genreSpan = document.createElement('span');
       genreSpan.className = (isMobileView
-        ? `track-genre-badge self-start text-[10px] font-bold px-2.5 py-1 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}`
-        : `track-genre-badge text-[9px] font-extrabold px-2 py-0.5 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}`
+        // Жанр по центру и чуть крупнее, чтобы проще было заметить жанр трека.
+        ? `track-genre-badge self-center text-[11px] font-bold px-3 py-1 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}`
+        : `track-genre-badge text-[11px] font-extrabold px-3 py-1 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}`
       );
       genreSpan.textContent = genreText;
 
@@ -1654,8 +1656,10 @@ function renderServices() {
 
     const card = document.createElement('div');
     card.className = s.isPopular
-      ? 'service-mobile-card popular-rack-card p-6 md:p-8 flex flex-col justify-between transition-colors duration-200 w-[78vw] max-w-[310px] sm:w-auto sm:max-w-none flex-shrink-0 snap-center cursor-pointer select-none'
-      : 'service-mobile-card rack-card p-6 md:p-8 flex flex-col justify-between transition-colors duration-200 w-[78vw] max-w-[310px] sm:w-auto sm:max-w-none flex-shrink-0 snap-center cursor-pointer select-none';
+      // Компактнее по вертикали на телефоне/планшете (иначе карточки еле
+      // помещаются на дисплей, особенно с нижней панелью плеера).
+      ? 'service-mobile-card popular-rack-card p-4 sm:p-5 flex flex-col justify-between transition-colors duration-200 w-[78vw] max-w-[310px] sm:w-auto sm:max-w-none flex-shrink-0 snap-center cursor-pointer select-none'
+      : 'service-mobile-card rack-card p-4 sm:p-5 flex flex-col justify-between transition-colors duration-200 w-[78vw] max-w-[310px] sm:w-auto sm:max-w-none flex-shrink-0 snap-center cursor-pointer select-none';
 
     // Set initial custom attribute
     card.setAttribute('data-card-index', idx);
@@ -1710,26 +1714,26 @@ function renderServices() {
           <div class="rack-bolt"></div>
         </div>
 
-        <h3 class="service-card-title text-2xl font-extrabold text-white mb-2 tracking-tight">${title}</h3>
-        <p class="service-card-desc text-sm text-gray-400 mb-6 leading-relaxed sm:max-lg:text-center">${desc}</p>
+        <h3 class="service-card-title text-xl sm:text-2xl font-extrabold text-white mb-1.5 tracking-tight">${title}</h3>
+        <p class="service-card-desc text-sm text-gray-400 mb-4 leading-relaxed sm:max-lg:text-center">${desc}</p>
 
-        <ul class="service-card-features space-y-3 mb-6">
+        <ul class="service-card-features space-y-2 sm:space-y-3 mb-3 sm:mb-5">
           ${featuresHtml}
         </ul>
       </div>
 
       <div class="service-card-bottom">
-        <div class="service-card-divider h-px bg-gray-800/80 my-6"></div>
+        <div class="service-card-divider h-px bg-gray-800/80 my-3 sm:my-5"></div>
 
         <div class="service-card-pricing flex items-center justify-between gap-4">
           <div class="service-card-price-group flex flex-col">
             <span class="service-card-from text-xs font-mono text-gray-400 uppercase tracking-wider">${fromLabel}</span>
-            <span class="service-card-price text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-amber-200 via-amber-400 to-amber-500 bg-clip-text text-transparent tracking-tight" data-target-price="${displayPrice}">${displayPrice}</span>
+            <span class="service-card-price text-2xl sm:text-3xl font-extrabold bg-gradient-to-r from-amber-200 via-amber-400 to-amber-500 bg-clip-text text-transparent tracking-tight" data-target-price="${displayPrice}">${displayPrice}</span>
           </div>
 
           <button
             onclick="openContactModal()"
-            class="service-card-order-btn py-3 px-6 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl transition-all duration-200 shadow-md shadow-amber-500/20 active:scale-95 text-sm sm:text-base cursor-pointer flex items-center gap-1.5 flex-shrink-0"
+            class="service-card-order-btn py-2.5 px-5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl transition-all duration-200 shadow-md shadow-amber-500/20 active:scale-95 text-sm sm:text-base cursor-pointer flex items-center gap-1.5 flex-shrink-0"
           >
             <span>${orderBtnText}</span>
           </button>
@@ -2732,8 +2736,20 @@ function updateScrollToTopVisibility() {
 function initScrollToTop() {
   const btn = document.getElementById('scrollToTopBtn');
   if (!btn) return;
+
+  const arrow = btn.querySelector('.scroll-to-top-arrow');
+
   btn.addEventListener('click', (e) => {
     e.preventDefault();
+    // Возвращаем стрелку в исходное положение: снимаем hover-анимацию на время
+    // клика и сразу возвращаем ей transform (иначе на тач/после клика «левитация»
+    // стрелки продолжалась бы, пока курсор/нажатие держится на кнопке).
+    if (arrow) {
+      arrow.classList.remove('nr-arrow-reset');
+      void arrow.offsetWidth; // reflow, чтобы перезапустить
+      arrow.classList.add('nr-arrow-reset');
+      setTimeout(() => arrow.classList.remove('nr-arrow-reset'), 650);
+    }
     scrollToTop();
   });
   updateScrollToTopVisibility();
@@ -3197,47 +3213,41 @@ function initServicesGsapAnimation() {
     return;
   }
 
-  // Pre-hide all elements to prepare for sequenced emergence
+  // ─────────────────────────────────────────────────────────────────────────
+  // МЯГКОЕ ВСПЛЫТИЕ ВСЕЙ СЕКЦИИ УСЛУГ (без «дёрганий»).
+  //
+  // Раньше здесь было 4 независимых ScrollTrigger-таймлайна (header, cards,
+  // features, bottom) с разными start-порогами (88/85/83/80 %) и резкими
+  // реверсами через timeScale(1.6)+(1.8). Из-за этого при прокрутке вниз
+  // элементы стартовали в разных точках, «догоняли» друг друга и визуально
+  // дёргались. Теперь на всю секцию вешаем ОДИН мягкий триггер — плавное
+  // простое всплытие (y 24→0, opacity 0→1), без reversе-таймскейла.
+  //
+  // При этом на планшете/десктопе каждая карточка получает СВОЙ ScrollTrigger
+  // (поочерёдное появление по мере скролла), а на телефоне оболочки карточек
+  // НЕ трогаем (их transform/opacity принадлежат coverflow из
+  // updateServicesDots()): мягко всплывают только внутренности карточки.
+
   if (sectionHeader) gsap.set(sectionHeader, { y: 24, opacity: 0 });
 
-  const allMainText = [];
-  const allDividers = [];
-  const allBottoms = [];
-
+  // Соберём «внутренности» карточек, которые можно мягко анимировать на ЛЮБОЙ
+  // ширине экрана (оболочки на телефоне исключаем из-за coverflow).
+  const cardInnerSelectors = [
+    '.service-card-top',
+    '.service-feature-item',
+    '.service-check-icon',
+    '.service-card-bottom',
+    '.service-card-divider',
+    '.service-card-price-group',
+    '.service-card-order-btn'
+  ];
   cards.forEach(card => {
-    if (!mobileCarousel) gsap.set(card, { y: 30, opacity: 0 });
+    if (!mobileCarousel) gsap.set(card, { y: 24, opacity: 0 });
 
-    const popularBadge = card.querySelector('.popular-badge') || card.querySelector('.service-card-popular');
-    const metaBar = card.querySelector('.service-card-meta');
-    const title = card.querySelector('.service-card-title');
-    const desc = card.querySelector('.service-card-desc');
-    const divider = card.querySelector('.service-card-divider');
-    const priceGroup = card.querySelector('.service-card-price-group');
-    const orderBtn = card.querySelector('.service-card-order-btn');
-
-    const topItems = [metaBar, title, desc, popularBadge].filter(Boolean);
-    topItems.forEach(el => allMainText.push(el));
-    if (topItems.length) gsap.set(topItems, { y: 16, opacity: 0 });
-
-    const featureItems = card.querySelectorAll('.service-feature-item');
-    const checkIcons = card.querySelectorAll('.service-check-icon');
-    if (featureItems.length) gsap.set(featureItems, { x: -30, opacity: 0 });
-    if (checkIcons.length) gsap.set(checkIcons, { scale: 0.2, opacity: 0 });
-
-    if (divider) {
-      allDividers.push(divider);
-      gsap.set(divider, { scaleX: 0, opacity: 0 });
+    const innerEls = card.querySelectorAll(cardInnerSelectors.join(','));
+    if (innerEls.length) {
+      gsap.set(innerEls, { opacity: 0 });
     }
-    const bottomGroup = [priceGroup, orderBtn].filter(Boolean);
-    bottomGroup.forEach(el => allBottoms.push(el));
-    if (bottomGroup.length) gsap.set(bottomGroup, { y: 16, opacity: 0 });
-  });
-
-  // Calculate maximum number of features across all cards
-  let maxFeatures = 0;
-  cards.forEach(card => {
-    const count = card.querySelectorAll('.service-feature-item').length;
-    if (count > maxFeatures) maxFeatures = count;
   });
 
   // Initialize prices to 0 so count-up starts cleanly
@@ -3245,124 +3255,75 @@ function initServicesGsapAnimation() {
     p.el.textContent = p.targetText.replace(p.raw, '0');
   });
 
-  const featuresContainer = document.querySelector('#servicesContainer .service-card-features') || '#servicesContainer';
   const bottomContainer = document.querySelector('#servicesContainer .service-card-bottom') || '#servicesContainer';
 
-  // 1. HEADER TIMELINE (Title "Услуги и Стоимость")
-  // Enters at 88%, reverses visibly when scrolling up past 88%
+  // Header: плавное всплытие, без каскада и резких реверсов.
   if (sectionHeader) {
-    const headerTl = gsap.timeline({
+    gsap.to(sectionHeader, {
+      y: 0,
+      opacity: 1,
+      duration: 0.55,
+      ease: 'power2.out',
       scrollTrigger: {
         trigger: sectionHeader,
-        start: computeDynamicStart(88),
-        end: 'bottom top',
-        toggleActions: 'play none none reverse',
-        onLeaveBack: () => {
-          headerTl.timeScale(1.6).reverse();
-        },
-        onEnter: () => {
-          headerTl.timeScale(1.0).play();
-        }
+        start: computeDynamicStart(85),
+        toggleActions: 'play none none none'
       }
     });
-
-    headerTl.fromTo(
-      sectionHeader,
-      { y: 24, opacity: 0 },
-      { y: 0, opacity: 1, duration: 0.45, ease: 'power2.out', clearProps: 'transform' },
-      0
-    );
-    servicesTimelines.push(headerTl);
   }
 
-  // 2. CARDS & MAIN TEXT TIMELINE (3 card shells + titles, descriptions, badges)
-  // Enters at 85%, reverses visibly when scrolling up past 85%
-  const cardsTl = gsap.timeline({
-    scrollTrigger: {
-      trigger: '#servicesContainer',
-      start: computeDynamicStart(85),
-      end: 'bottom top',
-      toggleActions: 'play none none reverse',
-      onLeaveBack: () => {
-        cardsTl.timeScale(1.6).reverse();
-      },
-      onEnter: () => {
-        cardsTl.timeScale(1.0).play();
-      }
-    }
-  });
-
+  // Планшет/десктоп: каждая карточка всплывает ОТДЕЛЬНО по мере скролла,
+  // чтобы анимация второй/третьей услуги была видна (было: все 3 сразу).
+  // Телефон: оболочки не трогаем — мягко плавятся только внутренности.
   if (!mobileCarousel) {
-    cardsTl.fromTo(
-      cards,
-      { y: 30, opacity: 0 },
-      { y: 0, opacity: 1, duration: 0.45, stagger: 0.08, ease: 'power2.out', clearProps: 'transform' },
-      0
-    );
-  }
-
-  if (allMainText.length) {
-    cardsTl.fromTo(
-      allMainText,
-      { y: 16, opacity: 0 },
-      { y: 0, opacity: 1, duration: 0.42, stagger: 0.05, ease: 'power2.out', clearProps: 'transform' },
-      0.14
-    );
-  }
-  servicesTimelines.push(cardsTl);
-
-  // 3. FEATURES & CHECKMARKS TIMELINE (Checkmarks float in row-by-row with emerald glow)
-  // Enters at 83%, reverses visibly row-by-row when scrolling up past 83%
-  const featuresTl = gsap.timeline({
-    scrollTrigger: {
-      trigger: featuresContainer,
-      start: computeDynamicStart(83),
-      end: 'bottom top',
-      toggleActions: 'play none none reverse',
-      onLeaveBack: () => {
-        featuresTl.timeScale(1.6).reverse();
-      },
-      onEnter: () => {
-        featuresTl.timeScale(1.0).play();
-      }
-    }
-  });
-
-  for (let r = 0; r < maxFeatures; r++) {
-    const rowItems = [];
-    const rowIcons = [];
-    cards.forEach(card => {
-      const items = card.querySelectorAll('.service-feature-item');
-      if (items[r]) {
-        rowItems.push(items[r]);
-        const ic = items[r].querySelector('.service-check-icon');
-        if (ic) rowIcons.push(ic);
+    cards.forEach((card, idx) => {
+      gsap.to(card, {
+        y: 0,
+        opacity: 1,
+        duration: 0.5,
+        ease: 'power2.out',
+        scrollTrigger: {
+          trigger: card,
+          start: () => `top ${Math.round((window.innerHeight * 0.86))}px`,
+          toggleActions: 'play none none none'
+        }
+      });
+      // Внутренности карточки появляются почти одновременно с оболочкой.
+      const innerEls = card.querySelectorAll(cardInnerSelectors.join(','));
+      if (innerEls.length) {
+        gsap.to(innerEls, {
+          opacity: 1,
+          duration: 0.4,
+          stagger: 0.03,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: card,
+            start: () => `top ${Math.round((window.innerHeight * 0.86))}px`,
+            toggleActions: 'play none none none'
+          }
+        });
       }
     });
-
-    if (rowItems.length) {
-      featuresTl.fromTo(
-        rowItems,
-        { x: -30, opacity: 0 },
-        { x: 0, opacity: 1, duration: 0.42, stagger: 0.06, ease: 'back.out(1.3)' },
-        r * 0.16
-      );
-    }
-    if (rowIcons.length) {
-      featuresTl.fromTo(
-        rowIcons,
-        { scale: 0.2, opacity: 0 },
-        { scale: 1, opacity: 1, duration: 0.42, stagger: 0.06, ease: 'back.out(1.8)' },
-        r * 0.16
-      );
-    }
+  } else {
+    cards.forEach(card => {
+      const innerEls = card.querySelectorAll(cardInnerSelectors.join(','));
+      if (innerEls.length) {
+        gsap.to(innerEls, {
+          opacity: 1,
+          duration: 0.4,
+          stagger: 0.025,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: card,
+            start: 'top 72%',
+            toggleActions: 'play none none none'
+          }
+        });
+      }
+    });
   }
-  servicesTimelines.push(featuresTl);
 
-  // 4. BOTTOM PRICING & ORDER BUTTONS TIMELINE (Divider, Order Buttons, Price count-up)
-  // Enters at 80%, reverses visibly when scrolling up past 80%
-  // On scroll down: elements fade/slide in, numbers count up smoothly from 0 to target
-  // On scroll up: elements simply fade/slide down and hide like FAQ (no countdown/decrease)
+  // Цены: мягкий count-up при появлении (без реверса/скачков).
   let priceCountTween = null;
   const counterProxy = { progress: 0 };
 
@@ -3401,51 +3362,16 @@ function initServicesGsapAnimation() {
     });
   }
 
-  const bottomTl = gsap.timeline({
-    scrollTrigger: {
+  // Count-up цен запускаем отдельным триггером (без повторного фейда
+  // bottomContainer — его opacity уже управляется общим мягким светом выше).
+  if (priceData.length) {
+    ScrollTrigger.create({
       trigger: bottomContainer,
       start: computeDynamicStart(80),
-      end: 'bottom top',
-      toggleActions: 'play none none reverse',
-      onLeaveBack: () => {
-        // Smoothly fade down and hide prices and buttons (identical to FAQ exit)
-        bottomTl.timeScale(1.8).reverse();
-        if (priceCountTween) {
-          priceCountTween.kill();
-          priceCountTween = null;
-        }
-        // Keep target price text intact during reverse fade, then reset to 0 in background
-        gsap.delayedCall(0.35, () => {
-          priceData.forEach(p => {
-            p.el.textContent = p.targetText.replace(p.raw, '0');
-          });
-        });
-      },
-      onEnter: () => {
-        bottomTl.timeScale(1.0).play();
-        startPriceCountUp();
-      }
-    }
-  });
-
-  if (allDividers.length) {
-    bottomTl.fromTo(
-      allDividers,
-      { scaleX: 0, opacity: 0 },
-      { scaleX: 1, opacity: 1, duration: 0.35, ease: 'power2.out' },
-      0
-    );
+      once: true,
+      onEnter: startPriceCountUp
+    });
   }
-
-  if (allBottoms.length) {
-    bottomTl.fromTo(
-      allBottoms,
-      { y: 16, opacity: 0 },
-      { y: 0, opacity: 1, duration: 0.45, stagger: 0.06, ease: 'power2.out' },
-      0.06
-    );
-  }
-  servicesTimelines.push(bottomTl);
 }
 
 function initFaqGsapAnimation() {
