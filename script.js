@@ -1940,14 +1940,19 @@ function updateServicesDots(withTransition = false) {
   if (!cards.length) return;
 
   if (window.innerWidth >= 640) {
-    // Планшет/десктоп: карточки уже не карусель, а сетка — снимаем coverflow-стили.
-    // Иначе после поворота телефона (или расширения окна) карточки остались бы
-    // уменьшенными, повёрнутыми и полупрозрачными.
+    // Планшет/десктоп: карточки уже не карусель, а сетка — снимаем ТОЛЬКО те
+    // inline-стили, которые выставлял coverflow (помечаем их data-атрибутом выше).
+    // Стирать transform/opacity «оптом» нельзя: на планшете/десктопе этими же
+    // свойствами управляет GSAP-анимация появления карточек, и стирание их
+    // посреди проигрывания давало «дёрганье».
     Array.from(cards).forEach(card => {
-      card.style.transform = '';
-      card.style.opacity = '';
-      card.style.zIndex = '';
-      card.style.transition = '';
+      if (card.dataset.nrCoverflow === '1') {
+        card.style.transform = '';
+        card.style.opacity = '';
+        card.style.zIndex = '';
+        card.style.transition = '';
+        delete card.dataset.nrCoverflow;
+      }
     });
     return;
   }
@@ -1993,6 +1998,9 @@ function updateServicesDots(withTransition = false) {
       card.style.transition = 'none';
     }
 
+    // Помечаем, что transform/opacity карточки выставил именно coverflow — по
+    // этому маркеру они снимаются при возврате к сетке (планшет/десктоп).
+    card.dataset.nrCoverflow = '1';
     card.style.transform = `translate3d(${shiftX.toFixed(1)}px, 0, 0) scale(${scale.toFixed(3)}) rotateY(${rotateY.toFixed(1)}deg)`;
     card.style.opacity = opacity.toFixed(2);
     card.style.zIndex = zIndex;
@@ -3156,7 +3164,10 @@ function initServicesGsapAnimation() {
   // Clean up previous timelines or triggers attached to services
   if (servicesTimelines && servicesTimelines.length) {
     servicesTimelines.forEach(tl => {
-      try { tl.kill(); } catch (e) {}
+      try {
+        if (tl.scrollTrigger) tl.scrollTrigger.kill();
+        tl.kill();
+      } catch (e) {}
     });
     servicesTimelines = [];
   }
@@ -3214,21 +3225,23 @@ function initServicesGsapAnimation() {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // МЯГКОЕ ВСПЛЫТИЕ ВСЕЙ СЕКЦИИ УСЛУГ (без «дёрганий»).
+  // ПОЯВЛЕНИЕ И «УЕЗД» КАРТОЧЕК УСЛУГ — тем же шаблоном, что в разделах
+  // «Вопросы» и «Контакты» (там анимация работает правильно):
   //
-  // Раньше здесь было 4 независимых ScrollTrigger-таймлайна (header, cards,
-  // features, bottom) с разными start-порогами (88/85/83/80 %) и резкими
-  // реверсами через timeScale(1.6)+(1.8). Из-за этого при прокрутке вниз
-  // элементы стартовали в разных точках, «догоняли» друг друга и визуально
-  // дёргались. Теперь на всю секцию вешаем ОДИН мягкий триггер — плавное
-  // простое всплытие (y 24→0, opacity 0→1), без reversе-таймскейла.
+  //   gsap.fromTo(el, { y, opacity: 0 } → { y: 0, opacity: 1, overwrite: 'auto',
+  //     scrollTrigger: { trigger: el, end: 'bottom top',
+  //                      toggleActions: 'play none none reverse' } })
   //
-  // При этом на планшете/десктопе каждая карточка получает СВОЙ ScrollTrigger
-  // (поочерёдное появление по мере скролла), а на телефоне оболочки карточек
-  // НЕ трогаем (их transform/opacity принадлежат coverflow из
-  // updateServicesDots()): мягко всплывают только внутренности карточки.
-
-  if (sectionHeader) gsap.set(sectionHeader, { y: 24, opacity: 0 });
+  // `play … reverse` даёт сразу обе анимации: открытие при прокрутке вниз и
+  // закрытие (плавный уезд) при прокрутке вверх. Раньше стояло 'none' — поэтому
+  // закрытия не было видно, а открытие «не читалось».
+  //
+  // На каждую карточку вешаем ОДИН таймлайн (оболочка + содержимое вместе):
+  // два отдельных триггера на одной карточке срабатывали не одновременно, и
+  // карточка «дёргалась».
+  //
+  // На телефоне оболочки карточек НЕ трогаем: их transform/opacity принадлежат
+  // coverflow из updateServicesDots(). Там всплывает только содержимое карточек.
 
   // Соберём «внутренности» карточек, которые можно мягко анимировать на ЛЮБОЙ
   // ширине экрана (оболочки на телефоне исключаем из-за coverflow).
@@ -3241,14 +3254,30 @@ function initServicesGsapAnimation() {
     '.service-card-price-group',
     '.service-card-order-btn'
   ];
+
+  // Если элемент уже на экране (например, переключили язык, а секция перед
+  // глазами) — показываем его сразу, без повторного «проявления».
+  const isAlreadyInView = (el) => {
+    if (!el || typeof el.getBoundingClientRect !== 'function') return false;
+    return el.getBoundingClientRect().top < window.innerHeight * 0.88;
+  };
+
+  // Снимаем твины прошлого запуска и ставим стартовое (скрытое) состояние.
   cards.forEach(card => {
-    if (!mobileCarousel) gsap.set(card, { y: 24, opacity: 0 });
+    gsap.killTweensOf(card);
+    if (!mobileCarousel) gsap.set(card, { y: 20, opacity: 0 });
 
     const innerEls = card.querySelectorAll(cardInnerSelectors.join(','));
     if (innerEls.length) {
+      gsap.killTweensOf(innerEls);
       gsap.set(innerEls, { opacity: 0 });
     }
   });
+
+  if (sectionHeader) {
+    gsap.killTweensOf(sectionHeader);
+    gsap.set(sectionHeader, { y: 20, opacity: 0 });
+  }
 
   // Initialize prices to 0 so count-up starts cleanly
   priceData.forEach(p => {
@@ -3257,71 +3286,69 @@ function initServicesGsapAnimation() {
 
   const bottomContainer = document.querySelector('#servicesContainer .service-card-bottom') || '#servicesContainer';
 
-  // Header: плавное всплытие, без каскада и резких реверсов.
+  // Заголовок секции — как в остальных разделах: появление и уезд.
   if (sectionHeader) {
-    gsap.to(sectionHeader, {
-      y: 0,
-      opacity: 1,
-      duration: 0.55,
-      ease: 'power2.out',
+    const headerTl = gsap.timeline({
       scrollTrigger: {
         trigger: sectionHeader,
-        start: computeDynamicStart(85),
-        toggleActions: 'play none none none'
+        start: computeDynamicStart(88),
+        end: 'bottom top',
+        toggleActions: 'play none none reverse'
       }
     });
+
+    headerTl.fromTo(
+      sectionHeader,
+      { y: 20, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.5, ease: 'power2.out', overwrite: 'auto' },
+      0
+    );
+
+    if (isAlreadyInView(sectionHeader)) headerTl.progress(1);
+    servicesTimelines.push(headerTl);
   }
 
-  // Планшет/десктоп: каждая карточка всплывает ОТДЕЛЬНО по мере скролла,
-  // чтобы анимация второй/третьей услуги была видна (было: все 3 сразу).
-  // Телефон: оболочки не трогаем — мягко плавятся только внутренности.
-  if (!mobileCarousel) {
-    cards.forEach((card, idx) => {
-      gsap.to(card, {
-        y: 0,
-        opacity: 1,
-        duration: 0.5,
-        ease: 'power2.out',
-        scrollTrigger: {
-          trigger: card,
-          start: () => `top ${Math.round((window.innerHeight * 0.86))}px`,
-          toggleActions: 'play none none none'
-        }
-      });
-      // Внутренности карточки появляются почти одновременно с оболочкой.
-      const innerEls = card.querySelectorAll(cardInnerSelectors.join(','));
-      if (innerEls.length) {
-        gsap.to(innerEls, {
-          opacity: 1,
-          duration: 0.4,
-          stagger: 0.03,
-          ease: 'power2.out',
-          scrollTrigger: {
-            trigger: card,
-            start: () => `top ${Math.round((window.innerHeight * 0.86))}px`,
-            toggleActions: 'play none none none'
-          }
-        });
+  // Карточки: на планшете/десктопе каждая всплывает отдельно по мере скролла
+  // (чтобы появление второй и третьей услуги было видно), на телефоне —
+  // всплывает только содержимое, оболочку не трогаем (coverflow).
+  cards.forEach((card, index) => {
+    // Лёгкая «волна»: карточки, стоящие рядом в одной строке сетки, срабатывают
+    // одновременно, поэтому вторая и третья получают небольшое отставание —
+    // так появление читается, как в «Контактах» (там delay: idx * 0.05).
+    const wave = mobileCarousel ? 0 : Math.min(index, 2) * 0.07;
+    const innerEls = card.querySelectorAll(cardInnerSelectors.join(','));
+
+    const cardTl = gsap.timeline({
+      scrollTrigger: {
+        trigger: card,
+        start: computeDynamicStart(86),
+        end: 'bottom top',
+        toggleActions: 'play none none reverse'
       }
     });
-  } else {
-    cards.forEach(card => {
-      const innerEls = card.querySelectorAll(cardInnerSelectors.join(','));
-      if (innerEls.length) {
-        gsap.to(innerEls, {
-          opacity: 1,
-          duration: 0.4,
-          stagger: 0.025,
-          ease: 'power2.out',
-          scrollTrigger: {
-            trigger: card,
-            start: 'top 72%',
-            toggleActions: 'play none none none'
-          }
-        });
-      }
-    });
-  }
+
+    if (!mobileCarousel) {
+      cardTl.fromTo(
+        card,
+        { y: 20, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.5, ease: 'power2.out', overwrite: 'auto' },
+        wave
+      );
+    }
+
+    if (innerEls.length) {
+      // Содержимое догоняет оболочку с лёгкой задержкой и мягким каскадом.
+      cardTl.fromTo(
+        innerEls,
+        { opacity: 0 },
+        { opacity: 1, duration: 0.4, stagger: 0.03, ease: 'power2.out', overwrite: 'auto' },
+        wave + (mobileCarousel ? 0 : 0.06)
+      );
+    }
+
+    if (isAlreadyInView(card)) cardTl.progress(1);
+    servicesTimelines.push(cardTl);
+  });
 
   // Цены: мягкий count-up при появлении (без реверса/скачков).
   let priceCountTween = null;
