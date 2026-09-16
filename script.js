@@ -642,44 +642,6 @@ function showStickyPlayer() {
   }
 }
 
-function closeStickyPlayer() {
-  if (activeTrackId) {
-    const item = trackAudioMap[activeTrackId];
-    if (item) {
-      item.audioA.pause();
-      item.audioB.pause();
-    }
-  }
-  const playerBar = document.getElementById('stickyPlayerBar');
-  if (playerBar) {
-    playerBar.classList.remove('active');
-    playerBar.classList.remove('translate-y-0');
-    playerBar.classList.add('translate-y-full');
-    document.body.classList.remove('has-sticky-player');
-    document.documentElement.style.removeProperty('--sticky-player-height');
-
-    if (typeof ScrollTrigger !== 'undefined') {
-      ScrollTrigger.refresh();
-    }
-    if (window.NickRiseAnimations && window.NickRiseAnimations.updateRevealObserver) {
-      window.NickRiseAnimations.updateRevealObserver();
-    }
-    setTimeout(() => {
-      if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
-      if (window.NickRiseAnimations && window.NickRiseAnimations.updateRevealObserver) {
-        window.NickRiseAnimations.updateRevealObserver();
-      }
-    }, 300);
-    setTimeout(() => {
-      if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
-      if (window.NickRiseAnimations && window.NickRiseAnimations.updateRevealObserver) {
-        window.NickRiseAnimations.updateRevealObserver();
-      }
-    }, 960);
-  }
-  renderTrackList();
-}
-
 function toggleTrack(trackId) {
   ensureTrackLoaded(trackId);
   if (activeTrackId === trackId) {
@@ -1554,13 +1516,6 @@ function renderTrackList(animate = false) {
   if (!animate && typeof initPlayerTrackCardsTimeline === 'function') {
     initPlayerTrackCardsTimeline(false);
   }
-}
-
-function formatTime(secs) {
-  if (!secs || isNaN(secs)) return '00:00';
-  const m = Math.floor(secs / 60);
-  const s = Math.floor(secs % 60);
-  return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
 }
 
 // --- SERVICES SECTION ---

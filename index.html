@@ -389,7 +389,7 @@
           </div>
 
           <p class="max-w-xl mx-auto text-base sm:text-lg leading-relaxed mb-8" data-i18n="contacts.subtitle">
-            <span class="font-semibold text-gray-200">Свяжитесь со мной напрямую для обсуждения вашего проекта.</span><br/>
+            <span class="font-semibold text-gray-200">Свяжитесь со мной напрямую<br class="lg:hidden"/> для обсуждения вашего проекта.</span><br/>
             <span class="text-amber-400 font-extrabold mt-1 inline-block">На связи 7 дней в неделю.</span>
           </p>
 
@@ -460,7 +460,7 @@
       </div>
 
       <p class="max-w-xl mx-auto text-base sm:text-lg leading-relaxed mb-8" data-i18n="contacts.subtitle">
-        <span class="font-semibold text-gray-200">Свяжитесь со мной напрямую для обсуждения вашего проекта.</span><br/>
+        <span class="font-semibold text-gray-200">Свяжитесь со мной напрямую<br class="lg:hidden"/> для обсуждения вашего проекта.</span><br/>
         <span class="text-amber-400 font-extrabold mt-1 inline-block">На связи 7 дней в неделю.</span>
       </p>
 
@@ -651,7 +651,7 @@
         class="h-full bg-gradient-to-r from-amber-600 via-amber-500 to-amber-300 transition-all duration-75 relative shadow-[0_0_8px_rgba(245,158,11,0.5)]"
         style="width: 0%"
       >
-        <!-- Glowing Scrubber Knob / Handle strictly centered on progress bar tip -->
+        <!-- Glowing Scrubber Knob, centered on the progress tip -->
         <div class="deck-scrubber-knob-wrapper">
           <div class="deck-scrubber-knob"></div>
         </div>
@@ -697,7 +697,6 @@
         </button>
       </div>
 
-      <!-- Right: Vertical BEFORE / AFTER Switch (w-0 flex-1 flex justify-end) -->
       <div class="w-0 flex-1 flex items-center justify-end pl-1">
         <div
           onclick="toggleDeckSource()"
@@ -707,7 +706,6 @@
           role="button"
           tabindex="0"
         >
-          <!-- Smooth Sliding Amber Pill for Mobile (Vertical) -->
           <div class="deck-slider-pill deck-slider-pill-mobile pointer-events-none"></div>
 
           <div class="deck-btn-before relative z-10 py-1 px-2 text-[9px] font-extrabold rounded-md flex items-center justify-between gap-1.5 w-full pointer-events-none">
@@ -723,7 +721,6 @@
       </div>
     </div>
 
-    <!-- DESKTOP PLAYER BAR (hidden sm:flex) -->
     <div class="hidden sm:flex max-w-7xl mx-auto px-5 py-3 items-center justify-between gap-4">
       
       <!-- Track Meta Info (Left) -->
@@ -783,7 +780,6 @@
           role="button"
           tabindex="0"
         >
-          <!-- Smooth Sliding Amber Pill for Desktop (Horizontal) -->
           <div class="deck-slider-pill deck-slider-pill-desktop pointer-events-none"></div>
 
           <div class="deck-btn-before relative z-10 flex-1 min-w-[104px] py-2 px-3 text-xs font-black tracking-wide rounded-xl flex items-center justify-center gap-2 pointer-events-none">
