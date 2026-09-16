@@ -1022,6 +1022,11 @@ function renderTrackList(animate = false) {
   if (!container) return;
 
   const currentDevice = getDeviceType();
+  // Мобильный вид карточек (вертикальный прямоугольник) — только < 640px.
+  // getTracksPerPage() меняет количество карточек на границе 640 (5 ↔ 6),
+  // поэтому при переходе mobile ⇄ tablet/desktop DOM всегда пересоздаётся.
+  const isMobileView = window.innerWidth < 640;
+  const currentView = isMobileView ? 'mobile' : 'desktop';
   const perPage = getTracksPerPage();
   const filtered = getEnabledTracks().filter(tr => activeGenre === 'all' || tr.genre === activeGenre);
   const totalItems = filtered.length;
@@ -1039,7 +1044,10 @@ function renderTrackList(animate = false) {
   const targetIds = visibleTracks.map(t => t.id);
 
   const canReuseDOM = existingIds.length === targetIds.length &&
-    existingIds.every((id, idx) => id === targetIds[idx]);
+    existingIds.every((id, idx) => id === targetIds[idx]) &&
+    // Вид (mobile ⇄ desktop) влияет на СТРУКТУРУ карточки, поэтому при смене
+    // вида DOM обязательно пересоздаём, даже если состав треков совпадает.
+    existingIds.length > 0 && existingCards[0].getAttribute('data-view') === currentView;
 
   if (canReuseDOM) {
     visibleTracks.forEach(track => {
@@ -1052,15 +1060,25 @@ function renderTrackList(animate = false) {
       const itemCard = document.getElementById(`track-item-${track.id}`);
       if (!itemCard) return;
 
-      itemCard.className = `p-3.5 rounded-2xl border transition-all duration-300 cursor-pointer flex items-center justify-between gap-3 group ${
-        isSelected 
-          ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10' 
-          : 'bg-[#0B0E15] border-gray-800/80 hover:border-amber-500/40 hover:bg-[#0F131E]'
-      }`;
+      itemCard.className = (isMobileView
+        ? `p-3 rounded-2xl border transition-all duration-300 cursor-pointer flex flex-col gap-3 group ${
+            isSelected 
+              ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10' 
+              : 'bg-[#0B0E15] border-gray-800/80 hover:border-amber-500/40 hover:bg-[#0F131E]'
+          }`
+        : `p-3.5 rounded-2xl border transition-all duration-300 cursor-pointer flex items-center justify-between gap-3 group ${
+            isSelected 
+              ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10' 
+              : 'bg-[#0B0E15] border-gray-800/80 hover:border-amber-500/40 hover:bg-[#0F131E]'
+          }`
+      );
 
       const coverBox = itemCard.querySelector('.track-cover-box');
       if (coverBox) {
-        coverBox.className = `track-cover-box relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl overflow-hidden flex-shrink-0 border transition-colors duration-300 ${isSelected ? 'border-amber-500' : 'border-gray-800'}`;
+        coverBox.className = (isMobileView
+          ? `track-cover-box relative w-full aspect-square rounded-xl overflow-hidden flex-shrink-0 border transition-colors duration-300 ${isSelected ? 'border-amber-500' : 'border-gray-800'}`
+          : `track-cover-box relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl overflow-hidden flex-shrink-0 border transition-colors duration-300 ${isSelected ? 'border-amber-500' : 'border-gray-800'}`
+        );
       }
 
       const liveOverlay = itemCard.querySelector('.track-live-overlay');
@@ -1077,16 +1095,26 @@ function renderTrackList(animate = false) {
       const genreBadge = itemCard.querySelector('.track-genre-badge');
       if (genreBadge) {
         genreBadge.textContent = genreText;
-        genreBadge.className = `track-genre-badge text-[9px] font-extrabold px-2 py-0.5 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}`;
+        genreBadge.className = (isMobileView
+          ? `track-genre-badge self-start text-[10px] font-bold px-2.5 py-1 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}`
+          : `track-genre-badge text-[9px] font-extrabold px-2 py-0.5 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}`
+        );
       }
 
       const playBtn = itemCard.querySelector('.track-play-btn');
       if (playBtn) {
-        playBtn.className = `track-play-btn p-2 sm:p-2.5 rounded-xl transition-all cursor-pointer ${
-          isSelected 
-            ? 'bg-amber-500 text-slate-950 font-black shadow-md' 
-            : 'bg-gray-900 text-gray-300 hover:bg-amber-500 hover:text-slate-950'
-        }`;
+        playBtn.className = (isMobileView
+          ? `track-play-btn absolute inset-0 z-10 m-auto w-11 h-11 rounded-full flex items-center justify-center transition-transform duration-300 group-hover:scale-110 cursor-pointer ${
+              isSelected
+                ? 'text-amber-400 hover:text-amber-300'
+                : 'text-white hover:text-amber-400'
+            } active:scale-95`
+          : `track-play-btn p-2 sm:p-2.5 rounded-xl transition-all cursor-pointer ${
+              isSelected 
+                ? 'bg-amber-500 text-slate-950 font-black shadow-md' 
+                : 'bg-gray-900 text-gray-300 hover:bg-amber-500 hover:text-slate-950'
+            }`
+        );
       }
 
       const playSvgPath = itemCard.querySelector('.track-play-svg path');
@@ -1135,50 +1163,117 @@ function renderTrackList(animate = false) {
       const itemCard = document.createElement('div');
       itemCard.id = `track-item-${track.id}`;
       itemCard.setAttribute('data-track-id', track.id);
+      itemCard.setAttribute('data-view', currentView);
       itemCard.onclick = () => toggleTrack(track.id);
-      itemCard.className = `p-3.5 rounded-2xl border transition-all duration-300 cursor-pointer flex items-center justify-between gap-3 group ${
-        isSelected 
-          ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10' 
-          : 'bg-[#0B0E15] border-gray-800/80 hover:border-amber-500/40 hover:bg-[#0F131E]'
-      }`;
+      itemCard.className = (isMobileView
+        ? `p-3 rounded-2xl border transition-all duration-300 cursor-pointer flex flex-col gap-3 group ${
+            isSelected 
+              ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10' 
+              : 'bg-[#0B0E15] border-gray-800/80 hover:border-amber-500/40 hover:bg-[#0F131E]'
+          }`
+        : `p-3.5 rounded-2xl border transition-all duration-300 cursor-pointer flex items-center justify-between gap-3 group ${
+            isSelected 
+              ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10' 
+              : 'bg-[#0B0E15] border-gray-800/80 hover:border-amber-500/40 hover:bg-[#0F131E]'
+          }`
+      );
 
-      itemCard.innerHTML = `
-        <div class="flex items-center gap-3.5 min-w-0 flex-1">
-          <div class="track-cover-box relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl overflow-hidden flex-shrink-0 border transition-colors duration-300 ${isSelected ? 'border-amber-500' : 'border-gray-800'}">
-            <img src="${track.cover}" alt="${trackTitle}" loading="lazy" decoding="async" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onerror="this.onerror=null;this.src='./image/cover1.webp'" />
-            <div class="track-live-overlay absolute inset-0 bg-black/60 items-center justify-center" style="display: ${isPlaying ? 'flex' : 'none'};">
-              <span class="w-2.5 h-2.5 rounded-full vu-led-green animate-ping"></span>
-            </div>
-          </div>
-          <div class="min-w-0 flex-1">
-            <h4 class="track-card-title text-xs sm:text-sm font-extrabold text-white truncate group-hover:text-amber-400 transition-colors">
-              ${trackTitle}
-            </h4>
-            <p class="track-card-artist text-[11px] text-gray-400 truncate mt-0.5">
-              ${trackArtist}
-            </p>
-          </div>
-        </div>
+      const trackCoverBox = document.createElement('div');
+      trackCoverBox.className = (isMobileView
+        ? `track-cover-box relative w-full aspect-square rounded-xl overflow-hidden flex-shrink-0 border transition-colors duration-300 ${isSelected ? 'border-amber-500' : 'border-gray-800'}`
+        : `track-cover-box relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl overflow-hidden flex-shrink-0 border transition-colors duration-300 ${isSelected ? 'border-amber-500' : 'border-gray-800'}`
+      );
 
-        <div class="flex items-center gap-2 flex-shrink-0">
-          <span class="track-genre-badge text-[9px] font-extrabold px-2 py-0.5 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}">
-            ${genreText}
-          </span>
-          <button
-            type="button"
-            onclick="event.stopPropagation(); toggleTrack('${track.id}')"
-            class="track-play-btn p-2 sm:p-2.5 rounded-xl transition-all cursor-pointer ${
-              isSelected 
-                ? 'bg-amber-500 text-slate-950 font-black shadow-md' 
-                : 'bg-gray-900 text-gray-300 hover:bg-amber-500 hover:text-slate-950'
-            }"
-          >
-            <svg class="track-play-svg w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-              <path d="${isPlaying ? 'M6 19h4V5H6v14zm8-14v14h4V5h-4z' : 'M8 5v14l11-7z'}"/>
-            </svg>
-          </button>
-        </div>
-      `;
+      const coverImg = document.createElement('img');
+      coverImg.src = track.cover;
+      coverImg.alt = trackTitle;
+      coverImg.loading = 'lazy';
+      coverImg.decoding = 'async';
+      coverImg.className = 'w-full h-full object-cover group-hover:scale-105 transition-transform duration-300';
+      coverImg.onerror = () => { coverImg.onerror = null; coverImg.src = './image/cover1.webp'; };
+      trackCoverBox.appendChild(coverImg);
+
+      const liveOverlay = document.createElement('div');
+      liveOverlay.className = 'track-live-overlay absolute inset-0 bg-black/60 items-center justify-center';
+      liveOverlay.style.display = isPlaying ? 'flex' : 'none';
+      const liveLed = document.createElement('span');
+      liveLed.className = 'w-2.5 h-2.5 rounded-full vu-led-green animate-ping';
+      liveOverlay.appendChild(liveLed);
+      trackCoverBox.appendChild(liveOverlay);
+
+      const meta = document.createElement('div');
+      const titleEl = document.createElement('h4');
+      titleEl.className = (isMobileView
+        ? 'track-card-title text-sm font-extrabold text-white truncate group-hover:text-amber-400 transition-colors'
+        : 'track-card-title text-xs sm:text-sm font-extrabold text-white truncate group-hover:text-amber-400 transition-colors'
+      );
+      titleEl.textContent = trackTitle;
+      const artistEl = document.createElement('p');
+      artistEl.className = (isMobileView
+        ? 'track-card-artist text-xs text-gray-400 truncate mt-0.5'
+        : 'track-card-artist text-[11px] text-gray-400 truncate mt-0.5'
+      );
+      artistEl.textContent = trackArtist;
+      meta.appendChild(titleEl);
+      meta.appendChild(artistEl);
+
+      const genreSpan = document.createElement('span');
+      genreSpan.className = (isMobileView
+        ? `track-genre-badge self-start text-[10px] font-bold px-2.5 py-1 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}`
+        : `track-genre-badge text-[9px] font-extrabold px-2 py-0.5 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}`
+      );
+      genreSpan.textContent = genreText;
+
+      if (isMobileView) {
+        // ── МОБИЛЬНЫЙ ВИД: вертикальный прямоугольник ─────────────────────
+        // Квадратное фото на всю ширину карточки, по центру фото кнопка
+        // play/pause «треугольником» без фона, ниже название + артист,
+        // ниже жанр.
+
+        const playBtn = document.createElement('button');
+        playBtn.type = 'button';
+        playBtn.setAttribute('aria-label', isPlaying ? 'Pause' : 'Play');
+        playBtn.onclick = (ev) => { ev.stopPropagation(); toggleTrack(track.id); };
+        playBtn.className = `track-play-btn absolute inset-0 z-10 m-auto w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-110 cursor-pointer ${
+          isSelected
+            ? 'text-amber-400 hover:text-amber-300'
+            : 'text-white hover:text-amber-400'
+        } active:scale-95`;
+        playBtn.innerHTML = `<svg class="track-play-svg w-5 h-5 fill-current drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] pointer-events-none mx-auto" viewBox="0 0 24 24"><path d="${isPlaying ? 'M6 19h4V5H6v14zm8-14v14h4V5h-4z' : 'M8 5v14l11-7z'}"/></svg>`;
+        trackCoverBox.appendChild(playBtn);
+
+        meta.className = 'min-w-0 flex-1 flex-col';
+
+        itemCard.appendChild(trackCoverBox);
+        itemCard.appendChild(meta);
+        itemCard.appendChild(genreSpan);
+      } else {
+        // ── ПЛАНШЕТ / ДЕСКТОП: прежний горизонтальный вид ──────────────────
+        const playBtn = document.createElement('button');
+        playBtn.type = 'button';
+        playBtn.setAttribute('aria-label', isPlaying ? 'Pause' : 'Play');
+        playBtn.onclick = (ev) => { ev.stopPropagation(); toggleTrack(track.id); };
+        playBtn.className = `track-play-btn p-2 sm:p-2.5 rounded-xl transition-all cursor-pointer ${
+          isSelected 
+            ? 'bg-amber-500 text-slate-950 font-black shadow-md' 
+            : 'bg-gray-900 text-gray-300 hover:bg-amber-500 hover:text-slate-950'
+        }`;
+        playBtn.innerHTML = `<svg class="track-play-svg w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="${isPlaying ? 'M6 19h4V5H6v14zm8-14v14h4V5h-4z' : 'M8 5v14l11-7z'}"/></svg>`;
+
+        const leftRow = document.createElement('div');
+        leftRow.className = 'flex items-center gap-3.5 min-w-0 flex-1';
+        leftRow.appendChild(trackCoverBox);
+        meta.className = 'min-w-0 flex-1';
+        leftRow.appendChild(meta);
+
+        const rightRow = document.createElement('div');
+        rightRow.className = 'flex items-center gap-2 flex-shrink-0';
+        rightRow.appendChild(genreSpan);
+        rightRow.appendChild(playBtn);
+
+        itemCard.appendChild(leftRow);
+        itemCard.appendChild(rightRow);
+      }
 
       container.appendChild(itemCard);
     });
