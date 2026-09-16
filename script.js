@@ -36,49 +36,79 @@ if (typeof document !== 'undefined' && document.fonts && document.fonts.ready) {
   });
 }
 
-// --- AUTOMATIC REGION & LANGUAGE DETECTION ---
+// --- АВТООПРЕДЕЛЕНИЕ ЯЗЫКА ПО РЕГИОНУ ---
+// Русская версия показывается России и СНГ: Беларусь, Казахстан, Кыргызстан,
+// Узбекистан, Таджикистан, Туркменистан, Армения, Азербайджан, Молдова, а также
+// Украина (там русский понимает большинство посетителей). Остальной мир получает
+// английскую версию. Ручной выбор кнопкой RU/EN запоминается в localStorage и
+// всегда приоритетнее любого автоопределения.
+
+// Языки, носители которых ожидают русскоязычный сайт. 'mo' — устаревший код
+// молдавского, далее — языки народов РФ (локаль обычно вида tt-RU, os-RU и т.п.).
+const RU_SPHERE_LANGS = [
+  'ru', 'be', 'uk', 'kk', 'ky', 'uz', 'tg', 'tk', 'hy', 'az', 'mo',
+  'ab', 'av', 'ba', 'ce', 'cv', 'os', 'tt', 'udm', 'sah'
+];
+
+// Страны СНГ и постсоветского пространства (ISO 3166-1 alpha-2)
+const RU_SPHERE_COUNTRIES = [
+  'RU', 'BY', 'KZ', 'KG', 'UZ', 'TJ', 'TM', 'AM', 'AZ', 'MD', 'UA'
+];
+
+// Города в названиях таймзон: надёжный признак региона, когда браузер сообщает
+// только английскую локаль (например, en-US у человека, живущего в России).
+const RU_SPHERE_TIMEZONES = [
+  'moscow', 'kirov', 'volgograd', 'astrakhan', 'ulyanovsk', 'saratov', 'samara',
+  'kaliningrad', 'simferopol', 'zaporozhye', 'minsk', 'kyiv', 'kiev', 'chisinau',
+  'tiraspol', 'yekaterinburg', 'omsk', 'novosibirsk', 'barnaul', 'tomsk',
+  'novokuznetsk', 'krasnoyarsk', 'irkutsk', 'chita', 'yakutsk', 'khandyga',
+  'vladivostok', 'ust-nera', 'magadan', 'sakhalin', 'srednekolymsk', 'kamchatka',
+  'anadyr', 'almaty', 'qostanay', 'aqtobe', 'aqtau', 'atyrau', 'oral',
+  'qyzylorda', 'bishkek', 'tashkent', 'samarkand', 'dushanbe', 'ashgabat',
+  'yerevan', 'baku'
+];
+
+// Код страны из локали браузера: 'ru-RU' → 'RU', 'en-BY' → 'BY', 'uk_UA' → 'UA'
+function getLocaleRegion(locale) {
+  const parts = String(locale || '').replace(/_/g, '-').split('-');
+  for (let i = 1; i < parts.length; i++) {
+    if (/^[a-zA-Z]{2}$/.test(parts[i])) return parts[i].toUpperCase();
+  }
+  return '';
+}
+
 function detectUserLanguage() {
-  // 1. Check if user already manually selected a preferred language
+  // 1. Ручной выбор пользователя — приоритетнее любых догадок
   try {
     const saved = localStorage.getItem('nick_rise_lang');
-    if (saved === 'ru' || saved === 'en') {
-      return saved;
-    }
+    if (saved === 'ru' || saved === 'en') return saved;
   } catch (e) {}
 
-  // 2. Check browser languages (navigator.languages or navigator.language)
+  // 2. Языки браузера: проверяем и код языка, и код страны
   try {
     const navLangs = (navigator.languages && navigator.languages.length)
       ? navigator.languages
       : [navigator.language || navigator.userLanguage || ''];
 
-    const cisLangs = ['ru', 'be', 'kk', 'uk', 'ky', 'tg', 'uz', 'hy', 'az', 'mo'];
     for (let i = 0; i < navLangs.length; i++) {
-      const l = String(navLangs[i] || '').toLowerCase().trim();
-      if (!l) continue;
-      const base = l.split('-')[0].split('_')[0];
-      if (cisLangs.includes(base)) {
-        return 'ru';
-      }
+      const raw = String(navLangs[i] || '').trim();
+      if (!raw) continue;
+
+      const base = raw.replace(/_/g, '-').split('-')[0].toLowerCase();
+      if (RU_SPHERE_LANGS.indexOf(base) !== -1) return 'ru';
+
+      const region = getLocaleRegion(raw);
+      if (region && RU_SPHERE_COUNTRIES.indexOf(region) !== -1) return 'ru';
     }
   } catch (e) {}
 
-  // 3. Check timezone as additional regional indicator for CIS countries
+  // 3. Часовой пояс — сработает, когда локаль английская, а человек в СНГ
   try {
     const tz = (Intl.DateTimeFormat().resolvedOptions().timeZone || '').toLowerCase();
-    const cisTimezones = [
-      'moscow', 'minsk', 'kiev', 'kyiv', 'samara', 'yekaterinburg', 'kaliningrad',
-      'volgograd', 'saratov', 'ulyanovsk', 'astrakhan', 'kirov', 'almaty', 'tashkent',
-      'bishkek', 'yerevan', 'baku', 'dushanbe', 'novosibirsk', 'krasnoyarsk', 'irkutsk',
-      'yakutsk', 'vladivostok', 'sakhalin', 'magadan', 'kamchatka', 'omsk', 'barnaul',
-      'tomsk', 'novokuznetsk', 'chita', 'anadyr', 'qyzylorda', 'aqtobe', 'aqtau', 'atyrau', 'oral'
-    ];
-    if (cisTimezones.some(city => tz.includes(city))) {
-      return 'ru';
-    }
+    if (tz && RU_SPHERE_TIMEZONES.some(city => tz.indexOf(city) !== -1)) return 'ru';
   } catch (e) {}
 
-  // 4. Default to international English for all other regions
+  // 4. Все остальные регионы — английская версия
   return 'en';
 }
 
@@ -459,16 +489,16 @@ function initPlayer() {
       trackIndex: index + 1
     };
 
+    // Никаких жёстких seek внутри воспроизведения: расхождение пары гасится
+    // микро-коррекцией скорости той дорожки, которая сейчас не звучит.
     const handleTimeUpdate = () => {
-      if (activeTrackId === track.id) {
-        if (Math.abs(audioA.currentTime - audioB.currentTime) > 0.25) {
-          audioB.currentTime = audioA.currentTime;
-        }
-        updateDeckProgressUI();
-      }
+      if (activeTrackId !== track.id) return;
+      syncAudioPair(trackAudioMap[track.id]);
+      updateDeckProgressUI();
     };
 
     audioA.addEventListener('timeupdate', handleTimeUpdate);
+    audioB.addEventListener('timeupdate', handleTimeUpdate);
     audioA.addEventListener('loadedmetadata', () => {
       if (activeTrackId === track.id) updateDeckProgressUI();
     });
@@ -660,10 +690,8 @@ function toggleTrack(trackId) {
       item.audioA.pause();
       item.audioB.pause();
     } else {
+      prepareAudioPair(item);
       applyAudioVolumes(trackId);
-      if (Math.abs(item.audioA.currentTime - item.audioB.currentTime) > 0.05) {
-        item.audioB.currentTime = item.audioA.currentTime;
-      }
       const pA = item.audioA.play();
       if (pA && pA.catch) pA.catch(err => console.warn('Play A:', err));
       const pB = item.audioB.play();
@@ -694,9 +722,7 @@ function selectTrack(trackId, shouldPlay = true) {
   if (item) {
     applyAudioVolumes(trackId);
     if (shouldPlay) {
-      if (Math.abs(item.audioA.currentTime - item.audioB.currentTime) > 0.05) {
-        item.audioB.currentTime = item.audioA.currentTime;
-      }
+      prepareAudioPair(item);
       const pA = item.audioA.play();
       if (pA && pA.catch) pA.catch(err => console.warn('Play A:', err));
       const pB = item.audioB.play();
@@ -739,10 +765,8 @@ function toggleDeckPlay() {
     item.audioA.pause();
     item.audioB.pause();
   } else {
+    prepareAudioPair(item);
     applyAudioVolumes(activeTrackId);
-    if (Math.abs(item.audioA.currentTime - item.audioB.currentTime) > 0.05) {
-      item.audioB.currentTime = item.audioA.currentTime;
-    }
     const pA = item.audioA.play();
     if (pA && pA.catch) pA.catch(err => console.warn('Play A:', err));
     const pB = item.audioB.play();
@@ -764,21 +788,42 @@ function toggleDeckPlay() {
   renderTrackList(false);
 }
 
-function switchDeckSource(src) {
+function updateDeckSourceUI() {
   if (!activeTrackId) return;
   const item = trackAudioMap[activeTrackId];
   if (!item) return;
+  // Обновляем только переключатели источника: полная перерисовка пульта в момент
+  // клика не нужна (и давала лишнюю работу в главном потоке).
+  document.querySelectorAll('.deck-source-switch').forEach(sw => {
+    sw.setAttribute('data-source', item.source);
+  });
+}
 
+function switchDeckSource(src) {
+  if (!activeTrackId) return;
+  const item = trackAudioMap[activeTrackId];
+  if (!item || item.source === src) return;
+
+  const nextEl = src === 'before' ? item.audioA : item.audioB;
+  const prevEl = src === 'before' ? item.audioB : item.audioA;
+  const isPlaying = !prevEl.paused && !nextEl.paused;
+
+  // Интерфейс переключается мгновенно, звук — мягким кроссфейдом.
   item.source = src;
+  updateDeckSourceUI();
 
-  if (src === 'before') {
-    item.audioA.currentTime = item.audioB.currentTime;
+  if (isPlaying) {
+    // ВАЖНО: во время воспроизведения currentTime не трогаем вовсе — любой seek
+    // даёт провал в звуке. Обе дорожки идут параллельно, расхождение копеечное,
+    // добираем его микро-коррекцией скорости уже после переключения.
+    nextEl.playbackRate = 1;
+    syncAudioPair(item, true);
   } else {
-    item.audioB.currentTime = item.audioA.currentTime;
+    // На паузе жёсткое выравнивание неслышно — можно сразу.
+    prepareAudioPair(item);
   }
 
   applyAudioVolumes(activeTrackId, true);
-  updateMasterDeckUI();
 }
 
 function toggleDeckSource() {
@@ -804,7 +849,77 @@ function changeDeckVolume(val) {
   applyAudioVolumes(activeTrackId, false);
 }
 
-let audioCrossfadeTimer = null;
+/* ══ ПЛАВНОЕ ПЕРЕКЛЮЧЕНИЕ BEFORE / AFTER ══════════════════════════════
+   На каждый трек параллельно идут ОБА файла: звучит только тот, чья громкость
+   больше нуля. Поэтому переключение — это чистый кроссфейд громкости: без
+   подгрузки, без смены источника и без seek. Вторая («тихая») дорожка держится
+   в синхроне микро-коррекцией скорости, а звучащая не трогается вообще — щелчки,
+   провалы и подтормаживания в этот момент невозможны.
+   ══════════════════════════════════════════════════════════════════════ */
+
+const AUDIO_SYNC_TOLERANCE = 0.015; // расхождение, которое уже не слышно (15 мс)
+const AUDIO_SYNC_RATE_MAX = 0.06;   // максимум коррекции скорости (6 %)
+const AUDIO_SYNC_HARD = 0.12;       // больше — выравниваем позицией тихую дорожку
+const AUDIO_CROSSFADE_MS = 220;     // длительность студийного кроссфейда
+
+let audioCrossfadeRAF = null;
+
+/* Какая из двух дорожек звучит сейчас, а какая идёт рядом на нулевой громкости */
+function getAudiblePair(item) {
+  const audibleIsA = item.source !== 'after';
+  return {
+    audible: audibleIsA ? item.audioA : item.audioB,
+    silent: audibleIsA ? item.audioB : item.audioA
+  };
+}
+
+/* Синхронизация пары: instant = true — сразу выровнять позицией (тихая дорожка),
+   иначе мягко подтянуть скорость тихой дорожки, не касаясь звучащей. */
+function syncAudioPair(item, instant = false) {
+  if (!item) return;
+  const { audible, silent } = getAudiblePair(item);
+
+  // Пользователь тянет полосу прокрутки: пока браузер не закончил seek звучащей
+  // дорожки, вторую не трогаем — двойной seek как раз и давал рывок в звуке.
+  if (item.seekPending && !instant) {
+    if (audible.seeking) return;
+    item.seekPending = false;
+  }
+
+  const drift = audible.currentTime - silent.currentTime;
+
+  if (instant || Math.abs(drift) > AUDIO_SYNC_HARD) {
+    silent.playbackRate = 1;
+    if (Math.abs(drift) > 0.05) silent.currentTime = audible.currentTime;
+    return;
+  }
+
+  if (Math.abs(drift) < AUDIO_SYNC_TOLERANCE) {
+    if (silent.playbackRate !== 1) silent.playbackRate = 1;
+    return;
+  }
+
+  const rate = 1 + Math.max(-AUDIO_SYNC_RATE_MAX, Math.min(AUDIO_SYNC_RATE_MAX, drift * 1.5));
+  if (Math.abs(silent.playbackRate - rate) > 0.002) silent.playbackRate = rate;
+}
+
+/* Подготовка пары к старту/паузе: тихую дорожку выравниваем по позиции */
+function prepareAudioPair(item) {
+  if (!item) return;
+  const { audible, silent } = getAudiblePair(item);
+  silent.playbackRate = 1;
+  if (Math.abs(audible.currentTime - silent.currentTime) > 0.03) {
+    silent.currentTime = audible.currentTime;
+  }
+  item.seekPending = false;
+}
+
+function stopAudioCrossfade() {
+  if (audioCrossfadeRAF !== null) {
+    cancelAnimationFrame(audioCrossfadeRAF);
+    audioCrossfadeRAF = null;
+  }
+}
 
 function applyAudioVolumes(trackId, smooth = false) {
   const item = trackAudioMap[trackId];
@@ -813,46 +928,39 @@ function applyAudioVolumes(trackId, smooth = false) {
   const targetVolA = item.source === 'before' ? item.volume : 0;
   const targetVolB = item.source === 'after' ? item.volume : 0;
 
-  // Immediate switch if audio is paused or smooth mode not requested
-  if (!smooth || (item.audioA.paused && item.audioB.paused)) {
-    if (audioCrossfadeTimer) {
-      clearInterval(audioCrossfadeTimer);
-      audioCrossfadeTimer = null;
-    }
+  // Мгновенно: пауза, скрытая вкладка или режим без сглаживания
+  if (!smooth || document.hidden || (item.audioA.paused && item.audioB.paused)) {
+    stopAudioCrossfade();
     item.audioA.volume = targetVolA;
     item.audioB.volume = targetVolB;
     return;
   }
 
-  // Soft analog studio crossfade over 280ms
-  if (audioCrossfadeTimer) {
-    clearInterval(audioCrossfadeTimer);
-  }
+  // Студийный кроссфейд по S-кривой считается покадрово, а не таймером:
+  // так переход не даёт «ступенек» и не зависит от загрузки главного потока.
+  stopAudioCrossfade();
 
   const startA = item.audioA.volume;
   const startB = item.audioB.volume;
-  const steps = 22;
-  const stepTime = 13; // ~280ms total duration
-  let step = 0;
+  const t0 = performance.now();
 
-  audioCrossfadeTimer = setInterval(() => {
-    step++;
-    const progress = Math.min(1, step / steps);
-    // Smooth S-curve sinusoidal curve for transparent studio transition
-    const ease = 0.5 - Math.cos(progress * Math.PI) / 2;
+  const step = (now) => {
+    const k = Math.min(1, (now - t0) / AUDIO_CROSSFADE_MS);
+    const ease = 0.5 - Math.cos(k * Math.PI) / 2;
 
-    try {
-      item.audioA.volume = Math.max(0, Math.min(1, startA + (targetVolA - startA) * ease));
-      item.audioB.volume = Math.max(0, Math.min(1, startB + (targetVolB - startB) * ease));
-    } catch (e) {}
+    item.audioA.volume = Math.max(0, Math.min(1, startA + (targetVolA - startA) * ease));
+    item.audioB.volume = Math.max(0, Math.min(1, startB + (targetVolB - startB) * ease));
 
-    if (step >= steps) {
-      clearInterval(audioCrossfadeTimer);
-      audioCrossfadeTimer = null;
+    if (k < 1) {
+      audioCrossfadeRAF = requestAnimationFrame(step);
+    } else {
+      audioCrossfadeRAF = null;
       item.audioA.volume = targetVolA;
       item.audioB.volume = targetVolB;
     }
-  }, stepTime);
+  };
+
+  audioCrossfadeRAF = requestAnimationFrame(step);
 }
 
 function seekDeckTrack(e) {
@@ -869,12 +977,14 @@ function seekDeckTrack(e) {
     : (e.clientX !== undefined ? e.clientX : (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : 0));
 
   const clickX = Math.max(0, Math.min(rect.width, clientX - rect.left));
-  const dur = item.audioA.duration || item.audioB.duration || 0;
+  const { audible, silent } = getAudiblePair(item);
+  const dur = audible.duration || silent.duration || 0;
 
   if (dur > 0) {
     const newTime = (clickX / rect.width) * dur;
-    item.audioA.currentTime = newTime;
-    item.audioB.currentTime = newTime;
+    // Тянем только звучащую дорожку: два seek одновременно и давали рывок звука.
+    audible.currentTime = newTime;
+    item.seekPending = true;
     updateDeckProgressUI();
   }
 }
@@ -898,12 +1008,15 @@ function initDeckSeekBar() {
       : (e.clientX !== undefined ? e.clientX : (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : 0));
 
     const clickX = Math.max(0, Math.min(rect.width, clientX - rect.left));
-    const dur = item.audioA.duration || item.audioB.duration || 0;
+    const { audible, silent } = getAudiblePair(item);
+    const dur = audible.duration || silent.duration || 0;
 
     if (dur > 0) {
       const newTime = (clickX / rect.width) * dur;
-      item.audioA.currentTime = newTime;
-      item.audioB.currentTime = newTime;
+      // Во время перетаскивания двигаем только звучащую дорожку —
+      // тихую выровняем одним seek после того, как закончится прокрутка.
+      audible.currentTime = newTime;
+      item.seekPending = true;
       updateDeckProgressUI();
     }
   };
@@ -924,6 +1037,15 @@ function initDeckSeekBar() {
     if (!isSeeking) return;
     isSeeking = false;
     try { seekArea.releasePointerCapture(e.pointerId); } catch (err) {}
+
+    // Прокрутка закончилась: выравниваем вторую дорожку по звучащей одним движением
+    if (activeTrackId) {
+      const item = trackAudioMap[activeTrackId];
+      if (item) {
+        item.seekPending = true;
+        if (item.audioA.paused && item.audioB.paused) prepareAudioPair(item);
+      }
+    }
   };
 
   seekArea.addEventListener('pointerup', stopSeeking);
@@ -1009,8 +1131,10 @@ function updateDeckProgressUI() {
   const item = trackAudioMap[activeTrackId];
   if (!item) return;
 
-  const cur = item.audioA.currentTime || 0;
-  const dur = item.audioA.duration || 0;
+  // Прогресс считаем по звучащей дорожке (BEFORE → audioA, AFTER → audioB)
+  const { audible, silent } = getAudiblePair(item);
+  const cur = audible.currentTime || 0;
+  const dur = audible.duration || silent.duration || 0;
   const pct = dur > 0 ? (cur / dur) * 100 : 0;
 
   const progressBar = document.getElementById('deckProgressBar');
@@ -1549,6 +1673,22 @@ function renderServices() {
   setTimeout(initMobileServicesPosition, 200);
   setTimeout(initMobileServicesPosition, 500);
 
+  // Подстраховка для телефона: как только секция услуг появляется на экране,
+  // coverflow карточек пересчитывается заново. Без этого после анимации
+  // появления карточки могли остаться «плоскими» до первого пролистывания.
+  if (servicesCarouselObserver) {
+    servicesCarouselObserver.disconnect();
+    servicesCarouselObserver = null;
+  }
+  if ('IntersectionObserver' in window) {
+    servicesCarouselObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) updateServicesDots(false);
+      });
+    }, { threshold: 0.06 });
+    servicesCarouselObserver.observe(container);
+  }
+
   // Refresh ScrollTrigger and animations after cards are rendered
   if (typeof initServicesGsapAnimation === 'function') {
     initServicesGsapAnimation();
@@ -1559,6 +1699,7 @@ function renderServices() {
 }
 
 let userInteractedServices = false;
+let servicesCarouselObserver = null;
 
 function onServicesResize() {
   updateServicesDots(true);
@@ -1579,25 +1720,35 @@ function scrollToServiceCard(index, behavior = 'smooth') {
   const container = document.getElementById('servicesContainer');
   if (!container) return;
   const cards = container.children;
-  if (cards && cards[index]) {
-    const card = cards[index];
-    const card0 = cards[0];
-    
-    let targetScrollLeft = 0;
-    if (index > 0 && card0) {
-      const delta = card.offsetLeft - card0.offsetLeft;
-      targetScrollLeft = delta > 0 ? delta : index * 270;
-    }
-    
-    if (behavior === 'instant') {
-      container.scrollLeft = targetScrollLeft;
-      updateServicesDots(false);
-    } else {
-      container.scrollTo({
-        left: targetScrollLeft,
-        behavior: 'smooth'
-      });
-    }
+  if (!cards || !cards[index]) return;
+
+  const card = cards[index];
+  const firstCard = cards[0];
+  if (!firstCard) return;
+
+  // Позиция карточки в прокручиваемой области: padding-left контейнера плюс
+  // смещение от первой карточки (gap и отрицательный margin уже учтены в
+  // offsetLeft). Расчёт не зависит от coverflow-трансформа и совпадает с точкой
+  // снапа (scroll-snap-align: center) — карточки не «прыгают» после пролистывания.
+  const padding = parseFloat(window.getComputedStyle(container).paddingLeft) || 0;
+  const contentX = padding + (card.offsetLeft - firstCard.offsetLeft);
+
+  // Снап выравнивает центры border-box карточки и scrollport (scroll-padding
+  // компенсирует padding-left контейнера), поэтому берём ширину самой карточки.
+  const cardWidth = card.offsetWidth || 290;
+
+  const maxScroll = Math.max(0, container.scrollWidth - container.clientWidth);
+  let targetScrollLeft = contentX + cardWidth / 2 - container.clientWidth / 2;
+  targetScrollLeft = Math.max(0, Math.min(maxScroll, Math.round(targetScrollLeft)));
+
+  if (behavior === 'instant') {
+    container.scrollTo({ left: targetScrollLeft, behavior: 'auto' });
+    updateServicesDots(false);
+  } else {
+    container.scrollTo({
+      left: targetScrollLeft,
+      behavior: 'smooth'
+    });
   }
 }
 
@@ -1609,17 +1760,33 @@ function updateServicesDots(withTransition = false) {
   if (!cards.length) return;
 
   if (window.innerWidth >= 640) {
+    // Планшет/десктоп: карточки уже не карусель, а сетка — снимаем coverflow-стили.
+    // Иначе после поворота телефона (или расширения окна) карточки остались бы
+    // уменьшенными, повёрнутыми и полупрозрачными.
+    Array.from(cards).forEach(card => {
+      card.style.transform = '';
+      card.style.opacity = '';
+      card.style.zIndex = '';
+      card.style.transition = '';
+    });
     return;
   }
 
   const containerWidth = container.clientWidth || window.innerWidth;
   const containerCenter = container.scrollLeft + (containerWidth / 2);
+
+  // Координаты карточек внутри прокручиваемой области: padding-left контейнера
+  // плюс смещение от первой карточки. Не зависят ни от offsetParent, ни от
+  // coverflow-трансформа, поэтому coverflow считается точно.
+  const padding = parseFloat(window.getComputedStyle(container).paddingLeft) || 0;
+  const firstCard = cards[0];
+
   let activeIndex = 0;
   let minDiff = Infinity;
 
   Array.from(cards).forEach((card, idx) => {
     const cardWidth = card.offsetWidth || 290;
-    const cardCenter = card.offsetLeft + (cardWidth / 2);
+    const cardCenter = padding + (card.offsetLeft - firstCard.offsetLeft) + (cardWidth / 2);
     const diff = cardCenter - containerCenter;
     const absDiff = Math.abs(diff);
 
@@ -2788,6 +2955,12 @@ function initServicesGsapAnimation() {
   const cards = document.querySelectorAll('#servicesContainer > *');
   if (!cards.length) return;
 
+  // На телефоне карточки услуг — карусель с coverflow: их transform и opacity
+  // принадлежат updateServicesDots(). GSAP здесь анимирует только содержимое,
+  // иначе его clearProps затирал позиции coverflow и карточки стояли
+  // «неправильно» до первого пролистывания карусели.
+  const mobileCarousel = window.innerWidth < 640;
+
   // Clean up previous timelines or triggers attached to services
   if (servicesTimelines && servicesTimelines.length) {
     servicesTimelines.forEach(tl => {
@@ -2839,7 +3012,7 @@ function initServicesGsapAnimation() {
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     if (sectionHeader) gsap.set(sectionHeader, { opacity: 1, y: 0 });
     cards.forEach(card => {
-      gsap.set(card, { opacity: 1, y: 0 });
+      if (!mobileCarousel) gsap.set(card, { opacity: 1, y: 0 });
       gsap.set(card.querySelectorAll('.service-feature-item'), { opacity: 1, x: 0 });
       gsap.set(card.querySelectorAll('.service-check-icon'), { opacity: 1, scale: 1 });
       gsap.set(card.querySelectorAll('.service-card-top, .service-card-bottom, .service-card-divider, .service-card-pricing, .service-card-order-btn, .service-card-price-group'), { opacity: 1, y: 0, scaleX: 1 });
@@ -2856,7 +3029,7 @@ function initServicesGsapAnimation() {
   const allBottoms = [];
 
   cards.forEach(card => {
-    gsap.set(card, { y: 30, opacity: 0 });
+    if (!mobileCarousel) gsap.set(card, { y: 30, opacity: 0 });
 
     const popularBadge = card.querySelector('.popular-badge') || card.querySelector('.service-card-popular');
     const metaBar = card.querySelector('.service-card-meta');
@@ -2943,12 +3116,14 @@ function initServicesGsapAnimation() {
     }
   });
 
-  cardsTl.fromTo(
-    cards,
-    { y: 30, opacity: 0 },
-    { y: 0, opacity: 1, duration: 0.45, stagger: 0.08, ease: 'power2.out', clearProps: 'transform' },
-    0
-  );
+  if (!mobileCarousel) {
+    cardsTl.fromTo(
+      cards,
+      { y: 30, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.45, stagger: 0.08, ease: 'power2.out', clearProps: 'transform' },
+      0
+    );
+  }
 
   if (allMainText.length) {
     cardsTl.fromTo(

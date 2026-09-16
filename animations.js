@@ -248,6 +248,57 @@
   /* ═══ 03. ШАПКА: линия прокрутки ════════════════════════════════════ */
 
   var scrollLine = null;
+  var lineTarget = 0;      /* реальный прогресс страницы — куда стремимся */
+  var lineValue = 0;       /* сглаженное значение, которое рисуем */
+  var lineRunning = false; /* идёт ли плавная догонка */
+  var lineVisible = false;
+
+  function computeScrollProgress() {
+    var doc = document.documentElement;
+    var max = doc.scrollHeight - window.innerHeight;
+    var y = window.scrollY || doc.scrollTop || 0;
+    return max > 0 ? Math.min(1, Math.max(0, y / max)) : 0;
+  }
+
+  function paintScrollLine() {
+    if (!scrollLine) return;
+    scrollLine.style.transform = 'scaleX(' + lineValue.toFixed(4) + ')';
+    var visible = lineValue > 0.004;
+    if (visible !== lineVisible) {
+      lineVisible = visible;
+      scrollLine.style.opacity = visible ? '1' : '0';
+    }
+  }
+
+  /* Полоска всегда догоняет цель с easing. Из-за этого она не «дёргается» на
+     быстрой прокрутке и не прыгает, когда высота страницы меняется без
+     события scroll (открылся вопрос в FAQ, появился нижний плеер и т.п.). */
+  function runScrollLine() {
+    var diff = lineTarget - lineValue;
+    if (Math.abs(diff) < 0.0006) {
+      lineValue = lineTarget;
+      lineRunning = false;
+      paintScrollLine();
+      return;
+    }
+    lineValue += diff * 0.14;
+    paintScrollLine();
+    requestAnimationFrame(runScrollLine);
+  }
+
+  function setScrollLineProgress(p, snap) {
+    lineTarget = p;
+    if (snap || REDUCED) {
+      lineValue = p;
+      lineRunning = false;
+      paintScrollLine();
+      return;
+    }
+    if (!lineRunning) {
+      lineRunning = true;
+      requestAnimationFrame(runScrollLine);
+    }
+  }
 
   function initHeader() {
     var header = $('#mainHeader');
@@ -255,6 +306,31 @@
     scrollLine = el('div');
     scrollLine.id = 'nr-scrollline';
     header.appendChild(scrollLine);
+
+    setScrollLineProgress(computeScrollProgress(), true);
+
+    /* Высота документа меняется и без прокрутки: открыли вопрос в FAQ, показался
+       нижний плеер, догрузился шрифт. Тогда цель пересчитываем — иначе полоска
+       «резко смещается» на первом же скролле. */
+    if (typeof ResizeObserver === 'function') {
+      var rafId = 0;
+      new ResizeObserver(function () {
+        if (rafId) return;
+        rafId = requestAnimationFrame(function () {
+          rafId = 0;
+          safe(function () { setScrollLineProgress(computeScrollProgress(), false); });
+        });
+      }).observe(document.documentElement);
+      if (document.body) {
+        new ResizeObserver(function () {
+          if (rafId) return;
+          rafId = requestAnimationFrame(function () {
+            rafId = 0;
+            safe(function () { setScrollLineProgress(computeScrollProgress(), false); });
+          });
+        }).observe(document.body);
+      }
+    }
   }
 
   /* ═══ 04. ГЕРОЙ: кольца, сканирование, параллакс ═══════════════════ */
@@ -710,10 +786,10 @@
 
     var p = max > 0 ? Math.min(1, Math.max(0, currentY / max)) : 0;
 
-    if (scrollLine) {
-      scrollLine.style.transform = 'scaleX(' + p.toFixed(4) + ')';
-      scrollLine.style.opacity = p > 0.004 ? '1' : '0';
-    }
+    /* Полоска прогресса едет плавно: цель обновляем сразу, а отрисовку догоняем
+       в собственном rAF. При очень большом прыжке (переход по якорю, возврат в
+       начало страницы) переставляем мгновенно, иначе она выглядит «залипшей». */
+    safe(function () { setScrollLineProgress(p, Math.abs(p - lineValue) > 0.3); });
 
     var isScrolled = currentY > 40;
     if (isScrolled !== wasScrolled) {
