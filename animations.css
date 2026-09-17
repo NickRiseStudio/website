@@ -1277,3 +1277,170 @@ footer p {
   visibility: visible !important;
   transform: none !important;
 }
+
+/* ═══ 18. КНОПКА «РАССЧИТАТЬ СТОИМОСТЬ УСЛУГ» — постоянно привлекает внимание ═════
+   Кнопка живёт под карточками услуг: дышащее янтарное свечение, бегущий блик
+   по корпусу и расходящаяся «волна» по контуру. */
+.nr-calc-cta {
+  position: relative;
+  isolation: isolate;
+  will-change: box-shadow, transform;
+  /* Один медленный цикл на пульс, блик и «волну» — кнопка дышит в едином
+     ритме (глобальная идея сайта: супер плавные и неспешные анимации). */
+  --nr-cta-cycle: 4.2s;
+  animation: nrCalcCtaPulse var(--nr-cta-cycle) cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  /* Наведение: плавный подъём и тёплое свечение. box-shadow не трогаем —
+     он занят пульсом, поэтому свечение даёт filter. */
+  transition: transform 0.7s var(--nr-ease),
+              filter 0.8s var(--nr-ease),
+              background-color 0.6s ease;
+}
+
+/* Наведение даём только устройствам с курсором — на тач-экране подъём
+   иначе «залипал» бы после тапа. */
+@media (hover: hover) and (pointer: fine) {
+  .nr-calc-cta:hover {
+    transform: translate3d(0, -4px, 0) scale(1.02);
+    filter: brightness(1.08) drop-shadow(0 0 16px rgba(245, 158, 11, 0.45));
+  }
+
+  /* Иконка калькулятора мягко увеличивается и чуть наклоняется */
+  .nr-calc-cta svg {
+    transition: transform 0.7s var(--nr-ease);
+  }
+  .nr-calc-cta:hover svg {
+    transform: scale(1.12) rotate(-8deg);
+  }
+}
+
+/* Нажатие: короткий, но не резкий отклик (перекрываем active:scale-95 из Tailwind) */
+.nr-calc-cta:active {
+  transform: translate3d(0, -1px, 0) scale(0.965);
+  transition-duration: 0.22s, 0.22s, 0.22s;
+}
+
+/* Дышащее свечение вокруг кнопки (только box-shadow — не мешает active:scale) */
+@keyframes nrCalcCtaPulse {
+  0%, 100% {
+    box-shadow: 0 10px 25px rgba(245, 158, 11, 0.3),
+                0 0 0 0 rgba(245, 158, 11, 0.35);
+  }
+  50% {
+    box-shadow: 0 14px 34px rgba(245, 158, 11, 0.5),
+                0 0 24px rgba(245, 158, 11, 0.45);
+  }
+}
+
+/* Бегущий блик по телу кнопки (под текстом, но над фоном).
+   border-radius: inherit — чтобы блик не выходил за скруглённые углы кнопки
+   (overflow: hidden на кнопке не ставим: он обрезал бы «волну» по контуру). */
+.nr-calc-cta::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.6) 50%, transparent 60%);
+  /* Плитка блика шире кнопки (260%), поэтому повтор обязательно выключаем:
+     при background-repeat: repeat (значение по умолчанию) копия блика ложилась
+     на кромку кнопки и «вспыхивала» сама по себе — это и читалось как резкий
+     перескок в начале и в конце цикла. Без повтора блик целиком уезжает за края. */
+  background-repeat: no-repeat;
+  background-size: 260% 100%;
+  background-position: 118% 0;
+  opacity: 0.75;
+  transition: opacity 0.7s var(--nr-ease);
+  animation: nrCalcCtaSheen var(--nr-cta-cycle) linear infinite;
+}
+
+/* На наведении блик становится ярче (через opacity — она анимируется плавно) */
+@media (hover: hover) and (pointer: fine) {
+  .nr-calc-cta:hover::after { opacity: 1; }
+}
+
+/* Цикл блика — стык повтора полностью невидим:
+   1) мягко выезжает из-за левой кромки и замирает в обычном левом положении;
+   2) пауза-остановка слева;
+   3) плавно разгоняется слева направо и уходит за правый край;
+   4) за правым краем пауза совсем короткая — блик «сразу» возвращается
+      в обычное левое положение и снова выезжает из левой кромки.
+   И конец цикла (-80%), и его начало (118%) целиком за пределами кнопки,
+   поэтому возврат к началу цикла не виден: нет ни вспышки, ни рывка.
+   Тайминг-функция задана внутри keyframes — у каждой фазы своё сглаживание,
+   поэтому общий linear не смазывает паузы. */
+@keyframes nrCalcCtaSheen {
+  0% {
+    background-position: 118% 0;                               /* чуть левее кромки */
+    animation-timing-function: cubic-bezier(0.33, 1, 0.68, 1); /* ease-out: мягко тормозим */
+  }
+  15% {
+    background-position: 70% 0;                                /* обычное положение слева */
+    animation-timing-function: linear;
+  }
+  30% {
+    background-position: 70% 0;                                /* пауза: остановился слева */
+    animation-timing-function: cubic-bezier(0.5, 0, 0.7, 0);   /* ease-in: плавный разгон */
+  }
+  96% {
+    background-position: -80% 0;                               /* уехал за правый край */
+    animation-timing-function: linear;
+  }
+  100% {
+    background-position: -80% 0;                               /* короткая пауза за краем (невидима) */
+  }
+}
+
+/* Расходящаяся волна по контуру кнопки */
+.nr-calc-cta::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  z-index: -2;
+  /* радиус кнопки (rounded-xl = 12px) + 3px смещения — волна «обнимает» кнопку */
+  border-radius: 15px;
+  border: 1px solid rgba(245, 158, 11, 0.6);
+  opacity: 0;
+  pointer-events: none;
+  animation: nrCalcCtaRing var(--nr-cta-cycle) linear infinite;
+}
+
+/* Волна тоже без скачка на стыке цикла: появляется из нулевой прозрачности
+   и так же плавно растворяется, расширяясь. */
+@keyframes nrCalcCtaRing {
+  0% {
+    opacity: 0;
+    transform: scale(0.99);
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1); /* мягкое проявление */
+  }
+  14% {
+    opacity: 0.8;
+    transform: scale(1.005);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+  }
+  62% {
+    opacity: 0;
+    transform: scale(1.07);
+    animation-timing-function: linear;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.07);   /* невидима — возврат в начало цикла незаметен */
+  }
+}
+
+/* Уважение к системной настройке «уменьшить движение»: кнопка просто заметная */
+@media (prefers-reduced-motion: reduce) {
+  .nr-calc-cta,
+  .nr-calc-cta::before,
+  .nr-calc-cta::after {
+    animation: none !important;
+  }
+  .nr-calc-cta,
+  .nr-calc-cta:hover,
+  .nr-calc-cta:active,
+  .nr-calc-cta:hover svg {
+    transform: none !important;
+    filter: none !important;
+  }
+}

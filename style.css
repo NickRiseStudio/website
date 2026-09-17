@@ -1227,3 +1227,304 @@ span.faq-q-text.lang-vapor-in {
     flex-shrink: 0;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   КАЛЬКУЛЯТОР СТОИМОСТИ УСЛУГ (окно «Рассчитать стоимость услуг»)
+   Шаги окна, ползунок длительности, выбор Да/Нет, итоговая смета.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Шаги окна: виден только активный */
+.nr-calc-step { display: none; }
+/* Новый шаг проявляется в такт с перетеканием высоты окна (см. goToCalcStepAnimated
+   в script.js): 0.82s и небольшая задержка, чтобы контент не «догонял» растущее окно.
+   fill-mode только backwards: он держит стартовое состояние во время задержки, но не
+   «залипает» в конечном — иначе CSS-анимация перебивала бы GSAP-затухание уходящего шага. */
+.nr-calc-step.is-active {
+  display: block;
+  animation: nrCalcStepIn 0.82s cubic-bezier(0.16, 1, 0.3, 1) 0.08s backwards;
+}
+
+@keyframes nrCalcStepIn {
+  from { opacity: 0; transform: translate3d(0, 12px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+/* Кнопка «Назад» */
+.nr-calc-back {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: #14171F;
+  border: 1px solid rgba(55, 65, 81, 0.8);
+  color: #D1D5DB;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.5s ease, color 0.45s ease,
+              border-color 0.5s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.nr-calc-back.is-visible { display: inline-flex; }
+.nr-calc-back:hover { background: #1C212E; color: #fff; }
+.nr-calc-back:active { transform: scale(0.96); transition-duration: 0.2s; }
+
+/* Пока окно перетекает в новый размер, кнопки навигации мягко приглушены:
+   быстрые повторные нажатия не пролистывают вопросы, пока идёт анимация. */
+.modal-content.is-calc-switching .nr-calc-next-btn,
+.modal-content.is-calc-switching .nr-calc-back {
+  opacity: 0.4;
+  pointer-events: none;
+  transition: opacity 0.45s ease;
+}
+
+/* Полоса прогресса шагов */
+.nr-calc-progress {
+  height: 5px;
+  border-radius: 9999px;
+  background: #090C12;
+  border: 1px solid rgba(55, 65, 81, 0.7);
+  overflow: hidden;
+}
+
+.nr-calc-progress-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #d97706, #f59e0b, #fbbf24);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+  /* Тянется вслед за перетеканием высоты окна — без рывка на смене шага */
+  transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Вопрос Да/Нет */
+.nr-calc-question {
+  font-size: 1.05rem;
+  line-height: 1.4;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 1.5rem;
+  letter-spacing: -0.01em;
+}
+@media (min-width: 640px) {
+  .nr-calc-question { font-size: 1.375rem; }
+}
+
+.nr-calc-choice {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  max-width: 22rem;
+  margin: 0 auto;
+}
+
+.nr-calc-choice-btn {
+  padding: 0.85rem 1rem;
+  border-radius: 0.75rem;
+  background: #090C12;
+  border: 1px solid rgba(55, 65, 81, 0.8);
+  color: #D1D5DB;
+  font-weight: 800;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+              color 0.45s ease,
+              box-shadow 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.nr-calc-choice-btn:hover { border-color: rgba(245, 158, 11, 0.5); color: #fff; }
+.nr-calc-choice-btn:active { transform: scale(0.97); transition-duration: 0.2s; }
+.nr-calc-choice-btn.is-selected {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  color: #020617;
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+  transform: translateY(-1px) scale(1.03);
+}
+
+/* Кнопка «Далее» */
+.nr-calc-next-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.8rem 2rem;
+  border-radius: 0.75rem;
+  background: #f59e0b;
+  color: #020617;
+  font-weight: 900;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color 0.55s ease,
+              opacity 0.5s ease,
+              box-shadow 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 10px 25px rgba(245, 158, 11, 0.2);
+}
+.nr-calc-next-btn:hover {
+  background: #fbbf24;
+  transform: translateY(-2px);
+  box-shadow: 0 16px 32px rgba(245, 158, 11, 0.32);
+}
+.nr-calc-next-btn:active { transform: translateY(0) scale(0.96); transition-duration: 0.2s; }
+.nr-calc-next-btn:disabled { opacity: 0.35; pointer-events: none; }
+
+/* Ползунок длительности трека */
+/* У .modal-content стоит touch-action: pan-y (запрет горизонтальных жестов), из-за
+   чего на телефоне нативный range не тянулся бы пальцем. Разрешаем горизонтальный
+   жест только внутри окна-калькулятора и на самом ползунке. */
+#priceCalcModal .modal-content { touch-action: pan-x pan-y; }
+
+.nr-calc-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 10px;
+  border-radius: 9999px;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  outline: none;
+  cursor: pointer;
+  touch-action: pan-x;
+  margin: 0.75rem 0 0.65rem;
+  /* --calc-fill обновляется из JS: заполненная часть — янтарная */
+  background: linear-gradient(
+    90deg,
+    #d97706 0%,
+    #fbbf24 var(--calc-fill, 40%),
+    #1F2530 var(--calc-fill, 40%),
+    #1F2530 100%
+  );
+}
+
+.nr-calc-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff7e6, #fbbf24 45%, #b45309);
+  border: 2px solid #0C0E12;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.7);
+  cursor: grab;
+  transition: box-shadow 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.nr-calc-range:hover::-webkit-slider-thumb {
+  box-shadow: 0 0 22px rgba(245, 158, 11, 0.95);
+  transform: scale(1.06);
+}
+.nr-calc-range:active::-webkit-slider-thumb {
+  cursor: grabbing;
+  transform: scale(0.98);
+  transition-duration: 0.2s;
+}
+
+.nr-calc-range::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff7e6, #fbbf24 45%, #b45309);
+  border: 2px solid #0C0E12;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.7);
+  cursor: grab;
+  transition: box-shadow 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.nr-calc-range:hover::-moz-range-thumb {
+  box-shadow: 0 0 22px rgba(245, 158, 11, 0.95);
+  transform: scale(1.06);
+}
+
+/* Шкала под ползунком: «1 мин … 6+ мин» */
+.nr-calc-scale {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px;
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-size: 9px;
+  color: #6B7280;
+  letter-spacing: 0.03em;
+}
+@media (min-width: 640px) {
+  .nr-calc-scale { font-size: 10px; }
+}
+
+.nr-calc-scale-item { white-space: nowrap; transition: color 0.6s cubic-bezier(0.16, 1, 0.3, 1), text-shadow 0.7s cubic-bezier(0.16, 1, 0.3, 1); }
+.nr-calc-scale-item.is-active {
+  color: #fbbf24;
+  text-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
+  font-weight: 700;
+}
+
+/* Предупреждение «Обговаривается индивидуально» */
+.nr-calc-individual {
+  display: block;
+  max-width: 26rem;
+  margin: 0 auto 1.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fcd34d;
+  font-weight: 700;
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+.nr-calc-individual.hidden { display: none; }
+/* Появление предупреждения/индивидуального итога — мягко, а не рывком */
+.nr-calc-individual:not(.hidden) { animation: nrCalcNoteIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+
+@keyframes nrCalcNoteIn {
+  from { opacity: 0; transform: translate3d(0, -8px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+/* Уважение к системной настройке «уменьшить движение» */
+@media (prefers-reduced-motion: reduce) {
+  .nr-calc-step.is-active,
+  .nr-calc-individual:not(.hidden) {
+    animation: none !important;
+  }
+}
+
+/* Смета итоговой стоимости */
+.nr-calc-receipt {
+  max-width: 26rem;
+  margin: 0 auto 1.25rem;
+  padding: 1rem;
+  border-radius: 1rem;
+  background: #090C12;
+  border: 1px solid rgba(55, 65, 81, 0.8);
+  text-align: left;
+}
+.nr-calc-receipt.hidden { display: none; }
+
+.nr-calc-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.8125rem;
+  color: #D1D5DB;
+}
+.nr-calc-row-label { line-height: 1.35; }
+.nr-calc-row-price {
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-weight: 700;
+  color: #E5E7EB;
+  white-space: nowrap;
+}
+.nr-calc-row-plus { color: #fbbf24; }
+
+.nr-calc-total-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid rgba(55, 65, 81, 0.8);
+}

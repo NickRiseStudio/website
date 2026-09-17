@@ -56,7 +56,40 @@ const CONFIG = {
         subtitle: 'Аналоговые приборы SSL, Neve, Tube-Tech и топовые цифровые плагины для бескомпромиссного качества.',
         popularBadge: 'ЧАСТЫЙ ВЫБОР',
         orderBtn: 'Заказать',
-        turnaround: 'Срок выполнения: 3-5 дней'
+        turnaround: 'Срок выполнения: 3-5 дней',
+        // Всплывающее окно «Рассчитать стоимость услуг» (шаги: предупреждение →
+        // длительность → 4 вопроса Да/Нет → итоговая цена).
+        priceCalc: {
+          button: 'Рассчитать стоимость услуг',
+          badge: 'КАЛЬКУЛЯТОР СТОИМОСТИ // NICK RISE',
+          warnTitle: 'ВАЖНО',
+          warnText: 'Стоимость услуг примерная и зависит от конкретного проекта, здесь вы можете считать ориентировочную стоимость работы.',
+          nextBtn: 'Далее',
+          prevBtn: 'Назад',
+          durationQ: 'Сколько длится Ваш трек (в минутах)?',
+          durationMin: 'мин',
+          individualNote: 'Обговаривается индивидуально',
+          qMastering: 'Вам нужен мастеринг?',
+          qVocalRhythm: 'Вам нужна коррекция ритмики и выравнивание громкости вокала?',
+          qTrackout: 'Вам нужно сведение trackout бита (бит по дорожкам) и доработка бита?',
+          qVocalNotes: 'Вам нужна ручная коррекция нот вокала?',
+          yes: 'Да',
+          no: 'Нет',
+          resultTitle: 'Ориентировочная стоимость',
+          resultSub: 'Это предварительный расчёт — точную цену я назову после прослушивания вашего материала.',
+          resultIndividualTitle: 'Обговаривается индивидуально',
+          resultIndividualSub: 'Для такого хронометража стоимость рассчитывается индивидуально. Напишите мне — обсудим ваш проект.',
+          durationRow: 'Длительность трека',
+          totalLabel: 'ИТОГО',
+          optMastering: 'Мастеринг',
+          optVocalRhythm: 'Коррекция ритмики и громкости вокала',
+          optTrackout: 'Сведение trackout бита и доработка',
+          optVocalNotes: 'Ручная коррекция нот вокала',
+          cta: 'Напишите мне — обсудим ваш проект и я назову точную стоимость.',
+          writeBtn: 'Написать мне',
+          restartBtn: 'Посчитать заново',
+          stepLabel: 'Шаг'
+        }
       },
       faq: {
         sectionBadge: 'FREQUENTLY ASKED QUESTIONS',
@@ -150,7 +183,40 @@ const CONFIG = {
         subtitle: 'Solid State Logic, Neve, Tube-Tech hardware combined with pristine digital processing.',
         popularBadge: 'MOST POPULAR',
         orderBtn: 'Order',
-        turnaround: 'Turnaround: 3-5 business days'
+        turnaround: 'Turnaround: 3-5 business days',
+        // Service cost calculator modal (steps: warning → duration → 4 Yes/No
+        // questions → final price).
+        priceCalc: {
+          button: 'Calculate service cost',
+          badge: 'SERVICE COST CALCULATOR // NICK RISE',
+          warnTitle: 'IMPORTANT',
+          warnText: 'Service pricing is approximate and depends on the specific project. Here you can estimate the cost of the work.',
+          nextBtn: 'Next',
+          prevBtn: 'Back',
+          durationQ: 'How long is your track (in minutes)?',
+          durationMin: 'min',
+          individualNote: 'Negotiated individually',
+          qMastering: 'Do you need mastering?',
+          qVocalRhythm: 'Do you need rhythm correction and vocal loudness leveling?',
+          qTrackout: 'Do you need trackout beat mixing (beat by stems) and beat refinement?',
+          qVocalNotes: 'Do you need manual vocal pitch correction?',
+          yes: 'Yes',
+          no: 'No',
+          resultTitle: 'Estimated cost',
+          resultSub: 'This is a preliminary estimate — I will name the exact price after listening to your material.',
+          resultIndividualTitle: 'Negotiated individually',
+          resultIndividualSub: 'For this track length the price is quoted individually. Message me and we will discuss your project.',
+          durationRow: 'Track length',
+          totalLabel: 'TOTAL',
+          optMastering: 'Mastering',
+          optVocalRhythm: 'Rhythm & vocal loudness correction',
+          optTrackout: 'Trackout beat mixing & refinement',
+          optVocalNotes: 'Manual vocal pitch correction',
+          cta: 'Message me — we will discuss your project and I will name the exact price.',
+          writeBtn: 'Message me',
+          restartBtn: 'Calculate again',
+          stepLabel: 'Step'
+        }
       },
       faq: {
         sectionBadge: 'FREQUENTLY ASKED QUESTIONS',
@@ -317,7 +383,7 @@ const CONFIG = {
       descRu: 'Идеальный баланс, глубина и мощь. Микс, который звучит дорого и готов к мастерингу.',
       descEn: 'Perfect balance, depth, and punch. A mix that sounds premium and is ready for mastering.',
       priceRu: 'от 3 500 ₽',
-      priceEn: 'from $120',
+      priceEn: 'from $110',
       featuresRu: [
         'Обработка до 20 мультитрек-дорожек',
         'Ручной тюнинг и ритмическая коррекция вокала',
@@ -376,6 +442,27 @@ const CONFIG = {
       ]
     }
   ],
+
+  // Данные калькулятора стоимости услуг (окно «Рассчитать стоимость услуг»).
+  // Длительность: 1 мин и 6+ мин считаются индивидуально (individual: true).
+  // Цены: RU — рубли, EN — доллары (шкала согласована с карточками услуг).
+  priceCalc: {
+    defaultMinutes: 3,
+    durations: [
+      { minutes: 1, label: '1', individual: true },
+      { minutes: 2, label: '2', priceRu: 3500, priceEn: 110 },
+      { minutes: 3, label: '3', priceRu: 3500, priceEn: 110 },
+      { minutes: 4, label: '4', priceRu: 4000, priceEn: 120 },
+      { minutes: 5, label: '5', priceRu: 4500, priceEn: 130 },
+      { minutes: 6, label: '6+', individual: true }
+    ],
+    options: [
+      { id: 'mastering', priceRu: 2000, priceEn: 40 },
+      { id: 'vocalRhythm', priceRu: 1000, priceEn: 20 },
+      { id: 'trackout', priceRu: 1000, priceEn: 20 },
+      { id: 'vocalNotes', priceRu: 1500, priceEn: 30 }
+    ]
+  },
 
   faqData: [
     {
