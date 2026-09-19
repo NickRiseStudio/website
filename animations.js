@@ -1051,8 +1051,10 @@
      #nr-boot видна при каждом заходе/обновлении страницы. Полоса
      плавно доезжает до 100% одним движением (CSS, ~1.8 с) — без
      финишных «скачков». Как только полоса доехала и страница готова
-     (window.load или страховка) — заставка уходит фейдом. Скрытие не
-     фризит сайт: класс + transition (opacity), без чтений layout. */
+     (window.load или страховка) — заставка уходит фейдом. Пока окно
+     видно, страница заморожена (lockPage): скролл выключен, фокус
+     не покидает оверлей, клики съедает #nr-boot. Лок снимается
+     (unlockPage) только в момент #nr-boot-done — display:none. */
   function initBoot() {
     var boot = $('#nr-boot');
     if (!boot) return;
@@ -1060,10 +1062,43 @@
     var MIN_HOLD = 1650;  /* полоса доехала к ~1.65с (1.5s + delay 0.15s) */
     var FADE_MS = 470;    /* чуть больше CSS-перехода opacity 0.42s */
 
+    function blockScroll(e) { e.preventDefault(); }
+    function blockKeys(e) {
+      var k = e.key || '';
+      if (k === 'Tab') {
+        e.preventDefault();
+        boot.focus({ preventScroll: true }); /* фокус «застревает» в оверлее */
+        return;
+      }
+      /* Пробел/стрелки/PageUp/… иначе всё равно прокрутят страницу. */
+      if (k === ' ' || k === 'Spacebar' || /^(Arrow|PageUp|PageDown|Home|End)/.test(k)) {
+        e.preventDefault();
+      }
+    }
+    function lockPage() {
+      if (boot.dataset.locked) return;
+      boot.dataset.locked = '1';
+      document.documentElement.classList.add('nr-boot-active');
+      window.addEventListener('wheel', blockScroll, { passive: false, capture: true });
+      window.addEventListener('touchmove', blockScroll, { passive: false, capture: true });
+      window.addEventListener('keydown', blockKeys, { capture: true });
+    }
+    function unlockPage() {
+      if (!boot.dataset.locked) return;
+      delete boot.dataset.locked;
+      document.documentElement.classList.remove('nr-boot-active');
+      window.removeEventListener('wheel', blockScroll, { capture: true });
+      window.removeEventListener('touchmove', blockScroll, { capture: true });
+      window.removeEventListener('keydown', blockKeys, { capture: true });
+    }
+
     function hideBoot() {
       if (boot.classList.contains('nr-boot-hide')) return;
-      boot.classList.add('nr-boot-hide'); /* сразу pointer-events:none */
-      setTimeout(function () { boot.classList.add('nr-boot-done'); }, FADE_MS);
+      boot.classList.add('nr-boot-hide'); /* фейд; клики и дальше съедает оверлей */
+      setTimeout(function () {
+        boot.classList.add('nr-boot-done'); /* display:none — последний кадр окна */
+        unlockPage();                       /* только теперь страница интерактивна */
+      }, FADE_MS);
     }
 
     function ready() {
@@ -1077,6 +1112,12 @@
     }
 
     boot.dataset.bootStart = String(Date.now());
+    /* prefers-reduced-motion: заставка скрыта CSS — лок не нужен. */
+    if (!REDUCED) {
+      lockPage();
+      boot.setAttribute('tabindex', '-1');
+      boot.focus({ preventScroll: true });
+    }
     if (document.readyState === 'complete') {
       ready();
     } else {

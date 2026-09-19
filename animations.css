@@ -19,8 +19,9 @@
    Видна при каждом заходе/обновлении страницы, прячет animations.js
    после готовности. ВАЖНО: все движения здесь через transform/opacity
    (композитор) — никаких чтений layout и изменений width/height.
-   Во время скрытия сразу pointer-events:none — страница кликабельна
-   уже на фейде, без фризов и «залипаний».  */
+   Пока заставка видна — страница заморожена (html.nr-boot-active):
+   скролл выключен, фокус не уходит из оверлея, клики съедает #nr-boot.
+   Разблокировка происходит только в момент #nr-boot-done (display:none).  */
 
 #nr-boot {
   position: fixed;
@@ -34,13 +35,24 @@
     radial-gradient(800px 500px at 50% 115%, rgba(245, 158, 11, 0.05), transparent 55%),
     linear-gradient(180deg, #0b0e14 0%, #0C0E12 46%, #07090d 100%);
   pointer-events: auto;
+  outline: none; /* tabindex=-1: фокус «держится» на заставке без ринга */
   opacity: 1;
   transition: opacity 0.42s ease;
 }
 
-/* Как только начали прятать — сайт сразу принимает клики/тапы */
+/* Пока заставка видна (класс вешает animations.js на <html>) — страница
+   заморожена: без скролла и без «ухода» фокуса на контент. Снимается
+   ровно в момент #nr-boot-done (display:none). */
+html.nr-boot-active,
+html.nr-boot-active body {
+  overflow: hidden;
+  height: 100%;
+  overscroll-behavior: none;
+}
+
+/* Начали прятать: оверлей гаснет, но по-прежнему перехватывает клики,
+   пока не наступит #nr-boot-done и JS не снимет лок страницы. */
 #nr-boot.nr-boot-hide {
-  pointer-events: none !important;
   opacity: 0;
 }
 

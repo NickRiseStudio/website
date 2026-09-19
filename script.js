@@ -1248,11 +1248,15 @@ function initPlayer() {
     };
 
     swipeViewport.addEventListener('touchstart', (e) => {
-      if (swipeAnimating) return;
       const touch = e.changedTouches[0];
+      // Базу жеста фиксируем ДО проверки swipeAnimating: иначе жест, начавшийся,
+      // пока лента ещё доезжает, унаследовал бы координаты и ось (swipeAxis='x')
+      // предыдущего свайпа — тогда вертикальный скролл по карточкам таскал бы
+      // ленту за собой, а отпускание возвращало её на место.
       swipeStartX = touch.clientX;
       swipeStartY = touch.clientY;
       swipeAxis = null;
+      if (swipeAnimating) return; // во время доводки новый жест не ведём
     }, { passive: true });
 
     swipeViewport.addEventListener('touchmove', (e) => {

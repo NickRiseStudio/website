@@ -94,10 +94,11 @@
        BOOT SCREEN — заставка «включения пульта».
        Видна при каждом заходе/обновлении страницы. Внутри: логотип
        (main hero) по центру + ползунок загрузки слева направо.
-       Скрытие делает animations.js (initBoot) после готовности:
-       сначала pointer-events:none + opacity 0 — сайт уже кликабелен
-       во время исчезновения; ниже inline-страховка на случай сбоя JS
-       (максимум 4 с, чтобы заставка никогда не «зависала»). -->
+       Скрытие делает animations.js (initBoot): оверлей гаснет
+       (opacity), и В МОМЕНТ display:none страница разблокируется
+       (класс html.nr-boot-active снимается). До этого — никаких
+       кликов/скролла/фокуса за оверлеем. Ниже inline-страховка на
+       случай сбоя JS (максимум 4 с, чтобы заставка не «зависала»). -->
   <div id="nr-boot" aria-hidden="true">
     <div class="nr-boot-inner">
       <div class="nr-boot-logo">
@@ -123,6 +124,7 @@
         setTimeout(function () {
           var b = document.getElementById('nr-boot');
           if (!b || b.classList.contains('nr-boot-done')) return;
+          document.documentElement.classList.remove('nr-boot-active');
           b.style.pointerEvents = 'none';
           b.style.opacity = '0';
           setTimeout(function () { b.style.display = 'none'; }, 500);
