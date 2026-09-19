@@ -49,9 +49,8 @@
   } catch (e) {}
   if (LITE) document.documentElement.classList.add('nr-lite');
 
-  /* Заставка «включения пульта» живёт целиком в animations.css.
-     Здесь только помечаем, что в этой вкладке её уже показали. */
-  try { sessionStorage.setItem('nrBooted', '1'); } catch (e) {}
+  /* Заставка «включения пульта» (#nr-boot) видна при каждом заходе/обновлении.
+     Скрывает её initBoot() — см. ниже в этом файле (перед init). */
 
   /* Обёртка над глобальной функцией: сначала оригинал, потом эффект. */
   function hook(name, after) {
@@ -253,16 +252,27 @@
   var lineRunning = false; /* идёт ли плавная догонка */
   var lineVisible = false;
 
-  function computeScrollProgress() {
+  /* Высота документа нужна для прогресса прокрутки. Читать scrollHeight в
+     каждом кадре скролла — это принудительная переклейка раскладки, поэтому
+     меряем её только когда документ реально меняет высоту (ResizeObserver на
+     <html> и <body> ниже) и при изменении размеров окна. */
+  var scrollMax = 0;
+
+  function refreshScrollMax() {
     var doc = document.documentElement;
-    var max = doc.scrollHeight - window.innerHeight;
-    var y = window.scrollY || doc.scrollTop || 0;
-    return max > 0 ? Math.min(1, Math.max(0, y / max)) : 0;
+    scrollMax = Math.max(0, doc.scrollHeight - window.innerHeight);
+  }
+
+  function computeScrollProgress() {
+    var y = window.scrollY || 0;
+    return scrollMax > 0 ? Math.min(1, Math.max(0, y / scrollMax)) : 0;
   }
 
   function paintScrollLine() {
     if (!scrollLine) return;
-    scrollLine.style.transform = 'scaleX(' + lineValue.toFixed(4) + ')';
+    // Ширина вместо transform: scaleX() — scaleX сплющивал box-shadow и свечение
+    // точки ::after в размытое пятно в начале скролла (см. комментарий в animations.css)
+    scrollLine.style.width = (lineValue * 100).toFixed(3) + '%';
     var visible = lineValue > 0.004;
     if (visible !== lineVisible) {
       lineVisible = visible;
@@ -307,6 +317,7 @@
     scrollLine.id = 'nr-scrollline';
     header.appendChild(scrollLine);
 
+    refreshScrollMax();
     setScrollLineProgress(computeScrollProgress(), true);
 
     /* Высота документа меняется и без прокрутки: открыли вопрос в FAQ, показался
@@ -314,21 +325,19 @@
        «резко смещается» на первом же скролле. */
     if (typeof ResizeObserver === 'function') {
       var rafId = 0;
-      new ResizeObserver(function () {
+      /* Документ изменил высоту — пересчитываем её один раз здесь, а не в
+         каждом кадре прокрутки (см. refreshScrollMax). */
+      function onDocResize() {
         if (rafId) return;
         rafId = requestAnimationFrame(function () {
           rafId = 0;
+          safe(refreshScrollMax);
           safe(function () { setScrollLineProgress(computeScrollProgress(), false); });
         });
-      }).observe(document.documentElement);
+      }
+      new ResizeObserver(onDocResize).observe(document.documentElement);
       if (document.body) {
-        new ResizeObserver(function () {
-          if (rafId) return;
-          rafId = requestAnimationFrame(function () {
-            rafId = 0;
-            safe(function () { setScrollLineProgress(computeScrollProgress(), false); });
-          });
-        }).observe(document.body);
+        new ResizeObserver(onDocResize).observe(document.body);
       }
     }
   }
@@ -362,7 +371,10 @@
 
   /* ═══ 05. СЕКЦИЯ «СЛУШАЙ РАЗНИЦУ» (A/B): эквалайзер внизу на фоне ══════ */
 
-  var playerCanvas = null, playerVisible = true;
+  /* playerVisible по умолчанию false: пока отложенная инициализация не
+     создаст canvas и IntersectionObserver (после load), считаем, что секции
+     на экране нет, и не держим rAF-цикл живым вхолостую. */
+  var playerCanvas = null, playerVisible = false;
 
   function initPlayerSectionEq() {
     var section = $('#player');
@@ -372,6 +384,9 @@
     if ('IntersectionObserver' in window) {
       new IntersectionObserver(function (ents) {
         playerVisible = ents[0].isIntersecting;
+        /* Секция вернулась в кадр — будим главный цикл: когда плеер был
+           за экраном и звук молчал, цикл спал и не рисовал фон. */
+        if (playerVisible) wakeLoop();
       }).observe(section);
     }
   }
@@ -780,11 +795,13 @@
 
   function handleScrollUpdate() {
     isScrollTicking = false;
-    var doc = document.documentElement;
-    var max = doc.scrollHeight - window.innerHeight;
-    var currentY = window.scrollY || doc.scrollTop || 0;
+    var currentY = window.scrollY || 0;
 
-    var p = max > 0 ? Math.min(1, Math.max(0, currentY / max)) : 0;
+    /* Высота документа уже измерена (refreshScrollMax вызывается из
+       ResizeObserver в initHeader), поэтому в кадре прокрутки остаётся только
+       дешёвое чтение scrollY — без переклейки раскладки. */
+    if (scrollMax <= 0) refreshScrollMax();
+    var p = computeScrollProgress();
 
     /* Полоска прогресса едет плавно: цель обновляем сразу, а отрисовку догоняем
        в собственном rAF. При очень большом прыжке (переход по якорю, возврат в
@@ -853,12 +870,27 @@
   var lastPlayerEq = 0;
   var loopRunning = false;
 
+  /* Нужен ли цикл прямо сейчас? Да — если звук играет (двигаются полоски
+     эквалайзера и «луч» источника), если видна секция плеера с canvas-фоном
+     или открыта модалка. Если секция уехала за экран и звук молчит —
+     рисовать нечего, и цикл засыпает: раньше rAF крутился непрерывно всё
+     время, пока открыта вкладка, и на телефоне это тратило батарею. */
+  function loopNeeded() {
+    return Engine.playing || playerVisible || document.body.classList.contains('modal-open');
+  }
+
   function startLoop() {
     if (!loopRunning && !document.hidden) {
       loopRunning = true;
       prev = performance.now();
       requestAnimationFrame(loop);
     }
+  }
+
+  /* Пробуждение из «сна»: любой ввод пользователя, старт/пауза/конец
+     воспроизведения и возврат вкладки в фокус. */
+  function wakeLoop() {
+    startLoop();
   }
 
   document.addEventListener('visibilitychange', function () {
@@ -868,6 +900,14 @@
       loopRunning = false;
     }
   });
+
+  ['pointerdown', 'keydown', 'touchstart', 'wheel', 'scroll'].forEach(function (ev) {
+    document.addEventListener(ev, wakeLoop, { passive: true });
+  });
+  // Медиа-события не всплывают, поэтому слушаем их на фазе перехвата
+  document.addEventListener('play', wakeLoop, true);
+  document.addEventListener('pause', wakeLoop, true);
+  document.addEventListener('ended', wakeLoop, true);
 
   function loop(now) {
     if (document.hidden) {
@@ -890,7 +930,13 @@
         safe(function () { drawPlayerEq(now); });
       }
     }
-    requestAnimationFrame(loop);
+
+    if (loopNeeded()) {
+      requestAnimationFrame(loop);
+    } else {
+      /* Засыпаем до следующего ввода или события плеера (wakeLoop). */
+      loopRunning = false;
+    }
   }
 
   /* ═══ 18. ХУКИ НА СУЩЕСТВУЮЩИЕ ФУНКЦИИ ══════════════════════════════
@@ -933,20 +979,120 @@
     }
   });
 
-  /* ═══ 19. СТАРТ ═════════════════════════════════════════════════════ */
+  /* ═══ 19. СТАРТ ═════════════════════════════════════════════════════
+     Инициализация разбита на две очереди. Первая — то, что видно сразу
+     (кольца героя, полоска прокрутки, появление карточек). Вторая — декор ниже
+     первого экрана: кривые под заголовками, canvas плеера, метки карточек.
+
+     Раньше всё собиралось подряд в одном DOMContentLoaded, и на телефоне это
+     давало один «залипший» кадр: замер показал ~120 мс в одном кадре, почти
+     всё — принудительная переклейка раскладки. Пока идёт загрузка (а на
+     телефоне это несколько секунд), пользователь как раз начинает листать —
+     именно эти блокировки и чувствуются как «фризы». */
+
+  var LATER_TASKS = [initToastMeter, initEqLines, initPlayerSectionEq, decorateServices, decorateTracks];
+  var laterStarted = false;
+
+  /* Очередь выполняется порциями по ~6 мс: между порциями браузер успевает
+     отрисовать кадр и обработать ввод. */
+  function runTaskQueue(tasks) {
+    var i = 0;
+    function step() {
+      var started = performance.now();
+      while (i < tasks.length && performance.now() - started < 6) {
+        safe(tasks[i++]);
+      }
+      if (i < tasks.length) {
+        if (typeof requestIdleCallback === 'function') {
+          requestIdleCallback(function () { requestAnimationFrame(step); }, { timeout: 200 });
+        } else {
+          setTimeout(function () { requestAnimationFrame(step); }, 0);
+        }
+      }
+    }
+    step();
+  }
+
+  function runLaterTasks() {
+    if (laterStarted) return;
+    laterStarted = true;
+    runTaskQueue(LATER_TASKS);
+  }
+
+  function scheduleLaterTasks() {
+    if (document.readyState === 'complete') {
+      runLaterTasks();
+      return;
+    }
+    window.addEventListener('load', runLaterTasks, { once: true });
+    /* Ранние взаимодействия: пользователь уже листает (или тронул экран),
+       пока страница ещё грузится — тогда декор собираем сразу, а не через
+       долгую страховку ниже. */
+    document.addEventListener('scroll', runLaterTasks, { once: true, passive: true });
+    document.addEventListener('touchstart', runLaterTasks, { once: true, passive: true });
+    document.addEventListener('pointerdown', runLaterTasks, { once: true, passive: true });
+    /* Если секция плеера уже рядом с экраном, канвас её фона должен появиться
+       до того, как пользователь туда доскроллит. */
+    if ('IntersectionObserver' in window) {
+      var p = $('#player');
+      if (p) {
+        var io = new IntersectionObserver(function (ents) {
+          if (ents[0].isIntersecting) runLaterTasks();
+        }, { rootMargin: '200px 0px' });
+        io.observe(p);
+      }
+    }
+    /* Страховка: если ничто из этого так и не сработает, декор всё равно
+       соберётся — иначе canvas плеера не появился бы вовсе. */
+    setTimeout(runLaterTasks, 4000);
+  }
+
+/* ═══ ЗАСТАВКА «ВКЛЮЧЕНИЯ ПУЛЬТА» (BOOT SCREEN) ═══════════════════
+     #nr-boot видна при каждом заходе/обновлении страницы. Полоса
+     плавно доезжает до 100% одним движением (CSS, ~1.8 с) — без
+     финишных «скачков». Как только полоса доехала и страница готова
+     (window.load или страховка) — заставка уходит фейдом. Скрытие не
+     фризит сайт: класс + transition (opacity), без чтений layout. */
+  function initBoot() {
+    var boot = $('#nr-boot');
+    if (!boot) return;
+
+    var MIN_HOLD = 1650;  /* полоса доехала к ~1.65с (1.5s + delay 0.15s) */
+    var FADE_MS = 470;    /* чуть больше CSS-перехода opacity 0.42s */
+
+    function hideBoot() {
+      if (boot.classList.contains('nr-boot-hide')) return;
+      boot.classList.add('nr-boot-hide'); /* сразу pointer-events:none */
+      setTimeout(function () { boot.classList.add('nr-boot-done'); }, FADE_MS);
+    }
+
+    function ready() {
+      var elapsed = Date.now() - Number(boot.dataset.bootStart || 0);
+      if (elapsed < MIN_HOLD) {
+        setTimeout(ready, MIN_HOLD - elapsed + 30);
+        return;
+      }
+      /* Полоса уже показала ход до конца — просто прячем заставку. */
+      hideBoot();
+    }
+
+    boot.dataset.bootStart = String(Date.now());
+    if (document.readyState === 'complete') {
+      ready();
+    } else {
+      window.addEventListener('load', ready, { once: true });
+      setTimeout(ready, 2000); /* страховка: не ждём вечно */
+    }
+  }
 
   function init() {
+    safe(initBoot);
     safe(initAmbient);
     safe(initHeader);
     safe(initHero);
-    safe(initPlayerSectionEq);
-    safe(initEqLines);
     safe(initReveal);
     safe(initViewportGate);
-    safe(initToastMeter);
     safe(animateHeroTitle);
-    safe(decorateServices);
-    safe(decorateTracks);
 
     /* зелёная вспышка на кнопках «копировать» */
     document.addEventListener('click', function (e) {
@@ -959,12 +1105,16 @@
 
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', function () {
+      safe(refreshScrollMax);
       safe(function () { playerCanvas && playerCanvas.resize(); });
       onScroll();
     }, { passive: true });
 
     onScroll();
     startLoop();
+
+    /* Вторая очередь — после первой отрисовки (или когда браузер свободен). */
+    scheduleLaterTasks();
   }
 
   if (document.readyState === 'loading') {

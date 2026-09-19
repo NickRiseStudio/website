@@ -322,6 +322,15 @@ body.modal-open {
   overscroll-behavior: contain !important;
 }
 
+/* Открытое мобильное/планшетное меню (бургер): страница не скроллится под меню.
+   Само меню (#mobileMenuDrawer) скроллится — touch-жесты внутри него не блокируются
+   (guard в initMobileMenuScrollLock, script.js). */
+html.nr-menu-open,
+body.nr-menu-open {
+  overflow: hidden !important;
+  overscroll-behavior: contain !important;
+}
+
 .modal-overlay {
   background: rgba(8, 10, 15, 0.82);
   backdrop-filter: blur(14px);
@@ -727,7 +736,7 @@ html.nr-lite .modal-overlay {
 }
 
 /* Fast touch response: eliminates mobile tap delay */
-a, button, [role="button"], input, select, textarea, .cursor-pointer, .genre-filter-btn {
+a, button, [role="button"], input, select, textarea, .cursor-pointer {
   touch-action: manipulation;
 }
 
@@ -1334,7 +1343,14 @@ span.faq-q-text.lang-vapor-in {
               box-shadow 0.7s cubic-bezier(0.16, 1, 0.3, 1),
               transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.nr-calc-choice-btn:hover { border-color: rgba(245, 158, 11, 0.5); color: #fff; }
+/* Наведение подсвечиваем только там, где есть настоящий курсор: на телефонах и
+   планшетах :hover «залипает» на кнопке, оказавшейся под последним касанием
+   (после авто-перехода это как раз «Нет» следующего вопроса) — подсветки быть
+   не должно. */
+@media (hover: hover) and (pointer: fine) {
+  .nr-calc-choice-btn:hover { border-color: rgba(245, 158, 11, 0.5); color: #fff; }
+}
+
 .nr-calc-choice-btn:active { transform: scale(0.97); transition-duration: 0.2s; }
 .nr-calc-choice-btn.is-selected {
   background: #f59e0b;

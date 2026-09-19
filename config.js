@@ -36,11 +36,6 @@ const CONFIG = {
         sectionBadge: 'A/B COMPARISON',
         title: 'Слушай разницу',
         subtitle: 'Переключайтесь на лету между необработанным миксом (BEFORE) и мастерингом мирового уровня (AFTER). Нажмите PLAY и проверьте разницу!',
-        filterAll: 'Все жанры',
-        filterPopHouse: 'Pop / House',
-        filterRockMetal: 'Rock / Metal',
-        filterRapRnB: 'Rap / R&B',
-        filterTrapHipHop: 'Rap / R&B',
         langRuBtn: 'На русском',
         langEnBtn: 'На английском',
         beforeLabel: 'BEFORE (MIX)',
@@ -163,11 +158,6 @@ const CONFIG = {
         sectionBadge: 'A/B COMPARISON',
         title: 'Hear the Difference',
         subtitle: 'Seamless real-time A/B switching between the raw mix (BEFORE) and polished studio master (AFTER). Hit PLAY to test the difference!',
-        filterAll: 'All Genres',
-        filterPopHouse: 'Pop / House',
-        filterRockMetal: 'Rock / Metal',
-        filterRapRnB: 'Rap / R&B',
-        filterTrapHipHop: 'Rap / R&B',
         langRuBtn: 'In Russian',
         langEnBtn: 'In English',
         beforeLabel: 'BEFORE (MIX)',
@@ -264,9 +254,10 @@ const CONFIG = {
     }
   },
 
+  // Треки для A/B плеера: id, язык (lang), видимость (enabled), подписи и обложка.
   tracks: [
     {
-      id: 'track-1',
+      id: 'track-2',
       lang: 'en',
       enabled: true,
       title: 'Masochist',
@@ -275,10 +266,10 @@ const CONFIG = {
       genreLabel: 'Pop Dark',
       audioBefore: './audio/en/(P) Pop Dark before (Ellise - Masochist).mp3',
       audioAfter: './audio/en/(P) Pop Dark after (Ellise - Masochist).mp3',
-      cover: './image/image_Ellise_Masochist.jpg'
+      cover: './image/image_Ellise_Masochist.webp'
     },
     {
-      id: 'track-7',
+      id: 'track-1',
       lang: 'en',
       enabled: true,
       title: 'Into The Fire',
@@ -287,10 +278,10 @@ const CONFIG = {
       genreLabel: 'Metal',
       audioBefore: './audio/en/(M) Metal before (Asking Alexandria - Into The Fire).mp3',
       audioAfter: './audio/en/(M) Metal after (Asking Alexandria - Into The Fire).mp3',
-      cover: './image/Image_AskingAlexandria_IntoTheFire.jpeg'
+      cover: './image/Image_AskingAlexandria_IntoTheFire.webp'
     },
     {
-      id: 'track-8',
+      id: 'track-3',
       lang: 'en',
       enabled: true,
       title: 'Dark Horses',
@@ -299,10 +290,10 @@ const CONFIG = {
       genreLabel: 'Rock Country',
       audioBefore: './audio/en/(M) Rock Country before (The Long Wait - Dark Horses).mp3',
       audioAfter: './audio/en/(M) Rock Country after (The Long Wait - Dark Horses).mp3',
-      cover: './image/image_TheLongWait_DarkHorses.jpg'
+      cover: './image/image_TheLongWait_DarkHorses.webp'
     },
     {
-      id: 'track-13',
+      id: 'track-4',
       lang: 'en',
       enabled: true,
       title: 'Teleport',
@@ -311,7 +302,7 @@ const CONFIG = {
       genreLabel: 'Rap',
       audioBefore: './audio/en/(R) Rap before (TytillidieXXollin - Teleport).mp3',
       audioAfter: './audio/en/(R) Rap after (TytillidieXXollin - Teleport).mp3',
-      cover: './image/image_TytillidieXXollin_Teleport.jpg'
+      cover: './image/image_TytillidieXXollin_Teleport.webp'
     },
     {
       id: 'track-ru-1',
@@ -323,7 +314,7 @@ const CONFIG = {
       genreLabel: 'Pop Lyric',
       audioBefore: './audio/ru/(P) Pop Lyric before (SIMA - Последняя мятная).mp3',
       audioAfter: './audio/ru/(P) Pop Lyric after (SIMA - Последняя мятная).mp3',
-      cover: './image/image_SIMA_ПоследняяМятная.jpg'
+      cover: './image/image_SIMA_ПоследняяМятная.webp'
     },
     {
       id: 'track-ru-2',
@@ -338,19 +329,7 @@ const CONFIG = {
       cover: './image/!image_none.jpg'
     },
     {
-      id: 'track-ru-7',
-      lang: 'ru',
-      enabled: false,
-      title: 'Стальной Пульс',
-      artist: 'Северный Ветер',
-      genre: 'rock-metal',
-      genreLabel: 'Rock / Metal',
-      audioBefore: './audio/rockmetal_1_before.mp3',
-      audioAfter: './audio/rockmetal_1_after.mp3',
-      cover: './image/Logo.webp'
-    },
-    {
-      id: 'track-ru-13',
+      id: 'track-ru-3',
       lang: 'ru',
       enabled: true,
       title: 'Титры',
@@ -359,10 +338,10 @@ const CONFIG = {
       genreLabel: 'Rap',
       audioBefore: './audio/ru/(R) Rap before (Solvada - Титры).mp3',
       audioAfter: './audio/ru/(R) Rap after (Solvada - Титры).mp3',
-      cover: './image/Logo.webp'
+      cover: './image/!image_none.jpg'
     },
     {
-      id: 'track-ru-14',
+      id: 'track-ru-4',
       lang: 'ru',
       enabled: true,
       title: 'Savage',

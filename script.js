@@ -1,12 +1,31 @@
 // State variables
 let currentLang = 'en';
 let activeTrackLang = 'en';
-let activeGenre = 'all';
 let activeTrackId = null;
 let currentTrackPage = 0;
+// Во время свайп-перехода лентой треков управляет свайп-режим
+// (enterSwipeMode/settleSwipe/exitSwipeMode), поэтому штатная «вкатка снизу»
+// в renderTrackList() на этот момент подавляется, чтобы не было двух анимаций.
+let suppressCardEnterAnimation = false;
 
 // Audio engine data
 const trackAudioMap = {}; // { trackId: { audioA, audioB, source: 'before'|'after', volume: 0.9 } }
+
+/* ScrollTrigger.refresh() — это полный пересчёт позиций всех триггеров, то есть
+   принудительная переклейка раскладки всей страницы. На старте он вызывался
+   несколько раз подряд (load, готовность шрифтов, отрисовка карточек услуг и
+   треков, показ нижнего плеера), и на телефоне это давало заметные «залипания»
+   в первые секунды. Здесь вызовы схлопываются в один: если пересчёт уже
+   запланирован, повторный запрос просто игнорируется. */
+let scrollTriggerRefreshTimer = 0;
+function scheduleScrollTriggerRefresh(delay) {
+  if (typeof ScrollTrigger === 'undefined') return;
+  if (scrollTriggerRefreshTimer) return;
+  scrollTriggerRefreshTimer = setTimeout(() => {
+    scrollTriggerRefreshTimer = 0;
+    if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
+  }, delay || 0);
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   initI18n();
@@ -14,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initServices();
   initFaq();
   initModalAndToast();
+  initMobileMenuScrollLock();
   initGsapAnimations();
   initMixerFaderScroll();
   initSmoothAnchorNavigation();
@@ -22,17 +42,13 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 window.addEventListener('load', () => {
-  if (typeof ScrollTrigger !== 'undefined') {
-    ScrollTrigger.refresh();
-  }
+  scheduleScrollTriggerRefresh(0);
 });
 
 // Ensure ScrollTrigger recalibrates when web fonts finish downloading
 if (typeof document !== 'undefined' && document.fonts && document.fonts.ready) {
   document.fonts.ready.then(() => {
-    if (typeof ScrollTrigger !== 'undefined') {
-      ScrollTrigger.refresh();
-    }
+    scheduleScrollTriggerRefresh(120);
   });
 }
 
@@ -280,6 +296,7 @@ function setLanguage(lang, savePreference = true, animate = false) {
     currentLang = lang;
     try {
       document.documentElement.lang = lang;
+      document.documentElement.setAttribute('data-lang', lang);
     } catch (e) {}
     renderI18nText();
     renderServices();
@@ -300,6 +317,7 @@ function setLanguage(lang, savePreference = true, animate = false) {
     currentLang = lang;
     try {
       document.documentElement.lang = lang;
+      document.documentElement.setAttribute('data-lang', lang);
     } catch (e) {}
 
     renderI18nText();
@@ -356,14 +374,20 @@ function renderI18nText() {
 }
 
 // --- PLAYER & MASTER DECK ENGINE ---
-function getEnabledTracks() {
+// Доступные треки конкретного языка (RU/EN) — нужно и для текущего списка,
+// и для «соседних» peek-панелей во время свайпа.
+function getEnabledTracksForLang(lang) {
   if (!CONFIG || !CONFIG.tracks) return [];
-  return CONFIG.tracks.filter(tr => 
-    tr.enabled !== false && 
-    tr.active !== false && 
+  return CONFIG.tracks.filter(tr =>
+    tr.enabled !== false &&
+    tr.active !== false &&
     tr.visible !== false &&
-    (!tr.lang || tr.lang === activeTrackLang)
+    (!tr.lang || tr.lang === lang)
   );
+}
+
+function getEnabledTracks() {
+  return getEnabledTracksForLang(activeTrackLang);
 }
 
 function updateTrackLangButtonsUI() {
@@ -385,41 +409,18 @@ function updateTrackLangButtonsUI() {
   }
 }
 
-function setTrackLanguage(targetLang) {
+// targetPage: 0 — первая страница языка (обычное переключение),
+// 'last' — последняя страница (когда листаем список назад по кругу).
+function setTrackLanguage(targetLang, targetPage = 0) {
   if (targetLang !== 'ru' && targetLang !== 'en') return;
   if (targetLang === activeTrackLang) return;
   activeTrackLang = targetLang;
 
-  currentTrackPage = 0;
+  currentTrackPage = targetPage === 'last' ? getTotalTrackPages() - 1 : targetPage;
   updateTrackLangButtonsUI();
 
-  const isPlaying = activeTrackId && isAudioPlaying(activeTrackId);
-  const enabled = getEnabledTracks();
-
-  // If NOT currently playing, update deck selection to the new language
-  if (!isPlaying) {
-    const matchingGenre = enabled.filter(tr => activeGenre === 'all' || tr.genre === activeGenre);
-    if (matchingGenre.length === 0) {
-      activeGenre = 'all';
-      const filterBtns = document.querySelectorAll('.genre-filter-btn');
-      filterBtns.forEach(b => {
-        const isAll = b.getAttribute('data-genre') === 'all';
-        const allMinW = isAll ? 'min-w-[92px] sm:min-w-[100px] flex items-center justify-center ' : '';
-        if (isAll) {
-          b.className = `${allMinW}genre-filter-btn px-3.5 py-2 text-xs font-bold rounded-xl transition-all bg-amber-500 text-slate-950 border border-amber-500 cursor-pointer shadow-md shadow-amber-500/20`;
-        } else {
-          b.className = `${allMinW}genre-filter-btn px-3.5 py-2 text-xs font-bold rounded-xl transition-all bg-[#090C12] border border-gray-800/80 text-gray-400 hover:text-white cursor-pointer`;
-        }
-      });
-    }
-
-    const tracksToPick = enabled.filter(tr => activeGenre === 'all' || tr.genre === activeGenre);
-    if (tracksToPick.length > 0) {
-      selectTrack(tracksToPick[0].id, false);
-    } else if (enabled.length > 0) {
-      selectTrack(enabled[0].id, false);
-    }
-  }
+  // Первый трек нового языка не выделяется: подсветка живёт только у трека,
+  // который пользователь включил сам. Плеер просто обновляет подписи.
 
   // Smooth entrance animation exclusively for track cards
   renderTrackList(true);
@@ -427,30 +428,263 @@ function setTrackLanguage(targetLang) {
 }
 
 function getTracksPerPage() {
-  if (window.innerWidth >= 1024) return 6; // Desktop: 3 columns x 2 rows
-  if (window.innerWidth >= 640) return 6;  // Tablet: 2 columns x 3 rows
-  return 5; // Mobile: 1 column x 5 rows
+  // Сетка карточек — 2 колонки на всех экранах (компьютер/планшет/телефон),
+  // поэтому страница = 2 колонки x 2 ряда = 4 трека.
+  return 4;
+}
+
+// Порядок языков при циклическом листании списка треков: EN → RU → EN …
+const TRACK_LANG_CYCLE_ORDER = ['en', 'ru'];
+
+// Языки, у которых есть доступные треки (используется для свайпа).
+function getTrackLangCycle() {
+  return TRACK_LANG_CYCLE_ORDER.filter(lang => getEnabledTracksForLang(lang).length > 0);
+}
+
+function getTotalTrackPages() {
+  return Math.max(1, Math.ceil(getEnabledTracks().length / getTracksPerPage()));
+}
+
+// Треки, которые будут видны на конкретной странице конкретного языка.
+// Нужно для peek-панелей: их содержимое = «соседний шаг» списка.
+function getTracksForState(lang, page) {
+  const all = getEnabledTracksForLang(lang);
+  const perPage = getTracksPerPage();
+  const maxPages = Math.max(1, Math.ceil(all.length / perPage));
+  const safePage = Math.min(Math.max(page, 0), maxPages - 1);
+  return all.slice(safePage * perPage, safePage * perPage + perPage);
+}
+
+// Куда приведёт шаг ±1: страница того же языка либо другой язык по кругу.
+// Ничего не меняет — только считает (используется и для шага, и для peek).
+function getStepTarget(direction) {
+  const totalPages = getTotalTrackPages();
+  const nextPage = currentTrackPage + direction;
+
+  // Обычная страница внутри текущего языка.
+  if (nextPage >= 0 && nextPage < totalPages) {
+    return { lang: activeTrackLang, page: nextPage, sameLang: true };
+  }
+
+  const cycle = getTrackLangCycle();
+
+  // Треки только одного языка — замыкаем страницы по кругу.
+  if (cycle.length <= 1) {
+    return { lang: activeTrackLang, page: direction > 0 ? 0 : totalPages - 1, sameLang: true };
+  }
+
+  const idx = Math.max(0, cycle.indexOf(activeTrackLang));
+  const nextLang = cycle[(idx + direction + cycle.length) % cycle.length];
+  const langPages = Math.max(1, Math.ceil(getEnabledTracksForLang(nextLang).length / getTracksPerPage()));
+
+  return {
+    lang: nextLang,
+    // Вперёд — с первой страницы нового языка, назад — с последней.
+    page: direction > 0 ? 0 : langPages - 1,
+    sameLang: false
+  };
+}
+
+// Шаг по списку треков: внутри языка листаем страницы, а когда страницы
+// закончились — переходим на другой язык по кругу (EN → RU → EN …).
+function stepTrackPage(direction) {
+  const target = getStepTarget(direction);
+
+  if (target.sameLang) {
+    currentTrackPage = target.page;
+    renderTrackList(true);
+    return;
+  }
+
+  setTrackLanguage(target.lang, target.page);
 }
 
 function prevTrackPage() {
-  if (currentTrackPage > 0) {
-    currentTrackPage--;
-    renderTrackList(true);
-  }
+  stepTrackPage(-1);
 }
 
 function nextTrackPage() {
-  const perPage = getTracksPerPage();
-  const filtered = getEnabledTracks().filter(tr => activeGenre === 'all' || tr.genre === activeGenre);
-  const maxPages = Math.ceil(filtered.length / perPage);
-  if (currentTrackPage < maxPages - 1) {
-    currentTrackPage++;
-    renderTrackList(true);
+  stepTrackPage(1);
+}
+
+// Куда поедет лента при смене языка кнопками EN / RU. Сторону задаёт ПОЛОЖЕНИЕ
+// КНОПОК, а не порядок цикла: кнопки стоят в том же порядке, что и страницы
+// ленты (слева «На английском», справа «На русском»), поэтому клик по правой
+// кнопке тянет ленту влево (новая страница въезжает справа, motion = -1), а по
+// левой — вправо (новая страница въезжает слева, motion = 1). Тогда треки
+// уезжают в ту сторону, где стоит выбранная кнопка.
+function getLangSwitchDirection(targetLang) {
+  const btns = Array.from(document.querySelectorAll('.track-lang-btn'));
+  const indexOf = (lang) => btns.findIndex(b => b.getAttribute('data-track-lang') === lang);
+  const currentIdx = indexOf(activeTrackLang);
+  const targetIdx = indexOf(targetLang);
+  if (currentIdx < 0 || targetIdx < 0 || targetIdx === currentIdx) return 1;
+  return targetIdx > currentIdx ? -1 : 1;
+}
+
+/* ── Точки-индикатор листания ─────────────────────────────────────────────
+   «Остановки» листания — это язык + страница внутри языка, в порядке цикла
+   (EN → RU → EN). Сейчас у каждого языка по одной странице, поэтому точек
+   ровно две: столько, сколько раз можно пролистать список. */
+function getTrackSteps() {
+  const steps = [];
+  getTrackLangCycle().forEach(lang => {
+    const pages = Math.max(1, Math.ceil(getEnabledTracksForLang(lang).length / getTracksPerPage()));
+    for (let page = 0; page < pages; page++) steps.push({ lang, page });
+  });
+  return steps;
+}
+
+function getCurrentTrackStepIndex() {
+  return getTrackSteps().findIndex(s => s.lang === activeTrackLang && s.page === currentTrackPage);
+}
+
+function goToTrackStep(index) {
+  const target = getTrackSteps()[index];
+  if (!target) return;
+  if (target.lang !== activeTrackLang) {
+    setTrackLanguage(target.lang, target.page);
+    return;
   }
+  currentTrackPage = target.page;
+  renderTrackList(true);
+}
+
+// Классы точек — те же, что у индикатора карусели услуг (index.html),
+// поэтому пересобирать tailwind.css не нужно.
+const TRACK_DOT_ACTIVE_CLASS = 'w-8 h-2.5 rounded-full transition-all duration-300 bg-amber-500 shadow-sm shadow-amber-500/50 cursor-pointer';
+const TRACK_DOT_IDLE_CLASS = 'w-2.5 h-2.5 rounded-full transition-all duration-300 bg-gray-700 hover:bg-amber-500 cursor-pointer';
+
+function renderTrackDots() {
+  const wrap = document.getElementById('trackDots');
+  if (!wrap) return;
+
+  const steps = getTrackSteps();
+  const activeIdx = getCurrentTrackStepIndex();
+  const shouldShow = steps.length > 1;
+
+  const isShown = wrap.style.display !== 'none';
+  if (shouldShow !== isShown) {
+    wrap.style.display = shouldShow ? '' : 'none';
+    if (shouldShow) scheduleScrollTriggerRefresh(0);
+  }
+
+  if (!shouldShow) {
+    if (wrap.children.length) wrap.innerHTML = '';
+    return;
+  }
+
+  // Кнопки пересоздаём только при смене их числа — иначе ширина активной точки
+  // перетекает плавно (transition-all).
+  if (wrap.children.length !== steps.length) {
+    wrap.innerHTML = '';
+    steps.forEach((step, idx) => {
+      const dot = document.createElement('button');
+      dot.type = 'button';
+      dot.setAttribute('aria-label', `${step.lang.toUpperCase()} — ${step.page + 1}`);
+      dot.onclick = () => goToTrackStep(idx);
+      wrap.appendChild(dot);
+    });
+  }
+
+  Array.from(wrap.children).forEach((dot, idx) => {
+    const isActive = idx === activeIdx;
+    const cls = isActive ? TRACK_DOT_ACTIVE_CLASS : TRACK_DOT_IDLE_CLASS;
+    if (dot.className !== cls) dot.className = cls;
+    if (isActive) dot.setAttribute('aria-current', 'true');
+    else dot.removeAttribute('aria-current');
+  });
+}
+
+/* ══ ЛЕНИВОЕ СОЗДАНИЕ ДОРОЖЕК ПЛЕЕРА ═══════════════════════════════════════
+   Раньше при загрузке страницы сразу создавались 16 элементов <audio>
+   (8 треков × BEFORE/AFTER) с preload='metadata' — браузер тут же открывал
+   16 запросов к mp3, в том числе к трекам языка, которого сейчас нет на
+   экране. Теперь пара дорожек создаётся при первом реальном интересе к треку:
+   наведение/касание карточки, фокус с клавиатуры, выбор трека или старт
+   воспроизведения. Логика и вид плеера не меняются. */
+
+function getTrackConfigById(trackId) {
+  if (!trackId || !CONFIG || !CONFIG.tracks) return null;
+  return CONFIG.tracks.find(tr => tr.id === trackId) || null;
+}
+
+function createTrackAudioEntry(track) {
+  if (!track || !track.id || !track.audioBefore || !track.audioAfter) return null;
+  if (trackAudioMap[track.id]) return trackAudioMap[track.id];
+
+  const audioA = new Audio(track.audioBefore);
+  const audioB = new Audio(track.audioAfter);
+  audioA.preload = 'metadata';
+  audioB.preload = 'metadata';
+
+  const handleAudioError = (el, type) => {
+    el.addEventListener('error', () => {
+      const fallbackSrc = `./audio/pophouse_1_${type}.mp3`;
+      const fullFallback = new URL(fallbackSrc, window.location.href).href;
+      if (el.src !== fullFallback) {
+        el.src = fallbackSrc;
+        el.load();
+      }
+    });
+  };
+  handleAudioError(audioA, 'before');
+  handleAudioError(audioB, 'after');
+
+  const trackIndex = CONFIG && CONFIG.tracks ? CONFIG.tracks.indexOf(track) + 1 : 1;
+  trackAudioMap[track.id] = {
+    audioA,
+    audioB,
+    source: 'after',
+    volume: 0.9,
+    trackIndex: trackIndex > 0 ? trackIndex : 1
+  };
+
+  // Никаких жёстких seek внутри воспроизведения: расхождение пары гасится
+  // микро-коррекцией скорости той дорожки, которая сейчас не звучит.
+  // timeupdate прилетает от ДВУХ дорожек (BEFORE и AFTER) примерно 4 раза в
+  // секунду каждая — складываем их в один пересчёт на кадр, чтобы не трогать
+  // интерфейс лишний раз (важно для батареи на телефоне).
+  let timeUpdatePending = false;
+  const handleTimeUpdate = () => {
+    if (activeTrackId !== track.id || timeUpdatePending) return;
+    timeUpdatePending = true;
+    requestAnimationFrame(() => {
+      timeUpdatePending = false;
+      if (activeTrackId !== track.id) return;
+      syncAudioPair(trackAudioMap[track.id]);
+      updateDeckProgressUI();
+    });
+  };
+
+  audioA.addEventListener('timeupdate', handleTimeUpdate);
+  audioB.addEventListener('timeupdate', handleTimeUpdate);
+  audioA.addEventListener('loadedmetadata', () => {
+    if (activeTrackId === track.id) updateDeckProgressUI();
+  });
+  audioB.addEventListener('loadedmetadata', () => {
+    if (activeTrackId === track.id) updateDeckProgressUI();
+  });
+
+  audioA.addEventListener('ended', () => {
+    if (activeTrackId === track.id) nextDeckTrack();
+  });
+  audioB.addEventListener('ended', () => {
+    if (activeTrackId === track.id) nextDeckTrack();
+  });
+
+  return trackAudioMap[track.id];
+}
+
+/* Предзагрузка без звука: создаём элемент с preload='metadata' (браузер
+   запросит только шапку файла). Вызывается на наведение/касание карточки. */
+function prefetchTrackAudio(trackId) {
+  if (trackAudioMap[trackId]) return;
+  createTrackAudioEntry(getTrackConfigById(trackId));
 }
 
 function ensureTrackLoaded(trackId) {
-  const item = trackAudioMap[trackId];
+  const item = trackAudioMap[trackId] || createTrackAudioEntry(getTrackConfigById(trackId));
   if (!item) return;
   if (item.audioA.preload !== 'auto') {
     item.audioA.preload = 'auto';
@@ -460,79 +694,89 @@ function ensureTrackLoaded(trackId) {
   }
 }
 
-function initPlayer() {
-  const allTracks = CONFIG && CONFIG.tracks ? CONFIG.tracks.filter(tr => tr.enabled !== false && tr.active !== false && tr.visible !== false) : [];
+// Анимация перехода ленты треков (свайп-эффект) и синхронизация стрелок
+// листания: назначаются в initPlayer, вызываются из renderTrackList и кнопок.
+let animateTrackTransition = null;
+let syncTrackNav = null;
+// Прогрев peek-панелей (соседние страницы) — тоже назначается в initPlayer.
+let warmTrackPeekPanels = null;
 
-  // Set metadata preload initially so page load doesn't download audio upfront
-  allTracks.forEach((track, index) => {
-    if (trackAudioMap[track.id]) return;
-    const audioA = new Audio(track.audioBefore);
-    const audioB = new Audio(track.audioAfter);
-    audioA.preload = 'metadata';
-    audioB.preload = 'metadata';
+/* ══ БЛИК ПО КАРТОЧКАМ ПОСЛЕ СВАЙПА ══════════════════════════════════════
+   Тот же янтарный «пробегающий» блик, что и при наведении, но запускается
+   явно: каскадом по карточкам страницы и всегда целиком — полоса плавно
+   входит из-за кромки и так же уходит (см. @keyframes nrCardSheen
+   в animations.css). */
+let trackSheenToken = 0;
 
-    const handleAudioError = (el, type) => {
-      el.addEventListener('error', () => {
-        const fallbackSrc = `./audio/pophouse_1_${type}.mp3`;
-        const fullFallback = new URL(fallbackSrc, window.location.href).href;
-        if (el.src !== fullFallback) {
-          el.src = fallbackSrc;
-          el.load();
-        }
-      });
-    };
-    handleAudioError(audioA, 'before');
-    handleAudioError(audioB, 'after');
+function playTrackSheen() {
+  if (prefersReducedMotion()) return;
 
-    trackAudioMap[track.id] = {
-      audioA,
-      audioB,
-      source: 'after',
-      volume: 0.9,
-      trackIndex: index + 1
-    };
+  const container = document.getElementById('trackListContainer');
+  if (!container) return;
 
-    // Никаких жёстких seek внутри воспроизведения: расхождение пары гасится
-    // микро-коррекцией скорости той дорожки, которая сейчас не звучит.
-    const handleTimeUpdate = () => {
-      if (activeTrackId !== track.id) return;
-      syncAudioPair(trackAudioMap[track.id]);
-      updateDeckProgressUI();
-    };
+  const cards = Array.from(container.children);
+  if (!cards.length) return;
 
-    audioA.addEventListener('timeupdate', handleTimeUpdate);
-    audioB.addEventListener('timeupdate', handleTimeUpdate);
-    audioA.addEventListener('loadedmetadata', () => {
-      if (activeTrackId === track.id) updateDeckProgressUI();
-    });
-    audioB.addEventListener('loadedmetadata', () => {
-      if (activeTrackId === track.id) updateDeckProgressUI();
-    });
-
-    audioA.addEventListener('ended', () => {
-      if (activeTrackId === track.id) nextDeckTrack();
-    });
-    audioB.addEventListener('ended', () => {
-      if (activeTrackId === track.id) nextDeckTrack();
-    });
+  const token = ++trackSheenToken;
+  cards.forEach((card, idx) => {
+    card.classList.remove('nr-sheen');
+    setTimeout(() => {
+      if (token !== trackSheenToken || !card.isConnected) return;
+      card.classList.add('nr-sheen');
+      const clear = () => card.classList.remove('nr-sheen');
+      card.addEventListener('animationend', clear, { once: true });
+      // Страховка: если анимация прервана (перерисовка списка), класс всё равно уйдёт.
+      setTimeout(clear, 1700);
+    }, idx * 70);
   });
+}
+
+function initPlayer() {
+  /* Дорожки <audio> создаются лениво (см. createTrackAudioEntry выше): на
+     загрузке страницы больше нет 16 запросов к mp3. Первый запрос возникает,
+     когда пользователь проявляет интерес к конкретной карточке — наведение
+     курсором, касание или фокус с клавиатуры. */
+  const trackListEl = document.getElementById('trackListContainer');
+  if (trackListEl) {
+    const warmCardAudio = (e) => {
+      const card = e.target && e.target.closest ? e.target.closest('[data-track-id]') : null;
+      if (card) prefetchTrackAudio(card.getAttribute('data-track-id'));
+    };
+    trackListEl.addEventListener('pointerover', warmCardAudio, { passive: true });
+    trackListEl.addEventListener('touchstart', warmCardAudio, { passive: true });
+    trackListEl.addEventListener('focusin', warmCardAudio);
+  }
 
   // Track Audio Language Switch (RU / EN)
+  // Смена языка проходит свайпом-лентой на ЛЮБОЙ ширине (и на компьютере):
+  // треки уезжают в сторону выбранной кнопки — правая кнопка ведёт список влево,
+  // левая вправо, — а не «вкатываются снизу». Если свайп-лента недоступна
+  // (нет её элементов), остаётся прежняя смена с появлением карточек.
   const trackLangBtns = document.querySelectorAll('.track-lang-btn');
   trackLangBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       const targetLang = btn.getAttribute('data-track-lang');
-      if (targetLang && targetLang !== activeTrackLang) {
-        setTrackLanguage(targetLang);
+      if (!targetLang || targetLang === activeTrackLang) return;
+
+      if (typeof animateTrackTransition === 'function') {
+        // Раскладка 'nav': слева предыдущая страница, справа следующая — как
+        // кнопки EN | RU. Сторону перехода задаёт положение кнопок, поэтому
+        // клик по правой кнопке ведёт треки влево, а по левой — вправо.
+        const direction = getLangSwitchDirection(targetLang);
+        animateTrackTransition(direction, () => {
+          setTrackLanguage(targetLang, direction > 0 ? 'last' : 0);
+        }, 'nav');
+        return;
       }
+
+      setTrackLanguage(targetLang);
     });
   });
   updateTrackLangButtonsUI();
 
-  const enabledTracks = getEnabledTracks();
-  if (enabledTracks.length > 0) {
-    activeTrackId = enabledTracks[0].id;
-  }
+  // Первый трек намеренно НЕ выбирается автоматически: при загрузке страницы
+  // ни одна карточка не должна выглядеть активной. Подсветка появляется только
+  // после того, как пользователь сам включит трек (клик по карточке / play).
 
   // Preload active track when user scrolls near player or hovers over it
   const triggerPreloadActive = () => {
@@ -558,57 +802,510 @@ function initPlayer() {
     pSec.addEventListener('touchstart', triggerPreloadActive, { once: true, passive: true });
   }
 
-  // Filter Buttons
-  const filterBtns = document.querySelectorAll('.genre-filter-btn');
-  filterBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      filterBtns.forEach(b => {
-        const isAll = b.getAttribute('data-genre') === 'all';
-        const allMinW = isAll ? 'min-w-[92px] sm:min-w-[100px] flex items-center justify-center ' : '';
-        b.className = `${allMinW}genre-filter-btn px-3.5 py-2 text-xs font-bold rounded-xl transition-all bg-[#090C12] border border-gray-800/80 text-gray-400 hover:text-white cursor-pointer`;
-      });
-      const isTargetAll = btn.getAttribute('data-genre') === 'all';
-      const targetMinW = isTargetAll ? 'min-w-[92px] sm:min-w-[100px] flex items-center justify-center ' : '';
-      btn.className = `${targetMinW}genre-filter-btn px-3.5 py-2 text-xs font-bold rounded-xl transition-all bg-amber-500 text-slate-950 border border-amber-500 cursor-pointer shadow-md shadow-amber-500/20`;
-      activeGenre = btn.getAttribute('data-genre');
-      currentTrackPage = 0;
-      
-      const isPlaying = activeTrackId && isAudioPlaying(activeTrackId);
-      const filtered = getEnabledTracks().filter(tr => activeGenre === 'all' || tr.genre === activeGenre);
-      if (!isPlaying && filtered.length > 0 && !filtered.some(t => t.id === activeTrackId)) {
-        selectTrack(filtered[0].id, false);
-      } else {
-        renderTrackList();
-        updateMasterDeckUI();
-      }
-    });
-  });
-
   window.addEventListener('resize', () => {
     renderTrackList();
   });
 
-  // Touch Swipe for mobile track list
+  // Свайп по списку треков (телефон): вправо — вперёд по кругу (EN → RU → EN),
+  // влево — назад. Список — «лента» из трёх панелей, поэтому во время свайпа
+  // видно, куда листаешь: [следующая страница][текущая][предыдущая].
+  // Следующая лежит СЛЕВА, потому что свайп вправо = вперёд, а лента ходит
+  // за пальцем: потянул вправо — из-под пальца выезжает следующая страница.
+  // Жест определяется по преобладающей оси, preventDefault не вызывается,
+  // поэтому вертикальная прокрутка страницы работает как обычно.
+  const swipeViewport = document.getElementById('trackListSwipeViewport');
+  const swipeTrack = document.getElementById('trackListSwipeTrack');
   const listContainer = document.getElementById('trackListContainer');
-  if (listContainer) {
-    let touchStartX = 0;
-    listContainer.addEventListener('touchstart', (e) => {
-      touchStartX = e.changedTouches[0].screenX;
+  const peekLeftPanel = document.getElementById('trackListPanelLeft');
+  const peekRightPanel = document.getElementById('trackListPanelRight');
+
+  if (swipeViewport && swipeTrack && listContainer && peekLeftPanel && peekRightPanel) {
+    const SWIPE_AXIS_THRESHOLD = 12; // px: отсекает дрожание пальца при обычном тапе
+    const SWIPE_TRIGGER = 60;        // px: порог зачёта свайпа
+    const DRAG_RATIO = 0.55;         // «сопротивление»: палец идёт быстрее ленты
+    const DRAG_LIMIT_RATIO = 0.35;   // максимум сдвига — доля ширины списка
+    const SETTLE_FALLBACK = 420;     // мс: страховка, если transitionend не придёт
+    const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    let swipeStartX = 0;
+    let swipeStartY = 0;
+    let swipeAxis = null;       // 'x' | 'y' | null (ещё не определена)
+    let swipeAnimating = false; // идёт доводка — новые жесты игнорируем
+    let peekReady = false;      // соседние панели отрисованы, лента включена
+
+    // Позиция ленты: '' — текущие карточки по центру (режим выключен),
+    // 'translate3d(-100%, 0, 0)' — режим свайпа (слева следующая страница,
+    // справа предыдущая), дальше — сдвиг пальцем или доводка к соседу.
+    // Переход включаем/выключаем инлайново: так порядок «сначала отключить
+    // анимацию, потом сдвинуть» гарантирован и не зависит от пересчёта стилей.
+    const setTrackX = (transform, animate) => {
+      swipeTrack.style.transition = animate ? '' : 'none';
+      swipeViewport.classList.toggle('nr-dragging', !animate);
+      swipeTrack.style.transform = transform;
+    };
+
+    // Возвращаем ленте штатный CSS-переход (после того как кадр отрисован).
+    const restoreTrackTransition = () => {
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        swipeViewport.classList.remove('nr-dragging');
+        swipeTrack.style.transition = '';
+      }));
+    };
+
+    // Принудительный пересчёт стилей ленты. Нужен, когда положение меняется
+    // программно (стрелки, кнопки языка): без него браузер «схлопывает»
+    // стартовое положение и доводку в один кадр, и перехода не видно.
+    const flushTrackStyles = () => { void swipeTrack.offsetWidth; };
+
+    // Ждём окончания CSS-перехода ленты (со страховкой по времени).
+    // Слушаем только сам переход ленты: у карточек внутри есть свои transition,
+    // и без фильтра их всплывающие события обрывали бы ожидание раньше времени.
+    const afterTrackTransition = (callback) => {
+      if (reducedMotion) { callback(); return; }
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        swipeTrack.removeEventListener('transitionend', onEnd);
+        callback();
+      };
+      const onEnd = (e) => {
+        if (e.target !== swipeTrack || e.propertyName !== 'transform') return;
+        finish();
+      };
+      swipeTrack.addEventListener('transitionend', onEnd);
+      setTimeout(finish, SETTLE_FALLBACK);
+    };
+
+    /* ── Соседние страницы ленты и общий переход шага ──────────────────────
+       Панели заполняются только на время анимации (свайп, стрелки, кнопки
+       языка). Раскладка:
+       • 'swipe' — как при жесте: слева следующая страница (свайп вправо =
+         вперёд), справа предыдущая;
+       • 'nav'   — как в обычной карусели: слева предыдущая, справа следующая
+         (стрелкам так привычнее: правая «толкает» список влево).
+       Содержимое панелей НЕ зависит от направления жеста — поэтому при смене
+       направления внутри одного свайпа ничего не пересобирается, и гаснущая
+       панель успевает уйти плавно. Подпись не даёт пересобирать панели зря. */
+    let peekSignature = '';
+
+    // Рисуем в панели карточки конкретной страницы. Карточки без id (иначе в
+    // документе появились бы дубли track-item-*) — тем же createTrackCard, что
+    // и контейнер, поэтому панель и контейнер выглядят пиксель в пиксель.
+    const renderPeekPanel = (panel, lang, page) => {
+      const currentDevice = getDeviceType();
+      const isMobileView = window.innerWidth < 640;
+      panel.innerHTML = '';
+      getTracksForState(lang, page).forEach(track => {
+        // Обложки панелей грузим сразу и заранее декодируем: панель появляется
+        // из-за края в первые же кадры свайпа, а к моменту подмены ленты
+        // (контейнер получает ту же страницу) картинки уже в кэше — тогда
+        // подмена проходит без мелькания пустых обложек.
+        panel.appendChild(createTrackCard(track, { isMobileView, currentDevice, withId: false, eagerImages: true }));
+      });
+      whenTrackCoversReady(panel);
+    };
+
+    const fillPeekPanels = (layout) => {
+      const leftTarget = layout === 'nav' ? getStepTarget(-1) : getStepTarget(1);
+      const rightTarget = layout === 'nav' ? getStepTarget(1) : getStepTarget(-1);
+      const isMobileView = window.innerWidth < 640;
+      const signature = [
+        layout, activeTrackLang, currentTrackPage, currentLang,
+        isMobileView ? 'm' : 'd',
+        leftTarget.lang, leftTarget.page, rightTarget.lang, rightTarget.page
+      ].join('|');
+      if (signature === peekSignature) return;
+      peekSignature = signature;
+
+      renderPeekPanel(peekLeftPanel, leftTarget.lang, leftTarget.page);
+      renderPeekPanel(peekRightPanel, rightTarget.lang, rightTarget.page);
+    };
+
+    /* Прозрачность соседних страниц. При жесте панель проявляется постепенно —
+       ровно настолько, насколько ушёл палец (см. moveTrackWithFinger), поэтому
+       карточки не «вспыхивают» по краям в первый же пиксель свайпа. Уходит
+       панель так же плавно: при смене направления жеста и при возврате ленты
+       она гаснет за PEEK_FADE_MS, а уехавшая после шага страница — за
+       PEEK_DISSOLVE_MS (чуть медленнее, чтобы растворение читалось). */
+    const PEEK_FADE_MS = 280;
+    const PEEK_DISSOLVE_MS = 360;
+    // Доводка ленты (transform в .track-swipe-track, см. animations.css): въезжающая
+    // панель должна дойти до полной видимости ровно к концу доводки.
+    const TRACK_SETTLE_MS = 340;
+    let peekFadeOutPanel = null;   // панель, которая сейчас гаснет
+    let peekFadeOutUntil = 0;
+
+    const fadePeekPanel = (panel, value, animate, duration = PEEK_FADE_MS) => {
+      // Пока панель гаснет, не мешаем её переходу (иначе следующий кадр жеста
+      // сбросил бы transition и она пропала бы мгновенно).
+      if (!animate && panel === peekFadeOutPanel && Date.now() < peekFadeOutUntil) return;
+      panel.style.transition = animate ? `opacity ${duration}ms var(--nr-ease)` : 'none';
+      panel.style.opacity = String(value);
+    };
+
+    const startPeekFadeOut = (panel) => {
+      peekFadeOutPanel = panel;
+      peekFadeOutUntil = Date.now() + PEEK_FADE_MS;
+      fadePeekPanel(panel, 0, true);
+    };
+
+    const setPeekFade = (leftOpacity, rightOpacity, animateLeft, animateRight) => {
+      fadePeekPanel(peekLeftPanel, leftOpacity, animateLeft);
+      fadePeekPanel(peekRightPanel, rightOpacity, animateRight);
+    };
+
+    const clearPeekFade = () => {
+      peekFadeOutPanel = null;
+      peekFadeOutUntil = 0;
+      [peekLeftPanel, peekRightPanel].forEach(panel => {
+        panel.style.transition = '';
+        panel.style.opacity = '';
+      });
+    };
+
+    // Включаем ленту: рисуем соседние страницы и в том же кадре сдвигаем ленту
+    // так, чтобы текущие карточки остались на месте (скачка нет). Панели всегда
+    // стартуют прозрачными: при жесте они проявляются по мере движения пальца, а
+    // при переходе стрелкой или кнопкой языка — плавно проявляются за время
+    // доводки. Так ни одна из сторон не «вспыхивает» полоской у края.
+    const enterSwipeMode = (layout = 'swipe') => {
+      if (peekReady) return;
+      peekReady = true;
+
+      clearPeekFade();
+      fillPeekPanels(layout);
+      peekMotion = 0;
+      setPeekFade(0, 0, false, false);
+
+      swipeViewport.classList.add('nr-swipe-active');
+      setTrackX('translate3d(-100%, 0, 0)', false);
+    };
+
+    // Выключаем ленту: возвращаем исходную позицию и прячем соседей в одном
+    // кадре — список визуально не «прыгает».
+    const exitSwipeMode = () => {
+      setTrackX('', false);
+      swipeViewport.classList.remove('nr-swipe-active');
+      // Панели НЕ очищаем: их карточки (и уже декодированные обложки) остаются
+      // готовыми к следующему свайпу. Раньше содержимое сбрасывалось, и при
+      // быстром листании панель успевала показаться раньше, чем декодируются
+      // картинки — соседние треки «моргали» пустыми обложками. Подпись тоже
+      // сохраняем: если состояние списка не изменилось, содержимое панелей
+      // остаётся верным и пересобирать его не нужно (см. fillPeekPanels).
+      clearPeekFade();
+      peekReady = false;
+      restoreTrackTransition();
+      // Положение стрелок пересчитываем по спокойной раскладке: во время
+      // перехода лента сдвинута, и замер «на ходу» дал бы сбитые координаты.
+      if (typeof syncTrackNav === 'function') syncTrackNav();
+    };
+
+    /* Прогрев панелей: собираем карточки соседних страниц заранее и декодируем
+       их обложки, чтобы к следующему свайпу всё было готово. Делается вне кадра
+       (rAF) и только когда лента спокойна: во время жеста или перехода панели
+       пересобирать нельзя — это сломало бы текущую анимацию. */
+    warmTrackPeekPanels = () => {
+      requestAnimationFrame(() => {
+        if (swipeAnimating || peekReady) return;
+        fillPeekPanels('swipe');
+        whenTrackCoversReady(peekLeftPanel);
+        whenTrackCoversReady(peekRightPanel);
+      });
+    };
+
+    // Лента идёт за пальцем с «резиновым» сопротивлением.
+    let peekMotion = 0;
+    const moveTrackWithFinger = (dx) => {
+      const width = listContainer.offsetWidth || swipeViewport.offsetWidth || 1;
+      const limit = Math.max(90, width * DRAG_LIMIT_RATIO);
+      const shift = Math.max(-limit, Math.min(limit, dx * DRAG_RATIO));
+      setTrackX(`translate3d(calc(-100% + ${shift}px), 0, 0)`, false);
+
+      // Проявление панели пропорционально сдвигу (smoothstep): полный сдвиг
+      // (потолок DRAG_LIMIT_RATIO) даёт полностью видимую соседнюю страницу.
+      const p = Math.min(1, Math.abs(shift) / Math.max(1, width * 0.32));
+      const eased = p * p * (3 - 2 * p);
+
+      // Смена направления внутри жеста: встречная панель гаснет плавно, а
+      // противоположная — проявляется под пальцем.
+      const motion = shift >= 0 ? 1 : -1;
+      const changed = motion !== peekMotion;
+      peekMotion = motion;
+
+      if (motion > 0) {
+        if (changed) startPeekFadeOut(peekRightPanel);
+        fadePeekPanel(peekLeftPanel, eased, false);
+      } else {
+        if (changed) startPeekFadeOut(peekLeftPanel);
+        fadePeekPanel(peekRightPanel, eased, false);
+      }
+    };
+
+    // ── Общий переход ленты ────────────────────────────────────────────────
+    // Один путь для свайпа, стрелок и кнопок языка: лента доезжает в сторону
+    // движения (motion > 0 — вправо, показывая левую панель; motion < 0 — влево,
+    // показывая правую), список перерисовывается без штатной «вкатки снизу»
+    // (её роль играет выезд ленты сбоку), затем лента возвращается на место.
+    // Финал: лента мгновенно встаёт в нейтральное положение (в окне — контейнер
+    // с уже новой страницей, пиксели те же), въехавшая панель сразу гаснет (её
+    // полоска у края до этого была пустой — иначе она «мигала» бы), а в уехавшую
+    // панель кладётся СТАРАЯ страница и плавно растворяется там, куда ушёл жест.
+    // applyStep — что применить к состоянию списка (шаг страницы или смена языка).
+    const runTrackTransition = (motion, applyStep, layout = 'swipe') => {
+      if (swipeAnimating) return false;   // уже едет — повторные нажатия игнорируем
+
+      // «Уменьшить движение»: переключаем состояние без анимации.
+      if (reducedMotion) {
+        suppressCardEnterAnimation = true;
+        try { applyStep(); } finally { suppressCardEnterAnimation = false; }
+        return true;
+      }
+
+      swipeAnimating = true;
+
+      // Состояние до шага: его страница уезжает в сторону движения и должна там
+      // же раствориться — язык и страницу запоминаем СРАЗУ, после applyStep их
+      // уже не восстановить.
+      const prevLang = activeTrackLang;
+      const prevPage = currentTrackPage;
+
+      // Сторона въезда/уезда задана геометрией: лента ходит за пальцем, поэтому
+      // при движении вправо новая страница въезжает слева, а старая уходит вправо.
+      const entryIsLeft = motion > 0;
+      const entryPanel = entryIsLeft ? peekLeftPanel : peekRightPanel;
+      const exitPanel = entryIsLeft ? peekRightPanel : peekLeftPanel;
+
+      enterSwipeMode(layout);
+      // Встречная панель уходит за кадр — держим её прозрачной: её полоска у
+      // противоположного края не должна «вспыхивать».
+      fadePeekPanel(exitPanel, 0, false);
+      // Обложки старой страницы декодируем заранее (пока лента едет): их покажет
+      // уехавшая панель в момент подмены, и они должны быть готовы — иначе при
+      // быстром листании старые треки мелькали бы пустыми.
+      const oldPageCoversReady = predecodeTrackCovers(prevLang, prevPage);
+      // Фиксируем стартовое положение ленты (-100%) и нулевую прозрачность
+      // въезжающей панели до включения переходов — иначе браузер «схлопнул» бы
+      // доводку и проявление в один кадр.
+      flushTrackStyles();
+      // Въезжающая панель проявляется ровно за время доводки: у свайпа она уже
+      // видна под пальцем, у стрелки/кнопки языка — плавно появляется из края.
+      fadePeekPanel(entryPanel, 1, true, TRACK_SETTLE_MS);
+      setTrackX(entryIsLeft ? 'translate3d(0%, 0, 0)' : 'translate3d(-200%, 0, 0)', true);
+      afterTrackTransition(() => {
+        // Карточки старой страницы запоминаем ДО перерисовки: их покажет уехавшая
+        // панель в момент подмены. Это те же узлы, что уже отрисованы в контейнере
+        // (обложки декодированы и нарисованы), поэтому старая страница появляется
+        // мгновенно — без «моргания» пустыми обложками.
+        const oldPageCards = Array.from(listContainer.children);
+
+        suppressCardEnterAnimation = true;
+        try {
+          applyStep();
+        } finally {
+          suppressCardEnterAnimation = false;
+        }
+
+        const finish = () => {
+          exitSwipeMode();
+          // Новая страница встала на место — по карточкам мягко пробегает блик.
+          playTrackSheen();
+          swipeAnimating = false;
+          // Готовим панели к следующему свайпу: их карточки и обложки собираются
+          // заранее, поэтому быстрое листание больше не показывает пустые картинки.
+          if (typeof warmTrackPeekPanels === 'function') warmTrackPeekPanels();
+        };
+
+        if (reducedMotion) { finish(); return; }
+
+        // Обложки новой страницы могут быть ещё не готовы к отрисовке: карточки
+        // контейнера только что созданы и стоят ЗА кадром (лента сейчас показывает
+        // въехавшую панель), а у карточек loading="lazy". Если подменить ленту
+        // прямо сейчас, в этом кадре мелькнут пустые обложки — то самое «моргание».
+        // В окне в это время та же страница в панели, поэтому ожидание (обычно
+        // единицы миллисекунд, у закэшированных картинок) визуально не заметно.
+        // Обложки СТАРОЙ страницы (их покажет уехавшая панель) к этому моменту уже
+        // декодированы — их подготовили, пока лента ехала.
+        Promise.all([whenTrackCoversReady(listContainer), oldPageCoversReady]).then(() => {
+          // «Заглушку» жеста снимаем: панели должны встать такими, как нужно.
+          peekFadeOutPanel = null;
+          peekFadeOutUntil = 0;
+
+          // Всё одним кадром (до отрисовки): лента в нейтраль, въехавшая панель
+          // гаснет, уехавшая показывает старую страницу в полную силу. Её край
+          // сейчас занимал контейнер (он уходил в ту же сторону), поэтому подмена
+          // незаметна — видно только то, что старая страница осталась на месте.
+          // Старую страницу переносим теми же узлами (перерисовка их отсоединила):
+          // они уже отрисованы, поэтому картинки не «моргают». Если перерисовка
+          // узлы переиспользовала, собираем карточки заново.
+          const canMoveOldCards = oldPageCards.length > 0 && oldPageCards.every(card => !card.isConnected);
+          if (canMoveOldCards) exitPanel.replaceChildren(...oldPageCards);
+          else renderPeekPanel(exitPanel, prevLang, prevPage);
+          // Содержимое панелей теперь не соответствует подписи (в уехавшей панели
+          // лежит старая страница), поэтому следующая перерисовка обязана пройти —
+          // её заранее делает warmTrackPeekPanels в finish().
+          peekSignature = '';
+          setTrackX('translate3d(-100%, 0, 0)', false);
+          fadePeekPanel(entryPanel, 0, false);
+          fadePeekPanel(exitPanel, 1, false);
+          flushTrackStyles();
+
+          // …и она плавно растворяется — ровно с той стороны, куда ушёл свайп.
+          let peekSettled = false;
+          const onPeekFadeEnd = (e) => {
+            // Только переход прозрачности самой панели: события карточек внутри
+            // всплывают сюда же и обрывали бы растворение раньше времени.
+            if (e.target !== exitPanel || e.propertyName !== 'opacity') return;
+            settlePeek();
+          };
+          const settlePeek = () => {
+            if (peekSettled) return;
+            peekSettled = true;
+            clearTimeout(peekWatchdog);
+            exitPanel.removeEventListener('transitionend', onPeekFadeEnd);
+            finish();
+          };
+          // Страховка: если transitionend не придёт (панель уже прозрачная).
+          const peekWatchdog = setTimeout(settlePeek, PEEK_DISSOLVE_MS + 160);
+          exitPanel.addEventListener('transitionend', onPeekFadeEnd);
+          fadePeekPanel(exitPanel, 0, true, PEEK_DISSOLVE_MS);
+        });
+      });
+      return true;
+    };
+    animateTrackTransition = runTrackTransition;
+
+    // Свайп вправо = вперёд (панель следующей страницы лежит слева).
+    const settleSwipe = (direction) => {
+      runTrackTransition(direction, () => stepTrackPage(direction), 'swipe');
+    };
+
+    /* ── Стрелки листания (телефон) ─────────────────────────────────────────
+       Листают список тем же переходом, что и свайп, но по-карусельному:
+       правая стрелка толкает список влево (следующие треки въезжают справа),
+       левая — вправо (предыдущие въезжают слева). Видимость и положение
+       включает syncTrackNav() из renderTrackList. */
+    const navPrevBtn = document.getElementById('trackNavPrevBtn');
+    const navNextBtn = document.getElementById('trackNavNextBtn');
+    const navWrap = document.getElementById('trackListNavWrap');
+
+    if (navPrevBtn) navPrevBtn.addEventListener('click', () => runTrackTransition(1, () => stepTrackPage(-1), 'nav'));
+    if (navNextBtn) navNextBtn.addEventListener('click', () => runTrackTransition(-1, () => stepTrackPage(1), 'nav'));
+
+    syncTrackNav = () => {
+      const shouldShow = window.innerWidth < 640 && getTrackSteps().length > 1;
+      swipeViewport.classList.toggle('nr-track-nav-mode', shouldShow);
+
+      const t = (CONFIG.i18n && CONFIG.i18n[currentLang] && CONFIG.i18n[currentLang].player) || {};
+      if (navPrevBtn) navPrevBtn.setAttribute('aria-label', t.prevBtn || 'Back');
+      if (navNextBtn) navNextBtn.setAttribute('aria-label', t.nextBtn || 'Next');
+
+      if (!shouldShow || !navWrap || !navPrevBtn || !navNextBtn) return;
+
+      // Стрелки ставим ровно в середину свободной полосы между краем страницы и
+      // краем карточек. Меряем по вьюпорту и его боковым зонам, а НЕ по
+      // контейнеру карточек: во время свайпа лента сдвинута, и замер по ней
+      // уводил стрелки в сторону.
+      const wrapRect = navWrap.getBoundingClientRect();
+      const vpRect = swipeViewport.getBoundingClientRect();
+      const vpStyle = getComputedStyle(swipeViewport);
+      const padLeft = parseFloat(vpStyle.paddingLeft) || 0;
+      const padRight = parseFloat(vpStyle.paddingRight) || 0;
+      const padBottom = parseFloat(vpStyle.paddingBottom) || 0;
+      const arrowW = navPrevBtn.offsetWidth || 30;
+
+      const cardsLeft = vpRect.left + padLeft;
+      const cardsRight = vpRect.right - padRight;
+      const cardsCenterY = vpRect.top + (vpRect.height - padBottom) / 2;
+
+      const bandLeft = cardsLeft;                             // полоса 0 … карточки
+      const bandRight = window.innerWidth - cardsRight;       // полоса карточки … край окна
+
+      const prevScreenLeft = Math.max(0, (bandLeft - arrowW) / 2);
+      const nextScreenRight = Math.max(0, (bandRight - arrowW) / 2);
+
+      navPrevBtn.style.left = (prevScreenLeft - wrapRect.left) + 'px';
+      navNextBtn.style.right = (nextScreenRight - (window.innerWidth - wrapRect.right)) + 'px';
+
+      // Вертикально — ровно по центру карточек (нижний padding вьюпорта — это
+      // место, куда «вкатываются» карточки, в высоту списка он не входит).
+      const centerY = cardsCenterY - wrapRect.top;
+      navPrevBtn.style.top = centerY + 'px';
+      navNextBtn.style.top = centerY + 'px';
+    };
+
+    // Свайп не зачтён — лента плавно возвращается к текущим карточкам,
+    // а соседние страницы так же плавно растворяются.
+    const resetSwipe = () => {
+      swipeAnimating = true;
+      setPeekFade(0, 0, true, true);
+      flushTrackStyles();
+      setTrackX('translate3d(-100%, 0, 0)', true);
+      afterTrackTransition(() => {
+        exitSwipeMode();
+        swipeAnimating = false;
+      });
+    };
+
+    swipeViewport.addEventListener('touchstart', (e) => {
+      if (swipeAnimating) return;
+      const touch = e.changedTouches[0];
+      swipeStartX = touch.clientX;
+      swipeStartY = touch.clientY;
+      swipeAxis = null;
     }, { passive: true });
 
-    listContainer.addEventListener('touchend', (e) => {
-      const touchEndX = e.changedTouches[0].screenX;
-      if (touchStartX - touchEndX > 60) {
-        nextTrackPage();
-      } else if (touchEndX - touchStartX > 60) {
-        prevTrackPage();
+    swipeViewport.addEventListener('touchmove', (e) => {
+      if (swipeAnimating || swipeAxis === 'y') return;
+      const touch = e.changedTouches[0];
+      const dx = touch.clientX - swipeStartX;
+      const dy = touch.clientY - swipeStartY;
+
+      // Ось жеста определяем один раз по первым сантиметрам движения.
+      if (swipeAxis === null) {
+        if (Math.abs(dx) > SWIPE_AXIS_THRESHOLD || Math.abs(dy) > SWIPE_AXIS_THRESHOLD) {
+          swipeAxis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+        }
+        if (swipeAxis !== 'x') return;
+        // Горизонтальный жест: показываем соседние треки и ведём ленту.
+        enterSwipeMode('swipe');
       }
+
+      moveTrackWithFinger(dx);
+    }, { passive: true });
+
+    swipeViewport.addEventListener('touchend', (e) => {
+      if (swipeAnimating) return;
+      const touch = e.changedTouches[0];
+      const dx = touch.clientX - swipeStartX;
+      const dy = touch.clientY - swipeStartY;
+
+      // Вертикальный жест — не мешаем прокрутке страницы.
+      if (swipeAxis === 'y') return;
+      if (swipeAxis !== 'x') return;
+
+      // Короткий или спорный жест: лента плавно возвращается на место.
+      if (Math.abs(dx) < SWIPE_TRIGGER || Math.abs(dx) < Math.abs(dy)) {
+        resetSwipe();
+        return;
+      }
+
+      settleSwipe(dx > 0 ? 1 : -1);
+    }, { passive: true });
+
+    // Системный жест (например, «назад» или звонок) — тоже плавно возвращаем.
+    swipeViewport.addEventListener('touchcancel', () => {
+      if (swipeAnimating || swipeAxis !== 'x') return;
+      resetSwipe();
     }, { passive: true });
   }
 
   initDeckSeekBar();
   updateMasterDeckUI();
   renderTrackList();
+  // Панели соседних страниц собираем и декодируем заранее: тогда первый же
+  // свайп (в том числе быстрый) показывает готовые обложки, без «моргания».
+  if (typeof warmTrackPeekPanels === 'function') warmTrackPeekPanels();
 }
 
 function showStickyPlayer() {
@@ -624,20 +1321,18 @@ function showStickyPlayer() {
       document.documentElement.style.setProperty('--sticky-player-height', barHeight + 'px');
     }
 
-    if (typeof ScrollTrigger !== 'undefined') {
-      ScrollTrigger.refresh();
-    }
+    scheduleScrollTriggerRefresh(0);
     if (window.NickRiseAnimations && window.NickRiseAnimations.updateRevealObserver) {
       window.NickRiseAnimations.updateRevealObserver();
     }
     setTimeout(() => {
-      if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
+      scheduleScrollTriggerRefresh(0);
       if (window.NickRiseAnimations && window.NickRiseAnimations.updateRevealObserver) {
         window.NickRiseAnimations.updateRevealObserver();
       }
     }, 300);
     setTimeout(() => {
-      if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
+      scheduleScrollTriggerRefresh(0);
       if (window.NickRiseAnimations && window.NickRiseAnimations.updateRevealObserver) {
         window.NickRiseAnimations.updateRevealObserver();
       }
@@ -1111,25 +1806,25 @@ function initDeckSeekBar() {
 }
 
 function prevDeckTrack() {
-  const filtered = getEnabledTracks().filter(tr => activeGenre === 'all' || tr.genre === activeGenre);
-  if (filtered.length === 0) return;
+  const tracks = getEnabledTracks();
+  if (tracks.length === 0) return;
 
-  const curIdx = filtered.findIndex(t => t.id === activeTrackId);
+  const curIdx = tracks.findIndex(t => t.id === activeTrackId);
   let nextIdx = curIdx - 1;
-  if (nextIdx < 0) nextIdx = filtered.length - 1;
+  if (nextIdx < 0) nextIdx = tracks.length - 1;
 
-  selectTrack(filtered[nextIdx].id, true);
+  selectTrack(tracks[nextIdx].id, true);
 }
 
 function nextDeckTrack() {
-  const filtered = getEnabledTracks().filter(tr => activeGenre === 'all' || tr.genre === activeGenre);
-  if (filtered.length === 0) return;
+  const tracks = getEnabledTracks();
+  if (tracks.length === 0) return;
 
-  const curIdx = filtered.findIndex(t => t.id === activeTrackId);
+  const curIdx = tracks.findIndex(t => t.id === activeTrackId);
   let nextIdx = curIdx + 1;
-  if (nextIdx >= filtered.length) nextIdx = 0;
+  if (nextIdx >= tracks.length) nextIdx = 0;
 
-  selectTrack(filtered[nextIdx].id, true);
+  selectTrack(tracks[nextIdx].id, true);
 }
 
 function updateMasterDeckUI() {
@@ -1146,7 +1841,11 @@ function updateMasterDeckUI() {
   const trackTitle = resolveDeviceText(track.title, currentDevice);
   const trackArtist = resolveDeviceText(track.artist, currentDevice);
 
-  document.querySelectorAll('.deck-cover').forEach(el => { el.src = track.cover; });
+  // Обложка в плеере: если файл трека недоступен — показываем заглушку.
+  document.querySelectorAll('.deck-cover').forEach(el => {
+    el.onerror = () => { el.onerror = null; el.src = './image/!image_none.jpg'; };
+    el.src = track.cover;
+  });
   document.querySelectorAll('.deck-title').forEach(el => { el.textContent = trackTitle; });
   document.querySelectorAll('.deck-artist').forEach(el => { el.textContent = trackArtist; });
   document.querySelectorAll('.deck-genre').forEach(el => { el.textContent = genreText; });
@@ -1194,27 +1893,226 @@ function updateDeckProgressUI() {
   if (progressBar) progressBar.style.width = `${pct}%`;
 }
 
+/* Ждём, пока обложки будут готовы к отрисовке. Зачем: у карточек стоит
+   loading="lazy", а панели ленты и только что перерисованный список в момент
+   перехода находятся ЗА кадром — браузер откладывает их загрузку и декодирование,
+   и в кадре подмены ленты мелькали бы пустые обложки («моргание» треков).
+   img.decode() резолвится, когда картинка декодирована и готова к отрисовке
+   (для уже закэшированной — почти мгновенно); страховка по времени нужна,
+   чтобы переход не задерживался из-за медленной сети. */
+const TRACK_COVERS_WAIT_MS = 240;
+
+function whenTrackCoversReady(root, timeoutMs = TRACK_COVERS_WAIT_MS) {
+  if (!root) return Promise.resolve();
+  const imgs = Array.from(root.querySelectorAll('img'));
+  if (!imgs.length) return Promise.resolve();
+
+  const allReady = Promise.all(imgs.map(img => {
+    // decode() заодно запускает загрузку, если она ещё не началась.
+    if (typeof img.decode === 'function') return img.decode().catch(() => {});
+    if (img.complete) return Promise.resolve();
+    return new Promise(resolve => {
+      img.addEventListener('load', resolve, { once: true });
+      img.addEventListener('error', resolve, { once: true });
+    });
+  }));
+
+  return Promise.race([
+    allReady,
+    new Promise(resolve => setTimeout(resolve, timeoutMs))
+  ]);
+}
+
+/* Готовит обложки страницы к отрисовке, не трогая разметку: создаём картинки
+   «на лету» и декодируем их. Нужно перед подменой ленты — уехавшая панель
+   получает СТАРУЮ страницу уже в момент подмены, и если картинки к этому
+   моменту не готовы, старые треки на мгновение показываются пустыми
+   (это и есть «моргание» при быстром листании). */
+function predecodeTrackCovers(lang, page) {
+  const tracks = (typeof getTracksForState === 'function') ? getTracksForState(lang, page) : [];
+  return Promise.all(tracks.map(track => {
+    const img = new Image();
+    img.decoding = 'async';
+    img.src = track.cover;
+    if (typeof img.decode === 'function') return img.decode().catch(() => {});
+    return Promise.resolve();
+  }));
+}
+
+// Карточка трека. withId=false используется для peek-панелей («соседние»
+// треки во время свайпа): там карточка нужна только визуально, иначе в
+// документе появились бы дубли id вида track-item-<id>.
+// eagerImages=true — грузить обложку сразу, не откладывая: такие карточки
+// создаются за кадром (панели ленты, список во время перехода), а «ленивая»
+// загрузка в этот момент откладывается, и обложка мелькала бы пустой.
+function createTrackCard(track, { isMobileView, currentDevice, withId = true, eagerImages = false }) {
+  const isSelected = activeTrackId === track.id;
+  const isPlaying = isSelected && isAudioPlaying(track.id);
+  const genreText = resolveI18nValue(track.genreLabel, currentLang, currentDevice);
+  const trackTitle = resolveDeviceText(track.title, currentDevice);
+  const trackArtist = resolveDeviceText(track.artist, currentDevice);
+
+  const itemCard = document.createElement('div');
+  if (withId) {
+    itemCard.id = `track-item-${track.id}`;
+    itemCard.onclick = () => toggleTrack(track.id);
+  }
+  itemCard.setAttribute('data-track-id', track.id);
+  itemCard.setAttribute('data-view', isMobileView ? 'mobile' : 'desktop');
+  itemCard.className = (isMobileView
+    ? `p-3 rounded-2xl border transition-all duration-300 cursor-pointer flex flex-col gap-3 group ${
+        isSelected
+          ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10'
+          : 'bg-[#0B0E15] border-gray-800/80 hover:border-amber-500/40 hover:bg-[#0F131E]'
+      }`
+    : `p-3.5 rounded-2xl border transition-all duration-300 cursor-pointer flex items-center justify-between gap-3 group ${
+        isSelected
+          ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10'
+          : 'bg-[#0B0E15] border-gray-800/80 hover:border-amber-500/40 hover:bg-[#0F131E]'
+      }`
+  );
+
+  const trackCoverBox = document.createElement('div');
+  trackCoverBox.className = (isMobileView
+    ? `track-cover-box relative w-full aspect-square rounded-xl overflow-hidden flex-shrink-0 border transition-colors duration-300 ${isSelected ? 'border-amber-500' : 'border-gray-800'}`
+    : `track-cover-box relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl overflow-hidden flex-shrink-0 border transition-colors duration-300 ${isSelected ? 'border-amber-500' : 'border-gray-800'}`
+  );
+
+  const coverImg = document.createElement('img');
+  coverImg.src = track.cover;
+  coverImg.alt = trackTitle;
+  coverImg.loading = eagerImages ? 'eager' : 'lazy';
+  coverImg.decoding = 'async';
+  coverImg.className = 'w-full h-full object-cover group-hover:scale-105 transition-transform duration-300';
+  // Если обложки нет/не загрузилась — подставляем единую заглушку «нет обложки».
+  coverImg.onerror = () => { coverImg.onerror = null; coverImg.src = './image/!image_none.jpg'; };
+  trackCoverBox.appendChild(coverImg);
+
+  const liveOverlay = document.createElement('div');
+  liveOverlay.className = 'track-live-overlay absolute inset-0 bg-black/60 items-center justify-center';
+  liveOverlay.style.display = isPlaying ? 'flex' : 'none';
+  const liveLed = document.createElement('span');
+  liveLed.className = 'w-2.5 h-2.5 rounded-full vu-led-green animate-ping';
+  liveOverlay.appendChild(liveLed);
+  trackCoverBox.appendChild(liveOverlay);
+
+  const meta = document.createElement('div');
+  const titleEl = document.createElement('h4');
+  titleEl.className = (isMobileView
+    ? 'track-card-title text-sm font-extrabold text-white truncate group-hover:text-amber-400 transition-colors'
+    : 'track-card-title text-xs sm:text-sm font-extrabold text-white truncate group-hover:text-amber-400 transition-colors'
+  );
+  titleEl.textContent = trackTitle;
+  const artistEl = document.createElement('p');
+  artistEl.className = (isMobileView
+    ? 'track-card-artist text-xs text-gray-400 truncate mt-0.5'
+    : 'track-card-artist text-[11px] text-gray-400 truncate mt-0.5'
+  );
+  artistEl.textContent = trackArtist;
+  meta.appendChild(titleEl);
+  meta.appendChild(artistEl);
+
+  const genreSpan = document.createElement('span');
+  genreSpan.className = (isMobileView
+    // Жанр по центру и чуть крупнее, чтобы проще было заметить жанр трека.
+    ? `track-genre-badge self-center text-[11px] font-bold px-3 py-1 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}`
+    : `track-genre-badge text-[11px] font-extrabold px-3 py-1 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}`
+  );
+  genreSpan.textContent = genreText;
+
+  if (isMobileView) {
+    // ── МОБИЛЬНЫЙ ВИД: вертикальный прямоугольник ─────────────────────
+    // Квадратное фото на всю ширину карточки, по центру фото кнопка
+    // play/pause «треугольником» без фона, ниже название + артист,
+    // ниже жанр.
+
+    const playBtn = document.createElement('button');
+    playBtn.type = 'button';
+    playBtn.setAttribute('aria-label', isPlaying ? 'Pause' : 'Play');
+    if (withId) playBtn.onclick = (ev) => { ev.stopPropagation(); toggleTrack(track.id); };
+    // Кнопка-контейнер крупнее (64px) — сам треугольник внутри теперь 48px,
+    // плюс плотная тень: на светлых обложках его стало хорошо видно.
+    playBtn.className = `track-play-btn absolute inset-0 z-10 m-auto w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-110 cursor-pointer ${
+      isSelected
+        ? 'text-amber-400 hover:text-amber-300'
+        : 'text-white hover:text-amber-400'
+    } active:scale-95`;
+    playBtn.innerHTML = `<svg class="track-play-svg w-12 h-12 fill-current drop-shadow-[0_4px_12px_rgba(0,0,0,0.85)] pointer-events-none mx-auto" viewBox="0 0 24 24"><path d="${isPlaying ? 'M6 19h4V5H6v14zm8-14v14h4V5h-4z' : 'M8 5v14l11-7z'}"/></svg>`;
+    trackCoverBox.appendChild(playBtn);
+
+    meta.className = 'min-w-0 flex-1 flex-col';
+
+    itemCard.appendChild(trackCoverBox);
+    itemCard.appendChild(meta);
+    itemCard.appendChild(genreSpan);
+  } else {
+    // ── ПЛАНШЕТ / ДЕСКТОП: горизонтальный вид ─────────────────────────
+    const playBtn = document.createElement('button');
+    playBtn.type = 'button';
+    playBtn.setAttribute('aria-label', isPlaying ? 'Pause' : 'Play');
+    if (withId) playBtn.onclick = (ev) => { ev.stopPropagation(); toggleTrack(track.id); };
+    playBtn.className = `track-play-btn p-2 sm:p-2.5 rounded-xl transition-all cursor-pointer ${
+      isSelected
+        ? 'bg-amber-500 text-slate-950 font-black shadow-md'
+        : 'bg-gray-900 text-gray-300 hover:bg-amber-500 hover:text-slate-950'
+    }`;
+    playBtn.innerHTML = `<svg class="track-play-svg w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="${isPlaying ? 'M6 19h4V5H6v14zm8-14v14h4V5h-4z' : 'M8 5v14l11-7z'}"/></svg>`;
+
+    const leftRow = document.createElement('div');
+    leftRow.className = 'flex items-center gap-3.5 min-w-0 flex-1';
+    leftRow.appendChild(trackCoverBox);
+    meta.className = 'min-w-0 flex-1';
+    leftRow.appendChild(meta);
+
+    const rightRow = document.createElement('div');
+    rightRow.className = 'flex items-center gap-2 flex-shrink-0';
+    rightRow.appendChild(genreSpan);
+    rightRow.appendChild(playBtn);
+
+    itemCard.appendChild(leftRow);
+    itemCard.appendChild(rightRow);
+  }
+
+  return itemCard;
+}
+
 function renderTrackList(animate = false) {
   const container = document.getElementById('trackListContainer');
   if (!container) return;
 
+  // При свайп-переходе въездом карточек управляет свайп-лента (см. initPlayer).
+  if (suppressCardEnterAnimation) animate = false;
+
   const currentDevice = getDeviceType();
   // Мобильный вид карточек (вертикальный прямоугольник) — только < 640px.
-  // getTracksPerPage() меняет количество карточек на границе 640 (5 ↔ 6),
-  // поэтому при переходе mobile ⇄ tablet/desktop DOM всегда пересоздаётся.
+  // Структура карточки зависит от вида, поэтому при переходе mobile ⇄ desktop
+  // DOM всегда пересоздаётся (см. canReuseDOM ниже).
   const isMobileView = window.innerWidth < 640;
   const currentView = isMobileView ? 'mobile' : 'desktop';
   const perPage = getTracksPerPage();
-  const filtered = getEnabledTracks().filter(tr => activeGenre === 'all' || tr.genre === activeGenre);
-  const totalItems = filtered.length;
+  // Жанровые фильтры убраны: показываем все треки текущего языка (RU/EN).
+  const tracks = getEnabledTracks();
+  const totalItems = tracks.length;
   const maxPages = Math.ceil(totalItems / perPage) || 1;
 
   if (currentTrackPage >= maxPages) {
     currentTrackPage = Math.max(0, maxPages - 1);
   }
 
+  // Пагинация нужна, только если карточек больше одной страницы:
+  // при 4 колонках и 4 треках весь список влезает в один ряд.
+  const paginationWrap = document.getElementById('trackPagination');
+  if (paginationWrap) {
+    const shouldShowPagination = maxPages > 1;
+    const isPaginationShown = paginationWrap.style.display !== 'none';
+    if (shouldShowPagination !== isPaginationShown) {
+      paginationWrap.style.display = shouldShowPagination ? '' : 'none';
+      scheduleScrollTriggerRefresh(0);
+    }
+  }
+
   const startIdx = currentTrackPage * perPage;
-  const visibleTracks = filtered.slice(startIdx, startIdx + perPage);
+  const visibleTracks = tracks.slice(startIdx, startIdx + perPage);
 
   const existingCards = Array.from(container.children);
   const existingIds = existingCards.map(c => c.getAttribute('data-track-id'));
@@ -1329,136 +2227,14 @@ function renderTrackList(animate = false) {
     if (visibleTracks.length === 0) {
       const emptyDiv = document.createElement('div');
       emptyDiv.className = 'col-span-full py-12 text-center text-gray-500 text-xs sm:text-sm font-medium';
-      emptyDiv.textContent = currentLang === 'ru' ? 'В этом жанре пока нет доступных треков' : 'No tracks available in this genre yet';
+      emptyDiv.textContent = currentLang === 'ru' ? 'Пока нет доступных треков' : 'No tracks available yet';
       container.appendChild(emptyDiv);
     }
 
     visibleTracks.forEach(track => {
-      const isSelected = activeTrackId === track.id;
-      const isPlaying = isSelected && isAudioPlaying(track.id);
-      const genreText = resolveI18nValue(track.genreLabel, currentLang, currentDevice);
-      const trackTitle = resolveDeviceText(track.title, currentDevice);
-      const trackArtist = resolveDeviceText(track.artist, currentDevice);
-
-      const itemCard = document.createElement('div');
-      itemCard.id = `track-item-${track.id}`;
-      itemCard.setAttribute('data-track-id', track.id);
-      itemCard.setAttribute('data-view', currentView);
-      itemCard.onclick = () => toggleTrack(track.id);
-      itemCard.className = (isMobileView
-        ? `p-3 rounded-2xl border transition-all duration-300 cursor-pointer flex flex-col gap-3 group ${
-            isSelected 
-              ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10' 
-              : 'bg-[#0B0E15] border-gray-800/80 hover:border-amber-500/40 hover:bg-[#0F131E]'
-          }`
-        : `p-3.5 rounded-2xl border transition-all duration-300 cursor-pointer flex items-center justify-between gap-3 group ${
-            isSelected 
-              ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10' 
-              : 'bg-[#0B0E15] border-gray-800/80 hover:border-amber-500/40 hover:bg-[#0F131E]'
-          }`
-      );
-
-      const trackCoverBox = document.createElement('div');
-      trackCoverBox.className = (isMobileView
-        ? `track-cover-box relative w-full aspect-square rounded-xl overflow-hidden flex-shrink-0 border transition-colors duration-300 ${isSelected ? 'border-amber-500' : 'border-gray-800'}`
-        : `track-cover-box relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl overflow-hidden flex-shrink-0 border transition-colors duration-300 ${isSelected ? 'border-amber-500' : 'border-gray-800'}`
-      );
-
-      const coverImg = document.createElement('img');
-      coverImg.src = track.cover;
-      coverImg.alt = trackTitle;
-      coverImg.loading = 'lazy';
-      coverImg.decoding = 'async';
-      coverImg.className = 'w-full h-full object-cover group-hover:scale-105 transition-transform duration-300';
-      coverImg.onerror = () => { coverImg.onerror = null; coverImg.src = './image/cover1.webp'; };
-      trackCoverBox.appendChild(coverImg);
-
-      const liveOverlay = document.createElement('div');
-      liveOverlay.className = 'track-live-overlay absolute inset-0 bg-black/60 items-center justify-center';
-      liveOverlay.style.display = isPlaying ? 'flex' : 'none';
-      const liveLed = document.createElement('span');
-      liveLed.className = 'w-2.5 h-2.5 rounded-full vu-led-green animate-ping';
-      liveOverlay.appendChild(liveLed);
-      trackCoverBox.appendChild(liveOverlay);
-
-      const meta = document.createElement('div');
-      const titleEl = document.createElement('h4');
-      titleEl.className = (isMobileView
-        ? 'track-card-title text-sm font-extrabold text-white truncate group-hover:text-amber-400 transition-colors'
-        : 'track-card-title text-xs sm:text-sm font-extrabold text-white truncate group-hover:text-amber-400 transition-colors'
-      );
-      titleEl.textContent = trackTitle;
-      const artistEl = document.createElement('p');
-      artistEl.className = (isMobileView
-        ? 'track-card-artist text-xs text-gray-400 truncate mt-0.5'
-        : 'track-card-artist text-[11px] text-gray-400 truncate mt-0.5'
-      );
-      artistEl.textContent = trackArtist;
-      meta.appendChild(titleEl);
-      meta.appendChild(artistEl);
-
-      const genreSpan = document.createElement('span');
-      genreSpan.className = (isMobileView
-        // Жанр по центру и чуть крупнее, чтобы проще было заметить жанр трека.
-        ? `track-genre-badge self-center text-[11px] font-bold px-3 py-1 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}`
-        : `track-genre-badge text-[11px] font-extrabold px-3 py-1 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}`
-      );
-      genreSpan.textContent = genreText;
-
-      if (isMobileView) {
-        // ── МОБИЛЬНЫЙ ВИД: вертикальный прямоугольник ─────────────────────
-        // Квадратное фото на всю ширину карточки, по центру фото кнопка
-        // play/pause «треугольником» без фона, ниже название + артист,
-        // ниже жанр.
-
-        const playBtn = document.createElement('button');
-        playBtn.type = 'button';
-        playBtn.setAttribute('aria-label', isPlaying ? 'Pause' : 'Play');
-        playBtn.onclick = (ev) => { ev.stopPropagation(); toggleTrack(track.id); };
-        // Кнопка-контейнер крупнее (64px) — сам треугольник внутри теперь 48px,
-        // плюс плотная тень: на светлых обложках его стало хорошо видно.
-        playBtn.className = `track-play-btn absolute inset-0 z-10 m-auto w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-110 cursor-pointer ${
-          isSelected
-            ? 'text-amber-400 hover:text-amber-300'
-            : 'text-white hover:text-amber-400'
-        } active:scale-95`;
-        playBtn.innerHTML = `<svg class="track-play-svg w-12 h-12 fill-current drop-shadow-[0_4px_12px_rgba(0,0,0,0.85)] pointer-events-none mx-auto" viewBox="0 0 24 24"><path d="${isPlaying ? 'M6 19h4V5H6v14zm8-14v14h4V5h-4z' : 'M8 5v14l11-7z'}"/></svg>`;
-        trackCoverBox.appendChild(playBtn);
-
-        meta.className = 'min-w-0 flex-1 flex-col';
-
-        itemCard.appendChild(trackCoverBox);
-        itemCard.appendChild(meta);
-        itemCard.appendChild(genreSpan);
-      } else {
-        // ── ПЛАНШЕТ / ДЕСКТОП: прежний горизонтальный вид ──────────────────
-        const playBtn = document.createElement('button');
-        playBtn.type = 'button';
-        playBtn.setAttribute('aria-label', isPlaying ? 'Pause' : 'Play');
-        playBtn.onclick = (ev) => { ev.stopPropagation(); toggleTrack(track.id); };
-        playBtn.className = `track-play-btn p-2 sm:p-2.5 rounded-xl transition-all cursor-pointer ${
-          isSelected 
-            ? 'bg-amber-500 text-slate-950 font-black shadow-md' 
-            : 'bg-gray-900 text-gray-300 hover:bg-amber-500 hover:text-slate-950'
-        }`;
-        playBtn.innerHTML = `<svg class="track-play-svg w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="${isPlaying ? 'M6 19h4V5H6v14zm8-14v14h4V5h-4z' : 'M8 5v14l11-7z'}"/></svg>`;
-
-        const leftRow = document.createElement('div');
-        leftRow.className = 'flex items-center gap-3.5 min-w-0 flex-1';
-        leftRow.appendChild(trackCoverBox);
-        meta.className = 'min-w-0 flex-1';
-        leftRow.appendChild(meta);
-
-        const rightRow = document.createElement('div');
-        rightRow.className = 'flex items-center gap-2 flex-shrink-0';
-        rightRow.appendChild(genreSpan);
-        rightRow.appendChild(playBtn);
-
-        itemCard.appendChild(leftRow);
-        itemCard.appendChild(rightRow);
-      }
-
-      container.appendChild(itemCard);
+      // Во время свайп-перехода список перерисовывается за кадром — грузим
+      // обложки сразу, иначе «ленивая» загрузка отложилась бы до подмены ленты.
+      container.appendChild(createTrackCard(track, { isMobileView, currentDevice, withId: true, eagerImages: suppressCardEnterAnimation }));
     });
 
     if (animate && typeof gsap !== 'undefined' && container.children.length > 0) {
@@ -1519,6 +2295,10 @@ function renderTrackList(animate = false) {
   if (!animate && typeof initPlayerTrackCardsTimeline === 'function') {
     initPlayerTrackCardsTimeline(false);
   }
+
+  // Точки-индикатор листания и стрелки на телефоне
+  renderTrackDots();
+  if (typeof syncTrackNav === 'function') syncTrackNav();
 }
 
 // --- SERVICES SECTION ---
@@ -1748,9 +2528,7 @@ function renderServices() {
   if (typeof initServicesGsapAnimation === 'function') {
     initServicesGsapAnimation();
   }
-  if (typeof ScrollTrigger !== 'undefined') {
-    ScrollTrigger.refresh();
-  }
+  scheduleScrollTriggerRefresh(0);
 }
 
 /* ── Телефонная карусель услуг: стартовое положение ───────────────────
@@ -1767,6 +2545,7 @@ let servicesContainerObserver = null;  // ResizeObserver на контейнер
 let servicesAutoCentered = false;      // стартовое положение уже применено
 let servicesUserScrolled = false;      // пользователь сам пролистал карусель
 let servicesAppliedScrollLeft = null;  // последняя позиция, которую выставили мы
+let servicesCoverflowTransition = null; // последняя строка transition, выставленная coverflow
 let isServicesScrollTicking = false;
 
 function resetServicesCarouselState() {
@@ -1910,6 +2689,9 @@ function updateServicesDots(withTransition = false) {
         card.style.zIndex = '';
         card.style.transition = '';
         delete card.dataset.nrCoverflow;
+        // Сбрасываем и кэш значений: иначе при возврате в режим карусели
+        // coverflow решил бы, что стили уже выставлены, и ничего не записал.
+        delete card.__nrCoverflow;
       }
     });
     return;
@@ -1921,22 +2703,41 @@ function updateServicesDots(withTransition = false) {
   // Координаты карточек внутри прокручиваемой области: padding-left контейнера
   // плюс смещение от первой карточки. Не зависят ни от offsetParent, ни от
   // coverflow-трансформа, поэтому coverflow считается точно.
+  //
+  // ВАЖНО: сначала ЧИТАЕМ все размеры (одна переклейка раскладки), и только
+  // потом пишем стили. Раньше чтение offsetWidth/offsetLeft переплеталось с
+  // записью transform, и браузер пересчитывал раскладку заново на каждой
+  // карточке — при листании карусели это давало «фризы».
   const padding = parseFloat(window.getComputedStyle(container).paddingLeft) || 0;
-  const firstCard = cards[0];
+  const firstLeft = cards[0].offsetLeft;
+  const metrics = new Array(cards.length);
+  for (let i = 0; i < cards.length; i++) {
+    const w = cards[i].offsetWidth || 290;
+    metrics[i] = { w: w, center: padding + (cards[i].offsetLeft - firstLeft) + (w / 2) };
+  }
 
   let activeIndex = 0;
   let minDiff = Infinity;
-
-  Array.from(cards).forEach((card, idx) => {
-    const cardWidth = card.offsetWidth || 290;
-    const cardCenter = padding + (card.offsetLeft - firstCard.offsetLeft) + (cardWidth / 2);
-    const diff = cardCenter - containerCenter;
-    const absDiff = Math.abs(diff);
-
+  for (let i = 0; i < metrics.length; i++) {
+    const absDiff = Math.abs(metrics[i].center - containerCenter);
     if (absDiff < minDiff) {
       minDiff = absDiff;
-      activeIndex = idx;
+      activeIndex = i;
     }
+  }
+
+  // Режим перехода меняется редко (ресайз или ручная прокрутка), поэтому строку
+  // transition пишем только когда она реально другая, а не на каждом кадре.
+  const transitionValue = withTransition
+    ? 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease, z-index 0.4s step-start'
+    : 'none';
+  const transitionChanged = transitionValue !== servicesCoverflowTransition;
+  servicesCoverflowTransition = transitionValue;
+
+  for (let idx = 0; idx < cards.length; idx++) {
+    const card = cards[idx];
+    const cardWidth = metrics[idx].w;
+    const diff = metrics[idx].center - containerCenter;
 
     // Normalized distance from viewport center (-1 to 1)
     const progress = Math.max(-1.5, Math.min(1.5, diff / cardWidth));
@@ -1950,19 +2751,23 @@ function updateServicesDots(withTransition = false) {
     const rotateY = -10 * progress; // 3D tilt
     const zIndex = Math.max(1, Math.round(30 - clampedAbs * 20));
 
-    if (withTransition) {
-      card.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease, z-index 0.4s step-start';
-    } else {
-      card.style.transition = 'none';
-    }
-
     // Помечаем, что transform/opacity карточки выставил именно coverflow — по
     // этому маркеру они снимаются при возврате к сетке (планшет/десктоп).
-    card.dataset.nrCoverflow = '1';
-    card.style.transform = `translate3d(${shiftX.toFixed(1)}px, 0, 0) scale(${scale.toFixed(3)}) rotateY(${rotateY.toFixed(1)}deg)`;
-    card.style.opacity = opacity.toFixed(2);
-    card.style.zIndex = zIndex;
-  });
+    if (card.dataset.nrCoverflow !== '1') card.dataset.nrCoverflow = '1';
+
+    // Кэш последних выставленных значений: если карточка уже стоит так, как
+    // нужно, повторная запись только зря нагружает стилевой движок.
+    let cache = card.__nrCoverflow;
+    if (!cache) cache = card.__nrCoverflow = { t: '', o: '', z: '' };
+    if (transitionChanged || !cache.t) card.style.transition = transitionValue;
+
+    const nextTransform = `translate3d(${shiftX.toFixed(1)}px, 0, 0) scale(${scale.toFixed(3)}) rotateY(${rotateY.toFixed(1)}deg)`;
+    const nextOpacity = opacity.toFixed(2);
+    const nextZ = String(zIndex);
+    if (cache.t !== nextTransform) { cache.t = nextTransform; card.style.transform = nextTransform; }
+    if (cache.o !== nextOpacity) { cache.o = nextOpacity; card.style.opacity = nextOpacity; }
+    if (cache.z !== nextZ) { cache.z = nextZ; card.style.zIndex = nextZ; }
+  }
 
   const dotsContainer = document.getElementById('servicesDotsContainer');
   if (dotsContainer) {
@@ -1982,6 +2787,18 @@ function initFaq() {
   renderFaq();
 }
 
+// FAQ-ответы в config.js заканчиваются промо-блоком со скидкой (FAQ_PROMO_RU / FAQ_PROMO_EN).
+// Промо рендерится отдельным блоком ПОСЛЕ текста ответа: внутри <p> блок-уровневый <div>
+// недопустим — парсер выносит его за пределы абзаца, и при повторном рендере промо дублируется.
+function splitFaqAnswer(answerHtml) {
+  const promo = currentLang === 'ru' ? FAQ_PROMO_RU : FAQ_PROMO_EN;
+  if (typeof promo === 'string' && promo && answerHtml.indexOf(promo) !== -1) {
+    // split/join убирает все вхождения — промо-блок на странице всегда один
+    return { text: answerHtml.split(promo).join(''), promo: promo };
+  }
+  return { text: answerHtml, promo: '' };
+}
+
 function renderFaq() {
   const container = document.getElementById('faqContainer');
   if (!container) return;
@@ -1998,12 +2815,16 @@ function renderFaq() {
       const q = resolveDeviceText(qRaw, currentDevice);
       const rawA = resolveDeviceText(aRaw, currentDevice);
       const a = (rawA || '').replace(/\n/g, '<br/>');
+      const answer = splitFaqAnswer(a);
 
       const qSpan = card.querySelector('.faq-q-text') || card.querySelector('button > span');
       if (qSpan) qSpan.textContent = q;
 
-      const aP = card.querySelector('.faq-content-wrapper p');
-      if (aP) aP.innerHTML = a;
+      const aP = card.querySelector('.faq-a-text') || card.querySelector('.faq-content-wrapper p');
+      if (aP) aP.innerHTML = answer.text;
+
+      const promoSlot = card.querySelector('.faq-promo-slot');
+      if (promoSlot) promoSlot.innerHTML = answer.promo;
 
       const body = card.querySelector('.faq-content-wrapper');
       if (body && body.getAttribute('data-open') === 'true') {
@@ -2024,6 +2845,7 @@ function renderFaq() {
     const q = resolveDeviceText(qRaw, currentDevice);
     const rawA = resolveDeviceText(aRaw, currentDevice);
     const a = (rawA || '').replace(/\n/g, '<br/>');
+    const answer = splitFaqAnswer(a);
     const itemKey = `faq-${index}`;
 
     const el = document.createElement('div');
@@ -2046,7 +2868,8 @@ function renderFaq() {
       </button>
       <div id="faq-body-${itemKey}" class="faq-content-wrapper overflow-hidden" style="height: 0px; opacity: 0; display: none;" data-open="false">
         <div class="px-5 pb-5 sm:px-6 sm:pb-6 text-gray-300 text-sm sm:text-base leading-relaxed border-t border-gray-800/60 pt-4">
-          <p>${a}</p>
+          <p class="faq-a-text">${answer.text}</p>
+          <div class="faq-promo-slot">${answer.promo}</div>
         </div>
       </div>
     `;
@@ -2057,9 +2880,7 @@ function renderFaq() {
     if (typeof initFaqGsapAnimation === 'function') {
       initFaqGsapAnimation();
     }
-    if (typeof ScrollTrigger !== 'undefined') {
-      ScrollTrigger.refresh();
-    }
+    scheduleScrollTriggerRefresh(0);
   }, 50);
 }
 
@@ -2123,7 +2944,7 @@ function openFaqItem(id) {
         onComplete: () => {
           body.style.height = 'auto';
           requestAnimationFrame(() => {
-            if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
+            scheduleScrollTriggerRefresh(0);
           });
         }
       }
@@ -2132,7 +2953,7 @@ function openFaqItem(id) {
     body.style.height = 'auto';
     body.style.opacity = '1';
     requestAnimationFrame(() => {
-      if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
+      scheduleScrollTriggerRefresh(0);
     });
   }
 }
@@ -2171,7 +2992,7 @@ function closeFaqItem(id) {
         body.style.display = 'none';
         body.style.height = '0px';
         requestAnimationFrame(() => {
-          if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
+          scheduleScrollTriggerRefresh(0);
         });
       }
     });
@@ -2180,7 +3001,7 @@ function closeFaqItem(id) {
     body.style.opacity = '0';
     body.style.display = 'none';
     requestAnimationFrame(() => {
-      if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
+      scheduleScrollTriggerRefresh(0);
     });
   }
 }
@@ -2353,7 +3174,9 @@ function closePriceCalcModal() {
   const modal = document.getElementById('priceCalcModal');
   if (modal && modal.classList.contains('active')) {
     modal.classList.remove('active');
-    // Отменяем незавершённые переходы шагов и снимаем «замороженную» высоту
+    // Отменяем запланированный авто-переход и незавершённые переходы шагов,
+    // снимаем «замороженную» высоту окна.
+    cancelCalcAutoAdvance();
     calcStepAnimId++;
     cancelCalcStepFade();
     resetCalcModalBox();
@@ -2362,6 +3185,7 @@ function closePriceCalcModal() {
 }
 
 function resetPriceCalc(animate = false) {
+  cancelCalcAutoAdvance();
   Object.keys(calcAnswers).forEach(key => { calcAnswers[key] = null; });
   const cfg = getCalcConfig();
   const range = document.getElementById('calcDurationRange');
@@ -2684,6 +3508,37 @@ function playCalcReceiptCascade() {
   );
 }
 
+// ── Авто-переход на вопросах Да/Нет ───────────────────────────────────────
+// Кнопки «Далее» на этих шагах нет: выбранный ответ сам ведёт к следующему
+// вопросу (небольшая пауза, чтобы выбор был виден). Если окно в этот момент
+// ещё перетекает по высоте, пробуем снова, пока переход не пройдёт.
+const CALC_AUTO_ADVANCE_MS = 340;
+let calcAutoAdvanceTimer = null;
+
+function cancelCalcAutoAdvance() {
+  if (calcAutoAdvanceTimer) { clearTimeout(calcAutoAdvanceTimer); calcAutoAdvanceTimer = null; }
+}
+
+function scheduleCalcAutoAdvance() {
+  cancelCalcAutoAdvance();
+  // Шаги 2..5 — вопросы Да/Нет; шаги 0, 1 и итог работают как раньше.
+  if (calcStep < 2 || calcStep >= CALC_LAST_STEP) return;
+
+  let waited = 0;
+  const attempt = () => {
+    calcAutoAdvanceTimer = setTimeout(() => {
+      calcAutoAdvanceTimer = null;
+      if (calcStep < 2 || calcStep >= CALC_LAST_STEP) return;
+      if (calcStepSwitching) {
+        if (waited < 2000) { waited += 130; attempt(); }
+        return;
+      }
+      nextCalcStep();
+    }, waited === 0 ? CALC_AUTO_ADVANCE_MS : 130);
+  };
+  attempt();
+}
+
 function nextCalcStep() {
   if (calcStepSwitching) return;   // окно ещё перетекает — не пролистываем
   if (calcStep >= CALC_LAST_STEP) return;
@@ -2694,6 +3549,8 @@ function nextCalcStep() {
 function prevCalcStep() {
   if (calcStepSwitching) return;
   if (calcStep <= 0) return;
+  // «Назад» отменяет запланированный авто-переход (иначе шаг ускачет вперёд).
+  cancelCalcAutoAdvance();
   goToCalcStepAnimated(calcStep - 1);
 }
 
@@ -2709,6 +3566,8 @@ function setCalcAnswer(optionId, value) {
   if (!(optionId in calcAnswers)) return;
   calcAnswers[optionId] = value;
   renderPriceCalcStep();
+  // Ответ выбран — сразу переходим к следующему вопросу.
+  scheduleCalcAutoAdvance();
 }
 
 // Перерисовка видимого шага: навигация и смена языка.
@@ -2924,6 +3783,9 @@ function openMobileMenu() {
   if (header) header.classList.add('mobile-menu-active');
   drawer.classList.add('is-open');
   if (overlay) overlay.classList.add('is-open');
+  // Блокируем скролл страницы под открытым меню (см. initMobileMenuScrollLock)
+  document.documentElement.classList.add('nr-menu-open');
+  document.body.classList.add('nr-menu-open');
 
   if (hamIcon) {
     hamIcon.classList.add('scale-50', 'opacity-0', '-rotate-90');
@@ -2949,6 +3811,9 @@ function closeMobileMenu() {
 
   drawer.classList.remove('is-open');
   if (overlay) overlay.classList.remove('is-open');
+  // Снимаем блокировку скролла страницы
+  document.documentElement.classList.remove('nr-menu-open');
+  document.body.classList.remove('nr-menu-open');
 
   if (hamIcon) {
     hamIcon.classList.remove('scale-50', 'opacity-0', '-rotate-90');
@@ -2967,6 +3832,34 @@ function closeMobileMenu() {
     }
     mobileMenuCloseTimer = null;
   }, 1220);
+}
+
+/* Блокировка прокрутки страницы при открытом бургер-меню (телефоны/планшеты).
+   Класс nr-menu-open (html/body) запрещает скролл через overflow: hidden, но iOS
+   может «протащить» страницу жестом — поэтому touch-жесты вне меню отменяются.
+   Внутри #mobileMenuDrawer прокрутка работает (длинные меню). */
+function initMobileMenuScrollLock() {
+  document.addEventListener('touchmove', (e) => {
+    if (!document.body.classList.contains('nr-menu-open')) return;
+    if (!e.touches || !e.touches[0]) return;
+    const drawer = document.getElementById('mobileMenuDrawer');
+    if (drawer && drawer.contains(e.target)) return; // скролл самого меню — не блокируем
+    e.preventDefault();
+  }, { passive: false });
+
+  // Если при открытом меню размер окна дорастил до десктопа (≥1024px) — закрываем,
+  // иначе блокировка скролла останется при невидимом меню
+  const desktopQuery = window.matchMedia('(min-width: 1024px)');
+  const onDesktop = (mq) => {
+    if (mq.matches && document.body.classList.contains('nr-menu-open')) {
+      closeMobileMenu();
+    }
+  };
+  if (typeof desktopQuery.addEventListener === 'function') {
+    desktopQuery.addEventListener('change', onDesktop);
+  } else if (typeof desktopQuery.addListener === 'function') {
+    desktopQuery.addListener(onDesktop); // старые Safari
+  }
 }
 
 // --- SMOOTH & LUXURIOUS ANCHOR NAVIGATION (Header buttons & in-page anchors) ---
@@ -3504,7 +4397,7 @@ function initPlayerGsapAnimation() {
   if (!section) return;
 
   const sectionHeader = section.querySelector('.text-center');
-  const filtersContainer = section.querySelector('#playerContentContainer .flex.flex-wrap');
+  // Жанровые фильтры убраны — анимируем только пагинацию и карточки треков.
   const paginationContainer = section.querySelector('#playerContentContainer .border-t');
 
   // Clean up previous timelines or triggers attached to player
@@ -3530,14 +4423,12 @@ function initPlayerGsapAnimation() {
     }
   });
 
-  const filterBtns = filtersContainer ? filtersContainer.querySelectorAll('.genre-filter-btn') : [];
   const trackContainer = document.getElementById('trackListContainer');
   const trackCards = trackContainer ? trackContainer.querySelectorAll(':scope > *') : [];
 
   // Respect prefers-reduced-motion
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     if (sectionHeader) gsap.set(sectionHeader, { opacity: 1, y: 0 });
-    if (filterBtns.length) gsap.set(filterBtns, { opacity: 1, y: 0, scale: 1 });
     trackCards.forEach(card => gsap.set(card, { opacity: 1, y: 0 }));
     if (paginationContainer) gsap.set(paginationContainer, { opacity: 1, y: 0 });
     return;
@@ -3550,7 +4441,6 @@ function initPlayerGsapAnimation() {
 
   if (!isPlayerInView) {
     if (sectionHeader) gsap.set(sectionHeader, { y: 24, opacity: 0 });
-    if (filterBtns.length) gsap.set(filterBtns, { y: 14, opacity: 0, scale: 0.95 });
     trackCards.forEach(card => gsap.set(card, { y: 26, opacity: 0 }));
     if (paginationContainer) gsap.set(paginationContainer, { y: 16, opacity: 0 });
   }
@@ -3582,40 +4472,14 @@ function initPlayerGsapAnimation() {
     playerTimelines.push(headerTl);
   }
 
-  // 2. GENRE FILTERS TIMELINE (Buttons "Все жанры", "Pop/House", "Rock/Metal", "Rap/R&B")
-  // Enters at 86%, reverses visibly when scrolling up past 86%
-  if (filtersContainer && filterBtns.length) {
-    const filtersTl = gsap.timeline({
-      scrollTrigger: {
-        trigger: filtersContainer,
-        start: computeDynamicStart(86),
-        end: 'bottom top',
-        toggleActions: 'play none none reverse',
-        onLeaveBack: () => {
-          filtersTl.timeScale(1.6).reverse();
-        },
-        onEnter: () => {
-          filtersTl.timeScale(1.0).play();
-        }
-      }
-    });
-
-    filtersTl.fromTo(
-      filterBtns,
-      { y: 14, opacity: 0, scale: 0.95 },
-      { y: 0, opacity: 1, scale: 1, duration: 0.38, stagger: 0.05, ease: 'back.out(1.4)' },
-      0
-    );
-    playerTimelines.push(filtersTl);
-  }
-
-  // 3. TRACK LIST GRID TIMELINE (Individual track cards with cover art and play buttons)
+  // 2. TRACK LIST GRID TIMELINE (Individual track cards with cover art and play buttons)
   // Enters at 83%, reverses visibly when scrolling up past 83%
   initPlayerTrackCardsTimeline(true);
 
-  // 4. PAGINATION CONTROLS TIMELINE (Prev/Next buttons + Page info / Dots)
+  // 3. PAGINATION CONTROLS TIMELINE (Prev/Next buttons + Page info / Dots)
   // Enters at 80%, reverses visibly when scrolling up past 80%
-  if (paginationContainer) {
+  // Если страница одна, блок пагинации скрыт (см. renderTrackList) — анимировать нечего.
+  if (paginationContainer && paginationContainer.style.display !== 'none') {
     const paginationTl = gsap.timeline({
       scrollTrigger: {
         trigger: paginationContainer,
@@ -4106,26 +4970,46 @@ function initMixerFaderScroll() {
   const redCount = Math.max(2, Math.round(totalLeds * 0.15));
   const yellowCount = Math.max(4, Math.round(totalLeds * 0.38));
 
-  function updateFaderUI(scrollPercent) {
+  // Метрики ползунка читаем не на каждом кадре скролла, а при старте и при
+  // изменении размеров окна: clientHeight/offsetHeight — это чтение раскладки.
+  let maxTravel = 0;
+  function measureFader() {
     const railH = rail.clientHeight || 400;
     const knobH = knob.offsetHeight || 24;
-    const maxTravel = Math.max(0, railH - knobH);
+    maxTravel = Math.max(0, railH - knobH);
+  }
+  measureFader();
+  window.addEventListener('resize', measureFader, { passive: true });
+
+  // Последнее отрисованное состояние: подсветка 16 светодиодов и текст
+  // dB переписываются только когда значение реально изменилось.
+  let lastLedActive = -1;
+  let lastDbText = '';
+
+  function updateFaderUI(scrollPercent) {
     const topPx = Math.max(0, Math.min(maxTravel, scrollPercent * maxTravel));
     knob.style.top = `${topPx}px`;
 
     const faderLevel = 1 - Math.max(0, Math.min(1, scrollPercent));
 
     if (dbLabel) {
+      let txt;
       if (faderLevel < 0.04) {
-        dbLabel.textContent = '-INF';
+        txt = '-INF';
       } else {
         const dbVal = ((faderLevel - 0.75) * 24).toFixed(1);
-        dbLabel.textContent = `${dbVal > 0 ? '+' : ''}${dbVal}dB`;
+        txt = `${dbVal > 0 ? '+' : ''}${dbVal}dB`;
+      }
+      if (txt !== lastDbText) {
+        lastDbText = txt;
+        dbLabel.textContent = txt;
       }
     }
 
     if (totalLeds > 0) {
       const activeCount = Math.round(faderLevel * totalLeds);
+      if (activeCount === lastLedActive) return;
+      lastLedActive = activeCount;
 
       sideLeds.forEach((led, idx) => {
         const distFromBottom = totalLeds - 1 - idx;
@@ -4144,12 +5028,27 @@ function initMixerFaderScroll() {
     }
   }
 
-  function getScrollMetrics() {
-    const scrollTop = window.scrollY || document.documentElement.scrollTop || 0;
-    const scrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight || 0;
+  // Высота документа меняется редко (открылся вопрос в FAQ, показался нижний
+  // плеер), поэтому меряем её не в каждом кадре скролла, а по resize и через
+  // ResizeObserver. Раньше scrollHeight и clientHeight читались на каждом
+  // кадре прокрутки — это принудительная переклейка раскладки всей страницы.
+  let cachedMaxScroll = 0;
+  function measureScrollMetrics() {
+    const scrollHeight = document.documentElement.scrollHeight || (document.body && document.body.scrollHeight) || 0;
     const clientHeight = window.innerHeight || document.documentElement.clientHeight || 0;
-    const maxScroll = Math.max(1, scrollHeight - clientHeight);
-    return { scrollTop, maxScroll };
+    cachedMaxScroll = Math.max(1, scrollHeight - clientHeight);
+  }
+  measureScrollMetrics();
+  window.addEventListener('resize', measureScrollMetrics, { passive: true });
+  if ('ResizeObserver' in window) {
+    new ResizeObserver(() => measureScrollMetrics()).observe(document.documentElement);
+  }
+
+  function getScrollMetrics() {
+    // window.scrollY читается без переклейки — в отличие от scrollTop у элемента.
+    const scrollTop = window.scrollY || 0;
+    if (!cachedMaxScroll) measureScrollMetrics();
+    return { scrollTop, maxScroll: cachedMaxScroll };
   }
 
   let isWindowScrollTicking = false;
