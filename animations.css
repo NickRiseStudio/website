@@ -135,8 +135,8 @@ html.nr-boot-active body {
 }
 
 /* Ползунок загрузки: медленно и плавно едет слева направо (scaleX — композитор).
-   Полоса ползёт на ~92% и останавливается; как только страница готова — JS
-   добавляет .nr-boot-finish, полоса плавно доезжает до конца и заставка уходит. */
+   Полоса плавными одним движением доезжает до 100% за ~1 с; как только страница
+   готова (window.load) и MIN_HOLD истёк — JS прячет заставку фейдом. */
 .nr-boot-track {
   position: relative;
   width: min(300px, 66vw);
@@ -156,7 +156,7 @@ html.nr-boot-active body {
   transform-origin: left;
   background: linear-gradient(90deg, var(--nr-amber-dk), var(--nr-amber), var(--nr-amber-lt));
   box-shadow: 0 0 12px rgba(245, 158, 11, 0.65);
-  animation: nrBootFill 1.5s cubic-bezier(0.4, 0.15, 0.2, 1) 0.15s forwards;
+  animation: nrBootFill 1s cubic-bezier(0.4, 0.15, 0.2, 1) 0.12s forwards;
 }
 
 .nr-boot-tip {
@@ -169,7 +169,7 @@ html.nr-boot-active body {
   background: var(--nr-amber-lt);
   box-shadow: 0 0 10px rgba(245, 158, 11, 0.9);
   opacity: 0;
-  animation: nrBootTip 1.5s cubic-bezier(0.4, 0.15, 0.2, 1) 0.15s forwards;
+  animation: nrBootTip 1s cubic-bezier(0.4, 0.15, 0.2, 1) 0.12s forwards;
 }
 
 @keyframes nrBootFill {
@@ -261,6 +261,47 @@ html.nr-boot-active body {
 
 #mainHeader { will-change: background-color, border-color; }
 
+/* Логотип в шапке. Ховер — лёгкий разворот плитки + вспышка рамки/свечения.
+   Мягкий пульс тени ПОЗАДИ плитки возвращён (усиливается во время проигрывания),
+   но тень теперь СИММЕТРИЧНАЯ: 0 0 … — раньше было смещение 0 8px (вниз),
+   из-за которого свечение выглядело «кривым».
+   ВАЖНО про резкость: transform/box-shadow живут на контейнере, а само <img>
+   поднято в собственный GPU-слой (translateZ) — Chrome рисует картинку один раз
+   в полном разрешении и при наведении только композитит готовую текстуру. */
+#mainHeader a > div:first-child,
+#mainHeader button > div:first-child,
+#headerLogoBtn > div:first-child {
+  animation: nrLogoBreath 5.5s ease-in-out infinite;
+  transition: transform 0.5s var(--nr-snap), border-color 0.3s ease, box-shadow 0.45s var(--nr-ease);
+  will-change: transform;
+}
+
+#headerLogoBtn > div:first-child img {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+#mainHeader a:hover > div:first-child,
+#mainHeader button:hover > div:first-child,
+#headerLogoBtn:hover > div:first-child {
+  transform: rotate(-4deg) scale(1.06);
+  border-color: rgba(245, 158, 11, 0.85);
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.30), 0 8px 33px rgba(245, 158, 11, 0.5);
+}
+
+body.nr-playing #mainHeader a > div:first-child,
+body.nr-playing #mainHeader button > div:first-child,
+body.nr-playing #headerLogoBtn > div:first-child {
+  animation-duration: 1.9s;
+}
+
+@keyframes nrLogoBreath {
+  0%, 100% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.12); }
+  50%      { box-shadow: 0 0 30px rgba(245, 158, 11, 0.36); }
+}
+
 #nr-scrollline {
   position: absolute;
   left: 0;
@@ -302,31 +343,6 @@ html.nr-boot-active body {
 body.nr-scrolled #mainHeader {
   background-color: rgba(9, 11, 16, 0.92);
   box-shadow: 0 10px 34px rgba(0, 0, 0, 0.55);
-}
-
-/* Логотип: мягкое «дыхание» плитки, ускоряется во время проигрывания */
-#mainHeader a > div:first-child,
-#mainHeader button > div:first-child,
-#headerLogoBtn > div:first-child {
-  animation: nrLogoBreath 5.5s ease-in-out infinite;
-  transition: transform 0.5s var(--nr-snap);
-}
-
-#mainHeader a:hover > div:first-child,
-#mainHeader button:hover > div:first-child,
-#headerLogoBtn:hover > div:first-child { 
-  transform: rotate(-4deg) scale(1.06); 
-}
-
-body.nr-playing #mainHeader a > div:first-child,
-body.nr-playing #mainHeader button > div:first-child,
-body.nr-playing #headerLogoBtn > div:first-child { 
-  animation-duration: 1.9s; 
-}
-
-@keyframes nrLogoBreath {
-  0%, 100% { box-shadow: 0 8px 20px rgba(245, 158, 11, 0.10); }
-  50%      { box-shadow: 0 8px 26px rgba(245, 158, 11, 0.34); }
 }
 
 /* Подчёркивание пунктов меню «прорисовывается» слева направо плавно и равномерно */

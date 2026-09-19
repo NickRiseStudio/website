@@ -14,11 +14,12 @@
   <meta property="og:url" content="https://nickrisestudio.github.io/website/">
   <meta property="og:locale" content="ru_RU">
   <meta property="og:locale:alternate" content="en_US">
-  <!-- og:image - лёгкий WebP 600x600 (21 КБ вместо 2 МБ JPEG). URL абсолютный: скраперы Telegram/VK/WhatsApp не понимают относительные пути -->
+  <!-- og:image - WebP 3000x3000 (98 КБ вместо 2 МБ JPEG-исходника; полный оригинал, без ресайза).
+       URL абсолютный: скраперы Telegram/VK/WhatsApp не понимают относительные пути -->
   <meta property="og:image" content="https://nickrisestudio.github.io/website/image/Logo.webp">
   <meta property="og:image:type" content="image/webp">
-  <meta property="og:image:width" content="600">
-  <meta property="og:image:height" content="600">
+  <meta property="og:image:width" content="3000">
+  <meta property="og:image:height" content="3000">
   <meta property="og:image:alt" content="Nick Rise - One Rise. Сведение и мастеринг">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Nick Rise Studio — Профессиональное сведение & мастеринг">
@@ -31,10 +32,10 @@
 
   <!-- Favicon / иконки для устройств.
        Иконки 180/192 не нужны отдельными файлами: тот же логотип уже есть в
-       WebP 600x600, он же используется для превью в соцсетях (og:image). -->
+       WebP 3000x3000, он же используется для превью в соцсетях (og:image). -->
   <link rel="icon" type="image/png" sizes="32x32" href="./image/favicon-32.png">
-  <link rel="icon" type="image/webp" sizes="600x600" href="./image/Logo.webp">
-  <link rel="apple-touch-icon" sizes="600x600" href="./image/Logo.webp">
+  <link rel="icon" type="image/webp" sizes="3000x3000" href="./image/Logo.webp">
+  <link rel="apple-touch-icon" sizes="3000x3000" href="./image/Logo.webp">
 
   <!-- Production Tailwind CSS (Compiled via CLI) -->
   <link rel="stylesheet" href="./tailwind.css">
@@ -49,12 +50,10 @@
   <!-- Animation Layer (добавляет только анимации) -->
   <link rel="stylesheet" href="./animations.css">
 
-  <!-- Главное фото hero (элемент LCP): грузим заранее, не дожидаясь разбора
-       разметки. Браузер сам выберет 480 px или 704 px по условиям sizes. -->
+  <!-- Главное фото hero (элемент LCP): грузим заранее, не дожидаясь разбора разметки.
+       Один оригинал — без srcset. -->
   <link rel="preload" as="image"
-        href="./image/Main-hero-704.webp"
-        imagesrcset="./image/Main-hero-480.webp 480w, ./image/Main-hero-704.webp 704w"
-        imagesizes="(min-width: 1024px) 448px, (min-width: 640px) 384px, 320px">
+        href="./image/Main%20hero.webp">
   <!-- Мгновенный LITE режим + ранний выбор языка (атрибут lang у <html> нужен
        поисковикам и скринридерам до загрузки script.js; сами тексты по-прежнему
        расставляет script.js). Заставка #nr-boot живёт в начале body и видна при
@@ -171,12 +170,12 @@
 
 
   <!-- 1. HEADER -->
-  <header id="mainHeader" class="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-[#0C0E12]/80 border-b border-gray-800/60 transition-all duration-300">
+  <header id="mainHeader" class="fixed top-0 left-0 right-0 z-50 bg-[#0C0E12]/90 border-b border-gray-800/60 transition-colors duration-300">
     <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
       
       <button id="headerLogoBtn" type="button" onclick="openAboutModal()" class="flex items-center gap-2 sm:gap-3.5 group min-w-0 text-left cursor-pointer focus:outline-none" title="Обо мне // Nick Rise" aria-label="Обо мне - Nick Rise Studio">
         <div class="w-9 h-9 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl overflow-hidden border border-amber-500/30 group-hover:border-amber-500 transition-colors shadow-lg shadow-amber-500/10 flex-shrink-0">
-          <img src="./image/logo-ui.webp" width="48" height="48" alt="Nick Rise Studio Logo" class="w-full h-full object-cover" decoding="async" fetchpriority="high">
+          <img src="./image/logo-256.webp" width="48" height="48" alt="Nick Rise Studio Logo" class="w-full h-full object-cover" decoding="async" fetchpriority="high">
         </div>
         <div class="flex flex-col min-w-0">
           <span class="font-black text-sm sm:text-lg text-white tracking-tight group-hover:text-amber-400 transition-colors truncate" data-i18n="nav.logoTitle">
@@ -307,11 +306,12 @@
                    выберет нужный (480 px для телефона, 704 px для десктопа).
                    ВАЖНО: в именах файлов нет пробелов — пробел в srcset
                    считается разделителем и ломает разбор кандидата. -->
+              <!-- Фото — элемент LCP. Отдаём ОДИН оригинал (максимальное качество,
+                   без srcset); CSS кроит его в квадрат (aspect-ratio 1/1,
+                   object-fit: cover) — визуальный кадр тот же. -->
               <img
-                src="./image/Main-hero-704.webp"
-                srcset="./image/Main-hero-480.webp 480w, ./image/Main-hero-704.webp 704w"
-                sizes="(min-width: 1024px) 448px, (min-width: 640px) 384px, 320px"
-                width="704" height="692"
+                src="./image/Main hero.webp"
+                width="1042" height="1024"
                 alt="Nick Rise Studio Engineer"
                 class="hero-mask-img"
                 decoding="async"
@@ -1150,7 +1150,7 @@
 
        Все внешние скрипты стоят с defer: браузер не блокирует отрисовку на их
        загрузке, а выполняет их после разбора разметки — но в прежнем порядке
-       (gsap → ScrollTrigger → ScrollToPlugin → config → smoothscroll →
+       (gsap → ScrollTrigger → ScrollToPlugin → config → smoothscroll-nr →
        script.min → animations.min) и всегда до DOMContentLoaded. Inline-блок
        плавного скролла подписывается на DOMContentLoaded, поэтому SmoothScroll
        к моменту вызова уже загружен. -->
@@ -1158,14 +1158,19 @@
   <script defer src="./vendor/ScrollTrigger.min.js"></script>
   <script defer src="./vendor/ScrollToPlugin.min.js"></script>
   <script defer src="./config.js"></script>
-  <!-- Плавный скролл как на melonmusicrecords.com (SmoothScroll Balázs Galambosi) — только для компьютеров -->
-  <script defer src="./smoothscroll.min.js"></script>
+  <!-- Плавный скролл: собственная реализация (smoothscroll-nr.js) вместо
+       внешней smoothscroll.min.js. Причина: внешняя либа вела себя капризно
+       после resize/zoom (буфер дельт в localStorage, эвристика «мышь vs
+       тачпад», ctrlKey-пропуски) — плавность «активировалась» только после
+       пары прокруток туда-сюда. Наша реализация плавная СРАЗУ и не зависит
+       от размеров окна. -->
+  <script defer src="./smoothscroll-nr.js"></script>
   <script>
     (function () {
       var smoothConfig = {
         // Время скролла 1000мс (1 сек) для мягкого студийного скольжения
         animationTime    : 1000,
-        // Размер шага в пикселях (как на melonmusicrecords.com)
+        // Размер шага в пикселях (как раньше)
         stepSize         : 75,
         // Ускорение при непрерывном скролле
         accelerationDelta: 30,
@@ -1173,16 +1178,14 @@
         // Поддержка клавиатуры (стрелки, пробел, PgUp/PgDown)
         keyboardSupport  : true,
         arrowScroll      : 50,
-        // Pulse-алгоритм кинетической инерции
-        pulseAlgorithm   : true,
-        pulseScale       : 4,
-        pulseNormalize   : 1,
         // Поддержка тачпада
         touchpadSupport  : true
       };
 
+      // API нашего модуля совместим с прежним (SmoothScroll.enable/destroy),
+      // поэтому переустановка безопасна: destroy снимает старые обработчики,
+      // enable тут же ставит свежие.
       function applySmoothScroll() {
-        // Pure touch-only mobile devices without pointer/mouse
         var isTouchOnly = ('ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0)) &&
                           window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
         var isDesktop = !isTouchOnly || window.innerWidth >= 1024;
@@ -1190,6 +1193,9 @@
         try {
           if (typeof SmoothScroll === 'function') {
             if (isDesktop) {
+              if (typeof SmoothScroll.destroy === 'function') {
+                SmoothScroll.destroy();
+              }
               if (typeof SmoothScroll.enable === 'function') {
                 SmoothScroll.enable(smoothConfig);
               } else {
@@ -1204,14 +1210,20 @@
         }
       }
 
+      // unlockPage() в animations.js дёргает nrApplySmoothScroll сразу, как
+      // только boot-заставка снимает overflow:hidden — плавный скролл
+      // «активируется» в момент разблокировки, без необходимости крутить
+      // колесо туда-сюда для прогрева.
+      window.nrApplySmoothScroll = applySmoothScroll;
+
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', applySmoothScroll);
       } else {
         applySmoothScroll();
       }
-
-      window.addEventListener('resize', applySmoothScroll, { passive: true });
-      window.addEventListener('orientationchange', applySmoothScroll, { passive: true });
+      // НАМЕРЕННО нет слушателя resize/zoom: наш модуль не зависит от размеров
+      // окна (пересчитывает границы каждого кадра анимации), поэтому изменение
+      // масштаба/окна переживает без пересоздания.
     })();
   </script>
   <script src="./script.min.js" defer></script>

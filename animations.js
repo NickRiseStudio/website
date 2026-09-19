@@ -1049,7 +1049,7 @@
 
 /* ═══ ЗАСТАВКА «ВКЛЮЧЕНИЯ ПУЛЬТА» (BOOT SCREEN) ═══════════════════
      #nr-boot видна при каждом заходе/обновлении страницы. Полоса
-     плавно доезжает до 100% одним движением (CSS, ~1.8 с) — без
+     плавно доезжает до 100% одним движением (CSS, ~1.1 с) — без
      финишных «скачков». Как только полоса доехала и страница готова
      (window.load или страховка) — заставка уходит фейдом. Пока окно
      видно, страница заморожена (lockPage): скролл выключен, фокус
@@ -1059,7 +1059,7 @@
     var boot = $('#nr-boot');
     if (!boot) return;
 
-    var MIN_HOLD = 1650;  /* полоса доехала к ~1.65с (1.5s + delay 0.15s) */
+    var MIN_HOLD = 1000;  /* полоса доехала к ~1.0с (1s + delay 0.12s) */
     var FADE_MS = 470;    /* чуть больше CSS-перехода opacity 0.42s */
 
     function blockScroll(e) { e.preventDefault(); }
@@ -1090,6 +1090,13 @@
       window.removeEventListener('wheel', blockScroll, { capture: true });
       window.removeEventListener('touchmove', blockScroll, { capture: true });
       window.removeEventListener('keydown', blockKeys, { capture: true });
+      /* Плавный скролл: либа могла «проснуться», пока страница была заморожена
+         (overflow:hidden) и не успела толком стартовать. Пересоздаём её заново
+         в момент, когда страница стала интерактивной, чтобы она сразу работала —
+         даже если юзер крутит колесо тут же после загрузки. */
+      if (typeof window.nrApplySmoothScroll === 'function') {
+        safe(window.nrApplySmoothScroll);
+      }
     }
 
     function hideBoot() {
