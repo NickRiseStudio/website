@@ -34,7 +34,7 @@
     animationTime: 1000,      // мс, «студийное скольжение»
     stepSize: 75,             // базовый шаг (для совместимости с прежним конфигом)
     accelerationDelta: 30,    // мс: при чаще дельт «ускоряем»
-    accelerationMax: 2,       // множитель ускорения
+    accelerationMax: 1.6,      // множитель ускорения (мягче — плавнее скольжение)
     keyboardSupport: true,
     arrowScroll: 50,
     pulseAlgorithm: true,
@@ -77,43 +77,90 @@
 
   function tick(now) {
     rafId = 0;
-    if (!enabled || targetY === null) return;
-    var last = tick._last || now;
-    var dt = Math.min(100, now - last);
-    tick._last = now;
-    // Относительно медленное «студийное» сглаживание: за animationTime доезжаем ~95%.
-    var k = 1 - Math.exp(-dt / (opts.animationTime * 0.22));
-    if (k <= 0) k = 0.05;
-    var cy = getY(), cx = getX();
-    var ny = cy + (targetY - cy) * k;
-    var nx = cx + (targetX === null ? 0 : (targetX - cx) * k);
-    // Клампим по актуальной проскролленности: страница могла измениться
-    // после resize/zoom (стала короче/уже)
-    var my = maxY(), mx = maxX();
-    if (ny < 0) ny = 0;
-    if (ny > my) ny = my;
-    if (nx < 0) nx = 0;
-    if (nx > mx) nx = mx;
-    var dy2 = Math.abs(targetY - ny), dx2 = Math.abs(targetX - nx);
-    if (dy2 < 0.4) ny = targetY;
-    if (dx2 < 0.4) nx = targetX;
+    if (!enabled) return;
+    if (targetY === null) return;
+    try {
+      var last = tick._last || now;
+      var dt = Math.min(100, now - last);
+      tick._last = now;
+      // Студийное сглаживание: средняя фаза — экспоненциальное приближение
+      // (за ~animationTime*0.26 кадров доезжаем ~95% дистанции).
+      var k = 1 - Math.exp(-dt / (opts.animationTime * 0.26));
+      if (k <= 0) k = 0.05;
+      var cy = getY(), cx = getX();
 
-    window.scrollTo(nx, ny);
+      var distY = targetY === null ? 0 : Math.abs(targetY - cy);
+      var distX = targetX === null ? 0 : Math.abs(targetX - cx);
+      var ny, nx;
+      if (distY < 24) {
+        // Финиш: равномерное торможение с гарантией доезда за ~18 кадров (≈0.3с
+        // при 60fps). Никакого рывка на последних пикселях (как было с k2), при
+        // этом цель достигается всегда — без вечного «ползания» хвоста.
+        var stepY = distY / 18 || 0;
+        ny = cy + (targetY !== null && targetY - cy >= 0 ? stepY : -stepY);
+      } else {
+        ny = cy + (targetY - cy) * k;
+      }
+      if (distX < 24) {
+        var stepX = distX / 18 || 0;
+        nx = cx + (targetX !== null && targetX - cx >= 0 ? stepX : -stepX);
+      } else {
+        nx = cx + (targetX === null ? 0 : (targetX - cx) * k);
+      }
+      // Клампим по актуальной проскролленности: страница могла измениться
+      // после resize/zoom (стала короче/уже). Клампим и ЦЕЛЬ — иначе при
+      // уменьшении scrollHeight анимация никогда не «сойдётся» и будет
+      // крутить rAF бесконечно, стоя на месте.
+      var my = maxY(), mx = maxX();
+      if (targetY !== null && targetY > my) targetY = my;
+      if (targetY !== null && targetY < 0) targetY = 0;
+      if (targetX !== null && targetX > mx) targetX = mx;
+      if (targetX !== null && targetX < 0) targetX = 0;
+      if (ny < 0) ny = 0;
+      if (ny > my) ny = my;
+      if (nx < 0) nx = 0;
+      if (nx > mx) nx = mx;
+      var dy2 = Math.abs(targetY - ny), dx2 = Math.abs(targetX - nx);
+      if (dy2 < 1) ny = targetY;
+      if (dx2 < 1) nx = targetX;
 
-    var atY = ny === targetY, atX = targetX === null || nx === targetX;
-    if (atY && atX) {
-      targetY = null;
-      targetX = null;
-      tick._last = 0;
-      return;
+      window.scrollTo(nx, ny);
+
+      // Завершение по ФАКТИЧЕСКОЙ позиции (scrollY иногда округляется до целых,
+      // а реальный максимум дробный) — толеранс 1.1px исключает вечный rAF.
+      var atY = targetY === null || Math.abs(getY() - targetY) < 1.1;
+      var atX = targetX === null || Math.abs(getX() - targetX) < 1.1;
+      if (atY && atX) {
+        // Фиксируем точно, чтобы не оставалось «хвоста» накапливающихся ошибок
+        if (targetY !== null && targetY === my) { window.scrollTo(0, my); }
+        if (targetY !== null && targetY === 0) { window.scrollTo(0, 0); }
+        targetY = null;
+        targetX = null;
+        tick._last = 0;
+        return;
+      }
+      rafId = requestAnimationFrame(tick);
+    } catch (err) {
+      // Любая ошибка кадра не должна ронять анимацию в «вечный цикл» или
+      // оставлять бесконечный rAF: останавливаемся, состояние сохраняется.
+      if (window.console && console.warn) console.warn('[smoothscroll-nr] tick', err);
+      stopMotion();
     }
-    rafId = requestAnimationFrame(tick);
   }
 
   function pushTarget(dy, dx) {
     var y = getY(), x = getX();
     if (targetY === null) targetY = y;
     if (targetX === null) targetX = x;
+    // Реверс знака: пользователь поехал противоположно старой цели.
+    // Гасим остаточную «инерцию» — иначе анимация продолжает догонять старую
+    // цель и разворот колеса не доводит страницу до нужного края («недовод»).
+    if (dy !== 0 && ((dy > 0 && targetY < y) || (dy < 0 && targetY > y))) {
+      targetY = y;
+    }
+    if (dx !== 0 && ((dx > 0 && targetX < x) || (dx < 0 && targetX > x))) {
+      targetX = x;
+    }
     targetY += dy;
     targetX += dx;
     var my = maxY(), mx = maxX();
@@ -200,10 +247,19 @@
     document.removeEventListener('visibilitychange', onVisChange);
   }
 
+  /* Остановить текущую анимацию скролла, не снимая обработчики (enabled остаётся).
+     Нужно для фейдера микшера/якорной навигации: их window.scrollTo не должен
+     драться с «доезжанием» колеса к старой цели. */
+  function stopMotion() {
+    if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+    targetY = null;
+    targetX = null;
+    tick._last = 0;
+  }
+
   function destroy() {
     enabled = false;
-    if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
-    targetY = null; targetX = null; tick._last = 0;
+    stopMotion();
     detach();
   }
 
@@ -224,6 +280,13 @@
   SmoothScroll.enable = enable;
   SmoothScroll.destroy = destroy;
   SmoothScroll.init = enable;
+  SmoothScroll.cancel = stopMotion;   // стоп анимации без снятия обработчиков
+  SmoothScroll.stop = stopMotion;
+  // Отладочный доступ к внутреннему состоянию (не используется прод-кодом)
+  SmoothScroll._dbg = function () {
+    return { targetY: targetY, targetX: targetX, y: getY(), x: getX(),
+             max: maxY(), raf: !!rafId, last: tick._last };
+  };
 
   window.SmoothScroll = SmoothScroll;
   window.nrSmoothScroll = SmoothScroll;

@@ -5070,7 +5070,25 @@ function initMixerFaderScroll() {
     }
   }
 
+  // Останавливаем активную анимацию плавного скролла (инерцию колеса или
+  // GSAP-якорь), иначе её tick дерётся за window.scrollTo с фейдером микшера:
+  // страница «откатывается» к старой цели колеса. Вызов дёшев (сброс состояния).
+  function stopSmoothMotion() {
+    try {
+      if (window.nrSmoothScroll && typeof window.nrSmoothScroll.cancel === 'function') {
+        window.nrSmoothScroll.cancel();
+      }
+    } catch (err) {}
+    if (typeof activeScrollTween !== 'undefined' && activeScrollTween) {
+      try {
+        activeScrollTween.kill();
+      } catch (err) {}
+      activeScrollTween = null;
+    }
+  }
+
   function applyScrollFromPointerY(clientY) {
+    stopSmoothMotion();
     const railRect = rail.getBoundingClientRect();
     if (railRect.height <= 0) return;
 
@@ -5096,6 +5114,8 @@ function initMixerFaderScroll() {
     knob.classList.add('is-dragging');
     document.body.style.userSelect = 'none';
     document.documentElement.style.scrollBehavior = 'auto';
+
+    stopSmoothMotion();
 
     const knobRect = knob.getBoundingClientRect();
     const knobH = knob.offsetHeight || 24;

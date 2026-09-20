@@ -1150,27 +1150,23 @@
 
        Все внешние скрипты стоят с defer: браузер не блокирует отрисовку на их
        загрузке, а выполняет их после разбора разметки — но в прежнем порядке
-       (gsap → ScrollTrigger → ScrollToPlugin → config → smoothscroll-nr →
+       (gsap → ScrollTrigger → ScrollToPlugin → config → smoothscroll.min →
        script.min → animations.min) и всегда до DOMContentLoaded. Inline-блок
        плавного скролла подписывается на DOMContentLoaded, поэтому SmoothScroll
        к моменту вызова уже загружен. -->
   <script defer src="./vendor/gsap.min.js"></script>
   <script defer src="./vendor/ScrollTrigger.min.js"></script>
   <script defer src="./vendor/ScrollToPlugin.min.js"></script>
-  <script defer src="./config.js"></script>
-  <!-- Плавный скролл: собственная реализация (smoothscroll-nr.js) вместо
-       внешней smoothscroll.min.js. Причина: внешняя либа вела себя капризно
-       после resize/zoom (буфер дельт в localStorage, эвристика «мышь vs
-       тачпад», ctrlKey-пропуски) — плавность «активировалась» только после
-       пары прокруток туда-сюда. Наша реализация плавная СРАЗУ и не зависит
-       от размеров окна. -->
-  <script defer src="./smoothscroll-nr.js"></script>
+  <script defer src="./config.js?v=3"></script>
+  <!-- Плавный скролл: SmoothScroll (Balázs Galambosi) — проверенная реализация,
+       обёрнутая в минимальную заплатку (cancel/stop для фейдера микшера). -->
+  <script defer src="./smoothscroll.min.js?v=3"></script>
   <script>
     (function () {
       var smoothConfig = {
         // Время скролла 1000мс (1 сек) для мягкого студийного скольжения
         animationTime    : 1000,
-        // Размер шага в пикселях (как раньше)
+        // Размер шага в пикселях
         stepSize         : 75,
         // Ускорение при непрерывном скролле
         accelerationDelta: 30,
@@ -1178,14 +1174,16 @@
         // Поддержка клавиатуры (стрелки, пробел, PgUp/PgDown)
         keyboardSupport  : true,
         arrowScroll      : 50,
+        // Pulse-алгоритм кинетической инерции
+        pulseAlgorithm   : true,
+        pulseScale       : 4,
+        pulseNormalize   : 1,
         // Поддержка тачпада
         touchpadSupport  : true
       };
 
-      // API нашего модуля совместим с прежним (SmoothScroll.enable/destroy),
-      // поэтому переустановка безопасна: destroy снимает старые обработчики,
-      // enable тут же ставит свежие.
       function applySmoothScroll() {
+        // Pure touch-only mobile devices without pointer/mouse
         var isTouchOnly = ('ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0)) &&
                           window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
         var isDesktop = !isTouchOnly || window.innerWidth >= 1024;
@@ -1212,8 +1210,7 @@
 
       // unlockPage() в animations.js дёргает nrApplySmoothScroll сразу, как
       // только boot-заставка снимает overflow:hidden — плавный скролл
-      // «активируется» в момент разблокировки, без необходимости крутить
-      // колесо туда-сюда для прогрева.
+      // «активируется» в момент разблокировки.
       window.nrApplySmoothScroll = applySmoothScroll;
 
       if (document.readyState === 'loading') {
@@ -1221,15 +1218,15 @@
       } else {
         applySmoothScroll();
       }
-      // НАМЕРЕННО нет слушателя resize/zoom: наш модуль не зависит от размеров
-      // окна (пересчитывает границы каждого кадра анимации), поэтому изменение
-      // масштаба/окна переживает без пересоздания.
+
+      window.addEventListener('resize', applySmoothScroll, { passive: true });
+      window.addEventListener('orientationchange', applySmoothScroll, { passive: true });
     })();
   </script>
-  <script src="./script.min.js" defer></script>
+  <script src="./script.min.js?v=3" defer></script>
   <!-- Минифицированная версия animations.js. Исходники лежат рядом
        (script.js, animations.js): после правок пересбирай их:
        node tools\build-min.cjs -->
-  <script src="./animations.min.js" defer></script>
+  <script src="./animations.min.js?v=3" defer></script>
 </body>
 </html>
