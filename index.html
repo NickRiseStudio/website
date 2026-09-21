@@ -3,13 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <!-- <title> и meta description — русские как fallback для no-JS; по языку их
+       подставляет script.js → updateDocumentMeta() (тексты — config.js → i18n.*.meta).
+       og:*/twitter:* — статичные и двуязычные: скрейперы не выполняют JS. -->
   <title>Nick Rise Studio — Профессиональное сведение & мастеринг</title>
   <meta name="description" content="Премиальное сведение и мастеринг треков от Ника Райза (Nick Rise). Аналоговый звук SSL, Neve, Tube-Tech под стандарты Spotify, Apple Music и Радио.">
 
   <!-- OpenGraph / Social Meta Tags -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Nick Rise Studio — Профессиональное сведение & мастеринг">
-  <meta property="og:description" content="Премиальное сведение и мастеринг треков от Ника Райза (Nick Rise). Аналоговый звук SSL, Neve, Tube-Tech под стандарты Spotify, Apple Music и Радио.">
+  <meta property="og:title" content="Nick Rise Studio — Mixing & Mastering / Сведение и мастеринг">
+  <meta property="og:description" content="Premium mixing & mastering / Премиальное сведение и мастеринг треков от Ника Райза (Nick Rise). Analog SSL, Neve, Tube-Tech.">
   <meta property="og:site_name" content="Nick Rise Studio">
   <meta property="og:url" content="https://nickrisestudio.github.io/website/">
   <meta property="og:locale" content="ru_RU">
@@ -20,10 +23,10 @@
   <meta property="og:image:type" content="image/webp">
   <meta property="og:image:width" content="3000">
   <meta property="og:image:height" content="3000">
-  <meta property="og:image:alt" content="Nick Rise - One Rise. Сведение и мастеринг">
+  <meta property="og:image:alt" content="Nick Rise - One Rise. Mixing & Mastering / Сведение и мастеринг">
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="Nick Rise Studio — Профессиональное сведение & мастеринг">
-  <meta name="twitter:description" content="Премиальное сведение и мастеринг треков от Ника Райза (Nick Rise).">
+  <meta name="twitter:title" content="Nick Rise Studio — Mixing & Mastering / Сведение и мастеринг">
+  <meta name="twitter:description" content="Premium mixing & mastering / Премиальное сведение и мастеринг треков от Ника Райза (Nick Rise). Analog SSL, Neve, Tube-Tech.">
   <meta name="twitter:image" content="https://nickrisestudio.github.io/website/image/Logo.webp">
   <meta name="theme-color" content="#0C0E12">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -38,17 +41,17 @@
   <link rel="apple-touch-icon" sizes="3000x3000" href="./image/Logo.webp">
 
   <!-- Production Tailwind CSS (Compiled via CLI) -->
-  <link rel="stylesheet" href="./tailwind.css?v=8">
+  <link rel="stylesheet" href="./tailwind.css?v=10">
 
   <!-- Custom web fonts (self-hosted): fonts.css + public/fonts/*.woff2.
        Пересборка после обновления шрифтов: node tools\fonts-selfhost.cjs -->
-  <link rel="stylesheet" href="./fonts.css?v=8">
+  <link rel="stylesheet" href="./fonts.css?v=10">
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="./style.css?v=8">
+  <link rel="stylesheet" href="./style.css?v=10">
 
   <!-- Animation Layer (добавляет только анимации) -->
-  <link rel="stylesheet" href="./animations.css?v=8">
+  <link rel="stylesheet" href="./animations.css?v=10">
 
   <!-- Главное фото hero (элемент LCP): грузим заранее, не дожидаясь разбора разметки.
        Один оригинал — без srcset. -->
@@ -134,7 +137,7 @@
 
   <!-- 0. FIXED STUDIO MIXER FADER (GSAP TRACKED) -->
   <!-- 0. FIXED STUDIO MIXER FADER (GSAP TRACKED) -->
-  <aside id="side-mixer-strip" class="mixer-track-fixed hidden lg:flex" title="Интерактивная полоса микшера SSL">
+  <aside id="side-mixer-strip" class="mixer-track-fixed hidden lg:flex" title="Интерактивная полоса микшера SSL" data-i18n-title="a11y.mixerStrip">
     <!-- Верхний VU индикатор -->
     <div class="text-[8px] font-mono text-gray-400 text-center uppercase tracking-tighter">SSL</div>
 
@@ -173,7 +176,7 @@
   <header id="mainHeader" class="fixed top-0 left-0 right-0 z-50 bg-[#0C0E12]/90 border-b border-gray-800/60 transition-colors duration-300">
     <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
       
-      <button id="headerLogoBtn" type="button" onclick="openAboutModal()" class="flex items-center gap-2 sm:gap-3.5 group min-w-0 text-left cursor-pointer focus:outline-none" title="Обо мне // Nick Rise" aria-label="Обо мне - Nick Rise Studio">
+      <button id="headerLogoBtn" type="button" onclick="openAboutModal()" class="flex items-center gap-2 sm:gap-3.5 group min-w-0 text-left cursor-pointer focus:outline-none" title="Обо мне // Nick Rise" data-i18n-title="a11y.aboutTitle" aria-label="Обо мне - Nick Rise Studio" data-i18n-aria-label="a11y.aboutAria">
         <div class="w-9 h-9 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl overflow-hidden border border-amber-500/30 group-hover:border-amber-500 transition-colors shadow-lg shadow-amber-500/10 flex-shrink-0">
           <img src="./image/logo-256.webp" width="48" height="48" alt="Nick Rise Studio Logo" class="w-full h-full object-cover" decoding="async" fetchpriority="high">
         </div>
@@ -301,6 +304,7 @@
               onclick="openAboutModal()"
               class="hero-mask-container max-w-xs sm:max-w-sm lg:max-w-md w-full cursor-pointer group relative mx-auto"
               title="Нажмите, чтобы узнать больше обо мне"
+              data-i18n-title="a11y.aboutPhoto"
             >
               <!-- Фото — элемент LCP: отдаём сразу два размера, браузер сам
                    выберет нужный (480 px для телефона, 704 px для десктопа).
@@ -401,12 +405,12 @@
                  Включаются классом .nr-track-nav-mode на вьюпорте (animations.css).
                  На компьютере (≥1024px) список снова в две колонки — стрелки там
                  не показываются (см. script.js → syncTrackNav). -->
-            <button type="button" id="trackNavPrevBtn" class="nr-track-nav nr-track-nav-prev" aria-label="Назад">
+            <button type="button" id="trackNavPrevBtn" class="nr-track-nav nr-track-nav-prev" aria-label="Назад" data-i18n-aria-label="a11y.prev">
               <svg class="nr-track-nav-glyph" viewBox="0 0 28 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M22 38C16 31 8 25 6 20C8 15 16 9 22 2" stroke="currentColor" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </button>
-            <button type="button" id="trackNavNextBtn" class="nr-track-nav nr-track-nav-next" aria-label="Вперед">
+            <button type="button" id="trackNavNextBtn" class="nr-track-nav nr-track-nav-next" aria-label="Вперед" data-i18n-aria-label="a11y.next">
               <svg class="nr-track-nav-glyph" viewBox="0 0 28 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M6 38C12 31 20 25 22 20C20 15 12 9 6 2" stroke="currentColor" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
@@ -579,7 +583,7 @@
   <div id="contactModal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-4">
     <div class="modal-content rack-card max-w-2xl w-full p-6 sm:p-10 relative overflow-hidden text-center shadow-2xl">
       <!-- Close Button -->
-      <button onclick="closeContactModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-2 rounded-xl hover:bg-gray-800/80 transition-colors z-20 cursor-pointer" title="Закрыть">
+      <button onclick="closeContactModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-2 rounded-xl hover:bg-gray-800/80 transition-colors z-20 cursor-pointer" title="Закрыть" data-i18n-title="a11y.close">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
           <path d="M18 6L6 18M6 6l12 12"/>
         </svg>
@@ -636,7 +640,7 @@
   <div id="aboutModal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto">
     <div class="modal-content rack-card max-w-3xl w-full p-5 sm:p-8 relative overflow-hidden shadow-2xl my-auto text-left max-h-[90vh] overflow-y-auto">
       <!-- Close Button -->
-      <button onclick="closeAboutModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-2 rounded-xl hover:bg-gray-800/80 transition-colors z-20 cursor-pointer" title="Закрыть">
+      <button onclick="closeAboutModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-2 rounded-xl hover:bg-gray-800/80 transition-colors z-20 cursor-pointer" title="Закрыть" data-i18n-title="a11y.close">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
           <path d="M18 6L6 18M6 6l12 12"/>
         </svg>
@@ -775,7 +779,7 @@
     <div class="modal-content rack-card max-w-xl w-full p-5 sm:p-8 relative overflow-hidden shadow-2xl my-auto max-h-[90vh] overflow-y-auto text-center">
 
       <!-- Close Button -->
-      <button onclick="closePriceCalcModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-2 rounded-xl hover:bg-gray-800/80 transition-colors z-20 cursor-pointer" title="Закрыть">
+      <button onclick="closePriceCalcModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-2 rounded-xl hover:bg-gray-800/80 transition-colors z-20 cursor-pointer" title="Закрыть" data-i18n-title="a11y.close">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
           <path d="M18 6L6 18M6 6l12 12"/>
         </svg>
@@ -1131,7 +1135,9 @@
     type="button"
     class="scroll-to-top-btn group flex items-center justify-center cursor-pointer focus:outline-none"
     aria-label="Вернуться наверх"
+    data-i18n-aria-label="a11y.backToTop"
     title="Вернуться наверх"
+    data-i18n-title="a11y.backToTop"
   >
     <svg class="scroll-to-top-arrow w-10 h-6 sm:w-12 sm:h-7 transition-all duration-300 drop-shadow-[0_0_10px_rgba(245,158,11,0.7)]" viewBox="0 0 48 28" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M6 22C13 16 19 8 24 6C29 8 35 16 42 22" stroke="currentColor" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -1145,7 +1151,7 @@
         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
         <polyline points="22 4 12 14.01 9 11.01"></polyline>
       </svg>
-      <span id="toastText">Никнейм @Nick_Rise скопирован!</span>
+      <span id="toastText" data-i18n="contacts.toastTgCopied">Никнейм @Nick_Rise скопирован!</span>
     </div>
   </div>
 
@@ -1163,14 +1169,14 @@
   <script defer src="./vendor/gsap.min.js"></script>
   <script defer src="./vendor/ScrollTrigger.min.js"></script>
   <script defer src="./vendor/ScrollToPlugin.min.js"></script>
-  <script defer src="./config.js?v=8"></script>
+  <script defer src="./config.js?v=10"></script>
   <!-- Плавный скролл: собственный модуль smoothscroll-nr.js.
        Ядро — как у Balázs Galambosi (per-notch pulse-инерция через scrollBy),
        но без localStorage-эвристики «мышь vs тачпад» и без destroy/enable на
        resize/zoom: они ломали плавность после изменения масштаба/размера окна.
        Плавность работает сразу после загрузки. API: SmoothScroll.enable(opts) /
        destroy() / cancel() / stop() / resync(); window.nrSmoothScroll. -->
-  <script defer src="./smoothscroll-nr.js?v=8"></script>
+  <script defer src="./smoothscroll-nr.js?v=10"></script>
   <script>
     (function () {
       var smoothConfig = {
@@ -1244,10 +1250,10 @@
       window.addEventListener('orientationchange', onViewportChange, { passive: true });
     })();
   </script>
-  <script src="./script.min.js?v=8" defer></script>
+  <script src="./script.min.js?v=10" defer></script>
   <!-- Минифицированная версия animations.js. Исходники лежат рядом
        (script.js, animations.js): после правок пересбирай их:
        node tools\build-min.cjs -->
-  <script src="./animations.min.js?v=8" defer></script>
+  <script src="./animations.min.js?v=10" defer></script>
 </body>
 </html>

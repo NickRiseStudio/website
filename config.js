@@ -5,14 +5,13 @@
  */
 
 const FAQ_PROMO_RU = '<div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200/90 text-sm flex items-start sm:items-center gap-3"><svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V6a2 2 0 10-2 2h2zm0 13C10.832 21 2 20 2 15V8a2 2 0 012-2h16a2 2 0 012 2v7c0 5-8.832 6-10 6z"/></svg><span>Вижу вам интересно сотрудничество со мной! Напишите мне в Телеграм <strong class="text-amber-400 font-bold">"NRSDiscount"</strong> и получите скидку на первый заказ в размере <strong class="text-amber-400 font-bold">10%</strong></span></div>';
-const FAQ_PROMO_EN = '<div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200/90 text-sm flex items-start sm:items-center gap-3"><svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V6a2 2 0 10-2 2h2zm0 13C10.832 21 2 20 2 15V8a2 2 0 012-2h16a2 2 0 012 2v7c0 5-8.832 6-10 6z"/></svg><span>I see you\'re interested in working together! Message me <strong class="text-amber-400 font-bold">"NRSDiscount"</strong> on Telegram to get <strong class="text-amber-400 font-bold">10% off</strong> your first order.</span></div>';
+const FAQ_PROMO_EN = '<div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200/90 text-sm flex items-start sm:items-center gap-3"><svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V6a2 2 0 10-2 2h2zm0 13C10.832 21 2 20 2 15V8a2 2 0 012-2h16a2 2 0 012 2v7c0 5-8.832 6-10 6z"/></svg><span>Interested in working together? Message me <strong class="text-amber-400 font-bold">"NRSDiscount"</strong> on Telegram and get <strong class="text-amber-400 font-bold">10% off</strong> your first order.</span></div>';
 
 const CONFIG = {
   i18n: {
     ru: {
       nav: {
         logoTitle: 'Nick Rise Studio',
-        about: 'Обо мне',
         abPlayer: 'Примеры A/B',
         services: 'Услуги',
         faq: 'FAQ',
@@ -20,7 +19,6 @@ const CONFIG = {
         contactBtn: 'Связаться'
       },
       hero: {
-        badge: 'ANALOG HYBRID MIXING & MASTERING',
         title: 'Профессиональное<br><span class="whitespace-nowrap">Сведение / Мастеринг</span>',
         subtitle: {
           desktop: 'Специализация: Pop/House • Rock/Metal • Rap/R&B',
@@ -33,25 +31,18 @@ const CONFIG = {
         aboutPhotoBadge: 'Обо мне'
       },
       player: {
-        sectionBadge: 'A/B COMPARISON',
         title: 'Слушай разницу',
-        subtitle: 'Переключайтесь на лету между необработанным миксом (BEFORE) и мастерингом мирового уровня (AFTER). Нажмите PLAY и проверьте разницу!',
         langRuBtn: 'На русском',
         langEnBtn: 'На английском',
         beforeLabel: 'BEFORE (MIX)',
         afterLabel: 'AFTER (MASTERED)',
-        volumeLabel: 'Громкость',
-        nowPlaying: 'Сейчас играет:',
         prevBtn: 'Назад',
         nextBtn: 'Вперед'
       },
       services: {
-        sectionBadge: 'SERVICES & PRICING',
         title: 'Услуги и цены',
-        subtitle: 'Аналоговые приборы SSL, Neve, Tube-Tech и топовые цифровые плагины для бескомпромиссного качества.',
         popularBadge: 'ЧАСТЫЙ ВЫБОР',
         orderBtn: 'Заказать',
-        turnaround: 'Срок выполнения: 3-5 дней',
         // Всплывающее окно «Рассчитать стоимость услуг» (шаги: предупреждение →
         // длительность → 4 вопроса Да/Нет → итоговая цена).
         priceCalc: {
@@ -87,26 +78,16 @@ const CONFIG = {
         }
       },
       faq: {
-        sectionBadge: 'FREQUENTLY ASKED QUESTIONS',
-        title: 'Частые вопросы',
-        subtitle: 'Ответы на самые популярные вопросы по подготовке мультитрека и процессу работы.'
+        title: 'Частые вопросы'
       },
       contacts: {
-        sectionBadge: 'DIRECT CONTACT',
-        title: '',
         subtitle: '<span class="font-semibold text-gray-200">Свяжитесь со мной напрямую<br class="lg:hidden"/> для обсуждения вашего проекта.</span><br/><span class="text-amber-400 font-extrabold mt-1 inline-block">На связи 7 дней в неделю.</span>',
         telegramBtn: 'Открыть Telegram',
         copyTgUsername: 'Копировать ТГ @Nick_Rise',
         copyEmail: 'Копировать Email',
         vkBtn: 'Профиль ВКонтакте',
-        instagramBtn: 'Профиль ВКонтакте',
         toastTgCopied: 'Никнейм @Nick_Rise скопирован!',
         toastEmailCopied: 'Email скопирован в буфер обмена!'
-      },
-      modal: {
-        title: 'Связаться с Nick Rise',
-        subtitle: 'Выберите удобный способ связи для быстрого ответа:',
-        closeBtn: 'Закрыть'
       },
       aboutModal: {
         tag: 'STUDIO ENGINEER PROFILE // NICK RISE',
@@ -126,15 +107,32 @@ const CONFIG = {
         btnFaqWhy: 'Почему стоит выбрать именно меня?',
         btnFaqWorkflow: 'Как происходит процесс работы?',
         btnDiscuss: 'Обсудить проект',
-        btnDemos: 'Примеры работ (A/B)',
-        closeBtn: 'Закрыть'
+        btnDemos: 'Примеры работ (A/B)'
+      },
+
+      // Метаданные страницы: title и meta description подставляются по языку
+      // в script.js → updateDocumentMeta(). og:*/twitter:* — статичные, двуязычные.
+      meta: {
+        title: 'Nick Rise Studio — Профессиональное сведение & мастеринг',
+        description: 'Премиальное сведение и мастеринг треков от Ника Райза (Nick Rise). Аналоговый звук SSL, Neve, Tube-Tech под стандарты Spotify, Apple Music и Радио.'
+      },
+
+      // Подписи тултипов и aria-label (атрибуты data-i18n-title / data-i18n-aria-label).
+      a11y: {
+        mixerStrip: 'Интерактивная полоса микшера SSL',
+        aboutTitle: 'Обо мне // Nick Rise',
+        aboutAria: 'Обо мне - Nick Rise Studio',
+        aboutPhoto: 'Нажмите, чтобы узнать больше обо мне',
+        prev: 'Назад',
+        next: 'Вперед',
+        close: 'Закрыть',
+        backToTop: 'Вернуться наверх'
       }
     },
 
     en: {
       nav: {
         logoTitle: 'Nick Rise Studio',
-        about: 'About',
         abPlayer: 'A/B Demos',
         services: 'Services',
         faq: 'FAQ',
@@ -142,93 +140,75 @@ const CONFIG = {
         contactBtn: 'Contact'
       },
       hero: {
-        badge: 'ANALOG HYBRID MIXING & MASTERING',
         title: 'Professional<br><span class="whitespace-nowrap">Mixing / Mastering</span>',
         subtitle: {
           desktop: 'Specialization: Pop/House • Rock/Metal • Rap/R&B',
           tablet: 'Specialization: Pop/House • Rock/Metal • Rap/R&B',
           mobile: 'Pop/House • Rock/Metal • Rap/R&B'
         },
-        usp: 'I transform raw demos and multitracks into a powerful, spacious, and world-class commercial sound. From the first bar to the final master — every element in its place, every frequency under control.',
-        btnPlayer: 'Listen A/B Demos',
-        btnContact: 'Contacts',
+        usp: 'I turn raw demos and multitracks into a powerful, wide and competitive world-class sound. From the first bar to the final master — every element in its place, every frequency under control.',
+        btnPlayer: 'Hear A/B Demos',
+        btnContact: 'Contact Me',
         aboutPhotoBadge: 'About'
       },
       player: {
-        sectionBadge: 'A/B COMPARISON',
         title: 'Hear the Difference',
-        subtitle: 'Seamless real-time A/B switching between the raw mix (BEFORE) and polished studio master (AFTER). Hit PLAY to test the difference!',
         langRuBtn: 'In Russian',
         langEnBtn: 'In English',
         beforeLabel: 'BEFORE (MIX)',
         afterLabel: 'AFTER (MASTERED)',
-        volumeLabel: 'Volume',
-        nowPlaying: 'Now Playing:',
         prevBtn: 'Previous',
         nextBtn: 'Next'
       },
       services: {
-        sectionBadge: 'SERVICES & PRICING',
         title: 'Services & Pricing',
-        subtitle: 'Solid State Logic, Neve, Tube-Tech hardware combined with pristine digital processing.',
-        popularBadge: 'MOST POPULAR',
+        popularBadge: 'MOST CHOSEN',
         orderBtn: 'Order',
-        turnaround: 'Turnaround: 3-5 business days',
         // Service cost calculator modal (steps: warning → duration → 4 Yes/No
         // questions → final price).
         priceCalc: {
           button: 'Calculate service cost',
           badge: 'SERVICE COST CALCULATOR // NICK RISE',
           warnTitle: 'IMPORTANT',
-          warnText: 'Service pricing is approximate and depends on the specific project. Here you can estimate the cost of the work.',
+          warnText: 'Service pricing is approximate and depends on the specific project — use this calculator to get a rough estimate.',
           nextBtn: 'Next',
           prevBtn: 'Back',
           durationQ: 'How long is your track (in minutes)?',
           durationMin: 'min',
-          individualNote: 'Negotiated individually',
+          individualNote: 'Quoted individually',
           qMastering: 'Do you need mastering?',
-          qVocalRhythm: 'Do you need rhythm correction and vocal loudness leveling?',
-          qTrackout: 'Do you need trackout beat mixing (beat by stems) and beat refinement?',
+          qVocalRhythm: 'Do you need vocal timing correction / loudness leveling?',
+          qTrackout: 'Do you need beat trackout mixing (beat stems) / beat refinement?',
           qVocalNotes: 'Do you need manual vocal pitch correction?',
           yes: 'Yes',
           no: 'No',
           resultTitle: 'Estimated cost',
-          resultSub: 'This is a preliminary estimate — I will name the exact price after listening to your material.',
-          resultIndividualTitle: 'Negotiated individually',
-          resultIndividualSub: 'For this track length the price is quoted individually. Message me and we will discuss your project.',
+          resultSub: 'This is a preliminary estimate — I\'ll give you an exact quote after listening to your material.',
+          resultIndividualTitle: 'Quoted individually',
+          resultIndividualSub: 'For this track length the price is quoted individually. Message me and let\'s discuss your project.',
           durationRow: 'Track length',
           totalLabel: 'TOTAL',
           optMastering: 'Mastering',
-          optVocalRhythm: 'Rhythm & vocal loudness correction',
-          optTrackout: 'Trackout beat mixing & refinement',
+          optVocalRhythm: 'Vocal timing & loudness correction',
+          optTrackout: 'Beat trackout mixing & refinement',
           optVocalNotes: 'Manual vocal pitch correction',
-          cta: 'Message me — we will discuss your project and I will name the exact price.',
+          cta: 'Message me — we\'ll discuss your project and I\'ll give you an exact quote.',
           writeBtn: 'Message me',
           restartBtn: 'Calculate again',
           stepLabel: 'Step'
         }
       },
       faq: {
-        sectionBadge: 'FREQUENTLY ASKED QUESTIONS',
-        title: 'FAQ',
-        subtitle: 'Everything you need to know about multitrack preparation and the workflow process.'
+        title: 'FAQ'
       },
       contacts: {
-        sectionBadge: 'DIRECT CONTACT',
-        title: '',
         subtitle: '<span class="font-semibold text-gray-200">Reach out directly to discuss your project.</span><br/><span class="text-amber-400 font-extrabold mt-1 inline-block">Available 7 days a week.</span>',
         telegramBtn: 'Open Telegram',
         copyTgUsername: 'Copy TG @Nick_Rise',
         copyEmail: 'Copy Email',
         vkBtn: 'VKontakte Profile',
-        instagramBtn: 'VKontakte Profile',
         toastTgCopied: 'Username @Nick_Rise copied to clipboard!',
         toastEmailCopied: 'Email copied to clipboard!'
-      },
-      modal: {
-        title: 'Contact Nick Rise',
-        subtitle: 'Choose your preferred channel for an instant response:',
-        closeBtn: 'Close'
       },
       aboutModal: {
         tag: 'STUDIO ENGINEER PROFILE // NICK RISE',
@@ -241,15 +221,33 @@ const CONFIG = {
         bioText3: 'I would be happy to work with you!',
         stat1Num: '200+',
         stat1Text: 'Tracks Mixed & Mastered',
-        stat2Num: '6+ Yrs',
+        stat2Num: '6+ Years',
         stat2Text: 'Studio Experience',
         stat3Num: '100%',
         stat3Text: 'Radio & Streaming Ready',
         btnFaqWhy: 'Why choose me?',
-        btnFaqWorkflow: 'How does the workflow process work?',
+        btnFaqWorkflow: 'How does the process work?',
         btnDiscuss: 'Discuss Project',
-        btnDemos: 'Listen to A/B Demos',
-        closeBtn: 'Close'
+        btnDemos: 'Hear A/B Demos'
+      },
+
+      // Page metadata: title and meta description are set per language
+      // by script.js → updateDocumentMeta(). og:*/twitter:* are static and bilingual.
+      meta: {
+        title: 'Nick Rise Studio — Professional Mixing & Mastering',
+        description: 'Premium mixing and mastering by Nick Rise. Analog SSL, Neve and Tube-Tech sound, mastered to Spotify, Apple Music and radio standards.'
+      },
+
+      // Tooltip and aria-label captions (data-i18n-title / data-i18n-aria-label attributes).
+      a11y: {
+        mixerStrip: 'Interactive SSL mixer strip',
+        aboutTitle: 'About Me // Nick Rise',
+        aboutAria: 'About Me - Nick Rise Studio',
+        aboutPhoto: 'Click to learn more about me',
+        prev: 'Previous',
+        next: 'Next',
+        close: 'Close',
+        backToTop: 'Back to top'
       }
     }
   },
@@ -370,8 +368,8 @@ const CONFIG = {
         'Стерео WAV (32-bit) + Минус и Акапелла'
       ],
       featuresEn: [
-        'Processing for up to 20 multitrack tracks',
-        'Manual vocal tuning & pitch alignment',
+        'Up to 20 tracks processed',
+        'Manual vocal tuning & timing correction',
         '3 complimentary revision rounds',
         'Stereo WAV (32-bit) + Instrumental & Acapella'
       ]
@@ -392,9 +390,9 @@ const CONFIG = {
         'Приоритетный срок выполнения (до 3 дней)'
       ],
       featuresEn: [
-        'Everything included in Mixing',
-        'Everything included in Mastering',
-        'Processing for up to 40 multitrack tracks',
+        'Everything from the Mixing package',
+        'Everything from the Mastering package',
+        'Up to 40 tracks processed',
         'Priority turnaround (up to 3 days)'
       ]
     },
@@ -416,7 +414,7 @@ const CONFIG = {
       featuresEn: [
         'Playback check on studio monitors and consumer sound systems',
         'Frequency balance & dynamics control',
-        'Mid-Side balance monitoring',
+        'Mid/Side balance control',
         'Distribution-ready streaming masters'
       ]
     }
@@ -448,13 +446,13 @@ const CONFIG = {
       qRu: 'Почему стоит выбрать именно меня?',
       qEn: 'Why choose me?',
       aRu: 'Мой опыт — это не только 6+ лет сведения и мастеринга, но и написания аранжировок. Благодаря этому я могу и контролировать качество на всех этапах создания музыки и давать советы по его улучшению.<br/><br/>Я не просто делаю «громко и чисто». Я слышу трек целиком и понимаю, что нужно именно вашему жанру, настроению и материалу. Вы получаете не просто сведение, а профессиональный взгляд на ваш трек со всех сторон.<br/><br/>Моя задача — чтобы ваш трек звучал на уровне мировых релизов, был конкурентным на стримингах и цеплял слушателя с первой секунды.' + FAQ_PROMO_RU,
-      aEn: 'My background spans not only 6+ years of mixing and mastering, but also music arrangement. This allows me to maintain quality control at every stage of music production and provide expert guidance to elevate your sound.<br/><br/>I don\'t just make tracks "loud and clean." I hear the big picture and know exactly what your specific genre, mood, and material need. You get more than just a mix — you get a comprehensive, professional perspective on your music.<br/><br/>My goal is to make your track sound on par with world-class releases, remain competitive across all streaming platforms, and hook the listener from the very first second.' + FAQ_PROMO_EN
+      aEn: 'My background spans not only 6+ years of mixing and mastering, but also music arrangement. This allows me to maintain quality control at every stage of music production and provide expert guidance to elevate your sound.<br/><br/>I don\'t just make tracks "loud and clean." I hear the big picture and know exactly what your specific genre, mood, and material need. You get more than just a mix — you get a comprehensive, professional perspective on your music.<br/><br/>My goal is to make your track sound stand alongside world-class releases, remain competitive across all streaming platforms, and hook the listener from the very first second.' + FAQ_PROMO_EN
     },
     {
       qRu: 'Как происходит процесс работы?',
-      qEn: 'How does the workflow process work?',
+      qEn: 'How does the process work?',
       aRu: 'Весь процесс делится на 4 этапа:<br/><br/>1 - Заявка и ТЗ. Вы присылаете мультитреки, референсы и техническое задание (как его правильно оформить, смотрите в следующем вопросе).<br/><br/>2 - Старт. Я слушаю материал, называю цену и срок. После вашей 50% предоплаты начинаю работу.<br/><br/>3 - Черновой микс и правки. Через 2–3 дня вы получаете MP3-черновик. Слушаете, пишете замечания. Я вношу правки (до 3-х итераций включительно).<br/><br/>4 - Финал. После утверждения микса вы оплачиваете оставшиеся 50%, я делаю мастеринг и отправляю готовые WAV и MP3 файлы.' + FAQ_PROMO_RU,
-      aEn: 'The process is divided into 4 stages:<br/><br/>1 - Request & Brief. You send multitracks, reference tracks, and technical requirements (see the next question for details on how to prepare them).<br/><br/>2 - Kickoff. I listen to your material, provide a quote, and set a completion date. Work begins once a 50% deposit is made.<br/><br/>3 - Draft Mix & Revisions. Within 2–3 days, you receive an MP3 preview. You listen and provide feedback, and I apply your adjustments (up to 3 revision rounds included).<br/><br/>4 - Final Delivery. Once the mix is approved, you pay the remaining 50%. I complete the final mastering and deliver your high-resolution WAV and MP3 files.' + FAQ_PROMO_EN
+      aEn: 'The process is divided into 4 stages:<br/><br/>1 - Request & Brief. You send multitracks, reference tracks, and technical requirements (see the next question for details).<br/><br/>2 - Kickoff. I listen to your material, provide a quote, and set a completion date. Work begins once a 50% deposit is made.<br/><br/>3 - Draft Mix & Revisions. Within 2–3 days, you receive an MP3 preview. You listen and provide feedback, and I apply your adjustments (up to 3 revision rounds included).<br/><br/>4 - Final Delivery. Once the mix is approved, you pay the remaining 50%. I complete the final mastering and deliver your WAV and MP3 files.' + FAQ_PROMO_EN
     },
     {
       qRu: 'Как правильно оформить Техническое Задание?',
@@ -466,13 +464,13 @@ const CONFIG = {
       qRu: 'Входят ли в стоимость правки?',
       qEn: 'Are revisions included in the price?',
       aRu: 'Да, в стоимость входит 3 итерации правок.<br/><br/>Это означает, что после получения чернового микса вы можете прислать список замечаний. Я вношу правки, вы слушаете обновлённую версию и при необходимости отправляете новый список. Так до трёх раз.<br/><br/>Важные правила:<br/><br/>1 - Замечания лучше присылать одним общим списком, а не по одному сообщению в день, при надобности указывайте чёткие тайминги, куда нужно вносить правку. Так мы не тратим время зря.<br/><br/>2 - Если после трёх итераций вы всё ещё недовольны — дальнейшие правки оплачиваются отдельно: одна итерация правок — 500₽.' + FAQ_PROMO_RU,
-      aEn: 'Yes, the price includes up to 3 rounds of revisions.<br/><br/>This means after receiving the initial draft, you can send a list of feedback. I update the mix, you review the new version, and if necessary, submit another list — up to three times.<br/><br/>Important Guidelines:<br/><br/>1 - Please consolidate your feedback into a single organized list (with specific timestamps where adjustments are needed) rather than sending separate messages daily. This saves valuable time.<br/><br/>2 - If additional revisions are needed after 3 rounds, further changes are billed separately at $10 per revision round.' + FAQ_PROMO_EN
+      aEn: 'Yes, the price includes 3 rounds of revisions.<br/><br/>This means after receiving the initial draft, you can send a list of feedback. I update the mix, you review the new version, and if necessary, submit another list — up to three times.<br/><br/>Important Guidelines:<br/><br/>1 - Please consolidate your feedback into a single organized list (with specific timestamps where adjustments are needed) rather than sending separate messages daily. This saves valuable time.<br/><br/>2 - If additional revisions are needed after 3 rounds, further changes are billed separately at $10 per revision round.' + FAQ_PROMO_EN
     },
     {
       qRu: 'Какой срок выполнения заказа?',
       qEn: 'What is the estimated turnaround time?',
       aRu: 'Стандартный срок — от 3 до 5 рабочих дней на один трек.<br/><br/>Время зависит от количества дорожек и сложности материала. Точную дату я называю после того, как послушаю ваши мультитреки.<br/><br/>Если нужно быстрее — я могу сделать трек за 24–48 часов. Стоимость срочного заказа увеличивается на 5000₽.' + FAQ_PROMO_RU,
-      aEn: 'Standard turnaround is 3 to 5 business days per track.<br/><br/>Delivery time depends on track count and complexity. I will provide an exact timeframe after reviewing your multitrack stems.<br/><br/>If you are in a rush, express delivery (24–48 hours) is available with a $100 rush order surcharge.' + FAQ_PROMO_EN
+      aEn: 'Standard turnaround is from 3 to 5 business days per track.<br/><br/>Delivery time depends on track count and complexity. I will provide an exact timeframe after reviewing your multitrack stems.<br/><br/>If you are in a rush, express delivery (24–48 hours) is available with a $100 rush fee.' + FAQ_PROMO_EN
     },
   ]
 };

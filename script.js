@@ -367,10 +367,34 @@ function renderI18nText() {
     }
   });
 
+  // Тултипы и aria-label (локализация атрибутов): data-i18n-title / data-i18n-aria-label
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    const v = getI18nValue(currentLang, el.getAttribute('data-i18n-title'), currentDevice);
+    if (typeof v === 'string' && v) el.setAttribute('title', v);
+  });
+
+  document.querySelectorAll('[data-i18n-aria-label]').forEach(el => {
+    const v = getI18nValue(currentLang, el.getAttribute('data-i18n-aria-label'), currentDevice);
+    if (typeof v === 'string' && v) el.setAttribute('aria-label', v);
+  });
+
+  // Заголовок вкладки и meta description — по текущему языку
+  updateDocumentMeta();
+
   // Окно-калькулятор стоимости услуг: пересчёт шкалы, подписей опций и итоговой цены
   renderPriceCalcStep();
 
   // Do not call animateHeroTitle on language toggle to prevent visual jitter/layout shift
+}
+
+// Заголовок вкладки (<title>) и meta description — динамические по языку.
+// og:* / twitter:* остаются статичными: скрейперы Telegram/VK/WhatsApp не выполняют JS.
+function updateDocumentMeta() {
+  const t = CONFIG.i18n && CONFIG.i18n[currentLang];
+  if (!t || !t.meta) return;
+  if (t.meta.title) document.title = t.meta.title;
+  const md = document.querySelector('meta[name="description"]');
+  if (md && t.meta.description) md.setAttribute('content', t.meta.description);
 }
 
 // --- PLAYER & MASTER DECK ENGINE ---

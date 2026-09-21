@@ -1704,15 +1704,19 @@ footer p {
 .nr-calc-cta {
   position: relative;
   isolation: isolate;
-  will-change: box-shadow, transform;
+  /* Подсказка только под тень — её и анимирует пульс ниже. transform в
+     will-change НЕ добавлять: кнопка содержит текст, а промоушен слоя
+     заставляет браузер растеризовать надпись отдельно (см. hover ниже и
+     раздел 6.5 в PROJECT-NOTES). */
+  will-change: box-shadow;
   /* Один медленный цикл на пульс, блик и «волну» — кнопка дышит в едином
      ритме (глобальная идея сайта: супер плавные и неспешные анимации). */
   --nr-cta-cycle: 4.2s;
   animation: nrCalcCtaPulse var(--nr-cta-cycle) cubic-bezier(0.45, 0, 0.55, 1) infinite;
   /* Наведение: плавный подъём и тёплое свечение. box-shadow не трогаем —
-     он занят пульсом, поэтому свечение даёт filter. */
+     он занят пульсом, поэтому свечение рисует слой-декорация ::after
+     (см. .nr-calc-cta:hover::after). filter на самой кнопке НЕ использовать. */
   transition: transform 0.7s var(--nr-ease),
-              filter 0.8s var(--nr-ease),
               background-color 0.6s ease;
 }
 
@@ -1720,8 +1724,12 @@ footer p {
    иначе «залипал» бы после тапа. */
 @media (hover: hover) and (pointer: fine) {
   .nr-calc-cta:hover {
-    transform: translate3d(0, -4px, 0) scale(1.02);
-    filter: brightness(1.08) drop-shadow(0 0 16px rgba(245, 158, 11, 0.45));
+    /* Подъём ровно на 4 px, БЕЗ scale и БЕЗ filter: внутри кнопки лежит
+       надпись. Композитный слой с масштабом и фильтр-поверхность заставляют
+       Chrome растеризовать текст в отдельный слой и отключают субпиксельное
+       сглаживание (LCD-текст) — на Windows надпись «сереет» и мылится.
+       Свечение и «рост» отданы слою-декорации ::after, там текста нет. */
+    transform: translateY(-4px);
   }
 
   /* Иконка калькулятора мягко увеличивается и чуть наклоняется */
@@ -1735,8 +1743,10 @@ footer p {
 
 /* Нажатие: короткий, но не резкий отклик (перекрываем active:scale-95 из Tailwind) */
 .nr-calc-cta:active {
-  transform: translate3d(0, -1px, 0) scale(0.965);
-  transition-duration: 0.22s, 0.22s, 0.22s;
+  transform: translateY(-1px) scale(0.965);
+  /* Ровно два значения — под два свойства в transition выше
+     (transform, background-color). */
+  transition-duration: 0.22s, 0.22s;
 }
 
 /* Дышащее свечение вокруг кнопки (только box-shadow — не мешает active:scale) */
@@ -1770,13 +1780,23 @@ footer p {
   background-size: 260% 100%;
   background-position: 118% 0;
   opacity: 0.75;
-  transition: opacity 0.7s var(--nr-ease);
+  transition: opacity 0.7s var(--nr-ease),
+              box-shadow 0.7s var(--nr-ease),
+              transform 0.7s var(--nr-ease);
   animation: nrCalcCtaSheen var(--nr-cta-cycle) linear infinite;
 }
 
-/* На наведении блик становится ярче (через opacity — она анимируется плавно) */
+/* На наведении блик становится ярче (через opacity — она анимируется плавно),
+   а этот же слой отдаёт тёплый ореол вокруг кнопки. Раньше ореол рисовал
+   filter: drop-shadow на самой кнопке — от него теряла качество надпись.
+   Здесь текста нет, поэтому и box-shadow, и лёгкий scale безопасны. */
 @media (hover: hover) and (pointer: fine) {
-  .nr-calc-cta:hover::after { opacity: 1; }
+  .nr-calc-cta:hover::after {
+    opacity: 1;
+    box-shadow: 0 0 22px rgba(245, 158, 11, 0.55),
+                0 6px 26px rgba(245, 158, 11, 0.35);
+    transform: scale(1.02);
+  }
 }
 
 /* Цикл блика — стык повтора полностью невидим:
@@ -1859,6 +1879,7 @@ footer p {
   .nr-calc-cta,
   .nr-calc-cta:hover,
   .nr-calc-cta:active,
+  .nr-calc-cta:hover::after,
   .nr-calc-cta:hover svg {
     transform: none !important;
     filter: none !important;
