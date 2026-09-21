@@ -428,8 +428,9 @@ function setTrackLanguage(targetLang, targetPage = 0) {
 }
 
 function getTracksPerPage() {
-  // Сетка карточек — 2 колонки на всех экранах (компьютер/планшет/телефон),
-  // поэтому страница = 2 колонки x 2 ряда = 4 трека.
+  // Колонок две на телефоне (2 x 2 = 4) и на компьютере (2 x 2 = 4); на планшете
+  // список идёт по одному треку в ряд, поэтому там 1 x 4 = 4. В любом случае
+  // страница — 4 трека, поэтому число страниц и «остановок» листания не меняется.
   return 4;
 }
 
@@ -1193,7 +1194,11 @@ function initPlayer() {
     if (navNextBtn) navNextBtn.addEventListener('click', () => runTrackTransition(-1, () => stepTrackPage(1), 'nav'));
 
     syncTrackNav = () => {
-      const shouldShow = window.innerWidth < 640 && getTrackSteps().length > 1;
+      // Стрелки нужны там, где список идёт в одну колонку — на телефоне и на
+      // планшете (до 1024px, как lg в Tailwind): там вьюпорт резервирует под них
+      // боковые зоны (см. animations.css). На компьютере карточки снова стоят в
+      // две колонки, места под стрелки нет — не показываем.
+      const shouldShow = window.innerWidth < 1024 && getTrackSteps().length > 1;
       swipeViewport.classList.toggle('nr-track-nav-mode', shouldShow);
 
       const t = (CONFIG.i18n && CONFIG.i18n[currentLang] && CONFIG.i18n[currentLang].player) || {};
@@ -1202,10 +1207,9 @@ function initPlayer() {
 
       if (!shouldShow || !navWrap || !navPrevBtn || !navNextBtn) return;
 
-      // Стрелки ставим ровно в середину свободной полосы между краем страницы и
-      // краем карточек. Меряем по вьюпорту и его боковым зонам, а НЕ по
-      // контейнеру карточек: во время свайпа лента сдвинута, и замер по ней
-      // уводил стрелки в сторону.
+      // Стрелки ставим по краю области карточек (см. ниже). Меряем по вьюпорту и
+      // его боковым зонам, а НЕ по контейнеру карточек: во время свайпа лента
+      // сдвинута, и замер по ней уводил стрелки в сторону.
       const wrapRect = navWrap.getBoundingClientRect();
       const vpRect = swipeViewport.getBoundingClientRect();
       const vpStyle = getComputedStyle(swipeViewport);
@@ -1221,8 +1225,16 @@ function initPlayer() {
       const bandLeft = cardsLeft;                             // полоса 0 … карточки
       const bandRight = window.innerWidth - cardsRight;       // полоса карточки … край окна
 
-      const prevScreenLeft = Math.max(0, (bandLeft - arrowW) / 2);
-      const nextScreenRight = Math.max(0, (bandRight - arrowW) / 2);
+      // Стрелку ставим вплотную к карточке. Раньше она вставала в середину
+      // свободной полосы: на телефоне полоса узкая (28–34px), и разницы не было,
+      // а на планшете полоса широкая — стрелка «висела» бы в пустоте далеко от
+      // списка. От края окна оставляем небольшой зазор: на узком экране он и
+      // задаёт положение (там вся полоса занята стрелкой).
+      const ARROW_GAP = 10;      // зазор между стрелкой и карточкой
+      const ARROW_EDGE_MIN = 6;  // минимум от края окна
+
+      const prevScreenLeft = Math.max(ARROW_EDGE_MIN, bandLeft - arrowW - ARROW_GAP);
+      const nextScreenRight = Math.max(ARROW_EDGE_MIN, bandRight - arrowW - ARROW_GAP);
 
       navPrevBtn.style.left = (prevScreenLeft - wrapRect.left) + 'px';
       navNextBtn.style.right = (nextScreenRight - (window.innerWidth - wrapRect.right)) + 'px';
@@ -1969,7 +1981,7 @@ function createTrackCard(track, { isMobileView, currentDevice, withId = true, ea
           ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10'
           : 'bg-[#0B0E15] border-gray-800/80 hover:border-amber-500/40 hover:bg-[#0F131E]'
       }`
-    : `p-3.5 rounded-2xl border transition-all duration-300 cursor-pointer flex items-center justify-between gap-3 group ${
+    : `p-4 rounded-2xl border transition-all duration-300 cursor-pointer flex items-center justify-between gap-3.5 group ${
         isSelected
           ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10'
           : 'bg-[#0B0E15] border-gray-800/80 hover:border-amber-500/40 hover:bg-[#0F131E]'
@@ -1979,7 +1991,7 @@ function createTrackCard(track, { isMobileView, currentDevice, withId = true, ea
   const trackCoverBox = document.createElement('div');
   trackCoverBox.className = (isMobileView
     ? `track-cover-box relative w-full aspect-square rounded-xl overflow-hidden flex-shrink-0 border transition-colors duration-300 ${isSelected ? 'border-amber-500' : 'border-gray-800'}`
-    : `track-cover-box relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl overflow-hidden flex-shrink-0 border transition-colors duration-300 ${isSelected ? 'border-amber-500' : 'border-gray-800'}`
+    : `track-cover-box relative w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden flex-shrink-0 border transition-colors duration-300 ${isSelected ? 'border-amber-500' : 'border-gray-800'}`
   );
 
   const coverImg = document.createElement('img');
@@ -2004,13 +2016,13 @@ function createTrackCard(track, { isMobileView, currentDevice, withId = true, ea
   const titleEl = document.createElement('h4');
   titleEl.className = (isMobileView
     ? 'track-card-title text-sm font-extrabold text-white truncate group-hover:text-amber-400 transition-colors'
-    : 'track-card-title text-xs sm:text-sm font-extrabold text-white truncate group-hover:text-amber-400 transition-colors'
+    : 'track-card-title text-sm sm:text-base font-extrabold text-white truncate group-hover:text-amber-400 transition-colors'
   );
   titleEl.textContent = trackTitle;
   const artistEl = document.createElement('p');
   artistEl.className = (isMobileView
     ? 'track-card-artist text-xs text-gray-400 truncate mt-0.5'
-    : 'track-card-artist text-[11px] text-gray-400 truncate mt-0.5'
+    : 'track-card-artist text-xs sm:text-sm text-gray-400 truncate mt-0.5'
   );
   artistEl.textContent = trackArtist;
   meta.appendChild(titleEl);
@@ -2020,7 +2032,7 @@ function createTrackCard(track, { isMobileView, currentDevice, withId = true, ea
   genreSpan.className = (isMobileView
     // Жанр по центру и чуть крупнее, чтобы проще было заметить жанр трека.
     ? `track-genre-badge self-center text-[11px] font-bold px-3 py-1 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}`
-    : `track-genre-badge text-[11px] font-extrabold px-3 py-1 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}`
+    : `track-genre-badge text-xs font-extrabold px-3.5 py-1.5 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}`
   );
   genreSpan.textContent = genreText;
 
@@ -2055,21 +2067,21 @@ function createTrackCard(track, { isMobileView, currentDevice, withId = true, ea
     playBtn.type = 'button';
     playBtn.setAttribute('aria-label', isPlaying ? 'Pause' : 'Play');
     if (withId) playBtn.onclick = (ev) => { ev.stopPropagation(); toggleTrack(track.id); };
-    playBtn.className = `track-play-btn p-2 sm:p-2.5 rounded-xl transition-all cursor-pointer ${
+    playBtn.className = `track-play-btn p-2.5 sm:p-3 rounded-xl transition-all cursor-pointer ${
       isSelected
         ? 'bg-amber-500 text-slate-950 font-black shadow-md'
         : 'bg-gray-900 text-gray-300 hover:bg-amber-500 hover:text-slate-950'
     }`;
-    playBtn.innerHTML = `<svg class="track-play-svg w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="${isPlaying ? 'M6 19h4V5H6v14zm8-14v14h4V5h-4z' : 'M8 5v14l11-7z'}"/></svg>`;
+    playBtn.innerHTML = `<svg class="track-play-svg w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="${isPlaying ? 'M6 19h4V5H6v14zm8-14v14h4V5h-4z' : 'M8 5v14l11-7z'}"/></svg>`;
 
     const leftRow = document.createElement('div');
-    leftRow.className = 'flex items-center gap-3.5 min-w-0 flex-1';
+    leftRow.className = 'flex items-center gap-4 min-w-0 flex-1';
     leftRow.appendChild(trackCoverBox);
     meta.className = 'min-w-0 flex-1';
     leftRow.appendChild(meta);
 
     const rightRow = document.createElement('div');
-    rightRow.className = 'flex items-center gap-2 flex-shrink-0';
+    rightRow.className = 'flex items-center gap-2.5 flex-shrink-0';
     rightRow.appendChild(genreSpan);
     rightRow.appendChild(playBtn);
 
@@ -2145,7 +2157,7 @@ function renderTrackList(animate = false) {
               ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10' 
               : 'bg-[#0B0E15] border-gray-800/80 hover:border-amber-500/40 hover:bg-[#0F131E]'
           }`
-        : `p-3.5 rounded-2xl border transition-all duration-300 cursor-pointer flex items-center justify-between gap-3 group ${
+        : `p-4 rounded-2xl border transition-all duration-300 cursor-pointer flex items-center justify-between gap-3.5 group ${
             isSelected 
               ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10' 
               : 'bg-[#0B0E15] border-gray-800/80 hover:border-amber-500/40 hover:bg-[#0F131E]'
@@ -2156,7 +2168,7 @@ function renderTrackList(animate = false) {
       if (coverBox) {
         coverBox.className = (isMobileView
           ? `track-cover-box relative w-full aspect-square rounded-xl overflow-hidden flex-shrink-0 border transition-colors duration-300 ${isSelected ? 'border-amber-500' : 'border-gray-800'}`
-          : `track-cover-box relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl overflow-hidden flex-shrink-0 border transition-colors duration-300 ${isSelected ? 'border-amber-500' : 'border-gray-800'}`
+          : `track-cover-box relative w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden flex-shrink-0 border transition-colors duration-300 ${isSelected ? 'border-amber-500' : 'border-gray-800'}`
         );
       }
 
@@ -2177,7 +2189,7 @@ function renderTrackList(animate = false) {
         genreBadge.className = (isMobileView
           // Жанр по центру и чуть крупнее, чтобы проще было заметить жанр трека.
           ? `track-genre-badge self-center text-[11px] font-bold px-3 py-1 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}`
-          : `track-genre-badge text-[11px] font-extrabold px-3 py-1 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}`
+          : `track-genre-badge text-xs font-extrabold px-3.5 py-1.5 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}`
         );
       }
 
@@ -2191,7 +2203,7 @@ function renderTrackList(animate = false) {
                 ? 'text-amber-400 hover:text-amber-300'
                 : 'text-white hover:text-amber-400'
             } active:scale-95`
-          : `track-play-btn p-2 sm:p-2.5 rounded-xl transition-all cursor-pointer ${
+          : `track-play-btn p-2.5 sm:p-3 rounded-xl transition-all cursor-pointer ${
               isSelected 
                 ? 'bg-amber-500 text-slate-950 font-black shadow-md' 
                 : 'bg-gray-900 text-gray-300 hover:bg-amber-500 hover:text-slate-950'
