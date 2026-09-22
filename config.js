@@ -8,6 +8,20 @@ const FAQ_PROMO_RU = '<div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-500/10 b
 const FAQ_PROMO_EN = '<div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200/90 text-sm flex items-start sm:items-center gap-3"><svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V6a2 2 0 10-2 2h2zm0 13C10.832 21 2 20 2 15V8a2 2 0 012-2h16a2 2 0 012 2v7c0 5-8.832 6-10 6z"/></svg><span>Interested in working together? Message me <strong class="text-amber-400 font-bold">"NRSDiscount"</strong> on Telegram and get <strong class="text-amber-400 font-bold">10% off</strong> your first order.</span></div>';
 
 const CONFIG = {
+  /* ── Отладочный обход HTTP-кэша аудио (в обычной работе ВЫКЛЮЧЕН) ────────
+     false — рабочее значение: файлы берутся из кэша браузера, повторный
+             заход треки не качает.
+     true  — только на время проверки: к каждому mp3 при создании дорожки
+             добавляется уникальный параметр (?nrcb=...), браузер не узнаёт
+             URL и качает все треки ЗАНОВО при каждом открытии страницы —
+             как будто зашёл новый человек. Так честно проверяются загрузка
+             и приоритеты прогрева в Network (≈113 МБ за заход).
+             После проверки вернуть false и пересобрать: build-min.cjs +
+             bump-assets.cjs.
+     На папку public/ значение не влияет: параметр живёт только в памяти
+     страницы, ссылки в index.html остаются прежними. */
+  AUDIO_CACHE_BUST: false,
+
   i18n: {
     ru: {
       nav: {

@@ -10,6 +10,9 @@ let suppressCardEnterAnimation = false;
 
 // Audio engine data
 const trackAudioMap = {}; // { trackId: { audioA, audioB, source: 'before'|'after', volume: 0.9 } }
+// Штамп для отладочного обхода кэша аудио (см. audioUrl): один на всю сессию
+// страницы, чтобы адреса внутри одного захода не расходились.
+let audioCacheStampValue = '';
 
 /* ScrollTrigger.refresh() — это полный пересчёт позиций всех триггеров, то есть
    принудительная переклейка раскладки всей страницы. На старте он вызывался
@@ -443,6 +446,10 @@ function setTrackLanguage(targetLang, targetPage = 0) {
   currentTrackPage = targetPage === 'last' ? getTotalTrackPages() - 1 : targetPage;
   updateTrackLangButtonsUI();
 
+  // Треки нового языка нужны раньше всего — поднимаем их в очереди прогрева
+  // (см. «ФОНОВЫЙ ПРОГРЕВ АУДИО»): у нового языка подгружается вся страница.
+  warmPrioritizeLanguage(targetLang);
+
   // Первый трек нового языка не выделяется: подсветка живёт только у трека,
   // который пользователь включил сам. Плеер просто обновляет подписи.
 
@@ -634,18 +641,47 @@ function getTrackConfigById(trackId) {
   return CONFIG.tracks.find(tr => tr.id === trackId) || null;
 }
 
+/* ══ ОТЛАДОЧНЫЙ ОБХОД КЭША АУДИО ═══════════════════════════════════════════
+   Выключатель: CONFIG.AUDIO_CACHE_BUST в config.js. Пока флаг true, к URL
+   каждого mp3 добавляется уникальный параметр — браузер считает файл новым и
+   качает его заново при каждом открытии страницы (проверка «как новый
+   человек»). После проверки флаг ставится в false, и поведение возвращается к
+   обычному кэшированию.
+
+   Важно: параметр добавляется РОВНО ОДИН РАЗ, при создании элемента <audio>.
+   Если подставлять его в момент загрузки (load()), тогда каждое прерывание
+   фонового прогрева обнуляло бы уже скачанное, и обход кэша ломал бы логику
+   возобновления. Здесь URL фиксируется на всю сессию элемента. */
+
+function audioUrl(src) {
+  if (!src) return src;
+  if (!CONFIG || !CONFIG.AUDIO_CACHE_BUST) return src;
+  const sep = src.indexOf('?') < 0 ? '?' : '&';
+  // Один и тот же штамп на все дорожки страницы: адреса уникальны для браузера,
+  // но внутри одного захода не меняются — иначе элементы одного трека
+  // разошлись бы по разным URL.
+  return src + sep + 'nrcb=' + getAudioCacheStamp();
+}
+
+function getAudioCacheStamp() {
+  if (!audioCacheStampValue) {
+    audioCacheStampValue = String(Date.now()) + '-' + Math.random().toString(36).slice(2, 8);
+  }
+  return audioCacheStampValue;
+}
+
 function createTrackAudioEntry(track) {
   if (!track || !track.id || !track.audioBefore || !track.audioAfter) return null;
   if (trackAudioMap[track.id]) return trackAudioMap[track.id];
 
-  const audioA = new Audio(track.audioBefore);
-  const audioB = new Audio(track.audioAfter);
+  const audioA = new Audio(audioUrl(track.audioBefore));
+  const audioB = new Audio(audioUrl(track.audioAfter));
   audioA.preload = 'metadata';
   audioB.preload = 'metadata';
 
   const handleAudioError = (el, type) => {
     el.addEventListener('error', () => {
-      const fallbackSrc = `./audio/pophouse_1_${type}.mp3`;
+      const fallbackSrc = audioUrl(`./audio/pophouse_1_${type}.mp3`);
       const fullFallback = new URL(fallbackSrc, window.location.href).href;
       if (el.src !== fullFallback) {
         el.src = fallbackSrc;
@@ -686,10 +722,21 @@ function createTrackAudioEntry(track) {
   audioB.addEventListener('timeupdate', handleTimeUpdate);
   audioA.addEventListener('loadedmetadata', () => {
     if (activeTrackId === track.id) updateDeckProgressUI();
+    restoreWarmResume(track.id, audioA);
   });
   audioB.addEventListener('loadedmetadata', () => {
     if (activeTrackId === track.id) updateDeckProgressUI();
+    restoreWarmResume(track.id, audioB);
   });
+
+  /* Играющий трек догрузился целиком — снимаем удержание фоновой очереди
+     (см. warmHold): дальше звук идёт из буфера, и фон снова может качать
+     остальные треки. Проверка дешёвая: срабатывает только для того трека,
+     который сейчас слушают. */
+  audioA.addEventListener('progress', () => warmCheckHoldRelease(track.id));
+  audioB.addEventListener('progress', () => warmCheckHoldRelease(track.id));
+  audioA.addEventListener('canplaythrough', () => warmCheckHoldRelease(track.id));
+  audioB.addEventListener('canplaythrough', () => warmCheckHoldRelease(track.id));
 
   audioA.addEventListener('ended', () => {
     if (activeTrackId === track.id) nextDeckTrack();
@@ -701,23 +748,428 @@ function createTrackAudioEntry(track) {
   return trackAudioMap[track.id];
 }
 
-/* Предзагрузка без звука: создаём элемент с preload='metadata' (браузер
-   запросит только шапку файла). Вызывается на наведение/касание карточки. */
+/* Наведение/фокус на карточке: пара создаётся сразу, а трек поднимается в
+   начало очереди прогрева — с небольшой задержкой «намерения», чтобы
+   случайные движения мыши не перетасовывали очередь и не тянули мегабайты. */
 function prefetchTrackAudio(trackId) {
-  if (trackAudioMap[trackId]) return;
-  createTrackAudioEntry(getTrackConfigById(trackId));
+  if (!trackId) return;
+  if (!trackAudioMap[trackId]) createTrackAudioEntry(getTrackConfigById(trackId));
+
+  if (hoverWarmId === trackId) return;
+  hoverWarmId = trackId;
+  clearTimeout(hoverWarmTimer);
+  hoverWarmTimer = setTimeout(() => warmQueuePush(trackId, { front: true }), AUDIO_WARM_HOVER_DELAY);
 }
 
+/* Трек понадобился сейчас (клик, старт воспроизведения): включаем полную
+   загрузку пары. Повторный вызов не перезапускает уже идущую передачу. */
 function ensureTrackLoaded(trackId) {
   const item = trackAudioMap[trackId] || createTrackAudioEntry(getTrackConfigById(trackId));
   if (!item) return;
-  if (item.audioA.preload !== 'auto') {
-    item.audioA.preload = 'auto';
-    item.audioB.preload = 'auto';
+  beginPairDownload(item);
+}
+
+/* ══ ФОНОВЫЙ ПРОГРЕВ АУДИО ═══════════════════════════════════════════════
+   Зачем. Треки «до/после» — это полноценные mp3 320 kbps: 5.4–11.1 МБ на
+   файл, то есть 11–22 МБ на трек. Пока пара не в буфере, первый клик ждал
+   сеть, а листание и смена языка EN↔RU ждали особенно долго: у нового языка
+   подгружается сразу вся страница треков (47–66 МБ).
+
+   Как. Сразу после загрузки страницы (window.load — критичные ресурсы уже
+   взяты, поэтому LCP/TBT не затрагиваются) все треки обоих языков встают в
+   очередь и качаются ПО ОДНОЙ паре за раз: следующий трек начинаем, когда
+   текущий готов (или по страховочному таймауту), чтобы слышимая дорожка не
+   делила канал с фоновыми загрузками.
+
+   Приоритеты. Клик, «Next/Prev» и смена языка перебивают фон: выбранный трек
+   идёт первым, а фоновую загрузку, которую никто не слушает, прерываем —
+   канал целиком достаётся тому, что включили. Если фон занят активным
+   (играющим) треком, его не трогаем: выбранный качается параллельно одной
+   дополнительной парой.
+
+   Чего очередь не делает: не трогает активную пару (звук не рвётся), не
+   начинает новых загрузок при скрытой вкладке, не берёт в работу треки,
+   которые уже целиком в буфере. Состояние очереди видно в консоли:
+   window.nrAudioWarm.
+   ══════════════════════════════════════════════════════════════════════ */
+
+const AUDIO_WARM_TIMEOUT = 20000;   // мс: страховка от залипания на медленном канале
+const AUDIO_WARM_READY_TAIL = 0.5;  // с: «готово», если в буфере всё, кроме хвоста
+const AUDIO_WARM_HOVER_DELAY = 120; // мс: сколько ждать «намерения» при наведении
+
+const audioWarmQueue = [];       // id треков, ожидающих фоновой загрузки, по порядку
+const audioWarmReady = [];       // id, чья пара уже целиком в буфере
+const audioWarmCanceled = [];    // id, чью фоновую загрузку прервало действие пользователя
+let audioWarmCurrentId = null;   // id фоновой загрузки в работе (одна пара за раз)
+let audioWarmCurrentItem = null; // её пара дорожек
+let audioWarmCurrentTimer = 0;   // таймер страховки фоновой загрузки
+let audioWarmBoostId = null;     // трек, который качается параллельно (фон занят)
+let audioWarmBoostTimer = 0;     // его таймер страховки
+/* id трека, который слушают прямо сейчас. Пока он задан, фоновая очередь не
+   берёт следующий трек: канал остаётся свободным для перемоток внутри
+   играющего трека (см. warmQueueRun). Как только воспроизведение остановлено,
+   warmReleaseHold() снимает удержание и очередь идёт дальше. */
+let audioWarmHoldId = null;
+let audioWarmSweepStarted = false;
+let hoverWarmId = null;
+let hoverWarmTimer = 0;
+
+/* Пара готова к мгновенному воспроизведению: в буфере есть всё, кроме
+   последнего хвоста (или браузер сам считает, что данных хватит до конца). */
+function isElementWarm(el) {
+  if (!el) return false;
+  const dur = el.duration;
+  if (dur && isFinite(dur)) {
+    try {
+      const t = el.currentTime || 0;
+      for (let i = 0; i < el.buffered.length; i++) {
+        if (el.buffered.start(i) <= t + 0.25 && el.buffered.end(i) >= dur - AUDIO_WARM_READY_TAIL) {
+          return true;
+        }
+      }
+    } catch (err) { /* buffered может быть недоступен до метаданных */ }
+  }
+  return el.readyState >= 4;
+}
+
+function isPairWarm(item) {
+  if (!item) return false;
+  return isElementWarm(item.audioA) && isElementWarm(item.audioB);
+}
+
+function markWarmReady(trackId) {
+  if (audioWarmReady.indexOf(trackId) < 0) audioWarmReady.push(trackId);
+}
+
+function setPairPreload(item, value) {
+  if (!item) return;
+  if (item.audioA.preload !== value) item.audioA.preload = value;
+  if (item.audioB.preload !== value) item.audioB.preload = value;
+}
+
+/* Возврат позиции после прерывания фоновой загрузки: load() в abortWarmCurrent
+   сбрасывает currentTime, поэтому запомненную позицию восстанавливаем, когда
+   элемент снова получил метаданные. */
+function restoreWarmResume(trackId, el) {
+  const item = trackAudioMap[trackId];
+  if (!item || !item.resumeAt) return;
+  try {
+    const at = item.resumeAt;
+    if (!el.duration || at < el.duration - 0.5) el.currentTime = at;
+  } catch (err) { /* не критично: восстанавливать позицию не обязательно */ }
+}
+
+/* Включает полную загрузку пары. load() вызываем ровно один раз на попытку:
+   повторный вызов сбросил бы уже скачанное и позицию воспроизведения. */
+function beginPairDownload(item) {
+  if (!item) return;
+  setPairPreload(item, 'auto');
+  if (item.warmStarted) return;
+  item.warmStarted = true;
+  item.audioA.load();
+  item.audioB.load();
+}
+
+/* Слушатели вешаем на пару один раз. Они «молчат», пока этот трек не станет
+   целью прогрева — фоновой или параллельной. */
+function bindWarmListeners(trackId, item) {
+  if (!item || item.warmBound) return;
+  item.warmBound = true;
+
+  const check = () => {
+    if (audioWarmCurrentId !== trackId && audioWarmBoostId !== trackId) return;
+    if (isPairWarm(item)) finishWarmLoad(trackId, true);
+  };
+
+  ['canplaythrough', 'progress', 'loadeddata', 'suspend'].forEach(evt => {
+    item.audioA.addEventListener(evt, check);
+    item.audioB.addEventListener(evt, check);
+  });
+}
+
+/* ── очередь прогрева ─────────────────────────────────────────────────── */
+
+/* Очередь дошла до этого трека — начинаем загрузку пары.
+   null: качать нечего (нет трека или он уже целиком в буфере). */
+function startWarmLoad(trackId) {
+  const item = trackAudioMap[trackId] || createTrackAudioEntry(getTrackConfigById(trackId));
+  if (!item) return null;
+  if (isPairWarm(item)) { markWarmReady(trackId); return null; }
+
+  bindWarmListeners(trackId, item);
+  beginPairDownload(item);
+  return item;
+}
+
+/* Фоновая загрузка закончилась: пара готова либо вышла страховка по времени. */
+function finishWarmLoad(trackId, isReady) {
+  if (audioWarmBoostId === trackId) {
+    clearTimeout(audioWarmBoostTimer);
+    audioWarmBoostTimer = 0;
+    audioWarmBoostId = null;
+  }
+  if (audioWarmCurrentId !== trackId) return;
+
+  clearTimeout(audioWarmCurrentTimer);
+  audioWarmCurrentTimer = 0;
+  audioWarmCurrentId = null;
+  audioWarmCurrentItem = null;
+  if (isReady) markWarmReady(trackId);
+  warmQueueRun();
+}
+
+/* Прерываем фоновую загрузку: канал нужен треку, который выбрал пользователь.
+   Пара сбрасывается и возвращается в конец очереди, чтобы догрузиться позже.
+   Активный (играющий) трек не прерываем никогда — звук не должен рваться. */
+function abortWarmCurrent() {
+  const trackId = audioWarmCurrentId;
+  const item = audioWarmCurrentItem;
+
+  audioWarmCurrentId = null;
+  audioWarmCurrentItem = null;
+  clearTimeout(audioWarmCurrentTimer);
+  audioWarmCurrentTimer = 0;
+
+  if (item) {
+    // Позицию запоминаем: load() обнуляет currentTime, а вернувшись к треку,
+    // пользователь должен услышать то же место (см. restoreWarmResume).
+    const at = Math.max(item.audioA.currentTime || 0, item.audioB.currentTime || 0);
+    item.resumeAt = at > 0.25 ? at : 0;
+    setPairPreload(item, 'none');
+    item.warmStarted = false;
     item.audioA.load();
     item.audioB.load();
   }
+  if (trackId) {
+    if (audioWarmCanceled.indexOf(trackId) < 0) audioWarmCanceled.push(trackId);
+    if (audioWarmQueue.indexOf(trackId) < 0) audioWarmQueue.push(trackId);
+  }
 }
+
+/* front: true — трек нужен раньше остальных (наведение, сосед играющего).
+   defer: true — не запускать очередь сразу: батч-постановка, запуск в конце
+   (см. warmPrioritizeLanguage — иначе первым начал бы качаться последний трек). */
+function warmQueuePush(trackId, options = {}) {
+  if (!trackId || !getTrackConfigById(trackId)) return;
+  if (audioWarmCurrentId === trackId || audioWarmBoostId === trackId) return;
+
+  const item = trackAudioMap[trackId];
+  if (item && isPairWarm(item)) { markWarmReady(trackId); return; }
+
+  const idx = audioWarmQueue.indexOf(trackId);
+  if (options.front) {
+    if (idx >= 0) audioWarmQueue.splice(idx, 1);
+    audioWarmQueue.unshift(trackId);
+  } else if (idx < 0) {
+    audioWarmQueue.push(trackId);
+  }
+
+  if (!options.defer) warmQueueRun();
+}
+
+function warmQueueRun() {
+  if (audioWarmCurrentId) return; // одна пара за раз
+  if (document.hidden) return;    // вкладка скрыта — новые загрузки не начинаем
+  /* Трек слушают прямо сейчас: канал держим свободным. Если продолжить качать
+     следующую пару, любая перемотка («перемотал на припев») встанет в очередь
+     за фоновыми мегабайтами — это и давало секунды ожидания. Как только
+     воспроизведение остановлено, очередь продолжается сама (warmReleaseHold). */
+  if (audioWarmHoldId) return;
+
+  while (audioWarmQueue.length) {
+    const trackId = audioWarmQueue.shift();
+    const item = startWarmLoad(trackId);
+    if (!item) continue;
+
+    audioWarmCurrentId = trackId;
+    audioWarmCurrentItem = item;
+    clearTimeout(audioWarmCurrentTimer);
+    audioWarmCurrentTimer = setTimeout(() => finishWarmLoad(trackId, false), AUDIO_WARM_TIMEOUT);
+    return;
+  }
+}
+
+/* ── приоритеты: действие пользователя главнее фона ───────────────────── */
+
+/* Выбранный трек нужен сейчас: фон, который никто не слушает, прерываем.
+   Если фон занят активным треком — качаем выбранный параллельно одной
+   дополнительной парой, чтобы не рвать звук. */
+function warmQueuePrioritize(trackId) {
+  if (!trackId || !getTrackConfigById(trackId)) return;
+
+  const item = trackAudioMap[trackId];
+  if (item && isPairWarm(item)) { markWarmReady(trackId); return; }
+
+  if (audioWarmCurrentId && audioWarmCurrentId !== trackId &&
+      audioWarmCurrentId !== activeTrackId) {
+    const currentItem = audioWarmCurrentItem;
+    if (currentItem && !isPairWarm(currentItem)) abortWarmCurrent();
+  }
+
+  warmQueuePush(trackId, { front: true });
+
+  if (audioWarmCurrentId && audioWarmCurrentId !== trackId && audioWarmBoostId !== trackId) {
+    clearTimeout(audioWarmBoostTimer);
+    audioWarmBoostTimer = 0;
+    const previousBoost = audioWarmBoostId;
+    audioWarmBoostId = null;
+    if (previousBoost) warmQueuePush(previousBoost);
+
+    const boostItem = startWarmLoad(trackId);
+    if (boostItem) {
+      audioWarmBoostId = trackId;
+      audioWarmBoostTimer = setTimeout(() => finishWarmLoad(trackId, false), AUDIO_WARM_TIMEOUT);
+    }
+  }
+}
+
+/* Пользователь слушает трек: он вне очереди, соседи — сразу за ним. */
+function warmOnPlay(trackId) {
+  if (!trackId) return;
+  // Клик «забывает» наведение: если трек позже вернётся в очередь, новое
+  // наведение на него снова сможет поднять его в начало.
+  hoverWarmId = null;
+  warmQueuePrioritize(trackId);
+
+  const enabled = getEnabledTracks();
+  if (enabled.length < 2) return;
+  const idx = enabled.findIndex(tr => tr.id === trackId);
+  if (idx < 0) return;
+
+  const nextTrack = enabled[(idx + 1) % enabled.length];
+  const prevTrack = enabled[(idx - 1 + enabled.length) % enabled.length];
+  // Порядок вставки обратный: следующий трек оказывается первым в очереди.
+  if (prevTrack && prevTrack.id !== nextTrack.id) warmQueuePush(prevTrack.id, { front: true });
+  if (nextTrack) warmQueuePush(nextTrack.id, { front: true });
+}
+
+/* Перемотка внутри играющего трека («перемотал на припев»). Новое место почти
+   всегда ещё не в буфере, поэтому браузер идёт в сеть за этим участком
+   (Range-запрос). Если параллельно идёт фоновый прогрев, канал делится, и звук
+   ждёт своей порции данных — на 320 kbps это заметные секунды. Здесь канал
+   освобождается под активный трек, но САМУ пару не перезагружаем: у неё уже
+   есть буфер и позиция, повторный load() их бы обнулил. */
+function warmOnSeek(trackId, seekTime) {
+  if (!trackId) return;
+  warmOnPlay(trackId);
+  /* Перемотали в место, которого в буфере ещё нет: канал снова целиком под
+     этот трек, пока нужный участок не догрузится (дальше удержание снимет
+     warmCheckHoldRelease). */
+  warmHold(trackId);
+  // Фоновая загрузка, которая не звучит, канал больше не занимает.
+  if (audioWarmCurrentId && audioWarmCurrentId !== trackId &&
+      audioWarmCurrentId !== activeTrackId) {
+    const currentItem = audioWarmCurrentItem;
+    if (currentItem && !isPairWarm(currentItem)) abortWarmCurrent();
+  }
+  void seekTime;
+}
+
+/* ── удержание фона на время прослушивания ─────────────────────────────── */
+
+/* Трек зазвучал: фоновая очередь останавливается, весь канал — этому треку,
+   пока он не догружен целиком. Именно это убирает «нажал и жду 8 секунд»:
+   выбранный трек не делит канал с фоновыми загрузками.
+   Как только пара в буфере целиком, удержание снимается само
+   (warmCheckHoldRelease) — слушать можно из буфера, и фон снова качает
+   остальные треки. Если пользователь перемотал в непрогруженный участок,
+   удержание ставится снова (warmOnSeek). */
+function warmHold(trackId) {
+  if (!trackId) return;
+  /* Пара уже целиком в буфере — держать канал незачем, и снимать удержание
+     будет нечем (событие progress для готового трека может не прийти). */
+  const item = trackAudioMap[trackId];
+  if (item && isPairWarm(item)) { audioWarmHoldId = null; return; }
+  audioWarmHoldId = trackId;
+}
+
+/* Воспроизведение остановлено (пауза, доиграл до конца) — фон снова качает
+   ВСЕ треки: очередь пересобирается в исходный порядок (активный язык целиком,
+   затем второй), уже скачанное не перекачивается. Это и есть «остановил —
+   снова загружаются все треки». */
+function warmReleaseHold() {
+  if (!audioWarmHoldId) return;
+  audioWarmHoldId = null;
+  warmQueueRefill();
+  warmQueueRun();
+}
+
+/* Играющий трек догрузился целиком — держать канал больше незачем. */
+function warmCheckHoldRelease(trackId) {
+  if (!audioWarmHoldId || audioWarmHoldId !== trackId) return;
+  const item = trackAudioMap[trackId];
+  if (item && isPairWarm(item)) warmReleaseHold();
+}
+
+/* Докладываем в очередь всё, чего в ней нет и что ещё не готово. */
+function warmQueueRefill() {
+  getInitialWarmOrder().forEach(trackId => warmQueuePush(trackId, { defer: true }));
+}
+
+/* Сменился язык — треки нового языка нужны раньше всего остального. */
+function warmPrioritizeLanguage(lang) {
+  const ids = getEnabledTracksForLang(lang).map(tr => tr.id);
+  // Ставим батчем и запускаем очередь один раз: у поочерёдной вставки первый же
+  // unshift начал бы качать последний трек языка вместо первого.
+  ids.slice().reverse().forEach(trackId => warmQueuePush(trackId, { front: true, defer: true }));
+  warmQueueRun();
+}
+
+/* Порядок первого прогрева: первый трек активного языка (самый вероятный
+   клик) → остальные треки активного языка → первый трек второго языка →
+   хвост второго языка. */
+function getInitialWarmOrder() {
+  const activeIds = getEnabledTracks().map(tr => tr.id);
+  const otherIds = getEnabledTracksForLang(activeTrackLang === 'ru' ? 'en' : 'ru').map(tr => tr.id);
+  return [].concat(
+    activeIds.slice(0, 1),
+    activeIds.slice(1),
+    otherIds.slice(0, 1),
+    otherIds.slice(1)
+  );
+}
+
+function whenBrowserIdle(callback) {
+  if (typeof requestIdleCallback === 'function') {
+    requestIdleCallback(() => callback(), { timeout: 1500 });
+  } else {
+    setTimeout(callback, 200);
+  }
+}
+
+/* Основной триггер прогрева: страница загружена целиком, сеть свободна. */
+function scheduleInitialAudioWarm() {
+  if (audioWarmSweepStarted) return;
+  audioWarmSweepStarted = true;
+  getInitialWarmOrder().forEach(trackId => warmQueuePush(trackId));
+}
+
+/* Состояние очереди — для проверки в браузере (консоль: nrAudioWarm).
+   hold — id трека, который слушают: пока он не догружен, фоновая очередь
+   стоит и канал целиком отдан ему. paused — стоит ли очередь из-за удержания
+   или скрытой вкладки. cacheBust — включён ли отладочный обход кэша
+   (CONFIG.AUDIO_CACHE_BUST): при true каждый заход качает треки заново. */
+window.nrAudioWarm = {
+  get queue() { return audioWarmQueue.slice(); },
+  get current() { return audioWarmCurrentId; },
+  get boost() { return audioWarmBoostId; },
+  get ready() { return audioWarmReady.slice(); },
+  get canceled() { return audioWarmCanceled.slice(); },
+  get hold() { return audioWarmHoldId; },
+  get paused() { return !!audioWarmHoldId || document.hidden; },
+  get cacheBust() { return !!(CONFIG && CONFIG.AUDIO_CACHE_BUST); },
+  get summary() {
+    return {
+      listening: audioWarmHoldId,
+      downloading: audioWarmCurrentId,
+      parallel: audioWarmBoostId,
+      waiting: audioWarmQueue.slice(),
+      buffered: audioWarmReady.slice(),
+      interrupted: audioWarmCanceled.slice(),
+      cacheBust: !!(CONFIG && CONFIG.AUDIO_CACHE_BUST)
+    };
+  }
+};
 
 // Анимация перехода ленты треков (свайп-эффект) и синхронизация стрелок
 // листания: назначаются в initPlayer, вызываются из renderTrackList и кнопок.
@@ -803,17 +1255,16 @@ function initPlayer() {
   // ни одна карточка не должна выглядеть активной. Подсветка появляется только
   // после того, как пользователь сам включит трек (клик по карточке / play).
 
-  // Preload active track when user scrolls near player or hovers over it
-  const triggerPreloadActive = () => {
-    if (activeTrackId) ensureTrackLoaded(activeTrackId);
-  };
-
+  /* Прогрев аудио. Раньше здесь грузился только активный трек, а до первого
+     клика активного трека нет — то есть не грузилось вообще ничего. Теперь
+     подход к секции плеера запускает общую очередь прогрева (см. блок
+     «ФОНОВЫЙ ПРОГРЕВ АУДИО» выше по файлу). */
   if ('IntersectionObserver' in window) {
     const playerSec = document.getElementById('player');
     if (playerSec) {
       const ioPlayer = new IntersectionObserver((entries) => {
         if (entries[0].isIntersecting) {
-          triggerPreloadActive();
+          scheduleInitialAudioWarm();
           ioPlayer.disconnect();
         }
       }, { rootMargin: '350px 0px' });
@@ -823,9 +1274,23 @@ function initPlayer() {
 
   const pSec = document.getElementById('player');
   if (pSec) {
-    pSec.addEventListener('pointerenter', triggerPreloadActive, { once: true, passive: true });
-    pSec.addEventListener('touchstart', triggerPreloadActive, { once: true, passive: true });
+    pSec.addEventListener('pointerenter', scheduleInitialAudioWarm, { once: true, passive: true });
+    pSec.addEventListener('touchstart', scheduleInitialAudioWarm, { once: true, passive: true });
   }
+
+  /* Основной триггер — конец загрузки страницы: критичные ресурсы уже взяты,
+     поэтому фоновая очередь не мешает первому рендеру и LCP. */
+  if (document.readyState === 'complete') {
+    whenBrowserIdle(scheduleInitialAudioWarm);
+  } else {
+    window.addEventListener('load', () => whenBrowserIdle(scheduleInitialAudioWarm), { once: true });
+  }
+
+  /* Вкладка скрыта — новые загрузки не начинаем (текущую не рвём); вернулись
+     на страницу — очередь продолжается. */
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) warmQueueRun();
+  });
 
   window.addEventListener('resize', () => {
     renderTrackList();
@@ -1389,6 +1854,8 @@ function toggleTrack(trackId) {
     if (isAudioPlaying(trackId)) {
       item.audioA.pause();
       item.audioB.pause();
+      // Остановили — фон снова качает все треки (см. warmReleaseHold).
+      warmReleaseHold();
     } else {
       prepareAudioPair(item);
       applyAudioVolumes(trackId);
@@ -1397,6 +1864,10 @@ function toggleTrack(trackId) {
       const pB = item.audioB.play();
       if (pB && pB.catch) pB.catch(err => console.warn('Play B:', err));
       showStickyPlayer();
+      // Трек слушают: он вне очереди прогрева, соседи — сразу за ним,
+      // а фоновая очередь удерживается (канал свободен под перемотку).
+      warmOnPlay(trackId);
+      warmHold(trackId);
     }
     updateMasterDeckUI();
     renderTrackList(false);
@@ -1429,15 +1900,14 @@ function selectTrack(trackId, shouldPlay = true) {
       if (pB && pB.catch) pB.catch(err => console.warn('Play B:', err));
       showStickyPlayer();
 
-      // Background prefetch adjacent track for zero delay
-      setTimeout(() => {
-        const enabled = getEnabledTracks();
-        const currIdx = enabled.findIndex(t => t.id === trackId);
-        if (currIdx >= 0 && enabled.length > 1) {
-          const nextTr = enabled[(currIdx + 1) % enabled.length];
-          if (nextTr) ensureTrackLoaded(nextTr.id);
-        }
-      }, 1500);
+      // Соседние треки — сразу в начало очереди прогрева: следующий клик по
+      // «Next» не должен ждать сеть. Раньше здесь стоял таймер 1.5 с и грузился
+      // один трек — при быстром листании он просто не успевал сработать.
+      warmOnPlay(trackId);
+      // Слушают этот трек — фоновую очередь удерживаем, канал свободен.
+      warmHold(trackId);
+    } else {
+      warmReleaseHold();
     }
   }
 
@@ -1464,6 +1934,7 @@ function toggleDeckPlay() {
   if (isAudioPlaying(activeTrackId)) {
     item.audioA.pause();
     item.audioB.pause();
+    warmReleaseHold();
   } else {
     prepareAudioPair(item);
     applyAudioVolumes(activeTrackId);
@@ -1473,15 +1944,10 @@ function toggleDeckPlay() {
     if (pB && pB.catch) pB.catch(err => console.warn('Play B:', err));
     showStickyPlayer();
 
-    // Background prefetch adjacent track for zero delay
-    setTimeout(() => {
-      const enabled = getEnabledTracks();
-      const currIdx = enabled.findIndex(t => t.id === activeTrackId);
-      if (currIdx >= 0 && enabled.length > 1) {
-        const nextTr = enabled[(currIdx + 1) % enabled.length];
-        if (nextTr) ensureTrackLoaded(nextTr.id);
-      }
-    }, 1500);
+    // Соседние треки — сразу в начало очереди прогрева (см. блок «ФОНОВЫЙ
+    // ПРОГРЕВ АУДИО»): таймер 1.5 с не успевал сработать при быстром листании.
+    warmOnPlay(activeTrackId);
+    warmHold(activeTrackId);
   }
 
   updateMasterDeckUI();
@@ -1508,6 +1974,12 @@ function switchDeckSource(src) {
   const prevEl = src === 'before' ? item.audioB : item.audioA;
   const prevPlaying = !prevEl.paused;
   const nextPlaying = !nextEl.paused;
+
+  /* Переключение BEFORE/AFTER на непрогруженной паре — это тоже перемотка:
+     второй дорожке нужен тот же участок из сети. Отдаём ей канал так же, как
+     при обычной перемотке (если пара уже целиком в буфере — ничего не делаем,
+     чтобы не держать фон без причины). */
+  if (!isPairWarm(item)) warmOnSeek(activeTrackId, prevEl.currentTime);
 
   // Логика и интерфейс переключаются мгновенно, звук — микро-фейдом
   item.source = src;
@@ -1770,6 +2242,12 @@ function seekDeckTrack(e) {
 
   if (dur > 0) {
     const newTime = (clickX / rect.width) * dur;
+    /* Ключевой момент для «перемотал на припев». Новое место почти наверняка
+       ещё не в буфере, поэтому браузер идёт в сеть за этим участком. Если в это
+       же время фон качает следующую пару, канал делится пополам и звук ждёт —
+       те самые секунды. Поэтому перемотка немедленно забирает канал: активный
+       трек получает максимальный приоритет, фоновая загрузка прерывается. */
+    warmOnSeek(activeTrackId, newTime);
     // Тянем только звучащую дорожку: два seek одновременно и давали рывок звука.
     audible.currentTime = newTime;
     item.seekPending = true;
