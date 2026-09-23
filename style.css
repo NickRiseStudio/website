@@ -1252,6 +1252,333 @@ span.faq-q-text.lang-vapor-in {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
+   ПОРЯДОК КНОПОК В КОНТАКТАХ
+   ═══════════════════════════════════════════════════════════════════════
+   В разметке кнопки лежат так: Открыть Telegram → Копировать TG →
+   Копировать Email → Открыть ВК. Показываем их в другом порядке — сначала
+   оба способа открыть (Telegram и ВК), потом оба способа скопировать:
+
+       Открыть Telegram | Открыть ВК
+       Копировать TG    | Копировать Email
+
+   В модалке «Связаться», которую открывает бургер на телефоне, кнопки
+   встают столбиком — там нужен порядок «мессенджер, копия ника, почта»:
+
+       Открыть Telegram
+       Копировать TG
+       Открыть ВК
+       Копировать Email
+
+   Порядок задаётся только свойством order: разметка кнопок в секции и в
+   модалке остаётся одинаковой, ссылки и обработчики копирования не меняются.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+#contactsGrid > :nth-child(1),
+#contactModal .grid > :nth-child(1) { order: 1; } /* Открыть Telegram */
+
+#contactsGrid > :nth-child(4),
+#contactModal .grid > :nth-child(4) { order: 2; } /* Открыть ВК */
+
+#contactsGrid > :nth-child(2),
+#contactModal .grid > :nth-child(2) { order: 3; } /* Копировать TG */
+
+#contactsGrid > :nth-child(3),
+#contactModal .grid > :nth-child(3) { order: 4; } /* Копировать Email */
+
+/* Телефон: в модалке одна колонка — Telegram → Копировать TG → ВК → Email */
+@media (max-width: 639px) {
+  #contactModal .grid > :nth-child(1) { order: 1; } /* Открыть Telegram */
+  #contactModal .grid > :nth-child(2) { order: 2; } /* Копировать TG */
+  #contactModal .grid > :nth-child(4) { order: 3; } /* Открыть ВК */
+  #contactModal .grid > :nth-child(3) { order: 4; } /* Копировать Email */
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ОТЗЫВЫ (#reviews): две бегущие ленты в противоход
+   Карточки строит script.js → renderReviews() из CONFIG.reviewsData:
+   верхний ряд (#reviewsRowTop) едет влево, нижний (#reviewsRowBottom) — вправо.
+   Каждый ряд лежит двумя одинаковыми половинами, поэтому трек сдвигается ровно
+   на -50 % и стык не виден. Корпус карточки — общий .rack-card.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Лента: края растворяются, чтобы карточки не резались об экран */
+.nr-marquee {
+  position: relative;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%);
+}
+
+.nr-marquee + .nr-marquee { margin-top: 1rem; }
+
+/* Колонку можно сдвигать пальцем влево-вправо (script.js → initReviewSwipe):
+   pan-y оставляет вертикальную прокрутку странице, а горизонтальный жест
+   отдаёт нам. Класс вешает скрипт на сенсорных экранах и не вешает при
+   «уменьшении движения» — там колонка прокручивается нативно. */
+.nr-marquee.nr-swipeable { touch-action: pan-y; }
+
+/* align-items: flex-start, а не stretch: раскрытый отзыв растёт вниз один, а
+   остальные карточки ряда стоят на месте и не тянутся за ним. Общую высоту
+   свёрнутой карточки держит переменная ряда --nr-review-card-h — её ставит
+   script.js → syncReviewCardHeights(). */
+.nr-marquee-track {
+  display: flex;
+  align-items: flex-start;
+  width: max-content;
+  padding: 0.75rem 0 1.125rem;
+  animation: nrMarqueeLeft 110s linear infinite;
+  will-change: transform;
+}
+
+.nr-marquee.is-reverse .nr-marquee-track { animation-name: nrMarqueeRight; }
+
+/* Лента замирает, пока палец или курсор на самой карточке отзыва: можно
+   спокойно прочитать текст и нажать на имя — ссылка не уезжает из-под курсора.
+   В промежутках над карточками и между ними лента продолжает движение. */
+.nr-marquee-track:has(.review-card:active) { animation-play-state: paused; }
+
+/* Наведение считаем только там, где есть настоящий курсор: на тач-экранах
+   :hover «залипает» после касания до следующего тапа — лента оставалась бы
+   в паузе, а карточка подсвеченной (тот же приём, что у карточек треков). */
+@media (hover: hover) and (pointer: fine) {
+  .nr-marquee-track:has(.review-card:hover) { animation-play-state: paused; }
+}
+
+/* Фокус с клавиатуры на имени автора: строка под ним тоже не уезжает. */
+.nr-marquee:focus-within .nr-marquee-track { animation-play-state: paused; }
+
+/* Принудительное возвращение движения после «Свернуть» (класс вешает
+   script.js → resumeReviewsMarquee): на сенсорных экранах браузер держит
+   :hover на карточке и фокус на кнопке после тапа, и лента «залипала» в паузе
+   навсегда. Класс снимается, когда курсор ушёл с ленты (мышь) или произошло
+   новое касание. Специфичность та же, что у правил паузы выше, поэтому правило
+   обязано стоять ПОСЛЕ них. Без !important — иначе перебило бы экономию
+   ресурсов у секции вне экрана (.nr-off в animations.css). */
+.nr-marquee .nr-marquee-track.nr-resume { animation-play-state: running; }
+
+@keyframes nrMarqueeLeft {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+
+@keyframes nrMarqueeRight {
+  from { transform: translate3d(-50%, 0, 0); }
+  to   { transform: translate3d(0, 0, 0); }
+}
+
+/* Карточка: фото с именем сверху, текст — по центру свободного места.
+   Высота свёрнутой карточки — общая на весь ряд (--nr-review-card-h): так текст
+   короткого отзыва стоит по центру, как было при align-items: stretch. */
+.review-card {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  width: 300px;
+  height: var(--nr-review-card-h, auto);
+  margin-right: 0.875rem;
+  padding: 1.25rem 1.125rem;
+  text-align: left;
+}
+
+/* Тень: базовая .rack-card даёт крупное чёрное пятно, а в ленте карточки стоят
+   плотно друг к другу — здесь тень короткая и мягкая, плюс световая грань
+   сверху. Подъём и свечение при наведении — animations.css. */
+#reviews .review-card {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Тач-экраны: после касания карточка отзыва не остаётся подсвеченной — браузер
+   держит на ней :hover до следующего тапа, и рамка «залипала» янтарной.
+   Подъём и свечение на тач-экранах отключены — animations.css. */
+@media (hover: none) {
+  #reviews .review-card:hover { border-color: rgba(255, 255, 255, 0.08); }
+}
+
+.review-person {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  text-decoration: none;
+}
+
+.review-avatar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  overflow: hidden;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+/* Инициалы лежат под фото: пока картинка не загрузилась, в круге буквы */
+.review-initials {
+  color: #FBBF24;
+  font-weight: 800;
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+}
+
+.review-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+}
+
+.review-name {
+  min-width: 0;
+  color: #F3F4F6;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.3;
+  transition: color 0.3s ease;
+}
+
+.review-person:hover .review-name,
+.review-person:focus-visible .review-name {
+  color: #FBBF24;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.review-person:focus-visible { outline: none; }
+
+/* Блок текста идёт по своему содержимому и прижат к верху — не центрируется по
+   высоте карточки. Высота свёрнутой карточки фиксированная (--nr-review-card-h),
+   а при раскрытии её ведёт GSAP (script.js → setReviewOpen), поэтому
+   justify-content: center пересчитывал бы центр на каждом кадре хода и текст
+   «плыл» вслед за шторкой. Теперь текст стоит неподвижно: его верх остаётся на
+   месте, а при раскрытии снизу плавно выезжает нижняя часть вместе с подписью
+   «Свернуть». Свободное место у короткого отзыва остаётся под текстом. */
+.review-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.875rem;
+}
+
+/* Текст отзыва обрезан по высоте: карточки в ленте становятся примерно на пятую
+   часть ниже. Высота — целое число строк (line-height 1.6), поэтому строка не
+   режется пополам. У длинных отзывов снизу встаёт подпись «Читать далее…»
+   (script.js → toggleReview / syncReviewsMore), у коротких её нет.
+   При раскрытии и сворачивании эту обрезку ведёт GSAP вместе с высотой карточки
+   (script.js → setReviewOpen), поэтому текст проявляется и прячется плавно;
+   у раскрытой карточки обрезка снята правилом ниже. */
+.review-text {
+  color: #D1D5DB;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  max-height: calc(1.6em * 6);
+  overflow: hidden;
+}
+
+/* Раскрытый отзыв: карточка растёт вниз по своему тексту (height: auto) и не
+   держится за общую высоту ряда. min-height — страховка от «проседания»: своя
+   высота карточки может быть на строку имени меньше высоты ряда, и без страховки
+   карточка дёрнулась бы вверх в момент раскрытия.
+   ВАЖНО: этот класс задаёт КОНЕЧНОЕ состояние и на время хода не ставится.
+   Иначе смена класса мгновенно переклеила бы раскладку страницы: трек и
+   .nr-marquee (overflow: hidden) сразу стали бы высокими, и раздел ниже прыгнул
+   бы вниз ещё до первого кадра анимации. Ход ведёт script.js → setReviewOpen:
+   обе величины (height карточки и maxHeight текста) едут inline-стилями GSAP,
+   а класс ставится в onComplete. */
+.review-card.is-open {
+  height: auto;
+  min-height: var(--nr-review-card-h, auto);
+}
+
+/* Идёт ход высоты (класс ставит/снимает script.js → setReviewOpen).
+   overflow: hidden нужен именно здесь: во время анимации у карточки задана
+   inline-высота, а у текста — inline-обрезка (maxHeight), которые едут от
+   состояния к состоянию; без обрезки текст выходил бы за рамку карточки.
+   Ход ведут две синхронные величины: height карточки и maxHeight текста. */
+.review-card.is-animating {
+  overflow: hidden;
+}
+
+.review-card.is-open .review-text {
+  max-height: none;
+}
+
+/* Подпись под обрезанным текстом: «Читать далее…», у раскрытой карточки —
+   «Свернуть» (текст подписи приходит из i18n: reviews.more / reviews.less).
+   Кнопка — не текст для чтения: на сенсорных экранах её нельзя выделять
+   (user-select + tap-highlight), а оставшееся выделение снимает script.js. */
+.review-more {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #FBBF24;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: color 0.3s ease;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.review-more:hover,
+.review-more:active {
+  color: #FCD34D;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.review-more[hidden] { display: none; }
+
+/* Пометка перевода: только в английской версии (ключ reviews.translated) */
+.review-note {
+  color: #6B7280;
+  font-size: 0.6875rem;
+  font-style: italic;
+  letter-spacing: 0.02em;
+}
+
+.review-note[hidden] { display: none; }
+
+@media (min-width: 640px) {
+  .review-card { width: 330px; margin-right: 1rem; }
+  /* На широкой карточке в строку влезает больше — обрезаем на седьмой строке */
+  .review-text { max-height: calc(1.6em * 7); }
+}
+
+@media (min-width: 1024px) {
+  .review-card { width: 360px; margin-right: 1.125rem; }
+}
+
+@media (max-width: 639px) {
+  #reviews h2 { font-size: 1.5rem; }
+  .review-card { width: 264px; padding: 1rem 0.875rem; }
+  .review-text { font-size: 0.8125rem; }
+}
+
+/* «Уменьшить движение»: лента не едет, а прокручивается вбок —
+   так все отзывы остаются доступными, но ничего не мелькает */
+@media (prefers-reduced-motion: reduce) {
+  .nr-marquee {
+    overflow-x: auto;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  .nr-marquee-track {
+    animation: none !important;
+    transform: none !important;
+    padding: 0.75rem 1rem 1.125rem;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
    КАЛЬКУЛЯТОР СТОИМОСТИ УСЛУГ (окно «Рассчитать стоимость услуг»)
    Шаги окна, ползунок длительности, выбор Да/Нет, итоговая смета.
    ═══════════════════════════════════════════════════════════════════════ */

@@ -193,6 +193,7 @@
         <a href="#services" class="hover:text-amber-400 transition-colors whitespace-nowrap" data-nav-section="services"><span data-i18n="nav.services">Услуги</span></a>
         <a href="#faq" class="hover:text-amber-400 transition-colors whitespace-nowrap" data-nav-section="faq"><span data-i18n="nav.faq">FAQ</span></a>
         <a href="#contacts" class="hover:text-amber-400 transition-colors whitespace-nowrap" data-nav-section="contacts"><span data-i18n="nav.contacts">Контакты</span></a>
+        <a href="#reviews" class="hover:text-amber-400 transition-colors whitespace-nowrap" data-nav-section="reviews"><span data-i18n="nav.reviews">Отзывы</span></a>
       </nav>
 
       <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
@@ -247,6 +248,11 @@
 
       <a href="#contacts" onclick="closeMobileMenu()" class="mobile-drawer-item nav-drawer-link px-4 py-3 rounded-xl bg-[#12151D] border border-gray-800/60 hover:bg-[#1A1F2B] hover:text-amber-400 transition-all flex items-center justify-between" data-nav-section="contacts">
         <span data-i18n="nav.contacts">Контакты</span>
+        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+      </a>
+
+      <a href="#reviews" onclick="closeMobileMenu()" class="mobile-drawer-item nav-drawer-link px-4 py-3 rounded-xl bg-[#12151D] border border-gray-800/60 hover:bg-[#1A1F2B] hover:text-amber-400 transition-all flex items-center justify-between" data-nav-section="reviews">
+        <span data-i18n="nav.reviews">Отзывы</span>
         <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
       </a>
 
@@ -544,7 +550,7 @@
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
               </svg>
-              <span class="font-bold text-gray-200 text-sm" data-i18n="contacts.copyTgUsername">Копировать @Nick_Rise</span>
+              <span class="font-bold text-gray-200 text-sm" data-i18n="contacts.copyTgUsername">Копировать TG</span>
             </button>
 
             <button onclick="copyText('nickrisemusic@gmail.com', 'Email copied to clipboard!')" class="p-4 rounded-xl bg-[#1A202C] hover:bg-[#222A3A] border border-gray-700/80 transition-all flex items-center justify-center gap-3 group active:scale-95">
@@ -559,7 +565,7 @@
               <svg class="w-6 h-6 fill-amber-400" viewBox="0 0 24 24">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5.72 13.52h-1.41c-.53 0-.7-.42-1.65-1.38-.84-.81-1.21-.92-1.42-.92-.29 0-.37.08-.37.48v1.24c0 .34-.11.55-1.01.55-1.49 0-3.14-.9-4.31-2.58-1.75-2.48-2.23-4.34-2.23-4.72 0-.2.08-.39.48-.39h1.41c.36 0 .49.16.63.55.68 1.99 1.83 3.74 2.31 3.74.18 0 .26-.08.26-.53V9.77c-.05-.97-.57-1.05-.57-1.39 0-.16.14-.33.35-.33h2.21c.3 0 .41.15.41.49v2.66c0 .29.12.39.21.39.18 0 .33-.11.66-.44 1.01-1.13 1.73-2.84 1.73-2.84.1-.2.27-.39.63-.39h1.41c.42 0 .52.22.42.52-.18.82-1.9 3.25-1.98 3.37-.16.26-.22.38 0 .68.15.2.66.64 1 1.04.85.96 1.5 1.76 1.68 2.32.09.3-.07.46-.41.46z"/>
               </svg>
-              <span class="font-bold text-gray-200 text-sm" data-i18n="contacts.vkBtn">Профиль ВКонтакте</span>
+              <span class="font-bold text-gray-200 text-sm" data-i18n="contacts.vkBtn">Открыть ВК</span>
             </a>
           </div>
 
@@ -568,10 +574,32 @@
       </div>
     </section>
 
+    <!-- 6.5 REVIEWS SECTION -->
+    <section id="reviews" class="scroll-mt-28 pt-2 pb-8 sm:pt-4 sm:pb-14 lg:pt-6 lg:pb-16 bg-[#131824] border-y border-gray-800/60 shadow-inner">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <div class="text-center space-y-3 mb-8">
+          <h2 class="text-3xl sm:text-4xl font-black text-white tracking-tight" data-i18n="reviews.title">
+            Отзывы
+          </h2>
+        </div>
+      </div>
+
+      <!-- Две бегущие ленты отзывов: верхняя едет влево, нижняя — вправо.
+           Карточки и их дубли (для безразрывности ленты) строит script.js → renderReviews() -->
+      <div class="nr-marquee" id="reviewsMarqueeTop">
+        <div class="nr-marquee-track" id="reviewsRowTop"></div>
+      </div>
+
+      <div class="nr-marquee is-reverse" id="reviewsMarqueeBottom">
+        <div class="nr-marquee-track" id="reviewsRowBottom"></div>
+      </div>
+    </section>
+
   </main>
 
   <!-- FOOTER -->
-  <footer class="bg-[#131824] border-t border-gray-800/60 py-8 sm:py-10 px-4 sm:px-6 text-center relative z-10">
+  <footer class="py-8 sm:py-10 px-4 sm:px-6 text-center relative z-10">
     <div class="max-w-7xl mx-auto flex flex-col items-center justify-center gap-2">
       <p class="text-xs sm:text-sm text-gray-300 font-medium tracking-wide">
         © 2026 Nick Rise Studio. All rights reserved.
@@ -615,7 +643,7 @@
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
           </svg>
-          <span class="font-bold text-gray-200 text-sm" data-i18n="contacts.copyTgUsername">Копировать @Nick_Rise</span>
+          <span class="font-bold text-gray-200 text-sm" data-i18n="contacts.copyTgUsername">Копировать TG</span>
         </button>
 
         <button onclick="copyText('nickrisemusic@gmail.com', 'Email copied to clipboard!')" class="p-4 rounded-xl bg-[#1A202C] hover:bg-[#222A3A] border border-gray-700/80 transition-all flex items-center justify-center gap-3 group active:scale-95 cursor-pointer">
@@ -630,7 +658,7 @@
           <svg class="w-6 h-6 fill-amber-400" viewBox="0 0 24 24">
             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5.72 13.52h-1.41c-.53 0-.7-.42-1.65-1.38-.84-.81-1.21-.92-1.42-.92-.29 0-.37.08-.37.48v1.24c0 .34-.11.55-1.01.55-1.49 0-3.14-.9-4.31-2.58-1.75-2.48-2.23-4.34-2.23-4.72 0-.2.08-.39.48-.39h1.41c.36 0 .49.16.63.55.68 1.99 1.83 3.74 2.31 3.74.18 0 .26-.08.26-.53V9.77c-.05-.97-.57-1.05-.57-1.39 0-.16.14-.33.35-.33h2.21c.3 0 .41.15.41.49v2.66c0 .29.12.39.21.39.18 0 .33-.11.66-.44 1.01-1.13 1.73-2.84 1.73-2.84.1-.2.27-.39.63-.39h1.41c.42 0 .52.22.42.52-.18.82-1.9 3.25-1.98 3.37-.16.26-.22.38 0 .68.15.2.66.64 1 1.04.85.96 1.5 1.76 1.68 2.32.09.3-.07.46-.41.46z"/>
           </svg>
-          <span class="font-bold text-gray-200 text-sm" data-i18n="contacts.vkBtn">Профиль ВКонтакте</span>
+          <span class="font-bold text-gray-200 text-sm" data-i18n="contacts.vkBtn">Открыть ВК</span>
         </a>
       </div>
     </div>

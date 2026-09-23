@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initPlayer();
   initServices();
   initFaq();
+  initReviews();
   initModalAndToast();
   initMobileMenuScrollLock();
   initGsapAnimations();
@@ -204,6 +205,7 @@ function initI18n() {
       renderI18nText();
       renderServices();
       renderFaq();
+      renderReviews();
       updateMasterDeckUI();
       renderTrackList(false);
     }
@@ -264,6 +266,9 @@ function getI18nAnimatedElements() {
     if (!elements.includes(el)) elements.push(el);
   });
 
+  // 4. Reviews (#reviews): текст и имя меняются мгновенно — карточки живут
+  //    в бегущих лентах и их в разы больше, чем остальных текстов на странице.
+
   // Filter out any elements whose ancestor is already in the list to avoid nested blurs
   return elements.filter(el => {
     let parent = el.parentElement;
@@ -304,6 +309,7 @@ function setLanguage(lang, savePreference = true, animate = false) {
     renderI18nText();
     renderServices();
     renderFaq();
+    renderReviews();
     updateMasterDeckUI();
     renderTrackList(false);
     return;
@@ -326,6 +332,7 @@ function setLanguage(lang, savePreference = true, animate = false) {
     renderI18nText();
     renderServices();
     renderFaq();
+    renderReviews();
     updateMasterDeckUI();
     renderTrackList(false);
 
@@ -4141,6 +4148,544 @@ function renderFaq() {
   }, 50);
 }
 
+// --- REVIEWS SECTION ---
+function initReviews() {
+  renderReviews();
+  initReviewSwipe();
+
+  // Метрики текста меняются после загрузки шрифтов — обрезку длинных отзывов
+  // («Читать далее…») и высоту карточек считаем заново.
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => {
+      syncReviewsMore();
+      syncReviewCardHeights();
+    });
+  }
+}
+
+// Инициалы — подложка под фото: видны, пока картинка не загрузилась.
+function getReviewInitials(name) {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  return parts.slice(0, 2).map(p => p.charAt(0).toUpperCase()).join('');
+}
+
+// Данные одной карточки — по текущему языку и разрешению экрана.
+// Английский текст отзыва — перевод, поэтому под ним показывается пометка
+// reviews.translated (в русской версии ключ пустой — пометки нет).
+function fillReviewCard(card, review) {
+  const currentDevice = getDeviceType();
+  const text = resolveDeviceText(currentLang === 'ru' ? review.textRu : review.textEn, currentDevice);
+
+  const personEl = card.querySelector('.review-person');
+  if (personEl) personEl.setAttribute('href', review.url || '#');
+
+  const photoEl = card.querySelector('.review-photo');
+  if (photoEl) photoEl.setAttribute('src', resolveDeviceText(review.avatar, currentDevice) || '');
+
+  const initialsEl = card.querySelector('.review-initials');
+  if (initialsEl) initialsEl.textContent = getReviewInitials(review.name);
+
+  const nameEl = card.querySelector('.review-name');
+  if (nameEl) nameEl.textContent = review.name || '';
+
+  const textEl = card.querySelector('.review-text');
+  if (textEl) textEl.textContent = text || '';
+
+  const noteEl = card.querySelector('.review-note');
+  if (noteEl) {
+    const note = getI18nValue(currentLang, 'reviews.translated') || '';
+    noteEl.textContent = note;
+    noteEl.hidden = !note;
+  }
+}
+
+// Отзывы раскладываются в две бегущие ленты (#reviewsRowTop / #reviewsRowBottom):
+// чётные — в верхнюю, нечётные — в нижнюю. Каждый ряд строится двумя
+// одинаковыми половинами, чтобы лента ехала безразрывно: трек сдвигается ровно
+// на половину своей ширины (style.css → @keyframes nrMarqueeLeft / nrMarqueeRight).
+function renderReviews() {
+  const rows = [
+    document.getElementById('reviewsRowTop'),
+    document.getElementById('reviewsRowBottom')
+  ];
+  if (!rows[0] || !rows[1]) return;
+
+  const reviews = CONFIG.reviewsData || [];
+  if (!reviews.length) return;
+
+  const groups = [
+    reviews.filter((review, index) => index % 2 === 0),
+    reviews.filter((review, index) => index % 2 === 1)
+  ];
+
+  // In-place update to prevent layout jumps and DOM destruction on language toggle
+  const isBuilt = rows.every((row, idx) => row.children.length === groups[idx].length * 2);
+  if (isBuilt) {
+    rows.forEach((row, idx) => {
+      Array.prototype.forEach.call(row.children, (card, index) => {
+        fillReviewCard(card, groups[idx][index % groups[idx].length]);
+      });
+    });
+    syncReviewsMore();
+    syncReviewCardHeights();
+    return;
+  }
+
+  rows.forEach((row, idx) => {
+    row.innerHTML = '';
+
+    // Вторая половина — копия первой: она делает ленту безразрывной, поэтому
+    // уходит из порядка табуляции и из озвучки скринридером.
+    [false, true].forEach((isClone) => {
+      groups[idx].forEach((review) => {
+        const card = document.createElement('article');
+        card.className = 'rack-card review-card';
+        // Номер отзыва в CONFIG.reviewsData: по нему раскрываются сразу обе
+        // карточки отзыва — сама карточка и её копия в ленте.
+        card.dataset.review = String(reviews.indexOf(review));
+        card.innerHTML = `
+          <a class="review-person" target="_blank" rel="noopener noreferrer">
+            <span class="review-avatar">
+              <span class="review-initials"></span>
+              <img class="review-photo" alt="" loading="lazy" referrerpolicy="no-referrer">
+            </span>
+            <span class="review-name"></span>
+          </a>
+          <div class="review-body">
+            <p class="review-text"></p>
+            <button class="review-more" hidden onclick="toggleReview(this, event)"></button>
+            <span class="review-note" hidden></span>
+          </div>
+        `;
+
+        if (isClone) {
+          card.setAttribute('aria-hidden', 'true');
+          card.querySelector('.review-person').setAttribute('tabindex', '-1');
+          card.querySelector('.review-more').setAttribute('tabindex', '-1');
+        }
+
+        row.appendChild(card);
+        fillReviewCard(card, review);
+      });
+    });
+  });
+
+  // Подписи «Читать далее…» и общая высота свёрнутых карточек — когда разметка
+  // уже собрана: и то и другое считается по факту обрезки текста.
+  syncReviewsMore();
+  syncReviewCardHeights();
+}
+
+// Обрезан ли текст карточки по высоте (style.css → .review-text: max-height)
+function isReviewTextClamped(card) {
+  const textEl = card.querySelector('.review-text');
+  return !!textEl && textEl.scrollHeight > textEl.clientHeight + 1;
+}
+
+// Высота, до которой обрезан свёрнутый текст (style.css → .review-text: max-height).
+// У раскрытой карточки обрезка снята классом, поэтому нужное значение берём у
+// свёрнутой карточки того же ряда: оно вычисленное (1.6em * 6), то есть одинаковое
+// для всех и не зависит от длины конкретного отзыва.
+// Карточку в движении пропускаем: у неё обрезка задана inline-стилем анимации.
+function getReviewClampHeight(card) {
+  const track = card.closest('.nr-marquee-track');
+  const probes = track ? track.querySelectorAll('.review-card:not(.is-open) .review-text') : [];
+  for (const probe of probes) {
+    if (probe.style.maxHeight) continue;
+    return parseFloat(getComputedStyle(probe).maxHeight) || 0;
+  }
+  return 0; // все карточки ряда раскрыты или в движении — обрезку взять негде
+}
+
+// Общая высота свёрнутой карточки ряда — переменная --nr-review-card-h, которую
+// ставит syncReviewCardHeights(). Именно она в style.css держит height свёрнутой
+// карточки, поэтому сворачивание должно заканчиваться ровно на этом значении.
+function getReviewRowHeight(card) {
+  const track = card.closest('.nr-marquee-track');
+  if (!track) return 0;
+  return parseFloat(getComputedStyle(track).getPropertyValue('--nr-review-card-h')) || 0;
+}
+
+// Подпись под текстом. Подпись есть у обрезанного отзыва, а у раскрытой карточки
+// она видна всегда («Свернуть») — даже у короткой: сворачивать её тоже нужно.
+// isOpen передаётся явно: setReviewOpen меняет класс в конце хода, поэтому на
+// время анимации состояние класса ещё старое, а подпись нужна уже целевая.
+// Готовый текст подписи — setReviewMoreLabelText(); видимость решает
+// setReviewMoreLabel() по конечному состоянию карточки (вызывается в конце хода).
+function setReviewMoreLabelText(card, isOpen) {
+  const moreEl = card.querySelector('.review-more');
+  if (!moreEl) return;
+  moreEl.textContent = getI18nValue(currentLang, isOpen ? 'reviews.less' : 'reviews.more') || '';
+}
+
+function setReviewMoreLabel(card, isClamped, isOpen) {
+  const moreEl = card.querySelector('.review-more');
+  if (!moreEl) return;
+
+  const open = typeof isOpen === 'boolean' ? isOpen : card.classList.contains('is-open');
+  setReviewMoreLabelText(card, open);
+  moreEl.hidden = !open && !isClamped;
+}
+
+// Подписи по всем карточкам сразу: сначала измеряем все (одна переклейка
+// раскладки), потом пишем подписи — иначе раскладка считалась бы на каждой карточке.
+function syncReviewsMore() {
+  const cards = document.querySelectorAll('#reviews .review-card');
+  const clamped = [];
+  cards.forEach((card) => clamped.push(isReviewTextClamped(card)));
+  cards.forEach((card, index) => setReviewMoreLabel(card, clamped[index]));
+}
+
+// Общая высота свёрнутой карточки для каждого ряда — переменная ряда
+// --nr-review-card-h (style.css → .nr-marquee-track / .review-card). Раньше её
+// давал align-items: stretch, но тогда раскрытый отзыв растягивал весь ряд;
+// теперь карточки не тянутся друг за другом, и высоту нужно задать. Меряем
+// только свёрнутые: у раскрытой карточки height: auto.
+function syncReviewCardHeights() {
+  const tracks = document.querySelectorAll('#reviews .nr-marquee-track');
+  if (!tracks.length) return;
+
+  // Замер — на чистой раскладке: снятую переменную иначе намерили бы её же значением
+  tracks.forEach((track) => track.style.removeProperty('--nr-review-card-h'));
+
+  const heights = [];
+  tracks.forEach((track) => {
+    let max = 0;
+    track.querySelectorAll('.review-card:not(.is-open)').forEach((card) => {
+      const textEl = card.querySelector('.review-text');
+      if (!textEl) return;
+      // Карточку в движении пропускаем: высота у неё сейчас между раскрытой и
+      // свёрнутой (script.js → setReviewOpen вешает .is-animating).
+      if (card.classList.contains('is-animating')) return;
+      // ceil: высота карточки не должна оказаться на доли пикселя меньше содержимого
+      max = Math.max(max, Math.ceil(card.getBoundingClientRect().height));
+    });
+    heights.push(max);
+  });
+
+  tracks.forEach((track, index) => {
+    if (heights[index]) track.style.setProperty('--nr-review-card-h', `${heights[index]}px`);
+  });
+}
+
+// Ход раскрытия и сворачивания отзыва — 1s, вдвое короче прежних 2s / 1.5s
+// (медленный ход читался вяло). Кривая sine.inOut общая для обоих направлений и
+// для всех движущихся величин (высота карточки, обрезка текста, подпись): плавное
+// начало, ускорение в середине пути и плавное торможение в конце. Именно синус, а
+// не power2: у power2.out скорость максимальна ровно в нуле, из-за чего раскрытие
+// начиналось рывком.
+const REVIEW_TOGGLE_DURATION = 1;
+const REVIEW_TOGGLE_EASE = 'sine.inOut';
+
+// Раскрывает и сворачивает отзыв: класс .is-open ставит конечное состояние
+// (style.css), а ход ведёт GSAP — как у вопроса в FAQ (openFaqItem).
+// Едут две синхронные величины: высота карточки и обрезка самого текста
+// (maxHeight от высоты обрезки до полной высоты текста). За счёт этого при
+// раскрытии нижняя часть текста плавно выезжает из карточки, а при сворачивании
+// так же плавно прячется вместе с ней, а не обрезается рывком. Вместе с текстом
+// опускается вниз только эта карточка — остальные стоят на общей высоте ряда
+// (style.css → .nr-marquee-track: flex-start).
+function setReviewOpen(card, willOpen) {
+  const textEl = card.querySelector('.review-text');
+  if (!textEl) return;
+
+  // Обрезан ли отзыв: по этому у свёрнутой карточки решается, показывать ли
+  // подпись «Читать далее…» (у короткого отзыва подписи нет).
+  // startTextH — видимая высота текста сейчас, fullH — его полная высота
+  // (обрезка по max-height на scrollHeight не влияет).
+  const startTextH = textEl.getBoundingClientRect().height;
+  const fullH = textEl.scrollHeight;
+  const clampH = getReviewClampHeight(card);
+  const isClamped = fullH > clampH + 1;
+
+  // Стартовые значения — то, что видно сейчас. Карточка могла остаться с
+  // inline-высотой от прерванного хода, поэтому startH берём до её снятия.
+  const startH = card.getBoundingClientRect().height;
+
+  const moreEl = card.querySelector('.review-more');
+  const moreWasHidden = !!moreEl && moreEl.hidden;
+
+  // Высоту конечного состояния меряем, не показывая его: класс .is-open и
+  // снятую обрезку ставим на один синхронный проход и сразу откатываем —
+  // браузер успевает пересчитать стили, но не отрисовывает кадр, поэтому
+  // раскладка страницы не мигает. Так высота получается ровно та, что даст CSS
+  // (height: auto с полным текстом и подписью), а не собранная вручную.
+  // Подпись на время замера показываем: у раскрытой карточки «Свернуть» видна
+  // всегда, и её строка входит в высоту.
+  const prevInlineH = card.style.height;
+  const prevInlineMax = textEl.style.maxHeight;
+  const wasOpen = card.classList.contains('is-open');
+  let openH = 0;
+  try {
+    if (moreEl) moreEl.hidden = false;
+    card.style.height = '';
+    textEl.style.maxHeight = '';
+    card.classList.add('is-open');
+    openH = Math.ceil(card.getBoundingClientRect().height);
+  } finally {
+    // Откат в finally: если замер почему-то упадёт, карточка всё равно вернётся
+    // в исходное состояние, а не останется раскрытой без анимации.
+    card.classList.toggle('is-open', wasOpen);
+    card.style.height = prevInlineH;
+    textEl.style.maxHeight = prevInlineMax;
+    if (moreEl) moreEl.hidden = moreWasHidden;
+  }
+
+  const rowH = getReviewRowHeight(card);
+  const endCardH = willOpen ? openH : Math.ceil(rowH || startH);
+  const endTextH = willOpen ? fullH : clampH;
+
+  // Подпись: у раскрытой карточки всегда «Свернуть», у обрезанной свёрнутой —
+  // «Читать далее…», у короткой свёрнутой подписи нет. Здесь меняем только текст:
+  // скрывать подпись будем по завершении хода, иначе у сворачиваемой карточки
+  // она пропала бы в самом начале, а не уехала с нижней частью текста.
+  // Видимость при этом снимаем: у раскрываемой карточки короткого отзыва подпись
+  // раньше была скрыта, а теперь её нужно показать («Свернуть»).
+  setReviewMoreLabelText(card, willOpen);
+  if (moreEl) moreEl.hidden = false;
+
+  const gsapReady = typeof gsap !== 'undefined';
+  const canAnimate = gsapReady && Math.abs(endCardH - startH) > 1;
+
+  if (!canAnimate) {
+    // Двигать нечего: отдаём карточку и текст CSS — класс сразу даёт конечное
+    // состояние, а inline-обрезка и высота снимаются. Подпись решаем сразу:
+    // хода нет, скрывать её позже некому.
+    card.classList.remove('is-animating');
+    card.classList.toggle('is-open', willOpen);
+    if (gsapReady) gsap.set(card, { clearProps: 'height' });
+    else card.style.height = '';
+    textEl.style.maxHeight = '';
+    setReviewMoreLabel(card, isClamped, willOpen);
+    requestAnimationFrame(() => { scheduleScrollTriggerRefresh(0); });
+    return;
+  }
+
+  // Подпись меняет текст на ходу («Читать далее…» ⇄ «Свернуть») — проявляем её
+  // в такт с ходом текста (та же длительность и кривая), а не отдельным
+  // мгновенным миганием: у раскрываемой карточки подпись выезжает вместе с
+  // нижней частью текста, у сворачиваемой — уходит вместе с ней.
+  const moreVisible = moreEl && !moreEl.hidden;
+  if (moreVisible) {
+    gsap.killTweensOf(moreEl);
+    gsap.fromTo(moreEl, { opacity: 0 }, {
+      opacity: 1,
+      duration: REVIEW_TOGGLE_DURATION,
+      ease: REVIEW_TOGGLE_EASE,
+      onComplete: () => gsap.set(moreEl, { clearProps: 'opacity' })
+    });
+  }
+
+  gsap.killTweensOf(card);
+  gsap.killTweensOf(textEl);
+
+  // Ключевой момент: класс .is-open задаёт КОНЕЧНОЕ состояние (height: auto и
+  // снятую обрезку текста) и на время хода НЕ ставится. Иначе смена класса
+  // мгновенно переклеила бы раскладку: трек и .nr-marquee (overflow: hidden)
+  // сразу стали бы высокими, и раздел ниже прыгнул бы вниз ещё до первого кадра
+  // анимации — а потом «догонял» бы в конце. Поэтому обе величины ведём только
+  // inline-стилями, а класс ставим в onComplete.
+  // .is-animating включается сразу: он обрезает контент за рамкой карточки.
+  card.classList.add('is-animating');
+  // Обрезка текста должна ехать, а не сниматься классом: на время хода её
+  // держит inline maxHeight от GSAP (перебивает CSS-правило .review-text).
+  textEl.style.maxHeight = startTextH + 'px';
+
+  const tween = { duration: REVIEW_TOGGLE_DURATION, ease: REVIEW_TOGGLE_EASE };
+
+  gsap.fromTo(card, { height: startH }, {
+    height: endCardH,
+    ...tween,
+    onComplete: () => {
+      // Конечное состояние отдаём CSS: класс даёт height: auto у раскрытой
+      // карточки и снятую обрезку текста, а свёрнутую держит высота ряда.
+      card.classList.toggle('is-open', willOpen);
+      gsap.set(card, { clearProps: 'height' });
+      textEl.style.maxHeight = '';
+      card.classList.remove('is-animating');
+      // Только теперь, когда ход закончен, решаем судьбу подписи: у короткого
+      // свёрнутого отзыва она скрывается, у остальных остаётся на месте.
+      setReviewMoreLabel(card, isClamped, willOpen);
+      requestAnimationFrame(() => { scheduleScrollTriggerRefresh(0); });
+    }
+  });
+
+  gsap.fromTo(textEl, { maxHeight: startTextH }, { maxHeight: endTextH, ...tween });
+}
+
+// Клик по «Читать далее…» раскрывает отзыв целиком, повторный клик — сворачивает.
+// Состояние переключается у обеих карточек отзыва: у самой карточки и её копии.
+function toggleReview(button, event) {
+  const card = button.closest('.review-card');
+  if (!card) return;
+
+  const key = card.dataset.review;
+  const sameReview = key ? document.querySelectorAll(`#reviews .review-card[data-review="${key}"]`) : [card];
+  const willOpen = !card.classList.contains('is-open');
+  // Клик с клавиатуры (Enter/Space) приходит без координат — detail === 0
+  const byKeyboard = !!event && event.detail === 0;
+
+  sameReview.forEach((item) => setReviewOpen(item, willOpen));
+
+  // Управляли карточкой — снимаем оставшееся выделение: на сенсорных экранах
+  // подсветка текста «залипала» после тапа по кнопке.
+  clearReviewsSelection();
+
+  // Мышь и палец фокус с кнопки снимают: иначе пауза по :focus-within держала
+  // ленту до следующего клика в другом месте. С клавиатуры фокус остаётся —
+  // по нему идёт переход по Tab, и лента под фокусом стоит (как и раньше).
+  if (!byKeyboard) button.blur();
+
+  // Свёрнутый отзыв прочитан — движение ленты возвращаем сразу, даже если
+  // курсор/палец остались на карточке (см. resumeReviewsMarquee). С клавиатуры
+  // не трогаем: там пауза держится фокусом.
+  if (!willOpen && !byKeyboard) resumeReviewsMarquee(card);
+
+  // Позиции триггеров анимаций пересчитываются по завершении хода высоты —
+  // в setReviewOpen (как у вопроса в FAQ). Раньше refresh стоял ещё и здесь,
+  // то есть запускался в первых кадрах движения и переклеивал раскладку всей
+  // страницы прямо посреди анимации: ход читался резким, с пропуском кадров.
+}
+
+// Снимает выделение текста, оставшееся после тапа или долгого нажатия
+function clearReviewsSelection() {
+  const selection = window.getSelection && window.getSelection();
+  if (!selection) return;
+  if (selection.removeAllRanges) selection.removeAllRanges();
+  else if (selection.empty) selection.empty(); // старый WebKit
+}
+
+// Возвращает движение ленте после свёртки отзыва (style.css →
+// .nr-marquee-track.nr-resume). Нужно потому, что карточка остаётся под
+// курсором/пальцем: на сенсорных экранах браузер держит на ней :hover до
+// следующего тапа, а мышь продолжала бы держать обычную паузу. Обычное
+// поведение возвращается, как только курсор ушёл с ленты, — или при новом
+// касании на сенсорном экране.
+function resumeReviewsMarquee(card) {
+  const track = card.closest('.nr-marquee-track');
+  if (!track) return;
+
+  track.classList.add('nr-resume');
+
+  const drop = (event) => {
+    // Тач-указатель «уходит» сразу после пальца, но браузер держит :hover —
+    // для него класс снимает только новое касание (pointerdown).
+    if (event.type === 'pointerleave' && event.pointerType === 'touch') return;
+    track.classList.remove('nr-resume');
+    track.removeEventListener('pointerleave', drop);
+    track.removeEventListener('pointerdown', drop);
+  };
+
+  track.addEventListener('pointerleave', drop);
+  track.addEventListener('pointerdown', drop);
+}
+
+/* Свайп колонок отзывов на сенсорных экранах: колонку можно тянуть пальцем
+   влево-вправо. Лента едет CSS-анимацией (transform), поэтому сдвиг пальцем
+   пишем в отдельное свойство translate на треке — оно складывается с анимацией,
+   останавливать её не нужно. Сдвиг держим в пределах одного «круга» ленты
+   (половины трека): половины одинаковые, поэтому переход через границу
+   незаметен. Жест определяем по преобладающей оси, вертикальная прокрутка
+   страницы остаётся нативной (touch-action: pan-y в style.css). */
+const REVIEW_SWIPE_AXIS_THRESHOLD = 12; // px: отсекает дрожание пальца при тапе
+const REVIEW_SWIPE_SHIFT_PROP = (window.CSS && CSS.supports && CSS.supports('translate', '0px'))
+  ? 'translate'
+  : 'marginLeft';
+
+// Есть сенсорный ввод (телефон, планшет, тач-экран ноутбука)? Свайп колонок
+// включаем только для него: там, где есть мышь, колонку ведёт сама лента.
+function hasTouchInput() {
+  return 'ontouchstart' in window ||
+    !!(navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+}
+
+// Сдвиг колонки: translate складывается с анимацией ленты; margin-left — запасной
+// путь для браузеров, где отдельных свойств трансформации ещё нет
+function setReviewColumnShift(track, shift) {
+  if (REVIEW_SWIPE_SHIFT_PROP === 'translate') track.style.translate = shift + 'px 0';
+  else track.style.marginLeft = shift + 'px';
+}
+
+// Сдвиг в пределах одного «круга» ленты: -span < shift <= 0
+function wrapReviewColumnShift(value, span) {
+  if (!span) return 0;
+  const shift = value % span;
+  return shift > 0 ? shift - span : shift;
+}
+
+function initReviewSwipe() {
+  if (!hasTouchInput()) return;
+  // «Уменьшить движение»: колонка прокручивается нативно (style.css) — свой свайп не нужен
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  document.querySelectorAll('#reviews .nr-marquee').forEach((marquee) => {
+    const track = marquee.querySelector('.nr-marquee-track');
+    if (!track) return;
+
+    marquee.classList.add('nr-swipeable'); // touch-action: pan-y (style.css)
+
+    let span = 0;       // половина трека = один «круг» ленты
+    let shift = 0;      // накопленный сдвиг колонки
+    let dragShift = 0;  // сдвиг на момент распознавания жеста
+    let startX = 0;
+    let startY = 0;
+    let lastDx = 0;
+    let axis = null;    // 'x' | 'y' | null (ещё не определена)
+    let swiped = false; // только что был жест — следующий клик гасим
+
+    // Клик, который браузер шлёт после жеста, не должен нажимать «Читать далее…»
+    // или открывать страницу автора
+    marquee.addEventListener('click', (event) => {
+      if (!swiped) return;
+      swiped = false;
+      event.preventDefault();
+      event.stopPropagation();
+    }, true);
+
+    marquee.addEventListener('touchstart', (event) => {
+      const touch = event.changedTouches[0];
+      startX = touch.clientX;
+      startY = touch.clientY;
+      lastDx = 0;
+      axis = null;
+      span = track.scrollWidth / 2; // копии ленты одинаковые: половина — «круг»
+    }, { passive: true });
+
+    marquee.addEventListener('touchmove', (event) => {
+      if (!span || axis === 'y') return;
+      const touch = event.changedTouches[0];
+      const dx = touch.clientX - startX;
+      const dy = touch.clientY - startY;
+
+      // Ось жеста определяем один раз по первым сантиметрам движения
+      if (axis === null) {
+        if (Math.abs(dx) < REVIEW_SWIPE_AXIS_THRESHOLD &&
+            Math.abs(dy) < REVIEW_SWIPE_AXIS_THRESHOLD) return;
+        axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+        dragShift = shift;
+        if (axis !== 'x') return;
+      }
+
+      lastDx = dx;
+      setReviewColumnShift(track, wrapReviewColumnShift(dragShift + dx, span));
+    }, { passive: true });
+
+    // Палец ушёл: запоминаем, где оставили колонку, и гасим клик после жеста
+    const finishSwipe = () => {
+      if (axis === 'x') {
+        shift = wrapReviewColumnShift(dragShift + lastDx, span);
+        swiped = true;
+        setTimeout(() => { swiped = false; }, 400);
+      }
+      axis = null;
+      lastDx = 0;
+    };
+
+    marquee.addEventListener('touchend', finishSwipe, { passive: true });
+    marquee.addEventListener('touchcancel', finishSwipe, { passive: true });
+  });
+}
+
 function toggleFaq(id) {
   const currentBody = document.getElementById(`faq-body-${id}`);
   if (!currentBody) return;
@@ -5302,9 +5847,10 @@ function updateActiveNavSection() {
     lastScrollSpyY = scrollY;
   }
 
-  // Если прокрутили до самого низа страницы — гарантированно активны Контакты
+  // Если прокрутили до самого низа страницы — гарантированно активны Отзывы
+  // (последний раздел страницы перед подвалом)
   if (scrollY + windowHeight >= documentHeight - 50) {
-    setActiveNavSection('contacts');
+    setActiveNavSection('reviews');
     return;
   }
 
@@ -5320,7 +5866,7 @@ function updateActiveNavSection() {
     ? visibleCenter
     : headerH + Math.round(visibleHeight * 0.72);
 
-  const NAV_SECTIONS = ['player', 'services', 'faq', 'contacts'];
+  const NAV_SECTIONS = ['player', 'services', 'faq', 'contacts', 'reviews'];
 
   // Зона Hero: если заголовок первого раздела (player) ещё не поднялся до центра экрана,
   // значит внимание пользователя на главном экране — подсветка выключена
@@ -5335,7 +5881,7 @@ function updateActiveNavSection() {
     return;
   }
 
-  // Проверяем секции в обратном порядке (снизу вверх: contacts -> faq -> services -> player):
+  // Проверяем секции в обратном порядке (снизу вверх: reviews -> contacts -> faq -> services -> player):
   // Первая секция снизу, чей заголовок/якорь пересёк линию центра экрана, становится активной
   let activeSection = null;
   for (let i = NAV_SECTIONS.length - 1; i >= 0; i--) {
@@ -5406,7 +5952,7 @@ function initSmoothAnchorNavigation() {
         const targetY = currentY + rect.top - headerH - extraOffset;
 
         const targetId = href.startsWith('#') ? href.slice(1) : null;
-        if (targetId && ['player', 'services', 'faq', 'contacts'].includes(targetId)) {
+        if (targetId && ['player', 'services', 'faq', 'contacts', 'reviews'].includes(targetId)) {
           setActiveNavSection(targetId);
           if (scrollSpyClickLockTimer) clearTimeout(scrollSpyClickLockTimer);
           scrollSpyClickLockTimer = setTimeout(() => {
@@ -6209,6 +6755,10 @@ function initGsapAnimations() {
 
   // 5. Footer Section: Opens at 92%
   animateScrollBlock('footer', { y: 16, duration: 0.5, start: 'top 92%' });
+
+  // 6. Reviews Section: заголовок раздела появляется первым.
+  //    Сами ряды лент поднимаются отдельно — animations.js → initReveal.
+  animateScrollBlock('#reviews .text-center', { duration: 0.5, y: 20, start: 'top 88%' });
 }
 
 function initMixerFaderScroll() {

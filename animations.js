@@ -540,7 +540,7 @@
       '<stop offset="100%" stop-color="#F59E0B" stop-opacity="0"/></defs>';
     document.body.appendChild(defs);
 
-    ['#player', '#services', '#faq', '#contacts'].forEach(function (sel) {
+    ['#player', '#services', '#faq', '#contacts', '#reviews'].forEach(function (sel) {
       var sec = $(sel);
       if (!sec) return;
       var h2 = $('h2', sec);
@@ -615,6 +615,15 @@
     $$('#contacts .grid > a, #contacts .grid > button').forEach(function (n, i) {
       n.classList.add('nr-reveal');
       n.setAttribute('data-nr-d', String((i % 4) + 1));
+      observeReveal(n);
+    });
+
+    /* Ряды бегущих лент отзывов (#reviews) — тот же мягкий подъём снизу,
+       что у плиток контактов. Карточки по отдельности не анимируем: их в ленте
+       десятки, а у ряда уже есть своя бесконечная анимация сдвига. */
+    $$('#reviews .nr-marquee').forEach(function (n, i) {
+      n.classList.add('nr-reveal');
+      n.setAttribute('data-nr-d', String(i + 1));
       observeReveal(n);
     });
   }
@@ -833,7 +842,7 @@
         en.target.classList.toggle('nr-off', !en.isIntersecting);
       });
     }, { rootMargin: '140px 0px' });
-    $$('#hero, #player, #faq, #contacts, footer').forEach(function (n) { io.observe(n); });
+    $$('#hero, #player, #faq, #contacts, #reviews, footer').forEach(function (n) { io.observe(n); });
   }
 
   /* ═══ 16. СИНХРОНИЗАЦИЯ СОСТОЯНИЙ ══════════════════════════════════ */
