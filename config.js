@@ -16,8 +16,8 @@ const CONFIG = {
              URL и качает все треки ЗАНОВО при каждом открытии страницы —
              как будто зашёл новый человек. Так честно проверяются загрузка
              и приоритеты прогрева в Network (≈113 МБ за заход).
-             После проверки вернуть false и пересобрать: build-min.cjs +
-             bump-assets.cjs.
+             После проверки вернуть false и запушить: файлы из public/ уходят
+             на сайт как есть, сборки в проекте нет.
      На папку public/ значение не влияет: параметр живёт только в памяти
      страницы, ссылки в index.html остаются прежними. */
   AUDIO_CACHE_BUST: false,
@@ -51,7 +51,8 @@ const CONFIG = {
         beforeLabel: 'BEFORE (MIX)',
         afterLabel: 'AFTER (MASTERED)',
         prevBtn: 'Назад',
-        nextBtn: 'Вперед'
+        nextBtn: 'Вперед',
+        audioError: 'Не удалось загрузить файл трека. Проверьте соединение и нажмите на трек ещё раз.'
       },
       services: {
         title: 'Услуги и цены',
@@ -172,7 +173,8 @@ const CONFIG = {
         beforeLabel: 'BEFORE (MIX)',
         afterLabel: 'AFTER (MASTERED)',
         prevBtn: 'Previous',
-        nextBtn: 'Next'
+        nextBtn: 'Next',
+        audioError: 'Could not load the track file. Check your connection and tap the track again.'
       },
       services: {
         title: 'Services & Pricing',

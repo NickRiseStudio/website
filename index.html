@@ -41,17 +41,17 @@
   <link rel="apple-touch-icon" sizes="3000x3000" href="./image/Logo.webp">
 
   <!-- Production Tailwind CSS (Compiled via CLI) -->
-  <link rel="stylesheet" href="./tailwind.css?v=15">
+  <link rel="stylesheet" href="./tailwind.css">
 
   <!-- Custom web fonts (self-hosted): fonts.css + public/fonts/*.woff2.
-       Пересборка после обновления шрифтов: node tools\fonts-selfhost.cjs -->
-  <link rel="stylesheet" href="./fonts.css?v=15">
+       Шрифты генерируются внешним инструментом, см. PROJECT-NOTES.md -->
+  <link rel="stylesheet" href="./fonts.css">
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="./style.css?v=15">
+  <link rel="stylesheet" href="./style.css">
 
   <!-- Animation Layer (добавляет только анимации) -->
-  <link rel="stylesheet" href="./animations.css?v=15">
+  <link rel="stylesheet" href="./animations.css">
 
   <!-- Главное фото hero (элемент LCP): грузим заранее, не дожидаясь разбора разметки.
        Один оригинал — без srcset. -->
@@ -959,6 +959,10 @@
       class="deck-seek-hitarea relative w-full bg-[#0A0D16] cursor-pointer select-none border-b border-amber-500/20 group"
       title="Seek track position"
     >
+      <!-- Полоса загрузки — бледная янтарная, под оранжевой полосой
+           воспроизведения. Показывает, до какого момента скачаны ОБЕ дорожки
+           пары (BEFORE и AFTER): пока одна отстаёт — полоса стоит. -->
+      <div id="deckBufferBar" class="deck-buffer-bar" style="width: 0%"></div>
       <div
         id="deckProgressBar"
         class="h-full bg-gradient-to-r from-amber-600 via-amber-500 to-amber-300 transition-all duration-75 relative shadow-[0_0_8px_rgba(245,158,11,0.5)]"
@@ -1163,20 +1167,20 @@
        Все внешние скрипты стоят с defer: браузер не блокирует отрисовку на их
        загрузке, а выполняет их после разбора разметки — но в прежнем порядке
        (gsap → ScrollTrigger → ScrollToPlugin → config → smoothscroll-nr →
-       script.min → animations.min) и всегда до DOMContentLoaded. Inline-блок
+       script → animations) и всегда до DOMContentLoaded. Inline-блок
        плавного скролла подписывается на DOMContentLoaded, поэтому SmoothScroll
        к моменту вызова уже загружен. -->
   <script defer src="./vendor/gsap.min.js"></script>
   <script defer src="./vendor/ScrollTrigger.min.js"></script>
   <script defer src="./vendor/ScrollToPlugin.min.js"></script>
-  <script defer src="./config.js?v=15"></script>
+  <script defer src="./config.js"></script>
   <!-- Плавный скролл: собственный модуль smoothscroll-nr.js.
        Ядро — как у Balázs Galambosi (per-notch pulse-инерция через scrollBy),
        но без localStorage-эвристики «мышь vs тачпад» и без destroy/enable на
        resize/zoom: они ломали плавность после изменения масштаба/размера окна.
        Плавность работает сразу после загрузки. API: SmoothScroll.enable(opts) /
        destroy() / cancel() / stop() / resync(); window.nrSmoothScroll. -->
-  <script defer src="./smoothscroll-nr.js?v=15"></script>
+  <script defer src="./smoothscroll-nr.js"></script>
   <script>
     (function () {
       var smoothConfig = {
@@ -1250,10 +1254,10 @@
       window.addEventListener('orientationchange', onViewportChange, { passive: true });
     })();
   </script>
-  <script src="./script.min.js?v=15" defer></script>
-  <!-- Минифицированная версия animations.js. Исходники лежат рядом
-       (script.js, animations.js): после правок пересбирай их:
-       node tools\build-min.cjs -->
-  <script src="./animations.min.js?v=15" defer></script>
+  <script src="./script.js" defer></script>
+  <!-- animations.js — визуальные эффекты: канвасы, эквалайзер, ScrollTrigger,
+       boot-заставка (initBoot). Подключается последней, после script.js.
+       -->
+  <script src="./animations.js" defer></script>
 </body>
 </html>

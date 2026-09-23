@@ -1,8 +1,7 @@
 /* ======================================================================
    NICK RISE STUDIO — плавный скролл (собственный модуль).
    Ядро — как у скролл-либы Balázs Galambosi (раньше подключалась как
-   smoothscroll.min.js; файл удалён из проекта, читаемый исходник для
-   сверки — tools/_smoothscroll-pretty.txt): per-notch pulse-инерция
+   smoothscroll.min.js; файл удалён из проекта): per-notch pulse-инерция
    через scrollBy. Убраны её хрупкие эвристики:
    localStorage-буфер и «прогрев» после resize/zoom, phantom-div,
    MutationObserver, ctrlKey-рассинхронизация; на resize/zoom — лёгкий

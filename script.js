@@ -641,6 +641,45 @@ function getTrackConfigById(trackId) {
   return CONFIG.tracks.find(tr => tr.id === trackId) || null;
 }
 
+/* id треков, чьи файлы не загрузились (404, битый mp3): их больше не качаем,
+   пока пользователь не кликнет по треку ещё раз (см. ensureTrackLoaded). */
+const audioFailedTrackIds = [];
+
+/* Текст сообщения о том, что файл трека не удалось загрузить, — на текущем
+   языке страницы (ключ player.audioError в config.js есть и в ru, и в en). */
+function getAudioErrorText() {
+  const t = (typeof CONFIG !== 'undefined' && CONFIG && CONFIG.i18n) ? CONFIG.i18n[currentLang] : null;
+  return (t && t.player && t.player.audioError) ? t.player.audioError : '';
+}
+
+/* В паре уже есть данные — метаданные или первые байты: значит запрос живой. */
+function hasAnyAudioData(item) {
+  return [item.audioA, item.audioB].some(el => el && (el.readyState >= 1 || el.buffered.length > 0));
+}
+
+/* Клик — приоритет №1: пара обязана начать получать байты. Если за отведённое
+   время не пришло НИ ОДНОГО байта (запрос завис в очереди соединений браузера),
+   выбор ресурса перезапускается — но только у ПОЛНОСТЬЮ пустых дорожек, чтобы не
+   потерять уже скачанное у соседней. В порционном режиме это не нужно: свой
+   запрос повторяет сам streamKick, а load() сбросил бы скачанное. */
+const AUDIO_FETCH_RETRY_MS = 2000;
+
+function retryStalledPairFetch(item) {
+  if (!item) return;
+  if (audioChunkSupported()) return;
+  const { audible } = getAudiblePair(item);
+  setTimeout(() => {
+    if (!item.wantPlay) return;
+    if (audible.readyState >= 2 || audible.buffered.length > 0) return;
+    if ((audible.currentTime || 0) > 0) return;
+    const stuck = [item.audioA, item.audioB].filter(el => el.readyState < 1 && el.buffered.length === 0);
+    if (!stuck.length) return;
+    item.warmStarted = false;
+    setPairPreload(item, 'auto');
+    stuck.forEach(el => el.load());
+  }, AUDIO_FETCH_RETRY_MS);
+}
+
 /* ══ ОТЛАДОЧНЫЙ ОБХОД КЭША АУДИО ═══════════════════════════════════════════
    Выключатель: CONFIG.AUDIO_CACHE_BUST в config.js. Пока флаг true, к URL
    каждого mp3 добавляется уникальный параметр — браузер считает файл новым и
@@ -674,23 +713,45 @@ function createTrackAudioEntry(track) {
   if (!track || !track.id || !track.audioBefore || !track.audioAfter) return null;
   if (trackAudioMap[track.id]) return trackAudioMap[track.id];
 
-  const audioA = new Audio(audioUrl(track.audioBefore));
-  const audioB = new Audio(audioUrl(track.audioAfter));
-  audioA.preload = 'metadata';
-  audioB.preload = 'metadata';
+  const urlA = audioUrl(track.audioBefore);
+  const urlB = audioUrl(track.audioAfter);
+  const chunked = audioChunkSupported();
 
-  const handleAudioError = (el, type) => {
+  const audioA = new Audio();
+  const audioB = new Audio();
+  if (chunked) {
+    audioA.preload = 'none';
+    audioB.preload = 'none';
+    audioA.setAttribute('data-nr-src', urlA);
+    audioB.setAttribute('data-nr-src', urlB);
+  } else {
+    audioA.preload = 'metadata';
+    audioB.preload = 'metadata';
+    audioA.src = urlA;
+    audioB.src = urlB;
+  }
+
+  /* Ошибка загрузки файла трека: пара останавливается, трек помечается
+     недоступным, пользователь видит честное сообщение. Повтор — только по его
+     клику (см. ensureTrackLoaded). Подмены на другой файл нет. */
+  const handleAudioError = el => {
     el.addEventListener('error', () => {
-      const fallbackSrc = audioUrl(`./audio/pophouse_1_${type}.mp3`);
-      const fullFallback = new URL(fallbackSrc, window.location.href).href;
-      if (el.src !== fullFallback) {
-        el.src = fallbackSrc;
-        el.load();
+      const item = trackAudioMap[track.id];
+      if (audioFailedTrackIds.indexOf(track.id) < 0) audioFailedTrackIds.push(track.id);
+      if (item) {
+        item.warmStarted = false;
+        pausePairAudio(track.id);
+      }
+      if (activeTrackId === track.id) {
+        warmReleaseHold();
+        updateMasterDeckUI();
+        renderTrackList(false);
+        showToast(getAudioErrorText());
       }
     });
   };
-  handleAudioError(audioA, 'before');
-  handleAudioError(audioB, 'after');
+  handleAudioError(audioA);
+  handleAudioError(audioB);
 
   const trackIndex = CONFIG && CONFIG.tracks ? CONFIG.tracks.indexOf(track) + 1 : 1;
   trackAudioMap[track.id] = {
@@ -698,8 +759,17 @@ function createTrackAudioEntry(track) {
     audioB,
     source: 'after',
     volume: 0.9,
+    // Трек слушают (не пауза): нужно, чтобы после буферизации продолжить самим.
+    wantPlay: false,
+    bufferGate: false,
     trackIndex: trackIndex > 0 ? trackIndex : 1
   };
+
+  /* Порционный режим: дорожки привязываются к своему потоку данных. */
+  if (chunked) {
+    streamBindElement(audioA, urlA);
+    streamBindElement(audioB, urlB);
+  }
 
   // Никаких жёстких seek внутри воспроизведения: расхождение пары гасится
   // микро-коррекцией скорости той дорожки, которая сейчас не звучит.
@@ -713,7 +783,12 @@ function createTrackAudioEntry(track) {
     requestAnimationFrame(() => {
       timeUpdatePending = false;
       if (activeTrackId !== track.id) return;
-      syncAudioPair(trackAudioMap[track.id]);
+      const item = trackAudioMap[track.id];
+      syncAudioPair(item);
+      // Звук не должен уходить за общий буфер обеих дорожек.
+      checkPairBufferGate(item);
+      // Данных впереди мало — просим следующую порцию (см. «ПОРЦИОННАЯ ЗАГРУЗКА»).
+      streamTickItem(item);
       updateDeckProgressUI();
     });
   };
@@ -745,15 +820,44 @@ function createTrackAudioEntry(track) {
     if (activeTrackId === track.id) nextDeckTrack();
   });
 
+  /* Состояние данных пары: полоса буфера в пульте, спиннер на кнопке Play и
+     дозапуск после буферизации (как в стримингах). Слушаем обе дорожки пары,
+     но обработчик срабатывает только для активного трека. */
+  const handleDeckDataState = () => {
+    if (activeTrackId !== track.id) return;
+    const item = trackAudioMap[track.id];
+    streamTickItem(item);
+    // Звук мог пойти или остановиться сам (гейт буфера) — доводим иконку Play.
+    syncPlayStateUI(track.id);
+    if (item.bufferGate) {
+      /* Пара встала на границе общего буфера (см. checkPairBufferGate): ждём,
+         пока данные дойдут до этой отметки у ОБЕИХ дорожек. */
+      releasePairBufferGate(track.id);
+    } else {
+      const { audible } = getAudiblePair(item);
+      if (audible.readyState >= 3) ensurePairPlaying(track.id);
+    }
+    updateDeckProgressUI();
+    updateDeckBufferingUI();
+  };
+  ['play', 'playing', 'pause', 'progress', 'waiting', 'stalled', 'canplay',
+    'loadeddata', 'suspend', 'ended'].forEach(evt => {
+    audioA.addEventListener(evt, handleDeckDataState);
+    audioB.addEventListener(evt, handleDeckDataState);
+  });
+
   return trackAudioMap[track.id];
 }
 
-/* Наведение/фокус на карточке: пара создаётся сразу, а трек поднимается в
-   начало очереди прогрева — с небольшой задержкой «намерения», чтобы
-   случайные движения мыши не перетасовывали очередь и не тянули мегабайты. */
+/* Наведение/фокус на карточке: пара создаётся сразу, а у файлов запрашиваются
+   только первые килобайты (длительность и полоса перемотки готовы заранее).
+   Мегабайты в сеть уходят только после клика. */
 function prefetchTrackAudio(trackId) {
   if (!trackId) return;
   if (!trackAudioMap[trackId]) createTrackAudioEntry(getTrackConfigById(trackId));
+
+  /* Порционный режим: «прогрев» — это только заголовки файлов (первые килобайты). */
+  streamPreparePair(trackAudioMap[trackId]);
 
   if (hoverWarmId === trackId) return;
   hoverWarmId = trackId;
@@ -766,7 +870,12 @@ function prefetchTrackAudio(trackId) {
 function ensureTrackLoaded(trackId) {
   const item = trackAudioMap[trackId] || createTrackAudioEntry(getTrackConfigById(trackId));
   if (!item) return;
+  /* Клик по треку — это и есть ручная повторная попытка: снимаем отметку об
+     ошибке загрузки, которую поставил handleAudioError. */
+  const failedIdx = audioFailedTrackIds.indexOf(trackId);
+  if (failedIdx >= 0) audioFailedTrackIds.splice(failedIdx, 1);
   beginPairDownload(item);
+  retryStalledPairFetch(item);
 }
 
 /* ══ ФОНОВЫЙ ПРОГРЕВ АУДИО ═══════════════════════════════════════════════
@@ -791,6 +900,10 @@ function ensureTrackLoaded(trackId) {
    начинает новых загрузок при скрытой вкладке, не берёт в работу треки,
    которые уже целиком в буфере. Состояние очереди видно в консоли:
    window.nrAudioWarm.
+
+   Важно: в порционном режиме («ПОРЦИОННАЯ ЗАГРУЗКА ПАРЫ») очередь вообще не
+   запускается — мегабайты уходят только по клику, а весь поток ведёт
+   nrAudioStream. Этот блок остаётся рабочим для браузеров без mp3 в MediaSource.
    ══════════════════════════════════════════════════════════════════════ */
 
 const AUDIO_WARM_TIMEOUT = 20000;   // мс: страховка от залипания на медленном канале
@@ -863,8 +976,15 @@ function restoreWarmResume(trackId, el) {
    повторный вызов сбросил бы уже скачанное и позицию воспроизведения. */
 function beginPairDownload(item) {
   if (!item) return;
+  /* Порционный режим: в сеть уходят только первые килобайты заголовка — порции
+     начнёт качать playPairAudio (streamActivateItem). */
+  if (audioChunkSupported()) { streamPreparePair(item); return; }
   setPairPreload(item, 'auto');
   if (item.warmStarted) return;
+  /* load() нужен только ПУСТОЙ паре: у элемента, в котором уже есть данные, он
+     обнулил бы и буфер, и позицию воспроизведения. Незакрытая загрузка у такой
+     пары просто продолжается. */
+  if (hasAnyAudioData(item)) return;
   item.warmStarted = true;
   item.audioA.load();
   item.audioB.load();
@@ -968,6 +1088,9 @@ function warmQueuePush(trackId, options = {}) {
 }
 
 function warmQueueRun() {
+  /* Порционный режим: мегабайты качаются только по клику — очередь здесь ничего
+     не делает, поэтому в сеть заранее не уходит ничего лишнего. */
+  if (audioChunkSupported()) return;
   if (audioWarmCurrentId) return; // одна пара за раз
   if (document.hidden) return;    // вкладка скрыта — новые загрузки не начинаем
   /* Трек слушают прямо сейчас: канал держим свободным. Если продолжить качать
@@ -1076,6 +1199,8 @@ function warmOnSeek(trackId, seekTime) {
    удержание ставится снова (warmOnSeek). */
 function warmHold(trackId) {
   if (!trackId) return;
+  /* Порционный режим: канал не делится — очередь здесь ничего не бронирует. */
+  if (audioChunkSupported()) return;
   /* Пара уже целиком в буфере — держать канал незачем, и снимать удержание
      будет нечем (событие progress для готового трека может не прийти). */
   const item = trackAudioMap[trackId];
@@ -1149,6 +1274,423 @@ function scheduleInitialAudioWarm() {
    стоит и канал целиком отдан ему. paused — стоит ли очередь из-за удержания
    или скрытой вкладки. cacheBust — включён ли отладочный обход кэша
    (CONFIG.AUDIO_CACHE_BUST): при true каждый заход качает треки заново. */
+/* ══ ПОРЦИОННАЯ ЗАГРУЗКА ПАРЫ (ПО 15 СЕКУНД) ═══════════════════════════════
+   Зачем. Файлы треков — mp3 320 kbps (5.4–11.1 МБ), то есть 11–22 МБ на пару,
+   а у двух языков — 47–66 МБ. В обычном режиме браузер, начав загрузку, качает
+   файл далеко вперёд: полоса загрузки сразу уходит к концу, а мегабайты — в то,
+   что ещё не слушают. Здесь поток данных режем сами: впереди держим ровно одну
+   порцию — AUDIO_CHUNK_SEC секунд, и просим следующую, когда до её конца
+   остаётся AUDIO_CHUNK_AHEAD секунд. Полоса загрузки после этого честная: она
+   показывает именно то, что скачано.
+
+   Как. Дорожка играет не файл, а MediaSource (audio/mpeg — тот же mp3, но байты
+   в буфер кладём мы). Длительность, битрейт и начало первого кадра известны из
+   первых килобайт файла (Range-запрос заголовка, без мегабайт), поэтому время
+   переводится в байты как t × битрейт/8. Границы порций выравниваются по кадрам
+   mp3 (1152 сэмпла = 26.12 мс), поэтому склейка бесшовная: следующая порция
+   начинается ровно там, где кончилась предыдущая.
+
+   Клик и перемотка. Первая порция короткая (AUDIO_CHUNK_HEAD_SEC): звук должен
+   пойти сразу, а не через 15 секунд загрузки. Перемотка в место, где данных нет,
+   качает порцию с этой позиции — показывается загрузка, а трек продолжается сам
+   с той же секунды (releasePairBufferGate). Пауза и переход на другой трек
+   передачу обрывают, скачанное остаётся; позади позиции держим только
+   AUDIO_CHUNK_KEEP_BEHIND секунд, иначе буферы прослушанных треков копились бы
+   в памяти. Порядок «мегабайты только по клику» держит и очередь прогрева: в
+   этом режиме она не запускается (warmQueueRun), а наведение на карточку тянет
+   лишь заголовки файлов (streamPreparePair).
+
+   Если браузер не умеет mp3 внутри MediaSource, файл оказался не CBR или буфер
+   отказался принять данные — режим выключается сам (streamDisableChunkMode) и
+   всё работает как раньше: файл качает браузер. Состояние видно в консоли:
+   window.nrAudioStream.summary. */
+
+const AUDIO_CHUNK_ENABLED = true;    // false — прежняя загрузка файла целиком
+const AUDIO_CHUNK_SEC = 15;          // с: размер порции
+const AUDIO_CHUNK_AHEAD = 5;         // с: за сколько до конца порции просить следующую
+const AUDIO_CHUNK_HEAD_SEC = 2;      // с: первая порция (клик, перемотка)
+const AUDIO_CHUNK_KEEP_BEHIND = 20;  // с: сколько скачанного оставляем позади
+const AUDIO_CHUNK_RETRY_MS = 1500;   // мс: пауза перед повтором
+const AUDIO_CHUNK_PROBE_BYTES = 4096;
+const AUDIO_CHUNK_FRAME_SEEK = 1600;
+const AUDIO_CHUNK_MIME = 'audio/mpeg';
+
+let audioChunkOff = false;
+let audioChunkCapable = null;
+
+function audioChunkSupported() {
+  if (!AUDIO_CHUNK_ENABLED || audioChunkOff) return false;
+  if (audioChunkCapable === null) {
+    try {
+      audioChunkCapable = typeof MediaSource !== 'undefined' &&
+        typeof MediaSource.isTypeSupported === 'function' &&
+        MediaSource.isTypeSupported(AUDIO_CHUNK_MIME);
+    } catch (err) { audioChunkCapable = false; }
+    if (!audioChunkCapable) audioChunkOff = true;
+  }
+  return audioChunkCapable;
+}
+
+/* ── разбор mp3 ── */
+
+const MP3_BITRATE_V1_L3 = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, -1];
+const MP3_BITRATE_V2_L3 = [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, -1];
+const MP3_SAMPLERATE_V1 = [44100, 48000, 32000, -1];
+const MP3_SAMPLERATE_V2 = [22050, 24000, 16000, -1];
+const MP3_SAMPLERATE_V25 = [11025, 12000, 8000, -1];
+
+function mp3Id3Size(bytes) {
+  if (bytes.length < 10) return 0;
+  if (bytes[0] !== 0x49 || bytes[1] !== 0x44 || bytes[2] !== 0x33) return 0;
+  const size = ((bytes[6] & 0x7f) << 21) | ((bytes[7] & 0x7f) << 14) |
+    ((bytes[8] & 0x7f) << 7) | (bytes[9] & 0x7f);
+  return 10 + size + ((bytes[5] & 0x10) ? 10 : 0);
+}
+
+function mp3FrameAt(bytes, p) {
+  if (p < 0 || p + 4 > bytes.length) return null;
+  if (bytes[p] !== 0xff || (bytes[p + 1] & 0xe0) !== 0xe0) return null;
+  const version = (bytes[p + 1] >> 3) & 3;
+  const layer = (bytes[p + 1] >> 1) & 3;
+  const bitrateIdx = (bytes[p + 2] >> 4) & 0xf;
+  const rateIdx = (bytes[p + 2] >> 2) & 3;
+  if (version === 1 || layer !== 1 || bitrateIdx === 0 || bitrateIdx === 15 || rateIdx === 3) return null;
+  const mpeg1 = version === 3;
+  const bitrate = (mpeg1 ? MP3_BITRATE_V1_L3 : MP3_BITRATE_V2_L3)[bitrateIdx] * 1000;
+  const sr = mpeg1 ? MP3_SAMPLERATE_V1[rateIdx] :
+    (version === 2 ? MP3_SAMPLERATE_V2[rateIdx] : MP3_SAMPLERATE_V25[rateIdx]);
+  if (!bitrate || sr <= 0) return null;
+  const padding = (bytes[p + 2] >> 1) & 1;
+  return { bitrate, sampleRate: sr, samplesPerFrame: mpeg1 ? 1152 : 576,
+    length: Math.floor((mpeg1 ? 144 : 72) * bitrate / sr) + padding };
+}
+
+function mp3FrameStartAt(bytes, p) {
+  const frame = mp3FrameAt(bytes, p);
+  if (!frame) return null;
+  if (p + frame.length + 4 > bytes.length) return frame;
+  const next = mp3FrameAt(bytes, p + frame.length);
+  if (!next || next.bitrate !== frame.bitrate || next.sampleRate !== frame.sampleRate) return null;
+  return frame;
+}
+
+function mp3ChunkStart(bytes, fromByte, atByte, mode) {
+  const at = atByte - fromByte;
+  if (mode === 'at') {
+    for (let p = Math.min(bytes.length - 4, at + 8); p >= 0; p--) {
+      if (mp3FrameStartAt(bytes, p)) return fromByte + p;
+    }
+  }
+  const until = Math.min(bytes.length - 4, at + AUDIO_CHUNK_FRAME_SEEK);
+  for (let p = Math.max(0, at); p <= until; p++) {
+    if (mp3FrameStartAt(bytes, p)) return fromByte + p;
+  }
+  return -1;
+}
+
+async function readAudioStreamMeta(url) {
+  let response;
+  try { response = await fetch(url, { headers: { Range: 'bytes=0-' + (AUDIO_CHUNK_PROBE_BYTES - 1) } }); } catch (err) { return null; }
+  const cr = response.headers.get('Content-Range');
+  if (!response.ok || !cr) {
+    if (response.body && response.body.cancel) { try { response.body.cancel(); } catch (err) {} }
+    return null;
+  }
+  const m = /\/(\d+)\s*$/.exec(cr);
+  const totalBytes = m ? Number(m[1]) : 0;
+  let bytes;
+  try { bytes = new Uint8Array(await response.arrayBuffer()); } catch (err) { return null; }
+  if (!totalBytes || bytes.length < 128) return null;
+
+  const audioStart = mp3Id3Size(bytes);
+  const first = mp3FrameStartAt(bytes, audioStart);
+  if (!first) return null;
+
+  let at = audioStart, frames = 0;
+  while (frames < 3 && at + 4 <= bytes.length) {
+    const f = mp3FrameStartAt(bytes, at);
+    if (!f || f.bitrate !== first.bitrate) return null;
+    at += f.length; frames++;
+  }
+  if (frames < 3) return null;
+  const bps = first.bitrate / 8;
+  return { url, totalBytes, audioStart, bitrate: first.bitrate, sampleRate: first.sampleRate,
+    bytesPerSec: bps, frameSec: first.samplesPerFrame / first.sampleRate,
+    duration: (totalBytes - audioStart) / bps };
+}
+
+/* ── состояние порционной загрузки ── */
+
+const audioStreamMap = new Map();
+
+function audioStreamOf(el) { return el ? (audioStreamMap.get(el) || null) : null; }
+
+/* Состояние дорожки для порционной загрузки: создаётся один раз. */
+function streamStateFor(el, url) {
+  let st = audioStreamOf(el);
+  if (!st) {
+    st = { el, url: url || (el.dataset && el.dataset.nrSrc) || '',
+      meta: null, probing: false, wanted: false, source: null, buffer: null,
+      objectUrl: null, chunk: null, appending: null, fetching: false, aborter: null,
+      fetchToken: 0, appended: 0, nextByte: 0, nextTime: 0, fresh: true, done: false,
+      retryAt: 0, failCount: 0 };
+    audioStreamMap.set(el, st);
+  }
+  return st;
+}
+
+/* Привязка дорожки к порционному режиму: состояние плюс реакция на перемотку.
+   Перемотку слушаем здесь, потому что место, куда прыгнул пользователь, почти
+   всегда ещё не скачано — порция качается с этой позиции (streamOnSeek). */
+function streamBindElement(el, url) {
+  const st = streamStateFor(el, url);
+  if (!st.seekBound) {
+    st.seekBound = true;
+    const onSeek = () => streamOnSeek(st);
+    el.addEventListener('seeking', onSeek);
+    el.addEventListener('seeked', onSeek);
+  }
+  return st;
+}
+
+function streamPreparePair(item) {
+  if (!item || !audioChunkSupported()) return;
+  [item.audioA, item.audioB].forEach(el => {
+    const st = streamBindElement(el);
+    if (st && !st.meta && !st.probing) streamPrepareMeta(st);
+  });
+}
+
+function streamPrepareMeta(st) {
+  st.probing = true;
+  readAudioStreamMeta(st.url).then(meta => {
+    st.probing = false;
+    if (!meta) { streamDisableChunkMode('файл не подошёл: ' + st.url); return; }
+    st.meta = meta; st.nextByte = meta.audioStart; st.nextTime = 0; st.fresh = true;
+    if (st.wanted) streamStart(st);
+  }).catch(() => { st.probing = false; });
+}
+
+function streamDisableChunkMode(reason) {
+  if (audioChunkOff) return;
+  audioChunkOff = true;
+  if (typeof console !== 'undefined' && console.warn)
+    console.warn('Аудио: порции (' + AUDIO_CHUNK_SEC + ' с) выключены —', reason);
+  Array.from(audioStreamMap.values()).forEach(st => streamRevertToFile(st));
+}
+
+function streamStopFetch(st) {
+  if (st.aborter) { try { st.aborter.abort(); } catch (err) {} st.aborter = null; }
+  /* Номер запроса растёт: обработчики уже отменённого ответа увидят чужой токен
+     и промолчат. Иначе отменённый ответ обнулил бы флаги НОВОГО запроса
+     (перемотка ровно в этот момент) — и качались бы две порции сразу. */
+  st.fetchToken++;
+  st.fetching = false;
+}
+
+function findItemForElement(el) {
+  for (const key in trackAudioMap) {
+    const i = trackAudioMap[key];
+    if (i && (i.audioA === el || i.audioB === el)) return i;
+  }
+  return null;
+}
+
+function streamRevertToFile(st) {
+  const el = st.el; const item = findItemForElement(el);
+  const at = el.currentTime || 0;
+  streamStopFetch(st); st.chunk = null; st.appending = null; st.wanted = false;
+  audioStreamMap.delete(el);
+  try { el.removeAttribute('src'); el.load(); } catch (err) {}
+  el.preload = 'none';
+  if (st.objectUrl) { try { URL.revokeObjectURL(st.objectUrl); } catch (err) {} st.objectUrl = null; }
+  st.source = null; st.buffer = null;
+  if (item) {
+    if (at > 0.25) item.resumeAt = at;
+    item.warmStarted = false;
+    if (item.wantPlay) { beginPairDownload(item); retryStalledPairFetch(item); }
+  }
+}
+
+/* ── активация потока ── */
+
+function streamActivateItem(item, on) {
+  if (!item) return;
+  if (!audioChunkSupported()) { if (on) { beginPairDownload(item); retryStalledPairFetch(item); } return; }
+  const states = [item.audioA, item.audioB].map(el => audioStreamOf(el)).filter(Boolean);
+  if (!states.length) { if (on) { beginPairDownload(item); retryStalledPairFetch(item); } return; }
+  states.forEach(st => { st.wanted = !!on; if (on) streamStart(st); else streamPause(st); });
+}
+
+function streamStart(st) {
+  if (!st || st.done) return;
+  if (!st.meta) { streamPrepareMeta(st); return; }
+  if (!st.source) streamAttach(st);
+  streamKick(st);
+}
+
+function streamAttach(st) {
+  const el = st.el;
+  let source;
+  try { source = new MediaSource(); st.objectUrl = URL.createObjectURL(source); } catch (err) { streamDisableChunkMode('MediaSource не создался'); return; }
+  st.source = source;
+  source.addEventListener('sourceopen', () => {
+    if (source.readyState !== 'open') return;
+    let buffer;
+    try { buffer = source.addSourceBuffer(AUDIO_CHUNK_MIME); } catch (err) { streamDisableChunkMode('аудиокодек не принят'); return; }
+    st.buffer = buffer;
+    buffer.addEventListener('updateend', () => streamAfterAppend(st));
+    buffer.addEventListener('error', () => streamDisableChunkMode('буфер не принял данные'));
+    try { source.duration = st.meta.duration; } catch (err) {}
+    streamKick(st);
+  });
+  st.nextByte = st.meta.audioStart; st.nextTime = 0; st.fresh = true; st.done = false; st.retryAt = 0; st.failCount = 0; st.appended = 0;
+  el.preload = 'none'; el.src = st.objectUrl;
+}
+
+function streamKick(st) {
+  if (!st || !st.meta || !st.buffer) return;
+  if (!st.wanted || st.fetching || st.done) return;
+  if (st.chunk) { streamFlush(st); return; }
+  if (document.hidden) return;
+  if (st.buffer.updating) return;
+  if (st.retryAt && performance.now() < st.retryAt) return;
+  const el = st.el; const at = el.currentTime || 0; const end = getBufferedEndAt(el, at);
+  if (end - at >= AUDIO_CHUNK_AHEAD) return;
+  if (end < at) { st.nextByte = st.meta.audioStart + Math.round(at * st.meta.bytesPerSec); st.nextTime = at; st.fresh = true; }
+  else if (end > 0 && Math.abs(st.nextTime - end) > 0.1) { st.nextByte = st.meta.audioStart + Math.round(end * st.meta.bytesPerSec); st.nextTime = end; }
+  streamFetchChunk(st);
+}
+
+function streamFetchChunk(st) {
+  const meta = st.meta; const sec = st.fresh ? AUDIO_CHUNK_HEAD_SEC : AUDIO_CHUNK_SEC;
+  const from = st.fresh ? Math.max(meta.audioStart, st.nextByte - AUDIO_CHUNK_FRAME_SEEK) : st.nextByte;
+  const last = meta.totalBytes - 1; const to = Math.min(last, st.nextByte + Math.round(sec * meta.bytesPerSec) - 1);
+  const token = ++st.fetchToken;
+  st.fetching = true; st.aborter = (typeof AbortController === 'function') ? new AbortController() : null;
+  fetch(meta.url, { headers: { Range: 'bytes=' + from + '-' + to }, signal: st.aborter ? st.aborter.signal : undefined })
+    .then(response => { if (!response.ok || !response.headers.get('Content-Range')) throw new Error('HTTP ' + response.status); return response.arrayBuffer(); })
+    .then(buffer => {
+      if (st.fetchToken !== token) return;   // это ответ отменённого запроса
+      st.fetching = false; st.aborter = null; st.failCount = 0;
+      if (!st.wanted || !st.meta) return;
+      streamQueueChunk(st, new Uint8Array(buffer), from, to >= last);
+    })
+    .catch(err => {
+      if (st.fetchToken !== token) return;
+      st.fetching = false; st.aborter = null;
+      if (err && err.name === 'AbortError') return;
+      st.failCount++; st.retryAt = performance.now() + AUDIO_CHUNK_RETRY_MS;
+      if (st.failCount >= 3) streamDisableChunkMode('порция не скачивается: ' + (err && err.message));
+    });
+}
+
+function streamQueueChunk(st, bytes, fromByte, tail) {
+  const startByte = mp3ChunkStart(bytes, fromByte, st.nextByte, st.fresh ? 'at' : 'after');
+  if (startByte < 0) { streamRetryChunk(st, 'граница кадра не найдена'); return; }
+  let offset = startByte - fromByte, atb = offset, frames = 0;
+  while (atb + 4 <= bytes.length) { const f = mp3FrameAt(bytes, atb); if (!f || f.bitrate !== st.meta.bitrate || atb + f.length > bytes.length) break; atb += f.length; frames++; }
+  const end = tail ? bytes.length : atb;
+  if (end <= offset) { streamRetryChunk(st, 'порция без полного кадра'); return; }
+  st.chunk = { payload: bytes.subarray(offset, end), time: st.nextTime, frames: frames + (tail ? 1 : 0), nextByte: fromByte + end, tail, fresh: st.fresh };
+  st.fresh = false; streamFlush(st);
+}
+
+function streamRetryChunk(st, reason) {
+  st.fresh = true; st.retryAt = performance.now() + AUDIO_CHUNK_RETRY_MS; st.failCount++;
+  if (st.failCount >= 3) streamDisableChunkMode(reason);
+}
+function streamFlush(st) {
+  const chunk = st.chunk, buffer = st.buffer, source = st.source;
+  if (!chunk || !buffer || !source || buffer.updating) return;
+  if (source.readyState === 'ended') { try { source.duration = st.meta.duration; } catch (err) {} }
+  st.chunk = null;
+  try { buffer.timestampOffset = chunk.time; buffer.appendBuffer(chunk.payload); st.appending = chunk; }
+  catch (err) { st.appending = null; streamDisableChunkMode('буфер не принял: ' + err.message); }
+}
+
+function streamAfterAppend(st) {
+  const chunk = st.appending; st.appending = null;
+  if (chunk) {
+    if (!streamCheckOffset(st, chunk)) return;
+    st.nextByte = chunk.nextByte; st.nextTime = chunk.time + chunk.frames * st.meta.frameSec;
+    st.appended += chunk.payload.length;
+    if (chunk.tail) { st.done = true; st.nextTime = st.meta.duration; streamEndOfStream(st); }
+    updateDeckProgressUI();
+  }
+  streamFlush(st); streamKick(st);
+}
+
+function streamCheckOffset(st, chunk) {
+  if (!chunk.fresh || chunk.time < 0.5) return true;
+  if (getBufferedEndAt(st.el, chunk.time) > chunk.time) return true;
+  streamDisableChunkMode('браузер игнорирует смещение'); return false;
+}
+
+function streamEndOfStream(st) {
+  const source = st.source;
+  if (!source || source.readyState !== 'open') return;
+  try { source.endOfStream(); } catch (err) {}
+}
+
+/* ── пауза, перемотка, подкачка ── */
+
+function streamPause(st) { streamStopFetch(st); st.chunk = null; st.retryAt = 0; streamTrimBehind(st); }
+
+function streamTrimBehind(st) {
+  const buffer = st.buffer, source = st.source;
+  if (!buffer || !source || source.readyState !== 'open' || buffer.updating) return;
+  const to = (st.el.currentTime || 0) - AUDIO_CHUNK_KEEP_BEHIND;
+  if (to <= 1) return; let from = 0;
+  try { from = st.el.buffered.length ? st.el.buffered.start(0) : 0; } catch (err) { return; }
+  if (to - from <= 1) return;
+  try { buffer.remove(from, to); } catch (err) {}
+}
+
+function streamOnSeek(st) {
+  if (!st || !st.meta || !st.wanted) return;
+  const at = st.el.currentTime || 0;
+  if (getBufferedEndAt(st.el, at) > at) return;
+  if (st.fetching && Math.abs(st.nextTime - at) < 0.5) return;
+  streamStopFetch(st); st.retryAt = 0;
+  /* Возврат в место, которое уже было прослушано и обрезано (streamTrimBehind)
+     или ещё не качалось: порция нужна снова — значит поток не «завершён». */
+  st.done = false;
+  st.nextByte = st.meta.audioStart + Math.round(at * st.meta.bytesPerSec);
+  st.nextTime = at; st.fresh = true; streamKick(st);
+}
+
+function streamTickItem(item) {
+  if (!item || !AUDIO_CHUNK_ENABLED || audioChunkOff) return;
+  if (!item.wantPlay) return;
+  [item.audioA, item.audioB].forEach(el => streamKick(audioStreamOf(el)));
+}
+
+function streamResumeActive() {
+  if (!AUDIO_CHUNK_ENABLED || audioChunkOff) return;
+  audioStreamMap.forEach(st => { if (st.wanted) streamKick(st); });
+}
+
+window.nrAudioStream = {
+  get enabled() { return audioChunkSupported(); },
+  get chunkSec() { return AUDIO_CHUNK_SEC; },
+  get summary() {
+    const rows = [];
+    audioStreamMap.forEach(st => {
+      if (!st.wanted) return;
+      const el = st.el; const at = el.currentTime || 0;
+      const item = findItemForElement(el);
+      rows.push({
+        track: item ? item.trackIndex : 0,
+        file: item ? (el === item.audioA ? 'before' : 'after') : '',
+        pos: Math.round(at * 10) / 10,
+        ahead: Math.round(getBufferedAhead(el, at) * 10) / 10,
+        gotKB: Math.round(st.appended / 1024), fetching: st.fetching, done: st.done
+      });
+    });
+    return rows;
+  }
+};
 window.nrAudioWarm = {
   get queue() { return audioWarmQueue.slice(); },
   get current() { return audioWarmCurrentId; },
@@ -1289,7 +1831,9 @@ function initPlayer() {
   /* Вкладка скрыта — новые загрузки не начинаем (текущую не рвём); вернулись
      на страницу — очередь продолжается. */
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) warmQueueRun();
+    if (document.hidden) return;
+    warmQueueRun();
+    streamResumeActive();   // порционная загрузка слушаемой пары продолжается
   });
 
   window.addEventListener('resize', () => {
@@ -1852,17 +2396,13 @@ function toggleTrack(trackId) {
     if (!item) return;
 
     if (isAudioPlaying(trackId)) {
-      item.audioA.pause();
-      item.audioB.pause();
+      pausePairAudio(trackId);
       // Остановили — фон снова качает все треки (см. warmReleaseHold).
       warmReleaseHold();
     } else {
       prepareAudioPair(item);
       applyAudioVolumes(trackId);
-      const pA = item.audioA.play();
-      if (pA && pA.catch) pA.catch(err => console.warn('Play A:', err));
-      const pB = item.audioB.play();
-      if (pB && pB.catch) pB.catch(err => console.warn('Play B:', err));
+      playPairAudio(trackId);
       showStickyPlayer();
       // Трек слушают: он вне очереди прогрева, соседи — сразу за ним,
       // а фоновая очередь удерживается (канал свободен под перемотку).
@@ -1882,8 +2422,7 @@ function selectTrack(trackId, shouldPlay = true) {
   if (activeTrackId && activeTrackId !== trackId) {
     const prevItem = trackAudioMap[activeTrackId];
     if (prevItem) {
-      prevItem.audioA.pause();
-      prevItem.audioB.pause();
+      pausePairAudio(activeTrackId);
     }
   }
 
@@ -1894,10 +2433,7 @@ function selectTrack(trackId, shouldPlay = true) {
     applyAudioVolumes(trackId);
     if (shouldPlay) {
       prepareAudioPair(item);
-      const pA = item.audioA.play();
-      if (pA && pA.catch) pA.catch(err => console.warn('Play A:', err));
-      const pB = item.audioB.play();
-      if (pB && pB.catch) pB.catch(err => console.warn('Play B:', err));
+      playPairAudio(trackId);
       showStickyPlayer();
 
       // Соседние треки — сразу в начало очереди прогрева: следующий клик по
@@ -1907,6 +2443,7 @@ function selectTrack(trackId, shouldPlay = true) {
       // Слушают этот трек — фоновую очередь удерживаем, канал свободен.
       warmHold(trackId);
     } else {
+      pausePairAudio(trackId);
       warmReleaseHold();
     }
   }
@@ -1932,16 +2469,12 @@ function toggleDeckPlay() {
   if (!item) return;
 
   if (isAudioPlaying(activeTrackId)) {
-    item.audioA.pause();
-    item.audioB.pause();
+    pausePairAudio(activeTrackId);
     warmReleaseHold();
   } else {
     prepareAudioPair(item);
     applyAudioVolumes(activeTrackId);
-    const pA = item.audioA.play();
-    if (pA && pA.catch) pA.catch(err => console.warn('Play A:', err));
-    const pB = item.audioB.play();
-    if (pB && pB.catch) pB.catch(err => console.warn('Play B:', err));
+    playPairAudio(activeTrackId);
     showStickyPlayer();
 
     // Соседние треки — сразу в начало очереди прогрева (см. блок «ФОНОВЫЙ
@@ -2345,6 +2878,11 @@ function nextDeckTrack() {
   selectTrack(tracks[nextIdx].id, true);
 }
 
+/* Состояние «звук идёт / звук стоит», которое СЕЙЧАС нарисовано на кнопках
+   Play (пульт снизу и карточки списка). Нужно, чтобы доводить иконки после
+   старта, случившегося без клика (см. syncPlayStateUI). */
+let deckUiPlaying = null;
+
 function updateMasterDeckUI() {
   const enabledTracks = getEnabledTracks();
   const track = (CONFIG && CONFIG.tracks) 
@@ -2355,6 +2893,8 @@ function updateMasterDeckUI() {
   const currentDevice = getDeviceType();
   const item = trackAudioMap[activeTrackId] || { source: 'after', volume: 0.9 };
   const isPlaying = isAudioPlaying(activeTrackId);
+  // Что именно нарисовано сейчас — сверяется в syncPlayStateUI.
+  deckUiPlaying = isPlaying;
   const genreText = resolveI18nValue(track.genreLabel, currentLang, currentDevice);
   const trackTitle = resolveDeviceText(track.title, currentDevice);
   const trackArtist = resolveDeviceText(track.artist, currentDevice);
@@ -2396,6 +2936,197 @@ function updateMasterDeckUI() {
   updateDeckProgressUI();
 }
 
+/* Иконка Play в карточках списка примеров: треугольник ⇄ две полосы и зелёный
+   «живой» огонёк на обложке. Обновляем точечно, без пересборки списка: перерисовка
+   на событии звука могла бы задеть идущую анимацию ленты (свайп, смена языка), а
+   здесь меняются только атрибут иконки и видимость огонька. Оформление карточки
+   (рамка, подсветка кнопки) зависит лишь от выбранного трека и не меняется. */
+function updateTrackCardPlayUI() {
+  const playing = !!activeTrackId && isAudioPlaying(activeTrackId);
+  const container = document.getElementById('trackListContainer');
+  if (!container) return;
+
+  Array.from(container.children).forEach(card => {
+    const isSelected = card.getAttribute('data-track-id') === activeTrackId;
+    const live = isSelected && playing;
+
+    const overlay = card.querySelector('.track-live-overlay');
+    if (overlay) overlay.style.display = live ? 'flex' : 'none';
+
+    const path = card.querySelector('.track-play-svg path');
+    if (path) path.setAttribute('d', live ? 'M6 19h4V5H6v14zm8-14v14h4V5h-4z' : 'M8 5v14l11-7z');
+  });
+}
+
+/* Иконка Play/Pause (треугольник ⇄ две полосы). Клик — не единственный момент,
+   когда состояние звука меняется: холодный клик сначала ждёт первую порцию
+   данных, и пара стартует САМА, уже после updateMasterDeckUI (см.
+   releasePairBufferGate), да и гейт буфера останавливает звук между порциями.
+   Поэтому иконки доводим по событиям play/pause дорожек: если нарисованное
+   состояние разошлось с настоящим — перерисовываем пульт и карточки. */
+function syncPlayStateUI(trackId) {
+  if (!activeTrackId || activeTrackId !== trackId) return;
+  const playing = isAudioPlaying(trackId);
+  if (playing === deckUiPlaying) return;   // на кнопках уже верная иконка
+
+  updateMasterDeckUI();      // пульт: треугольник/две полосы, подсветка, полосы
+  updateTrackCardPlayUI();   // карточки: иконка и зелёный огонёк
+}
+
+/* ── гейт общим буфером пары ───────────────────────────────────────────
+   Пара не должна играть дальше, чем у обеих дорожек есть данные: если звучащая
+   или неслышимая дорожка ушла бы вперёд, звук пропал бы, а полоса показала бы
+   неверное. Запас, при котором пара встаёт на паузу — AUDIO_PAIR_GUARD
+   (0.15 с); отпускаем, когда общий буфер впереди AUDIO_PAIR_HEAD (0.75 с). */
+
+const AUDIO_PAIR_GUARD = 0.15; // с: запас, при котором пара встаёт на паузу
+const AUDIO_PAIR_HEAD = 0.75;  // с: запас, с которым она продолжает (гистерезис)
+
+/* Конец скачанного участка дорожки РОВНО в этой точке. 0 — данных в позиции нет
+   (дыра): впереди может лежать скачанный кусок, но играть до него нельзя, не
+   перематывая. Именно так выглядит конец общего буфера пары. */
+function getBufferedEndAt(el, pos) {
+  if (!el) return 0;
+  try {
+    const t = Math.max(0, pos || 0);
+    for (let i = 0; i < el.buffered.length; i++) {
+      if (el.buffered.start(i) > t + 0.25) break; // ближайший участок — дальше позиции
+      const end = el.buffered.end(i);
+      if (end >= t) return end;
+    }
+    return 0;
+  } catch (err) {
+    return 0;
+  }
+}
+
+/* Сколько секунд данных есть в дорожке ВПЕРЁД от позиции (0 и меньше — в этой
+   точке данных нет). */
+function getBufferedAhead(el, pos) {
+  const t = Math.max(0, pos || 0);
+  return getBufferedEndAt(el, t) - t;
+}
+
+/* Минимум по обеим дорожкам пары — «до этой отметки трек обеспечен данными». */
+function getPairBufferedAhead(item, pos) {
+  if (!item) return 0;
+  return Math.min(getBufferedAhead(item.audioA, pos), getBufferedAhead(item.audioB, pos));
+}
+
+/* Полоса буфера и спиннер загрузки — показываем и включаем, только когда
+   трек слушают (wantPlay), а не при фоновой загрузке. */
+
+function setDeckBuffering(on) {
+  const bar = document.getElementById('stickyPlayerBar');
+  if (!bar) return;
+  bar.classList.toggle('nr-buffering', on);
+}
+
+function updateDeckBufferingUI() {
+  if (!activeTrackId) { setDeckBuffering(false); return; }
+  const item = trackAudioMap[activeTrackId];
+  if (!item || !item.wantPlay) { setDeckBuffering(false); return; }
+  const { audible } = getAudiblePair(item);
+  const buffering = audible.readyState < 3;
+  setDeckBuffering(buffering);
+}
+
+/* Гейт: звук не уходит за общий буфер обеих дорожек. Если данных впереди
+   меньше запаса — пара встаёт на паузу и ждёт, пока догрузится то же место
+   у МЕНЬШЕЙ из двух дорожек. */
+function checkPairBufferGate(item) {
+  if (!item || !item.wantPlay) return;
+  const { audible } = getAudiblePair(item);
+  if (audible.paused || audible.seeking || audible.ended) return;
+
+  const pos = audible.currentTime || 0;
+  const pairEnd = pos + getPairBufferedAhead(item, pos);
+  const dur = audible.duration || 0;
+  /* Хвост файла: если до конца трека меньше, чем запас для продолжения, ждать
+     нечего — иначе пара встала бы перед самым «ended» и следующий трек не
+     включился бы. */
+  if (dur > 0 && dur - pos <= AUDIO_PAIR_HEAD) return;
+  if (pairEnd - pos > AUDIO_PAIR_GUARD) return;
+
+  gatePairByBuffer(item);
+}
+
+function gatePairByBuffer(item) {
+  const { audible } = getAudiblePair(item);
+  item.bufferGate = true;
+  alignPairTo(item, audible);  // вторая дорожка — в ту же точку: продолжат вместе
+  audible.pause();
+  updateDeckBufferingUI();
+}
+
+/* Данные дошли до позиции, на которой пара встала, — продолжаем сами, без клика.
+   Запас для продолжения больше, чем для остановки: иначе пара дёргалась бы
+   пауза/игра на каждой новой порции данных. */
+function releasePairBufferGate(trackId) {
+  const item = trackAudioMap[trackId];
+  if (!item || !item.bufferGate) return;
+  const { audible } = getAudiblePair(item);
+  const pos = audible.currentTime || 0;
+  if (getPairBufferedAhead(item, pos) < AUDIO_PAIR_HEAD) return;
+
+  item.bufferGate = false;
+  alignPairTo(item, audible);
+  ensurePairPlaying(trackId);
+  updateDeckBufferingUI();
+}
+
+/* Трек слушают, но дорожка стоит без данных: как только браузер снова может
+   играть — продолжаем без клика пользователя. */
+function ensurePairPlaying(trackId) {
+  const item = trackAudioMap[trackId];
+  if (!item || !item.wantPlay) return;
+  [item.audioA, item.audioB].forEach(el => {
+    if (!el.paused || el.ended) return;
+    const p = el.play();
+    if (p && p.catch) p.catch(err => {
+      if (err && err.name === 'AbortError') return;
+      console.warn('Play:', err);
+      item.wantPlay = false;
+      updateDeckBufferingUI();
+    });
+  });
+}
+
+/* ── точка начала и остановки пары ── */
+
+function playPairAudio(trackId) {
+  const item = trackAudioMap[trackId];
+  if (!item) return;
+  item.wantPlay = true;
+  /* Поток данных пары: в порционном режиме клик сразу просит первые секунды. */
+  if (audioChunkSupported()) streamActivateItem(item, true);
+  /* Стоит ли на текущей позиции общий буфер пары (данные ОБЕИХ дорожек)? Если
+     нет, звук не начинаем: покажем ожидание и стартуем сами, когда данные дойдут
+     (releasePairBufferGate). Так на холодном клике не бывает «пуск-стоп». */
+  const { audible } = getAudiblePair(item);
+  item.bufferGate = getPairBufferedAhead(item, audible.currentTime || 0) <= AUDIO_PAIR_GUARD;
+  if (item.bufferGate) {
+    item.audioA.pause();
+    item.audioB.pause();
+  } else {
+    ensurePairPlaying(trackId);
+  }
+  updateDeckBufferingUI();
+}
+
+/* Пауза пары: сначала снимаем «слушают» — иначе дозапуск вернул бы звук. */
+function pausePairAudio(trackId) {
+  const item = trackAudioMap[trackId];
+  if (!item) return;
+  item.wantPlay = false;
+  item.bufferGate = false;
+  item.audioA.pause();
+  item.audioB.pause();
+  /* Порционный режим: обрываем передачу порций — скачанное и позиция остаются. */
+  if (audioChunkSupported()) streamActivateItem(item, false);
+  updateDeckBufferingUI();
+}
+
 function updateDeckProgressUI() {
   if (!activeTrackId) return;
   const item = trackAudioMap[activeTrackId];
@@ -2409,6 +3140,14 @@ function updateDeckProgressUI() {
 
   const progressBar = document.getElementById('deckProgressBar');
   if (progressBar) progressBar.style.width = `${pct}%`;
+
+  // Полоса загрузки: до какого момента скачаны ОБЕ дорожки пары (до этой отметки
+  // трек действительно обеспечен данными), но не меньше текущей позиции — чтобы
+  // полоса не откатывалась назад при перемотке.
+  const bufEnd = cur + getPairBufferedAhead(item, cur);
+  const bufPct = dur > 0 ? (Math.max(cur, bufEnd) / dur) * 100 : 0;
+  const bufferBar = document.getElementById('deckBufferBar');
+  if (bufferBar) bufferBar.style.width = `${bufPct}%`;
 }
 
 /* Ждём, пока обложки будут готовы к отрисовке. Зачем: у карточек стоит

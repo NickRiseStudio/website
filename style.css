@@ -658,6 +658,20 @@ body:has(#stickyPlayerBar.active) #scrollToTopBtn {
   box-shadow: 0 0 12px rgba(245, 158, 11, 0.8);
 }
 
+/* Полоса загрузки (буфер) — бледная янтарная, под оранжевой полосой
+   воспроизведения. Растёт при скачивании и при порционной загрузке (MSE). */
+.deck-buffer-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0%;
+  background: rgba(245, 158, 11, 0.22);
+  pointer-events: none;
+  transition: width 0.2s linear;    /* без рывков: полоса течёт вместе с данными */
+  z-index: 1;
+}
+
 /* Scrubber Knob Wrapper strictly centers at right: 0, top: 50% */
 .deck-scrubber-knob-wrapper {
   position: absolute;
