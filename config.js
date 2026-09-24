@@ -34,7 +34,18 @@ const CONFIG = {
         contactBtn: 'Связаться'
       },
       hero: {
-        title: 'Профессиональное<br><span class="whitespace-nowrap">Сведение / Мастеринг</span>',
+        /* Заголовок. На компьютере и планшете — две строки (перенос задаёт <br>).
+           На телефоне <br> НЕ нужен: там кадр маленький, а строки заголовка —
+           самая дорогая высота. Без принудительного переноса «Сведение /
+           Мастеринг» (в <span class="whitespace-nowrap">) встаёт в одну строку,
+           и весь диапазон размеров шрифта работает на читаемость, а не тратится
+           на вторую строку. Механизм — штатный resolveDeviceText (script.js):
+           объект с ключами desktop/tablet/mobile. */
+        title: {
+          desktop: 'Профессиональное<br><span class="whitespace-nowrap">Сведение / Мастеринг</span>',
+          tablet: 'Профессиональное<br><span class="whitespace-nowrap">Сведение / Мастеринг</span>',
+          mobile: 'Профессиональное <span class="whitespace-nowrap">Сведение / Мастеринг</span>'
+        },
         subtitle: {
           desktop: 'Специализация: Pop/House • Rock/Metal • Rap/R&B',
           tablet: 'Специализация: Pop/House • Rock/Metal • Rap/R&B',
@@ -165,7 +176,12 @@ const CONFIG = {
         contactBtn: 'Contact'
       },
       hero: {
-        title: 'Professional<br><span class="whitespace-nowrap">Mixing / Mastering</span>',
+        /* Телефон — без принудительного переноса, как в RU (см. комментарий выше). */
+        title: {
+          desktop: 'Professional<br><span class="whitespace-nowrap">Mixing / Mastering</span>',
+          tablet: 'Professional<br><span class="whitespace-nowrap">Mixing / Mastering</span>',
+          mobile: 'Professional <span class="whitespace-nowrap">Mixing / Mastering</span>'
+        },
         subtitle: {
           desktop: 'Specialization: Pop/House • Rock/Metal • Rap/R&B',
           tablet: 'Specialization: Pop/House • Rock/Metal • Rap/R&B',

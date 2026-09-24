@@ -387,6 +387,15 @@ body.nr-scrolled #mainHeader {
 
 /* ═══ 04. HERO ════════════════════════════════════════════════════════ */
 
+/* Параллакс фонового фото главного экрана: величину сдвига пишет
+   animations.js → initHeroParallax в --nr-hero-parallax-y (см. .hero-bg-layer
+   в style.css). Здесь только страховка для системной настройки «уменьшить
+   движение»: скрипт в этом режиме сдвиг не начисляет, но если настройку
+   включат ПОСЛЕ загрузки, переменная останется висеть — обнуляем её. */
+@media (prefers-reduced-motion: reduce) {
+  .hero-bg-layer { --nr-hero-parallax-y: 0px !important; }
+}
+
 /* Пульсирующее «дыхание» тёплой подсветки студии */
 #hero > div.absolute:first-of-type {
   animation: nrGlowBreath 9s ease-in-out infinite;
