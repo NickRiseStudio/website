@@ -1366,6 +1366,17 @@ span.faq-q-text.lang-vapor-in {
   to   { transform: translate3d(0, 0, 0); }
 }
 
+/* Скрытый контейнер предзагрузки аватаров (script.js → warmReviewsAvatars):
+   картинки в нём браузер качает сразу со страницей, в раскладке он не участвует
+   и к моменту initReviews() удаляется целиком. */
+.nr-avatars-preload {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+
 /* Карточка: фото с именем сверху, текст — по центру свободного места.
    Высота свёрнутой карточки — общая на весь ряд (--nr-review-card-h): так текст
    короткого отзыва стоит по центру, как было при align-items: stretch. */

@@ -4149,9 +4149,43 @@ function renderFaq() {
 }
 
 // --- REVIEWS SECTION ---
+// До появления ленты (initReviews) фото аватаров держим вставленными в скрытый
+// контейнер: браузер качает их на первом же кадре, вместе со страницей, а не
+// когда лента доедет до секции. Карточки получают уже готовые картинки из кэша.
+function warmReviewsAvatars() {
+  const reviews = CONFIG.reviewsData || [];
+  if (!reviews.length) return;
+
+  const holder = document.createElement('div');
+  holder.className = 'nr-avatars-preload';
+  holder.setAttribute('aria-hidden', 'true');
+
+  const currentDevice = getDeviceType();
+  reviews.forEach((review) => {
+    const src = resolveDeviceText(review.avatar, currentDevice);
+    if (typeof src !== 'string' || !src) return;
+    const img = document.createElement('img');
+    img.src = src;
+    img.alt = '';
+    img.loading = 'eager';
+    img.decoding = 'async';
+    holder.appendChild(img);
+  });
+
+  document.body.appendChild(holder);
+}
+warmReviewsAvatars();
+
 function initReviews() {
   renderReviews();
   initReviewSwipe();
+
+  // Фото уже в кэше (warmReviewsAvatars): держать на них loading="lazy"
+  // больше незачем — карточка показывает картинку сразу, без доедет-загрузится.
+  document.querySelectorAll('#reviews .review-photo').forEach((img) => {
+    img.loading = 'eager';
+  });
+  document.querySelectorAll('.nr-avatars-preload').forEach((el) => el.remove());
 
   // Метрики текста меняются после загрузки шрифтов — обрезку длинных отзывов
   // («Читать далее…») и высоту карточек считаем заново.
@@ -4180,7 +4214,11 @@ function fillReviewCard(card, review) {
   if (personEl) personEl.setAttribute('href', review.url || '#');
 
   const photoEl = card.querySelector('.review-photo');
-  if (photoEl) photoEl.setAttribute('src', resolveDeviceText(review.avatar, currentDevice) || '');
+  if (photoEl) {
+    // Фото — маленький локальный WebP (image/reviews), грузим сразу вместе со
+    // страницей: initReviews() снимает loading="lazy" с уже готовых картинок.
+    photoEl.setAttribute('src', resolveDeviceText(review.avatar, currentDevice) || '');
+  }
 
   const initialsEl = card.querySelector('.review-initials');
   if (initialsEl) initialsEl.textContent = getReviewInitials(review.name);
@@ -4247,7 +4285,7 @@ function renderReviews() {
           <a class="review-person" target="_blank" rel="noopener noreferrer">
             <span class="review-avatar">
               <span class="review-initials"></span>
-              <img class="review-photo" alt="" loading="lazy" referrerpolicy="no-referrer">
+              <img class="review-photo" alt="" loading="lazy" decoding="async">
             </span>
             <span class="review-name"></span>
           </a>
