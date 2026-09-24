@@ -161,6 +161,7 @@ const CONFIG = {
         prev: 'Назад',
         next: 'Вперед',
         close: 'Закрыть',
+        playerClose: 'Закрыть плеер',
         backToTop: 'Вернуться наверх'
       }
     },
@@ -297,6 +298,7 @@ const CONFIG = {
         prev: 'Previous',
         next: 'Next',
         close: 'Close',
+        playerClose: 'Close player',
         backToTop: 'Back to top'
       }
     }
@@ -427,8 +429,8 @@ const CONFIG = {
     {
       id: 'mix-master',
       isPopular: true,
-      titleRu: 'Сведение + Мастеринг (Полный пакет)',
-      titleEn: 'Mixing + Mastering (Full Package)',
+      titleRu: 'Сведение + Мастеринг<br>(Полный пакет)',
+      titleEn: 'Mixing + Mastering<br>(Full Package)',
       descRu: 'От мультитреков до готового релиза. Всё в одном пакете. Громкий, сбалансированный трек за 3 дня.',
       descEn: 'From raw multitracks to a release-ready master. All in one package. Loud, balanced track in 3 days.',
       priceRu: 'от 5 500 ₽',

@@ -397,10 +397,13 @@
                   <div id="trackListPanelLeft" class="track-peek-panel" aria-hidden="true"></div>
 
                   <!-- Колонки: телефон — две, планшет (640–1023px) — одна (название
-                       трека должно влезать целиком), компьютер — снова две.
-                       Ширину единственной карточки на планшете ограничивает
-                       боковая зона вьюпорта (см. animations.css → --nr-track-nav-zone). -->
-                  <div id="trackListContainer" class="grid grid-cols-2 gap-2.5 sm:grid-cols-1 sm:gap-3 lg:grid-cols-2">
+                       трека должно влезать целиком), компьютер — четыре (карточки
+                       там вертикальные, как на телефоне). Число колонок для
+                       компьютера задано в animations.css: класса lg:grid-cols-4 в
+                       собранном tailwind.css нет. Ширину единственной карточки на
+                       планшете ограничивает боковая зона вьюпорта
+                       (см. animations.css → --nr-track-nav-zone). -->
+                  <div id="trackListContainer" class="grid grid-cols-2 gap-2.5 sm:grid-cols-1 sm:gap-3">
                     <!-- Dynamically populated by script.js -->
                   </div>
 
@@ -415,7 +418,7 @@
                  Живут в обёртке, а не во вьюпорте: тот во время свайпа обрезает
                  содержимое, и стрелки, вынесенные за его края, иначе срезались бы.
                  Включаются классом .nr-track-nav-mode на вьюпорте (animations.css).
-                 На компьютере (≥1024px) список снова в две колонки — стрелки там
+                 На компьютере (≥1024px) список идёт в четыре колонки — стрелки там
                  не показываются (см. script.js → syncTrackNav). -->
             <button type="button" id="trackNavPrevBtn" class="nr-track-nav nr-track-nav-prev" aria-label="Назад" data-i18n-aria-label="a11y.prev">
               <svg class="nr-track-nav-glyph" viewBox="0 0 28 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -1009,6 +1012,28 @@
       </div>
     </div>
 
+    <!-- Кнопка закрытия пульта: белый крестик у правой кромки панели, чуть
+         отступя от края, ровно под полосой перемотки — полосу он не
+         перекрывает, трек можно докрутить до самого конца. Сама кнопка —
+         прозрачная дорожка во всю высоту ряда кнопок, чтобы на телефоне по
+         ней легко попадать пальцем. Переключатель BEFORE / AFTER подвинут
+         левее (см. .deck-close-notch в style.css), чтобы крестик встал на
+         своё место. -->
+    <button
+      type="button"
+      id="deckCloseBtn"
+      class="deck-close-btn"
+      onclick="closeStickyPlayer()"
+      aria-label="Закрыть плеер"
+      data-i18n-aria-label="a11y.playerClose"
+      title="Закрыть плеер"
+      data-i18n-title="a11y.playerClose"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <path d="M18 6L6 18M6 6l12 12"/>
+      </svg>
+    </button>
+
     <!-- MOBILE PLAYER BAR (sm:hidden) -->
     <div class="sm:hidden max-w-7xl mx-auto px-3 py-2.5 flex items-center justify-between">
       <!-- Left: Track Title & Artist (w-0 flex-1 for symmetric centering) -->
@@ -1048,7 +1073,7 @@
         </button>
       </div>
 
-      <div class="w-0 flex-1 flex items-center justify-end pl-1">
+      <div class="deck-close-notch w-0 flex-1 flex items-center justify-end pl-1">
         <div
           onclick="toggleDeckSource()"
           data-source="after"
@@ -1122,7 +1147,7 @@
       </div>
 
       <!-- Big Horizontal Rectangular BEFORE / AFTER Switch + Volume (Right) -->
-      <div class="flex items-center justify-end gap-4 flex-1 flex-shrink-0">
+      <div class="deck-close-notch flex items-center justify-end gap-4 flex-1 flex-shrink-0">
         <div
           onclick="toggleDeckSource()"
           data-source="after"

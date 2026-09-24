@@ -466,10 +466,21 @@ function setTrackLanguage(targetLang, targetPage = 0) {
 }
 
 function getTracksPerPage() {
-  // Колонок две на телефоне (2 x 2 = 4) и на компьютере (2 x 2 = 4); на планшете
-  // список идёт по одному треку в ряд, поэтому там 1 x 4 = 4. В любом случае
-  // страница — 4 трека, поэтому число страниц и «остановок» листания не меняется.
+  // Колонок две на телефоне (2 x 2 = 4) и четыре на компьютере (4 x 1 = 4); на
+  // планшете список идёт по одному треку в ряд, поэтому там 1 x 4 = 4. В любом
+  // случае страница — 4 трека, поэтому число страниц и «остановок» листания не
+  // меняется.
   return 4;
+}
+
+/* Раскладка карточки трека. «Вертикальная» (как на телефоне): обложка-квадрат
+   во всю ширину карточки, ниже название с артистом и жанр. Так карточки идут на
+   телефоне (<640px, две колонки) и на компьютере (≥1024px, четыре колонки —
+   число колонок в animations.css). На планшете (640–1023px) список стоит в одну
+   колонку, поэтому там карточка — строка: обложка-миниатюра и текст в ряд. */
+function isVerticalTrackCardView() {
+  const w = window.innerWidth;
+  return w < 640 || w >= 1024;
 }
 
 // Порядок языков при циклическом листании списка треков: EN → RU → EN …
@@ -1325,8 +1336,25 @@ const AUDIO_CHUNK_MIME = 'audio/mpeg';
 let audioChunkOff = false;
 let audioChunkCapable = null;
 
+/* Порции качаются через fetch с заголовком Range и собираются в MediaSource —
+   это возможно только по http(s). Страница, открытая прямо с диска (file://),
+   на такой запрос получает отказ, поэтому для неё режим порций выключаем сразу,
+   ещё до первого клика: иначе первая же выбранная пара уходила бы в fetch,
+   который падает асинхронно (уже после клика), и первый трек после открытия
+   страницы молчал бы, пока отказ не переключит режим на обычную загрузку. */
+function audioStreamProtocolOk() {
+  try {
+    const protocol = window.location && window.location.protocol;
+    return protocol === 'http:' || protocol === 'https:';
+  } catch (err) { return false; }
+}
+
 function audioChunkSupported() {
   if (!AUDIO_CHUNK_ENABLED || audioChunkOff) return false;
+  if (!audioStreamProtocolOk()) {
+    streamDisableChunkMode('страница открыта как файл (file://) — порции работают только по http(s)');
+    return false;
+  }
   if (audioChunkCapable === null) {
     try {
       audioChunkCapable = typeof MediaSource !== 'undefined' &&
@@ -1508,8 +1536,15 @@ function streamRevertToFile(st) {
   const at = el.currentTime || 0;
   streamStopFetch(st); st.chunk = null; st.appending = null; st.wanted = false;
   audioStreamMap.delete(el);
-  try { el.removeAttribute('src'); el.load(); } catch (err) {}
+  /* В порционном режиме элементу НЕ ставили src: адрес файла лежал в
+     data-nr-src, а звук шёл из собранного на лету потока. Возврат к обычной
+     загрузке обязан этот адрес вернуть: без него load() в beginPairDownload
+     остался бы без файла, и трек, который слушали в момент отказа, замолчал бы
+     навсегда — именно так и молчал первый клик после открытия страницы. */
+  const fileUrl = (el.dataset && el.dataset.nrSrc) || st.url || '';
   el.preload = 'none';
+  try { el.removeAttribute('src'); el.load(); } catch (err) {}
+  if (fileUrl) { try { el.src = fileUrl; } catch (err) {} }
   if (st.objectUrl) { try { URL.revokeObjectURL(st.objectUrl); } catch (err) {} st.objectUrl = null; }
   st.source = null; st.buffer = null;
   if (item) {
@@ -1935,14 +1970,14 @@ function initPlayer() {
     // и контейнер, поэтому панель и контейнер выглядят пиксель в пиксель.
     const renderPeekPanel = (panel, lang, page) => {
       const currentDevice = getDeviceType();
-      const isMobileView = window.innerWidth < 640;
+      const isVerticalView = isVerticalTrackCardView();
       panel.innerHTML = '';
       getTracksForState(lang, page).forEach(track => {
         // Обложки панелей грузим сразу и заранее декодируем: панель появляется
         // из-за края в первые же кадры свайпа, а к моменту подмены ленты
         // (контейнер получает ту же страницу) картинки уже в кэше — тогда
         // подмена проходит без мелькания пустых обложек.
-        panel.appendChild(createTrackCard(track, { isMobileView, currentDevice, withId: false, eagerImages: true }));
+        panel.appendChild(createTrackCard(track, { isVerticalView, currentDevice, withId: false, eagerImages: true }));
       });
       whenTrackCoversReady(panel);
     };
@@ -1950,10 +1985,10 @@ function initPlayer() {
     const fillPeekPanels = (layout) => {
       const leftTarget = layout === 'nav' ? getStepTarget(-1) : getStepTarget(1);
       const rightTarget = layout === 'nav' ? getStepTarget(1) : getStepTarget(-1);
-      const isMobileView = window.innerWidth < 640;
+      const isVerticalView = isVerticalTrackCardView();
       const signature = [
         layout, activeTrackLang, currentTrackPage, currentLang,
-        isMobileView ? 'm' : 'd',
+        isVerticalView ? 'v' : 'r',
         leftTarget.lang, leftTarget.page, rightTarget.lang, rightTarget.page
       ].join('|');
       if (signature === peekSignature) return;
@@ -2236,8 +2271,8 @@ function initPlayer() {
     syncTrackNav = () => {
       // Стрелки нужны там, где список идёт в одну колонку — на телефоне и на
       // планшете (до 1024px, как lg в Tailwind): там вьюпорт резервирует под них
-      // боковые зоны (см. animations.css). На компьютере карточки снова стоят в
-      // две колонки, места под стрелки нет — не показываем.
+      // боковые зоны (см. animations.css). На компьютере карточки стоят в
+      // четыре колонки, места под стрелки нет — не показываем.
       const shouldShow = window.innerWidth < 1024 && getTrackSteps().length > 1;
       swipeViewport.classList.toggle('nr-track-nav-mode', shouldShow);
 
@@ -2364,9 +2399,19 @@ function initPlayer() {
   if (typeof warmTrackPeekPanels === 'function') warmTrackPeekPanels();
 }
 
+/* Пульт могли закрывать крестиком: таймер ухода гасим, а сам класс закрытия
+   снимаем — пульт возвращается целым (см. closeStickyPlayer). */
+const PLAYER_CLOSING_SLIDE_MS = 950;  // пульт уезжает вниз целиком (см. #stickyPlayerBar.nr-closing)
+
+let playerClosingResetTimer = null;
+
 function showStickyPlayer() {
   const playerBar = document.getElementById('stickyPlayerBar');
   if (playerBar) {
+    clearTimeout(playerClosingResetTimer);
+    playerClosingResetTimer = null;
+    playerBar.classList.remove('nr-closing');
+
     playerBar.classList.add('active');
     playerBar.classList.remove('translate-y-full');
     playerBar.classList.add('translate-y-0');
@@ -2394,6 +2439,53 @@ function showStickyPlayer() {
       }
     }, 960);
   }
+}
+
+/* ── ЗАКРЫТИЕ ПУЛЬТА (крестик справа сверху) ───────────────────────────────
+   Уход — одно движение: пульт уезжает вниз целиком (корпус вместе с начинкой),
+   ровно как приезжал, и за то же время (PLAYER_CLOSING_SLIDE_MS ≈ возврат
+   отступа body — style.css, body.has-sticky-player). Раздельных фаз нет.
+   Звук останавливаем сразу, но трек остаётся выбранным: повторный клик по
+   нему (или по кнопке Play) возвращает пульт на место — showStickyPlayer(). */
+function closeStickyPlayer() {
+  const playerBar = document.getElementById('stickyPlayerBar');
+  if (!playerBar || playerBar.classList.contains('nr-closing')) return;
+
+  // Гасим пару всегда, когда трек выбран: звук мог стоять на паузе «гейта
+  // буфера» (wantPlay включён) — тогда после закрытия он снова заиграл бы.
+  if (activeTrackId && trackAudioMap[activeTrackId]) {
+    pausePairAudio(activeTrackId);
+    // Остановили — фон снова качает все треки (см. warmReleaseHold).
+    warmReleaseHold();
+  }
+  // Карточка выбранного трека и кнопки пульта перерисовываются на «паузу».
+  updateMasterDeckUI();
+  renderTrackList(false);
+
+  // Класс закрытия задаёт кривую ухода, а сам уход начинается со снятия
+  // active: его !important-transform держал пульт поднятым, без него панель
+  // уезжает в своё нижнее положение — вместе с начинкой (см.
+  // #stickyPlayerBar.nr-closing).
+  playerBar.classList.add('nr-closing');
+  playerBar.classList.remove('active');
+  document.body.classList.remove('has-sticky-player');
+
+  scheduleScrollTriggerRefresh(0);
+  if (window.NickRiseAnimations && window.NickRiseAnimations.updateRevealObserver) {
+    window.NickRiseAnimations.updateRevealObserver();
+  }
+
+  // Класс закрытия снимаем и отступы пересчитываем, когда пульт уже за кадром:
+  // возврат начинки в этот момент незаметен.
+  clearTimeout(playerClosingResetTimer);
+  playerClosingResetTimer = setTimeout(() => {
+    playerClosingResetTimer = null;
+    playerBar.classList.remove('nr-closing');
+    scheduleScrollTriggerRefresh(0);
+    if (window.NickRiseAnimations && window.NickRiseAnimations.updateRevealObserver) {
+      window.NickRiseAnimations.updateRevealObserver();
+    }
+  }, PLAYER_CLOSING_SLIDE_MS);
 }
 
 function toggleTrack(trackId) {
@@ -3209,7 +3301,9 @@ function predecodeTrackCovers(lang, page) {
 // eagerImages=true — грузить обложку сразу, не откладывая: такие карточки
 // создаются за кадром (панели ленты, список во время перехода), а «ленивая»
 // загрузка в этот момент откладывается, и обложка мелькала бы пустой.
-function createTrackCard(track, { isMobileView, currentDevice, withId = true, eagerImages = false }) {
+// isVerticalView=true — вертикальная карточка, как на телефоне: так выглядят и
+// карточки компьютера (см. isVerticalTrackCardView).
+function createTrackCard(track, { isVerticalView, currentDevice, withId = true, eagerImages = false }) {
   const isSelected = activeTrackId === track.id;
   const isPlaying = isSelected && isAudioPlaying(track.id);
   const genreText = resolveI18nValue(track.genreLabel, currentLang, currentDevice);
@@ -3222,8 +3316,10 @@ function createTrackCard(track, { isMobileView, currentDevice, withId = true, ea
     itemCard.onclick = () => toggleTrack(track.id);
   }
   itemCard.setAttribute('data-track-id', track.id);
-  itemCard.setAttribute('data-view', isMobileView ? 'mobile' : 'desktop');
-  itemCard.className = (isMobileView
+  // Подпись вида: структура карточки у видов разная, и renderTrackList по этой
+  // подписи понимает, можно ли переиспользовать готовый DOM (см. canReuseDOM).
+  itemCard.setAttribute('data-view', isVerticalView ? 'vertical' : 'row');
+  itemCard.className = (isVerticalView
     ? `p-3 rounded-2xl border transition-all duration-300 cursor-pointer flex flex-col gap-3 group ${
         isSelected
           ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10'
@@ -3237,7 +3333,7 @@ function createTrackCard(track, { isMobileView, currentDevice, withId = true, ea
   );
 
   const trackCoverBox = document.createElement('div');
-  trackCoverBox.className = (isMobileView
+  trackCoverBox.className = (isVerticalView
     ? `track-cover-box relative w-full aspect-square rounded-xl overflow-hidden flex-shrink-0 border transition-colors duration-300 ${isSelected ? 'border-amber-500' : 'border-gray-800'}`
     : `track-cover-box relative w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden flex-shrink-0 border transition-colors duration-300 ${isSelected ? 'border-amber-500' : 'border-gray-800'}`
   );
@@ -3262,13 +3358,13 @@ function createTrackCard(track, { isMobileView, currentDevice, withId = true, ea
 
   const meta = document.createElement('div');
   const titleEl = document.createElement('h4');
-  titleEl.className = (isMobileView
+  titleEl.className = (isVerticalView
     ? 'track-card-title text-sm font-extrabold text-white truncate group-hover:text-amber-400 transition-colors'
     : 'track-card-title text-sm sm:text-base font-extrabold text-white truncate group-hover:text-amber-400 transition-colors'
   );
   titleEl.textContent = trackTitle;
   const artistEl = document.createElement('p');
-  artistEl.className = (isMobileView
+  artistEl.className = (isVerticalView
     ? 'track-card-artist text-xs text-gray-400 truncate mt-0.5'
     : 'track-card-artist text-xs sm:text-sm text-gray-400 truncate mt-0.5'
   );
@@ -3277,15 +3373,15 @@ function createTrackCard(track, { isMobileView, currentDevice, withId = true, ea
   meta.appendChild(artistEl);
 
   const genreSpan = document.createElement('span');
-  genreSpan.className = (isMobileView
+  genreSpan.className = (isVerticalView
     // Жанр по центру и чуть крупнее, чтобы проще было заметить жанр трека.
     ? `track-genre-badge self-center text-[11px] font-bold px-3 py-1 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}`
     : `track-genre-badge text-xs font-extrabold px-3.5 py-1.5 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}`
   );
   genreSpan.textContent = genreText;
 
-  if (isMobileView) {
-    // ── МОБИЛЬНЫЙ ВИД: вертикальный прямоугольник ─────────────────────
+  if (isVerticalView) {
+    // ── ВЕРТИКАЛЬНЫЙ ВИД (телефон и компьютер): прямоугольник ─────────
     // Квадратное фото на всю ширину карточки, по центру фото кнопка
     // play/pause «треугольником» без фона, ниже название + артист,
     // ниже жанр.
@@ -3310,7 +3406,7 @@ function createTrackCard(track, { isMobileView, currentDevice, withId = true, ea
     itemCard.appendChild(meta);
     itemCard.appendChild(genreSpan);
   } else {
-    // ── ПЛАНШЕТ / ДЕСКТОП: горизонтальный вид ─────────────────────────
+    // ── ПЛАНШЕТ: горизонтальный вид (список идёт в одну колонку) ──────
     const playBtn = document.createElement('button');
     playBtn.type = 'button';
     playBtn.setAttribute('aria-label', isPlaying ? 'Pause' : 'Play');
@@ -3348,11 +3444,12 @@ function renderTrackList(animate = false) {
   if (suppressCardEnterAnimation) animate = false;
 
   const currentDevice = getDeviceType();
-  // Мобильный вид карточек (вертикальный прямоугольник) — только < 640px.
-  // Структура карточки зависит от вида, поэтому при переходе mobile ⇄ desktop
-  // DOM всегда пересоздаётся (см. canReuseDOM ниже).
-  const isMobileView = window.innerWidth < 640;
-  const currentView = isMobileView ? 'mobile' : 'desktop';
+  // Вертикальные карточки (как на телефоне) — на телефоне и на компьютере
+  // (см. isVerticalTrackCardView); на планшете карточка-строка. Структура
+  // карточки зависит от вида, поэтому при смене вида DOM всегда пересоздаётся
+  // (см. canReuseDOM ниже).
+  const isVerticalView = isVerticalTrackCardView();
+  const currentView = isVerticalView ? 'vertical' : 'row';
   const perPage = getTracksPerPage();
   // Жанровые фильтры убраны: показываем все треки текущего языка (RU/EN).
   const tracks = getEnabledTracks();
@@ -3384,8 +3481,9 @@ function renderTrackList(animate = false) {
 
   const canReuseDOM = existingIds.length === targetIds.length &&
     existingIds.every((id, idx) => id === targetIds[idx]) &&
-    // Вид (mobile ⇄ desktop) влияет на СТРУКТУРУ карточки, поэтому при смене
-    // вида DOM обязательно пересоздаём, даже если состав треков совпадает.
+    // Вид (вертикальные карточки ⇄ карточки-строки) влияет на СТРУКТУРУ
+    // карточки, поэтому при смене вида DOM обязательно пересоздаём, даже если
+    // состав треков совпадает.
     existingIds.length > 0 && existingCards[0].getAttribute('data-view') === currentView;
 
   if (canReuseDOM) {
@@ -3399,7 +3497,7 @@ function renderTrackList(animate = false) {
       const itemCard = document.getElementById(`track-item-${track.id}`);
       if (!itemCard) return;
 
-      itemCard.className = (isMobileView
+      itemCard.className = (isVerticalView
         ? `p-3 rounded-2xl border transition-all duration-300 cursor-pointer flex flex-col gap-3 group ${
             isSelected 
               ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10' 
@@ -3414,7 +3512,7 @@ function renderTrackList(animate = false) {
 
       const coverBox = itemCard.querySelector('.track-cover-box');
       if (coverBox) {
-        coverBox.className = (isMobileView
+        coverBox.className = (isVerticalView
           ? `track-cover-box relative w-full aspect-square rounded-xl overflow-hidden flex-shrink-0 border transition-colors duration-300 ${isSelected ? 'border-amber-500' : 'border-gray-800'}`
           : `track-cover-box relative w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden flex-shrink-0 border transition-colors duration-300 ${isSelected ? 'border-amber-500' : 'border-gray-800'}`
         );
@@ -3434,7 +3532,7 @@ function renderTrackList(animate = false) {
       const genreBadge = itemCard.querySelector('.track-genre-badge');
       if (genreBadge) {
         genreBadge.textContent = genreText;
-        genreBadge.className = (isMobileView
+        genreBadge.className = (isVerticalView
           // Жанр по центру и чуть крупнее, чтобы проще было заметить жанр трека.
           ? `track-genre-badge self-center text-[11px] font-bold px-3 py-1 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}`
           : `track-genre-badge text-xs font-extrabold px-3.5 py-1.5 rounded-full transition-colors duration-300 ${isSelected ? 'bg-amber-500 text-slate-950 font-black' : 'bg-gray-800 text-amber-400'}`
@@ -3443,7 +3541,7 @@ function renderTrackList(animate = false) {
 
       const playBtn = itemCard.querySelector('.track-play-btn');
       if (playBtn) {
-        playBtn.className = (isMobileView
+        playBtn.className = (isVerticalView
           // Кнопка-контейнер крупнее (64px) — сам треугольник внутри теперь 48px,
           // его хорошо видно на большом квадратном фото.
           ? `track-play-btn absolute inset-0 z-10 m-auto w-16 h-16 rounded-full flex items-center justify-center transition-transform duration-300 group-hover:scale-110 cursor-pointer ${
@@ -3498,7 +3596,7 @@ function renderTrackList(animate = false) {
     visibleTracks.forEach(track => {
       // Во время свайп-перехода список перерисовывается за кадром — грузим
       // обложки сразу, иначе «ленивая» загрузка отложилась бы до подмены ленты.
-      container.appendChild(createTrackCard(track, { isMobileView, currentDevice, withId: true, eagerImages: suppressCardEnterAnimation }));
+      container.appendChild(createTrackCard(track, { isVerticalView, currentDevice, withId: true, eagerImages: suppressCardEnterAnimation }));
     });
 
     if (animate && typeof gsap !== 'undefined' && container.children.length > 0) {
@@ -3614,7 +3712,12 @@ function renderServices() {
       if (popEl) popEl.textContent = popularBadgeText;
 
       const titleEl = card.querySelector('.service-card-title');
-      if (titleEl) titleEl.textContent = title;
+      if (titleEl) {
+        // Заголовок может содержать inline-HTML (перенос строки <br> в средней карточке) —
+        // та же проверка, что в renderI18nText().
+        if (typeof title === 'string' && title.includes('<')) titleEl.innerHTML = title;
+        else titleEl.textContent = title;
+      }
 
       const descEl = card.querySelector('.service-card-desc');
       if (descEl) descEl.textContent = desc;
@@ -3716,8 +3819,8 @@ function renderServices() {
           <div class="rack-bolt"></div>
         </div>
 
-        <h3 class="service-card-title text-xl sm:text-2xl font-extrabold text-white mb-1.5 tracking-tight">${title}</h3>
-        <p class="service-card-desc text-sm text-gray-400 mb-4 leading-relaxed sm:max-lg:text-center">${desc}</p>
+        <h3 class="service-card-title text-xl sm:text-2xl font-extrabold text-white mb-1.5 tracking-tight text-center">${title}</h3>
+        <p class="service-card-desc text-sm text-gray-400 mb-4 leading-relaxed text-center">${desc}</p>
 
         <ul class="service-card-features space-y-2 sm:space-y-3 mb-3 sm:mb-5">
           ${featuresHtml}

@@ -658,6 +658,20 @@ body.nr-playing .nr-rings i:nth-child(3) { animation-delay: 1.6s; }
   .track-peek-panel { grid-template-columns: repeat(1, minmax(0, 1fr)); }
 }
 
+/* Компьютер (≥1024px): карточки вертикальные, как на телефоне (см. script.js →
+   isVerticalTrackCardView), поэтому в ряд их встаёт четыре. Панели соседних
+   страниц держим в том же числе колонок — иначе при листании соседняя страница
+   выглядела бы не так, как текущая.
+
+   Число колонок контейнера задаём здесь, а не классом lg:grid-cols-4 в
+   index.html: в собранном tailwind.css такого класса нет (файл генерируется,
+   правка вручную не предусмотрена). ID-селектор перекрывает grid-cols-2 и без
+   !important. */
+@media (min-width: 1024px) {
+  #trackListContainer,
+  .track-peek-panel { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
 #trackListContainer > div {
   position: relative;
   transition: transform 0.42s var(--nr-ease), border-color 0.35s ease, background-color 0.35s ease, box-shadow 0.42s ease;
@@ -716,12 +730,14 @@ body.nr-playing .nr-rings i:nth-child(3) { animation-delay: 1.6s; }
 /* Эквалайзер поверх обложки играющего трека */
 #trackListContainer > div.nr-live .absolute.inset-0 > .animate-ping { display: none; }
 
-/* Телефон: обложка крупная (квадрат), поэтому на время проигрывания центр
-   занимает эквалайзер — иконку «пауза» убираем, иначе она накладывается
-   на полоски. Тап по центру обложки и по самой карточке по-прежнему ставит
-   паузу. В режиме «уменьшить движение» полоски не рисуются (см. раздел 17),
-   поэтому там иконку не скрываем. */
-@media (max-width: 639px) and (prefers-reduced-motion: no-preference) {
+/* Крупная квадратная обложка — на телефоне и на компьютере (карточки там
+   одинаковые, вертикальные — см. script.js → isVerticalTrackCardView). На время
+   проигрывания центр обложки занимает эквалайзер, поэтому иконку «пауза» убираем:
+   иначе она накладывается на полоски. Тап по центру обложки и по самой карточке
+   по-прежнему ставит паузу. В режиме «уменьшить движение» полоски не рисуются
+   (см. раздел 17), поэтому там иконку не скрываем. */
+@media (max-width: 639px) and (prefers-reduced-motion: no-preference),
+       (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
   #trackListContainer > div.nr-live .track-play-btn .track-play-svg {
     opacity: 0;
     transition: opacity 0.25s var(--nr-ease);
@@ -748,9 +764,9 @@ body.nr-playing .nr-rings i:nth-child(3) { animation-delay: 1.6s; }
   animation: nrEqBar 0.85s ease-in-out infinite alternate;
 }
 
-/* Шаблон из четырёх длительностей повторяется по кругу: на десктопе полосок
-   ровно четыре (поведение прежнее), на телефоне их больше — и волна внутри
-   такой широкой полосы выглядит живой. */
+/* Шаблон из четырёх длительностей повторяется по кругу: на планшете полосок
+   ровно четыре (поведение прежнее), на телефоне и компьютере их больше — и волна
+   внутри такой широкой полосы выглядит живой. */
 .nr-eqbars i:nth-child(4n+1) { animation-duration: 0.62s; }
 .nr-eqbars i:nth-child(4n+2) { animation-duration: 0.94s; }
 .nr-eqbars i:nth-child(4n+3) { animation-duration: 0.73s; }
@@ -761,11 +777,12 @@ body.nr-playing .nr-rings i:nth-child(3) { animation-delay: 1.6s; }
   to   { transform: scaleY(1); opacity: 1; }
 }
 
-/* Телефон: эквалайзер поверх квадратной обложки делаем низким и широким —
-   вытянутая «полоса» вместо длинных вертикальных штрихов. Полоски получают
-   одинаковую гибкую ширину (не толще 12px), поэтому блок сам подстраивается
-   под ширину обложки: от 320px до 639px. */
-@media (max-width: 639px) {
+/* Телефон и компьютер: эквалайзер поверх квадратной обложки делаем низким и
+   широким — вытянутая «полоса» вместо длинных вертикальных штрихов. Полоски
+   получают одинаковую гибкую ширину (не толще 14px), поэтому блок сам
+   подстраивается под ширину обложки: от 320px до 639px на телефоне и ~260px на
+   компьютере. */
+@media (max-width: 639px), (min-width: 1024px) {
   .nr-eqbars {
     inset: auto;
     top: 50%;

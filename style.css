@@ -1007,6 +1007,87 @@ body:has(#stickyPlayerBar.active) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   КНОПКА ЗАКРЫТИЯ ПУЛЬТА (крестик справа сверху) И ЕГО ПЛАВНЫЙ УХОД
+   Уход — одно движение: пульт уезжает вниз целиком, ровно как приезжал, и за
+   то же время (0.95s), что и возврат отступа body выше. Раздельных фаз
+   («сначала гаснет начинка, потом уезжает корпус») нет.
+   Длительность держит script.js (PLAYER_CLOSING_SLIDE_MS), здесь она только
+   рисуется.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Кнопка закрытия — прозрачная «дорожка» у правой кромки пульта, чуть отступя
+   от края (8px), во всю высоту ряда кнопок: по ней легко попадать пальцем.
+   Размер креста один на всех экранах — 20px, как на телефоне. Фона и рамки
+   нет, сам белый крест и есть кнопка. Лежит поверх пульта
+   (z-index 2 против 1 у рядов), но начинается ровно ПОД полосой перемотки (9px:
+   6px полосы + 1px рамки + зазор на её рост до 8px при наведении) — полосу
+   можно докрутить до самого правого края. Крест центрируется сам: он встаёт
+   вровень с кнопкой Play, потому что дорожка занимает ровно ряд от полосы до
+   его нижней кромки. */
+.deck-close-btn {
+  position: absolute;
+  top: 9px;
+  right: 8px;
+  bottom: max(8px, env(safe-area-inset-bottom, 0px));
+  z-index: 2;
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: #FFFFFF;
+  cursor: pointer;
+  transition: color 0.3s ease, filter 0.3s ease,
+              transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.deck-close-btn svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.deck-close-btn:hover,
+.deck-close-btn:focus-visible {
+  color: #F59E0B;
+  filter: drop-shadow(0 0 7px rgba(245, 158, 11, 0.6));
+}
+
+.deck-close-btn:hover svg,
+.deck-close-btn:focus-visible svg {
+  transform: scale(1.08);
+}
+
+.deck-close-btn:active {
+  transform: scale(0.9);
+}
+
+/* Место под крестик: переключатель BEFORE / AFTER (последний в правой группе)
+   сдвигается левее. Отступ один на всех экранах — крест везде одинаковый.
+   Ширина самой группы не меняется (отступ внутри flex-элемента), поэтому
+   кнопка Play остаётся ровно по центру. */
+.deck-close-notch {
+  padding-right: 40px;
+}
+
+/* Уход целиком, одним движением: класс задаёт только кривую и длительность —
+   те же 0.95s, что и у появления (см. .sticky-player-bar выше), но разгон
+   мягче, поэтому пульт не «выстреливает» из кадра, а именно уезжает. Сам уход
+   запускает снятие класса active в closeStickyPlayer: панель едет вниз вместе
+   с начинкой, отдельной фазы растворения нет. Пока пульт уезжает, он не
+   перехватывает нажатия. */
+#stickyPlayerBar.nr-closing {
+  transition: transform 0.95s cubic-bezier(0.65, 0, 0.35, 1),
+              box-shadow 0.95s ease,
+              opacity 0.95s ease;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    SCROLL TO TOP FLOATING BUTTON (CENTER BOTTOM)
    - Appears when user scrolls down
    - Floats above the sticky bottom player bar when active
