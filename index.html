@@ -271,6 +271,12 @@
 
     <!-- 2. HERO SECTION -->
     <section id="hero" class="relative min-h-[75vh] sm:min-h-[82vh] lg:min-h-[85vh] flex items-center justify-center pt-4 sm:pt-10 lg:pt-28 pb-4 sm:pb-10 lg:pb-8 overflow-hidden">
+      <!-- Фон главного экрана: фото студии (hero-bg.webp).
+           Слой НЕ имеет класса .absolute — иначе перехватил бы анимацию
+           «дыхания» подсветки (#hero > div.absolute:first-of-type).
+           Затемнение поверх фото — часть того же слоя (см. style.css). -->
+      <div class="hero-bg-layer" aria-hidden="true"></div>
+
       <!-- Ambient Studio Lighting Effect -->
       <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] sm:w-[700px] h-[500px] sm:h-[700px] bg-amber-500/10 blur-[130px] rounded-full pointer-events-none -z-10"></div>
 
