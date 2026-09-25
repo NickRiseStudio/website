@@ -5220,6 +5220,16 @@ function cancelCalcStepFade() {
   calcStepFadeEl = null;
 }
 
+// Видимая высота окна в пикселях — JS-эквивалент CSS-единицы dvh, по которой
+// теперь ограничены модальные окна (style.css, блок «ВСПЛЫВАЮЩИЕ ОКНА»).
+// window.innerHeight в мобильных браузерах — это «большое» окно БЕЗ нижней
+// панели браузера: она рисуется поверх страницы (в Яндекс.Браузере страницу
+// не сжимает), поэтому высоту окна-калькулятора упирало в запас за панелью.
+// visualViewport.height — то, что видно сейчас.
+function visibleViewportHeight() {
+  return (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+}
+
 function goToCalcStepAnimated(step) {
   const modal = document.getElementById('priceCalcModal');
   const box = modal ? modal.querySelector('.modal-content') : null;
@@ -5266,7 +5276,7 @@ function goToCalcStepAnimated(step) {
     goToCalcStep(target);
     calcHeightLock = false;
 
-    const maxHeight = Math.max(200, Math.round(window.innerHeight * 0.9));
+    const maxHeight = Math.max(200, Math.round(visibleViewportHeight() * 0.9));
     // natural меряем через offsetHeight (scrollHeight не учитывает рамку окна),
     // сняв фиксацию высоты ровно на один кадр чтения — без визуального скачка.
     box.style.height = '';
@@ -5394,7 +5404,7 @@ function animateCalcModalHeight(duration = 0.62) {
   // Целевую высоту меряем со снятой inline-фиксацией, иначе она была бы занижена
   box.style.height = '';
   box.style.overflow = '';
-  const maxHeight = Math.max(200, Math.round(window.innerHeight * 0.9));
+  const maxHeight = Math.max(200, Math.round(visibleViewportHeight() * 0.9));
   const toHeight = Math.min(Math.max(box.offsetHeight, 1), maxHeight);
 
   // Разница меньше пары пикселей — анимировать нечего
