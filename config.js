@@ -51,7 +51,15 @@ const CONFIG = {
           tablet: 'Специализация: Pop/House • Rock/Metal • Rap/R&B',
           mobile: 'Pop/House • Rock/Metal • Rap/R&B'
         },
-        usp: 'Превращаю демо-записи и сырые мультитреки в мощный, объемный и конкурентоспособный звук мирового уровня. От первых тактов до финального мастера — каждый элемент на своем месте, каждая частота под контролем.',
+        /* Текст USP. На компьютере и планшете — полный (два предложения).
+           На телефоне кадр маленький, поэтому оставлено только первое
+           предложение: главный экран становится выше, а смысл не теряется.
+           Механизм — тот же resolveDeviceText (script.js), что у title/subtitle. */
+        usp: {
+          desktop: 'Превращаю демо-записи и сырые мультитреки в мощный, объемный и конкурентоспособный звук мирового уровня. От первых тактов до финального мастера — каждый элемент на своем месте, каждая частота под контролем.',
+          tablet: 'Превращаю демо-записи и сырые мультитреки в мощный, объемный и конкурентоспособный звук мирового уровня. От первых тактов до финального мастера — каждый элемент на своем месте, каждая частота под контролем.',
+          mobile: 'Превращаю демо-записи и сырые мультитреки в мощный, объемный и конкурентоспособный звук мирового уровня.'
+        },
         btnPlayer: 'Примеры работ (A/B)',
         btnContact: 'Контакты',
         aboutPhotoBadge: 'Обо мне'
@@ -188,7 +196,13 @@ const CONFIG = {
           tablet: 'Specialization: Pop/House • Rock/Metal • Rap/R&B',
           mobile: 'Pop/House • Rock/Metal • Rap/R&B'
         },
-        usp: 'I turn raw demos and multitracks into a powerful, wide and competitive world-class sound. From the first bar to the final master — every element in its place, every frequency under control.',
+        /* USP text. Desktop and tablet get the full two-sentence version;
+           the phone keeps only the first sentence so the hero stays tall. */
+        usp: {
+          desktop: 'I turn raw demos and multitracks into a powerful, wide and competitive world-class sound. From the first bar to the final master — every element in its place, every frequency under control.',
+          tablet: 'I turn raw demos and multitracks into a powerful, wide and competitive world-class sound. From the first bar to the final master — every element in its place, every frequency under control.',
+          mobile: 'I turn raw demos and multitracks into a powerful, wide and competitive world-class sound.'
+        },
         btnPlayer: 'Hear A/B Demos',
         btnContact: 'Contact Me',
         aboutPhotoBadge: 'About'
