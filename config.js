@@ -549,8 +549,10 @@ const CONFIG = {
                   латиницей по имени автора) — внешних ссылок нет;
        textRu / textEn — текст отзыва. Английский — перевод, поэтому в
                   EN-версии под текстом стоит пометка reviews.translated.
-     Порядок в массиве = исходный порядок отзывов: чётные отзывы уходят в
-     верхнюю бегущую ленту, нечётные — в нижнюю (script.js → renderReviews()). */
+     Порядок в массиве = раскладка по лентам: чётные отзывы (индексы 0, 2, 4…)
+     уходят в верхнюю бегущую ленту, нечётные — в нижнюю (script.js → renderReviews()).
+     Длинные отзывы стоят так, чтобы попадать в верхнюю ленту: у них в ленте есть
+     подпись «Читать далее…», и увидеть их нужно первыми. */
   reviewsData: [
     {
       name: 'Артём Фартович',
@@ -560,32 +562,18 @@ const CONFIG = {
       textEn: 'We\'ve been making tracks together for a few months now, and we\'re only starting to understand each other — what I want, how I see it and how he sees it (it matters to me to hear the opinion of someone with many years of experience), so we\'ve been working together for several months and will keep going. A unique sound engineer: he finds an approach to everyone, always listens to you, and from his own experience suggests something of his own (for the better, of course)🕊🤝'
     },
     {
+      name: 'Трамс Трамс',
+      url: 'https://vk.ru/id239096362',
+      avatar: './image/reviews/trams-trams.webp',
+      textRu: 'Качественно свёл и довёл до ума сырой продукт 10/10',
+      textEn: 'Mixed it with quality and polished the raw product to perfection 10/10'
+    },
+    {
       name: 'Артур Голдин',
       url: 'https://vk.ru/needrate',
       avatar: './image/reviews/artur-goldin.webp',
       textRu: 'Ник максимально заинтересован в том, чтобы работа удовлетворила и задает правильные вопросы. Понимание и реализация твоих пожеланий происходит очень быстро, с первого раза. При этом может предложить что-то свое и это с большой долей вероятности тебе понравится! Заточен на взаимопонимание, а именно поэтому работа будет 100% качественной и более чем удовлетворительной. Рекомендация безоговорочная 👍',
       textEn: 'Nick is genuinely invested in making sure the work satisfies you, and he asks the right questions. He understands and implements your wishes very fast, right from the first try. At the same time he can suggest something of his own, and chances are you\'ll love it! He\'s all about mutual understanding — which is exactly why the work comes out 100% quality and more than satisfactory. Unconditional recommendation 👍'
-    },
-    {
-      name: 'Руслан Беспяткин',
-      url: 'https://vk.ru/deadboyclub_official',
-      avatar: './image/reviews/ruslan-bespyatkin.webp',
-      textRu: 'Парень-мастер своего дела, работой остался доволен, всегда подсказывал, инициативу проявлял. Отвечает всегда быстро и по делу, никогда не игнорил, списывается даже на не рабочие темы. Ник-профессионал в своем деле, советую каждому с ним поработать!)',
-      textEn: 'The guy is a true master of his craft. I was happy with the work: he always gave advice and took initiative. He always replies fast and to the point, never ignores you, and will even chat about non-work stuff. Nick is a professional in his field — I recommend everyone work with him!)'
-    },
-    {
-      name: 'Валерий Шакиров',
-      url: 'https://vk.ru/tungaionga',
-      avatar: './image/reviews/valeriy-shakirov.webp',
-      textRu: 'Работаю с Ником не первый месяц, каждый раз остаюсь доволен, своих денег работа точно стоит, но больше подмечу креативный подход в разным моментах работы, свои фишки, недостоющим музыкантам неких тонкостей в создании песни, точно сюда. А так, пока не попробуешь, не узнаешь, твой ли это звукорежиссер) Мир 😌',
-      textEn: 'I\'ve been working with Nick for more than a month now, and I\'m happy every single time. The work is definitely worth the money, but what I\'d highlight most is the creative approach at different stages of the job, his own little tricks — musicians who are missing certain finer points of song creation, come here. Otherwise you won\'t know if he\'s your sound engineer until you try) Peace 😌'
-    },
-    {
-      name: 'Иман Мамедов',
-      url: 'https://vk.ru/holdthesnow',
-      avatar: './image/reviews/iman-mamedov.webp',
-      textRu: 'Звукорежиссер придумывает авторские фишки в проекте, который сводит, а также доводит качество звука до максимума, используя всё то, что знает и умеет. По необходимости ответственно подходит к внесению правок, если ты в состоянии их грамотно сформулировать. Рекомендую, здесь работают по совести и от сердца.',
-      textEn: 'The sound engineer comes up with his own signature touches in the project he\'s mixing, and he pushes the sound quality to the max, using everything he knows and can do. When needed, he takes revisions seriously — as long as you\'re able to formulate them clearly. I recommend him: here they work honestly and from the heart.'
     },
     {
       name: 'Владимир Битков',
@@ -595,25 +583,18 @@ const CONFIG = {
       textEn: 'A responsive and attentive person. He doesn\'t blow you off — he tells you how to improve your recording quality. He does his job. Respect for the work 👍'
     },
     {
-      name: 'Трамс Трамс',
-      url: 'https://vk.ru/id239096362',
-      avatar: './image/reviews/trams-trams.webp',
-      textRu: 'Качественно свёл и довёл до ума сырой продукт 10/10',
-      textEn: 'Mixed it with quality and polished the raw product to perfection 10/10'
+      name: 'Иман Мамедов',
+      url: 'https://vk.ru/holdthesnow',
+      avatar: './image/reviews/iman-mamedov.webp',
+      textRu: 'Звукорежиссер придумывает авторские фишки в проекте, который сводит, а также доводит качество звука до максимума, используя всё то, что знает и умеет. По необходимости ответственно подходит к внесению правок, если ты в состоянии их грамотно сформулировать. Рекомендую, здесь работают по совести и от сердца.',
+      textEn: 'The sound engineer comes up with his own signature touches in the project he\'s mixing, and he pushes the sound quality to the max, using everything he knows and can do. When needed, he takes revisions seriously — as long as you\'re able to formulate them clearly. I recommend him: here they work honestly and from the heart.'
     },
     {
-      name: 'Эльдар Хисматуллин',
-      url: 'https://vk.ru/hismaruu',
-      avatar: './image/reviews/eldar-hismatullin.webp',
-      textRu: 'Наконец-то я его нашел, сделал все качественно, прям как хотел, хотя даже не объяснял чего хочу 😁 очень доволен , теперь я тут постоянный клиент )',
-      textEn: 'I finally found him. He did everything with quality, exactly how I wanted — even though I never even explained what I wanted 😁 Very happy, I\'m a regular client here now )'
-    },
-    {
-      name: 'Emil Che',
-      url: 'https://vk.ru/blckdhood_q',
-      avatar: './image/reviews/emil-che.webp',
-      textRu: 'Он действительно делает то что нужно🔥 Если где-то что-то не так подскажет) Обращайтесь не пожалеете',
-      textEn: 'He really does what\'s needed🔥 If something is off somewhere, he\'ll point it out) Get in touch, you won\'t regret it'
+      name: 'Артём Фирсов',
+      url: 'https://vk.ru/firsov998',
+      avatar: './image/reviews/artem-firsov.webp',
+      textRu: 'Спасибо Ник, очень общительный и хорошо делает свою работу🙂',
+      textEn: 'Thanks Nick, very communicative and does his job well🙂'
     },
     {
       name: 'Олег Ломтев',
@@ -623,11 +604,39 @@ const CONFIG = {
       textEn: 'I\'m blown away. This is top-class work. Nick really knows his craft. This man — with a capital M — is a real wizard. Harry Houdini is nervously smoking on the sidelines. He helped take the track to a completely different level. If you need an adequate sound engineer who will listen to your wishes and, when needed, throw in his own FRESH ideas — you\'re in the right place. To sum up: I suggest we canonize Nicholas, hand him a Grammy and hold a worldwide holiday in his honor every year. That\'s all from me. Thank you! Nick, you\'re the best!'
     },
     {
+      name: 'Иван Терсков',
+      url: 'https://vk.ru/montesori2013',
+      avatar: './image/reviews/ivan-terskov.webp',
+      textRu: 'Этот человек, сделал просто мощнейшую пушку, бля, однозначно знает что и как нужно!!!!! Респект!!!!',
+      textEn: 'This guy made an absolutely killer banger, damn, he definitely knows what and how it should be done!!!!! Respect!!!!'
+    },
+    {
+      name: 'Руслан Беспяткин',
+      url: 'https://vk.ru/deadboyclub_official',
+      avatar: './image/reviews/ruslan-bespyatkin.webp',
+      textRu: 'Парень-мастер своего дела, работой остался доволен, всегда подсказывал, инициативу проявлял. Отвечает всегда быстро и по делу, никогда не игнорил, списывается даже на не рабочие темы. Ник-профессионал в своем деле, советую каждому с ним поработать!)',
+      textEn: 'The guy is a true master of his craft. I was happy with the work: he always gave advice and took initiative. He always replies fast and to the point, never ignores you, and will even chat about non-work stuff. Nick is a professional in his field — I recommend everyone work with him!)'
+    },
+    {
       name: 'Kira Daon',
       url: 'https://vk.ru/kira_daon',
       avatar: './image/reviews/kira-daon.webp',
       textRu: 'Послушал песню, похвалил 😱 и дал советы? Да ещё и поделился интересным контентом по теме?😳 Приятное знакомство, удачи студии и его участникам от группы Sphecidae Ltd.!',
       textEn: 'He listened to the song, praised it 😱 and gave advice? And even shared some interesting content on the subject?😳 A pleasant acquaintance. Good luck to the studio and its members from the band Sphecidae Ltd.!'
+    },
+    {
+      name: 'Валерий Шакиров',
+      url: 'https://vk.ru/tungaionga',
+      avatar: './image/reviews/valeriy-shakirov.webp',
+      textRu: 'Работаю с Ником не первый месяц, каждый раз остаюсь доволен, своих денег работа точно стоит, но больше подмечу креативный подход в разным моментах работы, свои фишки, недостоющим музыкантам неких тонкостей в создании песни, точно сюда. А так, пока не попробуешь, не узнаешь, твой ли это звукорежиссер) Мир 😌',
+      textEn: 'I\'ve been working with Nick for more than a month now, and I\'m happy every single time. The work is definitely worth the money, but what I\'d highlight most is the creative approach at different stages of the job, his own little tricks — musicians who are missing certain finer points of song creation, come here. Otherwise you won\'t know if he\'s your sound engineer until you try) Peace 😌'
+    },
+    {
+      name: 'Emil Che',
+      url: 'https://vk.ru/blckdhood_q',
+      avatar: './image/reviews/emil-che.webp',
+      textRu: 'Он действительно делает то что нужно🔥 Если где-то что-то не так подскажет) Обращайтесь не пожалеете',
+      textEn: 'He really does what\'s needed🔥 If something is off somewhere, he\'ll point it out) Get in touch, you won\'t regret it'
     },
     {
       name: 'Евгений Вохманов',
@@ -651,13 +660,6 @@ const CONFIG = {
       textEn: 'Interesting treatment. I liked the work, he did it very fast 👍🏻❤🔥'
     },
     {
-      name: 'Иван Терсков',
-      url: 'https://vk.ru/montesori2013',
-      avatar: './image/reviews/ivan-terskov.webp',
-      textRu: 'Этот человек, сделал просто мощнейшую пушку, бля, однозначно знает что и как нужно!!!!! Респект!!!!',
-      textEn: 'This guy made an absolutely killer banger, damn, he definitely knows what and how it should be done!!!!! Respect!!!!'
-    },
-    {
       name: 'Даниил Ломейко',
       url: 'https://vk.ru/lom_0_9',
       avatar: './image/reviews/daniil-lomeyko.webp',
@@ -679,11 +681,11 @@ const CONFIG = {
       textEn: 'The guy knows his craft, respect! He mixed the track well and with quality 🤝 Reach out without hesitation, I recommend him!'
     },
     {
-      name: 'Артём Фирсов',
-      url: 'https://vk.ru/firsov998',
-      avatar: './image/reviews/artem-firsov.webp',
-      textRu: 'Спасибо Ник, очень общительный и хорошо делает свою работу🙂',
-      textEn: 'Thanks Nick, very communicative and does his job well🙂'
+      name: 'Эльдар Хисматуллин',
+      url: 'https://vk.ru/hismaruu',
+      avatar: './image/reviews/eldar-hismatullin.webp',
+      textRu: 'Наконец-то я его нашел, сделал все качественно, прям как хотел, хотя даже не объяснял чего хочу 😁 очень доволен , теперь я тут постоянный клиент )',
+      textEn: 'I finally found him. He did everything with quality, exactly how I wanted — even though I never even explained what I wanted 😁 Very happy, I\'m a regular client here now )'
     },
     {
       name: 'Алекс Лобанов',

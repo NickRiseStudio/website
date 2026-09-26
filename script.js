@@ -1468,7 +1468,7 @@ function streamStateFor(el, url) {
       meta: null, probing: false, wanted: false, source: null, buffer: null,
       objectUrl: null, chunk: null, appending: null, fetching: false, aborter: null,
       fetchToken: 0, appended: 0, nextByte: 0, nextTime: 0, fresh: true, done: false,
-      retryAt: 0, failCount: 0 };
+      retryAt: 0, failCount: 0, retryTimer: 0 };
     audioStreamMap.set(el, st);
   }
   return st;
@@ -1516,6 +1516,9 @@ function streamDisableChunkMode(reason) {
 
 function streamStopFetch(st) {
   if (st.aborter) { try { st.aborter.abort(); } catch (err) {} st.aborter = null; }
+  /* Незавершённый повтор порции тоже снимаем: иначе он «выстрелил» бы после
+     паузы или разбора состояния потока. */
+  if (st.retryTimer) { clearTimeout(st.retryTimer); st.retryTimer = 0; }
   /* Номер запроса растёт: обработчики уже отменённого ответа увидят чужой токен
      и промолчат. Иначе отменённый ответ обнулил бы флаги НОВОГО запроса
      (перемотка ровно в этот момент) — и качались бы две порции сразу. */
@@ -1592,7 +1595,8 @@ function streamAttach(st) {
 
 function streamKick(st) {
   if (!st || !st.meta || !st.buffer) return;
-  if (!st.wanted || st.fetching || st.done) return;
+  /* fresh — это перемотка: её порция нужна даже в «завершённом» потоке. */
+  if (!st.wanted || st.fetching || (st.done && !st.fresh)) return;
   if (st.chunk) { streamFlush(st); return; }
   if (document.hidden) return;
   if (st.buffer.updating) return;
@@ -1641,6 +1645,11 @@ function streamQueueChunk(st, bytes, fromByte, tail) {
 function streamRetryChunk(st, reason) {
   st.fresh = true; st.retryAt = performance.now() + AUDIO_CHUNK_RETRY_MS; st.failCount++;
   if (st.failCount >= 3) streamDisableChunkMode(reason);
+  /* Пока пара стоит на паузе (гейт буфера) или ждёт данных, timeupdate молчит,
+     и без этого таймера порция не повторилась бы сама — перемотка «зависала»
+     бы до переключения трека. */
+  clearTimeout(st.retryTimer);
+  st.retryTimer = setTimeout(() => { st.retryAt = 0; streamKick(st); }, AUDIO_CHUNK_RETRY_MS + 50);
 }
 function streamFlush(st) {
   const chunk = st.chunk, buffer = st.buffer, source = st.source;
@@ -1654,11 +1663,22 @@ function streamFlush(st) {
 function streamAfterAppend(st) {
   const chunk = st.appending; st.appending = null;
   if (chunk) {
-    if (!streamCheckOffset(st, chunk)) return;
-    st.nextByte = chunk.nextByte; st.nextTime = chunk.time + chunk.frames * st.meta.frameSec;
-    st.appended += chunk.payload.length;
-    if (chunk.tail) { st.done = true; st.nextTime = st.meta.duration; streamEndOfStream(st); }
-    updateDeckProgressUI();
+    /* Порция с перемотки легла не в позицию: её отбрасываем, но не «глотаем» —
+       иначе потеряется место, с которого качать дальше. Первую порцию после
+       перемотки повторяем с той же точки (streamRetryChunk), а для обычной
+       порции просто идём дальше, как раньше. */
+    if (!streamCheckOffset(st, chunk)) {
+      const at = st.el.currentTime || 0;
+      if (getBufferedEndAt(st.el, at) <= at) {
+        st.nextByte = st.meta.audioStart + Math.round(at * st.meta.bytesPerSec);
+        st.nextTime = at; st.fresh = true;
+      } else { st.fresh = false; }
+    } else {
+      st.nextByte = chunk.nextByte; st.nextTime = chunk.time + chunk.frames * st.meta.frameSec;
+      st.appended += chunk.payload.length;
+      if (chunk.tail) { st.done = true; st.nextTime = st.meta.duration; streamEndOfStream(st); }
+      updateDeckProgressUI();
+    }
   }
   streamFlush(st); streamKick(st);
 }
@@ -1666,7 +1686,11 @@ function streamAfterAppend(st) {
 function streamCheckOffset(st, chunk) {
   if (!chunk.fresh || chunk.time < 0.5) return true;
   if (getBufferedEndAt(st.el, chunk.time) > chunk.time) return true;
-  streamDisableChunkMode('браузер игнорирует смещение'); return false;
+  /* Порция с перемотки легла не туда. Раньше здесь режим выключался целиком,
+     а streamRevertToFile переводил элемент на файл и браузер качал его С НАЧАЛА.
+     Повторяем порцию с той же позиции — режим порций остаётся рабочим. */
+  streamRetryChunk(st, 'порция легла не в позицию перемотки');
+  return false;
 }
 
 function streamEndOfStream(st) {
@@ -1700,6 +1724,35 @@ function streamOnSeek(st) {
   st.done = false;
   st.nextByte = st.meta.audioStart + Math.round(at * st.meta.bytesPerSec);
   st.nextTime = at; st.fresh = true; streamKick(st);
+}
+
+/* Перемотка завершена (отпустили ползунок, кликнули по полосе): обе дорожки
+   пары обязаны получить порцию РОВНО с новой позиции. Без этого вторая
+   (неслышимая) дорожка остаётся без данных, гейт общего буфера не отпускает —
+   и звук стоит, пока пару не пересоздашь переключением трека.
+
+   Почему не полагаемся на события seeking/seeked: при перетаскивании ползунка
+   их десятки, они «дребезжат», и streamOnSeek со своей проверкой
+   (st.fetching && |nextTime - at| < 0.5) часть из них отбрасывает. Здесь
+   позиция уже окончательная, поэтому поток ведём к ней безусловно. */
+function streamSeekTo(trackId, at) {
+  if (!audioChunkSupported() || !trackId) return;
+  const item = trackAudioMap[trackId];
+  if (!item || !item.wantPlay) return;
+  const pos = Math.max(0, at || 0);
+  [item.audioA, item.audioB].forEach(el => {
+    const st = audioStreamOf(el);
+    if (!st || !st.meta) return;
+    /* В этой точке данные уже есть и поток не завершён — порция не нужна. */
+    if (getBufferedEndAt(el, pos) > pos && !st.done) return;
+    /* Уже качаем ровно эту позицию — не рвём живой запрос. */
+    if (st.fetching && Math.abs(st.nextTime - pos) < 0.5) return;
+    streamStopFetch(st); st.retryAt = 0; st.failCount = 0;
+    st.done = false; st.chunk = null;
+    st.nextByte = st.meta.audioStart + Math.round(pos * st.meta.bytesPerSec);
+    st.nextTime = pos; st.fresh = true;
+    streamKick(st);
+  });
 }
 
 function streamTickItem(item) {
@@ -2618,6 +2671,9 @@ function switchDeckSource(src) {
   updateDeckSourceUI();
   cancelPendingSwitch();
   item.seekPending = false;
+  /* Вторая дорожка вошла в игру на непрогруженной паре: просим её порцию
+     с той же позиции, иначе звук на ней молчал бы до переключения трека. */
+  streamSeekTo(activeTrackId, nextEl.currentTime || 0);
 
   if (prevPlaying && nextPlaying) {
     const drift = prevEl.currentTime - nextEl.currentTime;
@@ -2883,6 +2939,9 @@ function seekDeckTrack(e) {
     // Тянем только звучащую дорожку: два seek одновременно и давали рывок звука.
     audible.currentTime = newTime;
     item.seekPending = true;
+    /* Позиция окончательная — просим порцию (15 с) отсюда для ОБЕИХ дорожек
+       пары, иначе вторая останется без данных и гейт буфера не отпустит. */
+    streamSeekTo(activeTrackId, newTime);
     updateDeckProgressUI();
   }
 }
@@ -2942,6 +3001,14 @@ function initDeckSeekBar() {
       if (item) {
         item.seekPending = true;
         if (item.audioA.paused && item.audioB.paused) prepareAudioPair(item);
+        /* Позиция окончательная: обе дорожки пары просят порцию (15 с) ровно
+           отсюда. Раньше здесь ничего не делалось, и до данных докачивалась
+           только слышимая дорожка — гейт общего буфера держал паузу, пока
+           пользователь не переключит трек. */
+        const at = (item.source === 'before' ? item.audioA : item.audioB).currentTime || 0;
+        streamSeekTo(activeTrackId, at);
+        /* Перемотка — это и перемотка по треку: канал под активную пару. */
+        if (!isPairWarm(item)) warmOnSeek(activeTrackId, at);
       }
     }
   };
@@ -3166,7 +3233,13 @@ function releasePairBufferGate(trackId) {
   if (!item || !item.bufferGate) return;
   const { audible } = getAudiblePair(item);
   const pos = audible.currentTime || 0;
-  if (getPairBufferedAhead(item, pos) < AUDIO_PAIR_HEAD) return;
+  if (getPairBufferedAhead(item, pos) < AUDIO_PAIR_HEAD) {
+    /* Данных у одной из дорожек ещё нет. Гейт мог встать сразу после перемотки:
+       страховка на случай, если порция для второй дорожки не попросилась сама
+       (её событие seeking не пришло) — просим её отсюда, и пауза снимется. */
+    streamSeekTo(trackId, pos);
+    return;
+  }
 
   item.bufferGate = false;
   alignPairTo(item, audible);
@@ -4477,11 +4550,14 @@ function syncReviewsMore() {
   cards.forEach((card, index) => setReviewMoreLabel(card, clamped[index]));
 }
 
-// Общая высота свёрнутой карточки для каждого ряда — переменная ряда
-// --nr-review-card-h (style.css → .nr-marquee-track / .review-card). Раньше её
-// давал align-items: stretch, но тогда раскрытый отзыв растягивал весь ряд;
-// теперь карточки не тянутся друг за другом, и высоту нужно задать. Меряем
-// только свёрнутые: у раскрытой карточки height: auto.
+// Общая высота свёрнутой карточки для ОБЕИХ лент — переменная --nr-review-card-h,
+// которую читают и style.css (.nr-marquee-track / .review-card), и JS.
+// Раньше высота была общей через align-items: stretch, но тогда раскрытый отзыв
+// растягивал весь ряд; теперь карточки не тянутся друг за другом, и высоту нужно
+// задать. Меряем только свёрнутые: у раскрытой карточки height: auto.
+// Значение одно на две ленты: длинные отзывы (верхний ряд) задают «полку», и
+// короткий нижний ряд поднимается до неё — так карточки в лентах выглядят
+// одинаковыми, а не двумя разными по высоте рядами.
 function syncReviewCardHeights() {
   const tracks = document.querySelectorAll('#reviews .nr-marquee-track');
   if (!tracks.length) return;
@@ -4489,9 +4565,8 @@ function syncReviewCardHeights() {
   // Замер — на чистой раскладке: снятую переменную иначе намерили бы её же значением
   tracks.forEach((track) => track.style.removeProperty('--nr-review-card-h'));
 
-  const heights = [];
+  let max = 0;
   tracks.forEach((track) => {
-    let max = 0;
     track.querySelectorAll('.review-card:not(.is-open)').forEach((card) => {
       const textEl = card.querySelector('.review-text');
       if (!textEl) return;
@@ -4501,12 +4576,10 @@ function syncReviewCardHeights() {
       // ceil: высота карточки не должна оказаться на доли пикселя меньше содержимого
       max = Math.max(max, Math.ceil(card.getBoundingClientRect().height));
     });
-    heights.push(max);
   });
 
-  tracks.forEach((track, index) => {
-    if (heights[index]) track.style.setProperty('--nr-review-card-h', `${heights[index]}px`);
-  });
+  if (!max) return;
+  tracks.forEach((track) => track.style.setProperty('--nr-review-card-h', `${max}px`));
 }
 
 // Ход раскрытия и сворачивания отзыва — 1s, вдвое короче прежних 2s / 1.5s
@@ -4680,12 +4753,75 @@ function toggleReview(button, event) {
   // Свёрнутый отзыв прочитан — движение ленты возвращаем сразу, даже если
   // курсор/палец остались на карточке (см. resumeReviewsMarquee). С клавиатуры
   // не трогаем: там пауза держится фокусом.
-  if (!willOpen && !byKeyboard) resumeReviewsMarquee(card);
+  if (!willOpen && !byKeyboard) {
+    resumeReviewsMarquee(card);
+    // Тап-пауза ленты (сенсорные экраны) снимается вместе с движением: сворачивать
+    // отзыв и оставлять ленту стоящей смысла нет.
+    const track = card.closest('.nr-marquee-track');
+    if (track) track.classList.remove('nr-paused');
+  }
+
+  // Сенсорные экраны: раскрытый отзыв читают, а лента под пальцем не останавливается
+  // (hover там «залипает» только после касания, а его на бегущей ленте нет) —
+  // поэтому тап по «Читать далее…» останавливает именно ту ленту, где нажали.
+  // Снимает паузу повторный тап по «Свернуть» (ветка выше) или уход секции с экрана.
+  if (willOpen && isTouchActivation(event)) pauseReviewsMarquee(card);
 
   // Позиции триггеров анимаций пересчитываются по завершении хода высоты —
   // в setReviewOpen (как у вопроса в FAQ). Раньше refresh стоял ещё и здесь,
   // то есть запускался в первых кадрах движения и переклеивал раскладку всей
   // страницы прямо посреди анимации: ход читался резким, с пропуском кадров.
+}
+
+// Тап ли это пальцем — по нему решается пауза ленты на сенсорных экранах.
+// На гибридных устройствах (тач-экран + мышь) клик мышью паузы не даёт: там
+// отзыв под курсором и так стоит (:hover в style.css), а лента продолжает ехать.
+function isTouchActivation(event) {
+  if (!hasTouchInput()) return false;
+  if (!event) return false;                        // вызов без события — не тап
+  const type = event.pointerType || '';            // современных браузеров
+  if (type) return type === 'touch' || type === 'pen';
+  return true;                                     // старые: событие без pointerType
+}
+
+// Пауза ленты, в которой тапнули «Читать далее…» (style.css →
+// .nr-marquee-track.nr-paused). Вешаем только на сенсорных экранах: там нет
+// hover-паузы, и раскрытый отзыв иначе уезжал бы из-под пальца.
+function pauseReviewsMarquee(card) {
+  const track = card.closest('.nr-marquee-track');
+  if (!track) return;
+  track.classList.add('nr-paused');
+  // Прежний «принудительный старт» (resumeReviewsMarquee) отменяем: он перебил бы паузу.
+  track.classList.remove('nr-resume');
+}
+
+// Снимает паузу со всех лент отзывов — уход секции с экрана и повторный показ.
+function clearReviewsMarqueePause() {
+  document.querySelectorAll('#reviews .nr-marquee-track').forEach((track) => {
+    track.classList.remove('nr-paused');
+  });
+}
+
+// Сворачивает все раскрытые отзывы разом — секция ушла с экрана (animations.js →
+// initViewportGate). Ход GSAP здесь не нужен: карточки вне экрана, простой сброс
+// классов и inline-стилей дешевле и не переклеивает раскладку на глазах.
+function collapseAllReviews() {
+  const cards = document.querySelectorAll('#reviews .review-card');
+  let hasOpen = false;
+  cards.forEach((card) => {
+    if (!card.classList.contains('is-open')) return;
+    hasOpen = true;
+    card.classList.remove('is-open');
+    card.classList.remove('is-animating');
+    card.style.removeProperty('height');
+    const textEl = card.querySelector('.review-text');
+    if (textEl) textEl.style.removeProperty('max-height');
+  });
+  if (!hasOpen) return;
+
+  clearReviewsMarqueePause();
+  syncReviewsMore();
+  syncReviewCardHeights();
 }
 
 // Снимает выделение текста, оставшееся после тапа или долгого нажатия

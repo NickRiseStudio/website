@@ -948,6 +948,12 @@
     var io = new IntersectionObserver(function (ents) {
       ents.forEach(function (en) {
         en.target.classList.toggle('nr-off', !en.isIntersecting);
+        // Секция отзывов ушла с экрана: раскрытые отзывы сворачиваем, ленты
+        // снимаем с паузы — возвращаешься, а всё снова едет (script.js →
+        // collapseAllReviews). Порог тот же, что у .nr-off: карточки вне экрана.
+        if (en.target.id === 'reviews' && !en.isIntersecting) {
+          if (typeof collapseAllReviews === 'function') collapseAllReviews();
+        }
       });
     }, { rootMargin: '140px 0px' });
     $$('#hero, #player, #faq, #contacts, #reviews, footer').forEach(function (n) { io.observe(n); });
