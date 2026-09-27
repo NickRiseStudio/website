@@ -5070,7 +5070,7 @@ function openFaqItem(id) {
       {
         height: targetHeight,
         opacity: 1,
-        duration: 0.45,
+        duration: 1.5,
         ease: 'power3.out',
         onComplete: () => {
           body.style.height = 'auto';
@@ -5117,7 +5117,7 @@ function closeFaqItem(id) {
     gsap.to(body, {
       height: 0,
       opacity: 0,
-      duration: 0.35,
+      duration: 0.7,
       ease: 'power3.inOut',
       onComplete: () => {
         body.style.display = 'none';
