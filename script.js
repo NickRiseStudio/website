@@ -3842,10 +3842,16 @@ function renderServices() {
     // Set initial custom attribute
     card.setAttribute('data-card-index', idx);
 
-    // Клик по любой части карточки услуги (кроме кнопки «Заказать») открывает
-    // окно расчёта стоимости — на телефоне и на компьютере одинаково.
+    // Клик по карточке услуги (кроме кнопки «Заказать»). На телефоне (карусель)
+    // калькулятор открывается только по активной (центральной) карточке, а тап по
+    // соседней листает карусель до неё — она встаёт в центр. На планшете/ПК карточки
+    // видны все сразу (сетка), поэтому там клик по любой открывает калькулятор.
     card.addEventListener('click', (e) => {
       if (e.target.closest('button')) return;
+      if (window.innerWidth < 640 && idx !== servicesActiveIndex) {
+        scrollToServiceCard(idx);
+        return;
+      }
       if (typeof openPriceCalcModal === 'function') openPriceCalcModal();
     });
 
@@ -3987,6 +3993,8 @@ let servicesUserScrolled = false;      // пользователь сам про
 let servicesAppliedScrollLeft = null;  // последняя позиция, которую выставили мы
 let servicesCoverflowTransition = null; // последняя строка transition, выставленная coverflow
 let isServicesScrollTicking = false;
+let servicesActiveIndex = SERVICES_START_INDEX; // индекс центральной (активной) карточки карусели
+let servicesProgrammaticScroll = false;         // идёт наша плавная прокрутка к карточке
 
 function resetServicesCarouselState() {
   servicesAutoCentered = false;
@@ -4059,8 +4067,10 @@ function onServicesScroll() {
     requestAnimationFrame(() => {
       const container = document.getElementById('servicesContainer');
       // Позиция, которую выставили не мы, — значит карусель листает пользователь:
-      // после этого стартовое положение уже не навязываем.
-      if (container && servicesAppliedScrollLeft !== null &&
+      // после этого стартовое положение уже не навязываем. Во время нашей
+      // плавной прокрутки (servicesProgrammaticScroll) вывод не делаем: scrollLeft
+      // на этих кадрах промежуточный.
+      if (container && !servicesProgrammaticScroll && servicesAppliedScrollLeft !== null &&
           Math.abs(container.scrollLeft - servicesAppliedScrollLeft) > 6) {
         servicesUserScrolled = true;
       }
@@ -4096,17 +4106,53 @@ function scrollToServiceCard(index, behavior = 'smooth') {
   let targetScrollLeft = contentX + cardWidth / 2 - container.clientWidth / 2;
   targetScrollLeft = Math.max(0, Math.min(maxScroll, Math.round(targetScrollLeft)));
 
+  // Активная карточка известна уже сейчас — не ждём события scroll: иначе при
+  // тапе по соседней карточке «активной» ещё секунду числилась бы старая, и
+  // повторный тап по новой центральной карточке снова листал бы карусель
+  // вместо открытия калькулятора.
+  servicesActiveIndex = index;
+
   if (behavior === 'instant') {
+    servicesProgrammaticScroll = false;
     container.scrollTo({ left: targetScrollLeft, behavior: 'auto' });
     servicesAppliedScrollLeft = targetScrollLeft;
     updateServicesDots(false);
-  } else {
-    servicesAppliedScrollLeft = targetScrollLeft;
-    container.scrollTo({
-      left: targetScrollLeft,
-      behavior: 'smooth'
-    });
+    return;
   }
+
+  // Плавный скролл: позицию «своей» прокрутки записываем только когда анимация
+  // закончилась. Иначе onServicesScroll на промежуточных кадрах видел бы
+  // расхождение с целью и ошибочно помечал прокрутку как пользовательскую.
+  //
+  // ВАЖНО: на телефоне у контейнера scroll-snap-type: x mandatory, а у карточек
+  // scroll-snap-stop: always. С такими настройками браузер обязан тормозить на
+  // каждой снап-точке, поэтому плавный scrollTo через несколько карточек
+  // откатывался назад (замер: тап по 3-й карточке возвращал карусель к 1-й).
+  // На время программной прокрутки снап отключаем и возвращаем в конце.
+  const snapType = container.style.scrollSnapType;
+  const hadInlineSnap = container.style.scrollSnapType !== '';
+  container.style.scrollSnapType = 'none';
+
+  servicesAppliedScrollLeft = null;
+  servicesProgrammaticScroll = true;
+  let settled = false;
+  const onSettled = (e) => {
+    if (e && e.target !== container) return;
+    if (settled) return;
+    settled = true;
+    container.removeEventListener('scroll', onSettled);
+    container.style.scrollSnapType = hadInlineSnap ? snapType : '';
+    servicesProgrammaticScroll = false;
+    servicesAppliedScrollLeft = container.scrollLeft;
+    updateServicesDots(false);
+  };
+  container.addEventListener('scroll', onSettled, { passive: true });
+  container.scrollTo({
+    left: targetScrollLeft,
+    behavior: 'smooth'
+  });
+  // Страховка, если события scroll не будет (цель уже достигнута).
+  setTimeout(onSettled, 600);
 }
 
 function updateServicesDots(withTransition = false) {
@@ -4165,6 +4211,12 @@ function updateServicesDots(withTransition = false) {
       activeIndex = i;
     }
   }
+
+  // Активная (центральная) карточка — используется обработчиком клика, чтобы
+  // калькулятор открывался только по ней, а тап по соседним листал карусель.
+  // Пока идёт наша плавная прокрутка, индекс не трогаем: scrollLeft на этих
+  // кадрах промежуточный, и «активной» на миг становилась бы не та карточка.
+  if (!servicesProgrammaticScroll) servicesActiveIndex = activeIndex;
 
   // Режим перехода меняется редко (ресайз или ручная прокрутка), поэтому строку
   // transition пишем только когда она реально другая, а не на каждом кадре.
