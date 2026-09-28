@@ -764,17 +764,19 @@
     }
     revealObserver = new IntersectionObserver(function (ents) {
       ents.forEach(function (en) {
-        if (en.isIntersecting) {
-          en.target.classList.add('nr-in');
-        } else {
-          en.target.classList.remove('nr-in');
-        }
+        /* Появление строго один раз: nr-in не снимается, элемент сразу
+           снимается с наблюдения — кривая под заголовком секции рисуется
+           единожды, а плитки контактов и ленты отзывов не пропадают при
+           прокрутке вверх. */
+        if (!en.isIntersecting) return;
+        en.target.classList.add('nr-in');
+        revealObserver.unobserve(en.target);
       });
     }, { rootMargin: getRevealRootMargin(), threshold: 0.15 });
 
     for (var i = 0; i < revealNodes.length; i++) {
       var node = revealNodes[i];
-      if (node && node.isConnected) {
+      if (node && node.isConnected && !node.classList.contains('nr-in')) {
         revealObserver.observe(node);
       }
     }
@@ -1166,13 +1168,31 @@
     var delay = animate ? 330 : 0;
     setTimeout(function () { safe(decorateServices); safe(decorateTracks); }, delay);
   });
+  /* Янтарная полоска FAQ живёт вместе с ответом, а не с курсором: при закрытии
+     снимаем класс не сразу, а когда ответ уже свернулся (closeFaqItem —
+     0.7s), поэтому на тач-экранах полоса гаснет синхронно с текстом.
+     Повторное открытие отменяет запланированное снятие. */
+  var faqLineTimers = {};
   hook('openFaqItem', function (id) {
     var c = faqCard(id);
-    if (c) c.classList.add('nr-faq-open');
+    if (!c) return;
+    clearTimeout(faqLineTimers[id]);
+    delete faqLineTimers[id];
+    c.classList.add('nr-faq-open');
   });
   hook('closeFaqItem', function (id) {
     var c = faqCard(id);
-    if (c) c.classList.remove('nr-faq-open');
+    if (!c) return;
+    clearTimeout(faqLineTimers[id]);
+    faqLineTimers[id] = setTimeout(function () {
+      delete faqLineTimers[id];
+      var card = faqCard(id);
+      var body = document.getElementById('faq-body-' + id);
+      /* Карточку могли пересобрать (смена языка) — тогда класс снимать не нужно */
+      if (card && body && body.getAttribute('data-open') === 'false') {
+        card.classList.remove('nr-faq-open');
+      }
+    }, 700);
   });
   hook('openMobileMenu', function () {
     var d = $('#mobileMenuDrawer');

@@ -1510,7 +1510,19 @@ body.nr-src-before .deck-btn-before { box-shadow: 0 0 18px rgba(16, 185, 129, 0.
   #faqContainer > div:hover::before { transform: scaleY(1); }
 }
 
+/* Полоска — спутник раскрытого вопроса, а не курсора (см. правило выше).
+   Функция карточки включает .nr-faq-open вместе с ответом и снимает его, когда
+   ответ доехал (animations.js → hook closeFaqItem). */
 #faqContainer > div.nr-faq-open::before { transform: scaleY(1); }
+
+/* Сенсорные экраны: hover-правило выше не работает, полоска обязана ехать
+   синхронно с ответом — раскрытие 1.5s, сворачивание 0.7s (script.js).
+   Кривая power3.inOut не выражается в transition, поэтому берём близкую. */
+@media not all and (hover: hover) and (pointer: fine) {
+  #faqContainer > div::before {
+    transition: transform 0.5s cubic-bezier(0.66, 0, 0.34, 1);
+  }
+}
 
 #faqContainer > div.nr-faq-open { box-shadow: 0 0 34px rgba(245, 158, 11, 0.10), inset 0 0 24px rgba(245, 158, 11, 0.04); }
 

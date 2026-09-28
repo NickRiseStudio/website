@@ -6507,7 +6507,8 @@ function animateScrollBlock(selectorOrEls, options = {}) {
 
     const itemDelay = delay + (stagger > 0 ? idx * stagger : 0);
 
-    // Position-bound trigger: opens when crossing into viewport from below, closes when leaving viewport downward
+    // Появление один раз: элемент всплывает при пересечении start снизу
+    // и остаётся на месте — при прокрутке вверх ничего не прячется.
     gsap.fromTo(
       el,
       { y: yVal, opacity: 0 },
@@ -6522,7 +6523,7 @@ function animateScrollBlock(selectorOrEls, options = {}) {
           trigger: trigEl,
           start: dynamicStart,
           end: 'bottom top',
-          toggleActions: 'play none none reverse'
+          toggleActions: 'play none none none'
         }
       }
     );
@@ -6531,6 +6532,9 @@ function animateScrollBlock(selectorOrEls, options = {}) {
 
 let playerTimelines = [];
 let playerTracksTimeline = null;
+// Плеер уже всплыл: второй раз карточки не прячем и не анимируем
+// (перерисовка при смене языка, resize, листание страниц).
+let playerRevealed = false;
 
 function initPlayerGsapAnimation() {
   if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') return;
@@ -6541,6 +6545,10 @@ function initPlayerGsapAnimation() {
   const sectionHeader = section.querySelector('.text-center');
   // Жанровые фильтры убраны — анимируем только пагинацию и карточки треков.
   const paginationContainer = section.querySelector('#playerContentContainer .border-t');
+  // Переключатель языка примеров («На английском / На русском»): статичная
+  // разметка внутри #playerContentContainer, поэтому анимируется вместе с
+  // заголовком — иначе он просто стоит на экране и «не всплывает».
+  const langSwitcher = document.getElementById('trackLangSwitcher');
 
   // Clean up previous timelines or triggers attached to player
   if (playerTimelines && playerTimelines.length) {
@@ -6571,6 +6579,7 @@ function initPlayerGsapAnimation() {
   // Respect prefers-reduced-motion
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     if (sectionHeader) gsap.set(sectionHeader, { opacity: 1, y: 0 });
+    if (langSwitcher) gsap.set(langSwitcher, { opacity: 1, y: 0 });
     trackCards.forEach(card => gsap.set(card, { opacity: 1, y: 0 }));
     if (paginationContainer) gsap.set(paginationContainer, { opacity: 1, y: 0 });
     return;
@@ -6583,23 +6592,22 @@ function initPlayerGsapAnimation() {
 
   if (!isPlayerInView) {
     if (sectionHeader) gsap.set(sectionHeader, { y: 24, opacity: 0 });
+    if (langSwitcher) gsap.set(langSwitcher, { y: 18, opacity: 0 });
     trackCards.forEach(card => gsap.set(card, { y: 26, opacity: 0 }));
     if (paginationContainer) gsap.set(paginationContainer, { y: 16, opacity: 0 });
   }
 
   // 1. SECTION HEADER TIMELINE (Title "Слушай разницу")
-  // Enters at 88%, reverses visibly when scrolling up past 88%
+  // Всплывает один раз при пересечении 88% и больше не прячется.
   if (sectionHeader) {
     const headerTl = gsap.timeline({
       scrollTrigger: {
         trigger: sectionHeader,
         start: computeDynamicStart(88),
         end: 'bottom top',
-        toggleActions: 'play none none reverse',
-        onLeaveBack: () => {
-          headerTl.timeScale(1.6).reverse();
-        },
+        toggleActions: 'play none none none',
         onEnter: () => {
+          playerRevealed = true;
           headerTl.timeScale(1.0).play();
         }
       }
@@ -6611,15 +6619,26 @@ function initPlayerGsapAnimation() {
       { y: 0, opacity: 1, duration: 0.45, ease: 'power2.out' },
       0
     );
+
+    if (langSwitcher) {
+      // Переключатель языка примеров всплывает сразу за заголовком.
+      headerTl.fromTo(
+        langSwitcher,
+        { y: 18, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.45, ease: 'power2.out' },
+        0.12
+      );
+    }
+
     playerTimelines.push(headerTl);
   }
 
   // 2. TRACK LIST GRID TIMELINE (Individual track cards with cover art and play buttons)
-  // Enters at 83%, reverses visibly when scrolling up past 83%
+  // Всплывает один раз при пересечении 83%.
   initPlayerTrackCardsTimeline(true);
 
   // 3. PAGINATION CONTROLS TIMELINE (Prev/Next buttons + Page info / Dots)
-  // Enters at 80%, reverses visibly when scrolling up past 80%
+  // Появление один раз при пересечении 80%, без скрытия при прокрутке вверх.
   // Если страница одна, блок пагинации скрыт (см. renderTrackList) — анимировать нечего.
   if (paginationContainer && paginationContainer.style.display !== 'none') {
     const paginationTl = gsap.timeline({
@@ -6627,11 +6646,9 @@ function initPlayerGsapAnimation() {
         trigger: paginationContainer,
         start: computeDynamicStart(80),
         end: 'bottom top',
-        toggleActions: 'play none none reverse',
-        onLeaveBack: () => {
-          paginationTl.timeScale(1.8).reverse();
-        },
+        toggleActions: 'play none none none',
         onEnter: () => {
+          playerRevealed = true;
           paginationTl.timeScale(1.0).play();
         }
       }
@@ -6655,6 +6672,10 @@ function initPlayerTrackCardsTimeline(initialPreHide = true, alreadyAnimated = f
 
   const trackCards = trackContainer.querySelectorAll(':scope > *');
   if (!trackCards.length) return;
+
+  // Секция уже всплыла — карточки остаются на месте (перерисовка списка,
+  // смена языка, resize не запускают появление заново).
+  if (playerRevealed) return;
 
   if (playerTracksTimeline) {
     try { playerTracksTimeline.kill(); } catch (e) {}
@@ -6680,11 +6701,9 @@ function initPlayerTrackCardsTimeline(initialPreHide = true, alreadyAnimated = f
       trigger: '#trackListContainer',
       start: computeDynamicStart(83),
       end: 'bottom top',
-      toggleActions: 'play none none reverse',
-      onLeaveBack: () => {
-        playerTracksTimeline.timeScale(1.6).reverse();
-      },
+      toggleActions: 'play none none none',
       onEnter: () => {
+        playerRevealed = true;
         playerTracksTimeline.timeScale(1.0).play();
       }
     }
@@ -6699,6 +6718,7 @@ function initPlayerTrackCardsTimeline(initialPreHide = true, alreadyAnimated = f
 
   if (isAlreadyInView || alreadyAnimated) {
     playerTracksTimeline.progress(1);
+    playerRevealed = true;
   }
 
   if (playerTimelines && !playerTimelines.includes(playerTracksTimeline)) {
@@ -6707,6 +6727,8 @@ function initPlayerTrackCardsTimeline(initialPreHide = true, alreadyAnimated = f
 }
 
 let servicesTimelines = [];
+// Секция услуг уже всплыла: при перерисовке (смена языка) повторно не прячем.
+let servicesRevealed = false;
 
 function initServicesGsapAnimation() {
   if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') return;
@@ -6717,6 +6739,8 @@ function initServicesGsapAnimation() {
   const sectionHeader = section.querySelector('.text-center');
   const cards = document.querySelectorAll('#servicesContainer > *');
   if (!cards.length) return;
+
+  if (servicesRevealed) return;
 
   // На телефоне карточки услуг — карусель с coverflow: их transform и opacity
   // принадлежат updateServicesDots(). GSAP здесь анимирует только содержимое,
@@ -6779,7 +6803,7 @@ function initServicesGsapAnimation() {
     if (sectionHeader) gsap.set(sectionHeader, { opacity: 1, y: 0 });
     cards.forEach(card => {
       if (!mobileCarousel) gsap.set(card, { opacity: 1, y: 0 });
-      gsap.set(card.querySelectorAll('.service-feature-item'), { opacity: 1, x: 0 });
+      gsap.set(card.querySelectorAll('.service-feature-item'), { opacity: 1, x: 0, y: 0 });
       gsap.set(card.querySelectorAll('.service-check-icon'), { opacity: 1, scale: 1 });
       gsap.set(card.querySelectorAll('.service-card-top, .service-card-bottom, .service-card-divider, .service-card-pricing, .service-card-order-btn, .service-card-price-group'), { opacity: 1, y: 0, scaleX: 1 });
     });
@@ -6788,16 +6812,15 @@ function initServicesGsapAnimation() {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // ПОЯВЛЕНИЕ И «УЕЗД» КАРТОЧЕК УСЛУГ — тем же шаблоном, что в разделах
-  // «Вопросы» и «Контакты» (там анимация работает правильно):
+  // ПОЯВЛЕНИЕ КАРТОЧЕК УСЛУГ — тем же шаблоном, что в разделах «Вопросы» и
+  // «Контакты»:
   //
   //   gsap.fromTo(el, { y, opacity: 0 } → { y: 0, opacity: 1, overwrite: 'auto',
   //     scrollTrigger: { trigger: el, end: 'bottom top',
-  //                      toggleActions: 'play none none reverse' } })
+  //                      toggleActions: 'play none none none' } })
   //
-  // `play … reverse` даёт сразу обе анимации: открытие при прокрутке вниз и
-  // закрытие (плавный уезд) при прокрутке вверх. Раньше стояло 'none' — поэтому
-  // закрытия не было видно, а открытие «не читалось».
+  // `play … none` — появление строго один раз: карточка всплывает при
+  // прокрутке вниз и остаётся на месте, когда листаешь обратно.
   //
   // На каждую карточку вешаем ОДИН таймлайн (оболочка + содержимое вместе):
   // два отдельных триггера на одной карточке срабатывали не одновременно, и
@@ -6849,14 +6872,15 @@ function initServicesGsapAnimation() {
 
   const bottomContainer = document.querySelector('#servicesContainer .service-card-bottom') || '#servicesContainer';
 
-  // Заголовок секции — как в остальных разделах: появление и уезд.
+  // Заголовок секции — как в остальных разделах: появление один раз.
   if (sectionHeader) {
     const headerTl = gsap.timeline({
       scrollTrigger: {
         trigger: sectionHeader,
         start: computeDynamicStart(88),
         end: 'bottom top',
-        toggleActions: 'play none none reverse'
+        toggleActions: 'play none none none',
+        onEnter: () => { servicesRevealed = true; }
       }
     });
 
@@ -6867,7 +6891,10 @@ function initServicesGsapAnimation() {
       0
     );
 
-    if (isAlreadyInView(sectionHeader)) headerTl.progress(1);
+    if (isAlreadyInView(sectionHeader)) {
+      headerTl.progress(1);
+      servicesRevealed = true;
+    }
     servicesTimelines.push(headerTl);
   }
 
@@ -6886,7 +6913,7 @@ function initServicesGsapAnimation() {
         trigger: card,
         start: computeDynamicStart(86),
         end: 'bottom top',
-        toggleActions: 'play none none reverse'
+        toggleActions: 'play none none none'
       }
     });
 
@@ -6899,14 +6926,46 @@ function initServicesGsapAnimation() {
       );
     }
 
-    if (innerEls.length) {
-      // Содержимое догоняет оболочку с лёгкой задержкой и мягким каскадом.
+    const innerStart = wave + (mobileCarousel ? 0 : 0.06);
+
+    // Пункты списка услуг («галочки») идут ОТДЕЛЬНЫМ каскадом с крупным шагом:
+    // список читается строка за строкой сверху вниз (общая волна содержимого
+    // их пропускает, иначе на одном элементе было бы два твина).
+    const featureItems = card.querySelectorAll('.service-feature-item');
+    const checkIcons = card.querySelectorAll('.service-check-icon');
+    const otherInnerEls = [];
+    innerEls.forEach(el => {
+      if (el.classList.contains('service-feature-item') || el.classList.contains('service-check-icon')) return;
+      otherInnerEls.push(el);
+    });
+
+    if (otherInnerEls.length) {
+      // Остальное содержимое догоняет оболочку с лёгкой задержкой и мягким каскадом.
       cardTl.fromTo(
-        innerEls,
+        otherInnerEls,
         { opacity: 0 },
         { opacity: 1, duration: 0.4, stagger: 0.03, ease: 'power2.out', overwrite: 'auto' },
-        wave + (mobileCarousel ? 0 : 0.06)
+        innerStart
       );
+    }
+
+    if (featureItems.length) {
+      cardTl.fromTo(
+        featureItems,
+        { opacity: 0, y: 12 },
+        { opacity: 1, y: 0, duration: 0.42, stagger: 0.12, ease: 'power2.out', overwrite: 'auto' },
+        innerStart + 0.04
+      );
+
+      if (checkIcons.length) {
+        // Галочка «прощёлкивает» сразу после своей строки — чуть позже текста.
+        cardTl.fromTo(
+          checkIcons,
+          { opacity: 0, scale: 0.4 },
+          { opacity: 1, scale: 1, duration: 0.36, stagger: 0.12, ease: 'back.out(2.5)', overwrite: 'auto' },
+          innerStart + 0.1
+        );
+      }
     }
 
     if (isAlreadyInView(card)) cardTl.progress(1);
@@ -6964,11 +7023,16 @@ function initServicesGsapAnimation() {
   }
 }
 
+// Вопросы FAQ уже всплыли: при перерисовке (смена языка) повторно не прячем.
+let faqRevealed = false;
+
 function initFaqGsapAnimation() {
   if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') return;
 
   const faqItems = document.querySelectorAll('#faqContainer > *');
   if (!faqItems.length) return;
+
+  if (faqRevealed) return;
 
   // Kill previous triggers attached to FAQ items
   ScrollTrigger.getAll().forEach(st => {
@@ -6998,7 +7062,8 @@ function initFaqGsapAnimation() {
           trigger: item,
           start: computeDynamicStart(86),
           end: 'bottom top',
-          toggleActions: 'play none none reverse'
+          toggleActions: 'play none none none',
+          onEnter: () => { faqRevealed = true; }
         }
       }
     );
@@ -7039,7 +7104,7 @@ function initContactsGsapAnimation() {
           trigger: '#contactsGrid',
           start: computeDynamicStart(85),
           end: 'bottom top',
-          toggleActions: 'play none none reverse'
+          toggleActions: 'play none none none'
         }
       }
     );
