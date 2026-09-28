@@ -1331,15 +1331,23 @@ body.nr-src-before .deck-btn-before { box-shadow: 0 0 18px rgba(16, 185, 129, 0.
   .nr-ledstrip { display: none !important; }
 }
 
-#servicesContainer > *:hover::after { background-position: -60% 0; }
+/* Наведение — только там, где есть настоящий курсор: на телефонах и планшетах
+   :hover «залипает» после касания, поэтому карточки услуг оставались
+   подсвеченными (блик, винты, LED-лента, блик по цене) и при свайпе, и при
+   тапе. Тот же приём, что у карточек треков (выше) и отзывов (ниже). */
+@media (hover: hover) and (pointer: fine) {
+  #servicesContainer > *:hover::after { background-position: -60% 0; }
+}
 
 /* Винты рэка поворачиваются при наведении */
 .rack-bolt { transition: transform 0.6s var(--nr-snap), box-shadow 0.4s ease; }
 
-#servicesContainer > *:hover .rack-bolt,
-.rack-card:hover .rack-bolt {
-  transform: rotate(92deg);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 8px rgba(245, 158, 11, 0.5);
+@media (hover: hover) and (pointer: fine) {
+  #servicesContainer > *:hover .rack-bolt,
+  .rack-card:hover .rack-bolt {
+    transform: rotate(92deg);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 8px rgba(245, 158, 11, 0.5);
+  }
 }
 
 /* Лента индикаторов по верхней кромке карточки */
@@ -1372,8 +1380,10 @@ body.nr-src-before .deck-btn-before { box-shadow: 0 0 18px rgba(16, 185, 129, 0.
 
 .popular-rack-card .nr-ledstrip { top: 22px; }
 
-#servicesContainer > *:hover .nr-ledstrip { opacity: 1; }
-#servicesContainer > *:hover .nr-ledstrip i { animation: nrLedChase 1.3s ease-in-out infinite; }
+@media (hover: hover) and (pointer: fine) {
+  #servicesContainer > *:hover .nr-ledstrip { opacity: 1; }
+  #servicesContainer > *:hover .nr-ledstrip i { animation: nrLedChase 1.3s ease-in-out infinite; }
+}
 
 @keyframes nrLedChase {
   0%, 100% { background: #222836; box-shadow: none; }
@@ -1450,7 +1460,9 @@ body.nr-src-before .deck-btn-before { box-shadow: 0 0 18px rgba(16, 185, 129, 0.
 /* Цена — блик по градиенту */
 #servicesContainer .bg-clip-text { background-size: 220% 100%; }
 
-#servicesContainer > *:hover .bg-clip-text { animation: nrPriceShine 2.6s ease-in-out infinite; }
+@media (hover: hover) and (pointer: fine) {
+  #servicesContainer > *:hover .bg-clip-text { animation: nrPriceShine 2.6s ease-in-out infinite; }
+}
 
 @keyframes nrPriceShine {
   0%, 100% { background-position: 0% 0; }
@@ -1470,7 +1482,9 @@ body.nr-src-before .deck-btn-before { box-shadow: 0 0 18px rgba(16, 185, 129, 0.
   transition: background-position 0.8s var(--nr-ease);
 }
 
-#servicesContainer button:hover::after { background-position: -60% 0; }
+@media (hover: hover) and (pointer: fine) {
+  #servicesContainer button:hover::after { background-position: -60% 0; }
+}
 
 /* ═══ 10. FAQ ═════════════════════════════════════════════════════════ */
 
@@ -1489,7 +1503,13 @@ body.nr-src-before .deck-btn-before { box-shadow: 0 0 18px rgba(16, 185, 129, 0.
   transition: transform 0.5s var(--nr-ease);
 }
 
-#faqContainer > div:hover::before,
+/* Наведение — только для курсора: на тач-экране янтарная полоса оставалась бы
+   зажжённой после касания. Раскрытый вопрос (.nr-faq-open) работает на всех
+   устройствах — правило ниже. */
+@media (hover: hover) and (pointer: fine) {
+  #faqContainer > div:hover::before { transform: scaleY(1); }
+}
+
 #faqContainer > div.nr-faq-open::before { transform: scaleY(1); }
 
 #faqContainer > div.nr-faq-open { box-shadow: 0 0 34px rgba(245, 158, 11, 0.10), inset 0 0 24px rgba(245, 158, 11, 0.04); }
@@ -1543,7 +1563,12 @@ body.nr-src-before .deck-btn-before { box-shadow: 0 0 18px rgba(16, 185, 129, 0.
   opacity: 0.5;
 }
 
-#contacts .rack-card:hover::before { animation: nrSpin 6s linear infinite; opacity: 0.9; }
+/* Наведение — только там, где есть курсор: на телефонах и планшетах :hover
+   «залипает» после касания, и карточки контактов оставались подсвеченными
+   (подъём, свечение, крутящаяся рамка) и при свайпе, и при тапе. */
+@media (hover: hover) and (pointer: fine) {
+  #contacts .rack-card:hover::before { animation: nrSpin 6s linear infinite; opacity: 0.9; }
+}
 
 #contacts .grid > a,
 #contacts .grid > button,
@@ -1554,20 +1579,24 @@ body.nr-src-before .deck-btn-before { box-shadow: 0 0 18px rgba(16, 185, 129, 0.
   transition: transform 0.35s var(--nr-ease), background-color 0.3s ease, box-shadow 0.4s ease;
 }
 
-#contacts .grid > a:hover,
-#contacts .grid > button:hover,
-#contactModal .grid > a:hover,
-#contactModal .grid > button:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(245, 158, 11, 0.12);
+@media (hover: hover) and (pointer: fine) {
+  #contacts .grid > a:hover,
+  #contacts .grid > button:hover,
+  #contactModal .grid > a:hover,
+  #contactModal .grid > button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(245, 158, 11, 0.12);
+  }
 }
 
 #contacts .grid svg,
 #contactModal .grid svg { transition: transform 0.45s var(--nr-snap); }
 
 /* Самолётик Telegram улетает и возвращается */
-#contacts .grid > a[href*="t.me"]:hover svg,
-#contactModal .grid > a[href*="t.me"]:hover svg { animation: nrSend 0.75s var(--nr-ease); }
+@media (hover: hover) and (pointer: fine) {
+  #contacts .grid > a[href*="t.me"]:hover svg,
+  #contactModal .grid > a[href*="t.me"]:hover svg { animation: nrSend 0.75s var(--nr-ease); }
+}
 
 @keyframes nrSend {
   0%   { transform: translate(0, 0); }
@@ -1576,18 +1605,42 @@ body.nr-src-before .deck-btn-before { box-shadow: 0 0 18px rgba(16, 185, 129, 0.
   100% { transform: translate(0, 0); opacity: 1; }
 }
 
-#contacts .grid > button:hover svg,
-#contactModal .grid > button:hover svg { transform: scale(1.18) rotate(-6deg); }
+@media (hover: hover) and (pointer: fine) {
+  #contacts .grid > button:hover svg,
+  #contactModal .grid > button:hover svg { transform: scale(1.18) rotate(-6deg); }
 
-#contacts .grid > a[href*="vk"]:hover svg,
-#contactModal .grid > a[href*="vk"]:hover svg,
-#contacts .grid > a[href*="instagram"]:hover svg,
-#contactModal .grid > a[href*="instagram"]:hover svg { animation: nrPop 0.6s var(--nr-snap); }
+  #contacts .grid > a[href*="vk"]:hover svg,
+  #contactModal .grid > a[href*="vk"]:hover svg,
+  #contacts .grid > a[href*="instagram"]:hover svg,
+  #contactModal .grid > a[href*="instagram"]:hover svg { animation: nrPop 0.6s var(--nr-snap); }
+}
 
 @keyframes nrPop {
   0%, 100% { transform: scale(1); }
   45%      { transform: scale(1.25); }
 }
+
+/* Отклик на тап по карточкам контактов. На сенсорных экранах :hover не
+   работает (правила выше), поэтому подъём, свечение и анимацию иконки
+   включает класс .nr-contact-tap: его ставит animations.js ровно на клик
+   (клик браузер шлёт только за тап) и снимает через ход. При свайпе и
+   прокрутке клика нет — карточка не оживает. */
+#contacts .grid > .nr-contact-tap,
+#contactModal .grid > .nr-contact-tap {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(245, 158, 11, 0.12);
+}
+
+#contacts .grid > a[href*="t.me"].nr-contact-tap svg,
+#contactModal .grid > a[href*="t.me"].nr-contact-tap svg { animation: nrSend 0.75s var(--nr-ease); }
+
+#contacts .grid > button.nr-contact-tap svg,
+#contactModal .grid > button.nr-contact-tap svg { transform: scale(1.18) rotate(-6deg); }
+
+#contacts .grid > a[href*="vk"].nr-contact-tap svg,
+#contactModal .grid > a[href*="vk"].nr-contact-tap svg,
+#contacts .grid > a[href*="instagram"].nr-contact-tap svg,
+#contactModal .grid > a[href*="instagram"].nr-contact-tap svg { animation: nrPop 0.6s var(--nr-snap); }
 
 /* Успешное копирование — зелёная вспышка */
 .nr-copied { animation: nrCopied 0.9s ease; }

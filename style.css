@@ -929,9 +929,16 @@ html, body {
   }
 }
 
-.rack-card:hover {
-  border-color: rgba(245, 158, 11, 0.35);
-  box-shadow: 0 28px 55px rgba(0, 0, 0, 0.8), 0 0 28px rgba(245, 158, 11, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+/* Наведение — только там, где есть настоящий курсор: на телефонах и планшетах
+   :hover «залипает» после касания, и карточка (услуги, FAQ, отзывы, корпус
+   контактов) остаётся подсвеченной как под мышью — рамка и свечение видны и
+   после свайпа, и после тапа. Тот же приём, что у карточек треков и отзывов
+   (animations.css). */
+@media (hover: hover) and (pointer: fine) {
+  .rack-card:hover {
+    border-color: rgba(245, 158, 11, 0.35);
+    box-shadow: 0 28px 55px rgba(0, 0, 0, 0.8), 0 0 28px rgba(245, 158, 11, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
 }
 
 .rack-bolt {
@@ -962,8 +969,10 @@ html, body {
   }
 }
 
-.popular-rack-card:hover {
-  box-shadow: 0 0 35px rgba(245, 158, 11, 0.45), 0 18px 36px rgba(0, 0, 0, 0.8), inset 0 0 28px rgba(245, 158, 11, 0.16);
+@media (hover: hover) and (pointer: fine) {
+  .popular-rack-card:hover {
+    box-shadow: 0 0 35px rgba(245, 158, 11, 0.45), 0 18px 36px rgba(0, 0, 0, 0.8), inset 0 0 28px rgba(245, 158, 11, 0.16);
+  }
 }
 
 .popular-rack-card * {

@@ -1362,6 +1362,30 @@
       btn.classList.add('nr-copied');
     });
 
+    /* Отклик на тап по карточкам контактов (animations.css →
+       .nr-contact-tap). Ставим только там, где hover-эффекты отключены
+       медиазапросом: на сенсорных экранах :hover «залипает», поэтому подъём
+       и анимация иконки включаются классом. Клик браузер шлёт только за
+       настоящий тап — при свайпе и прокрутке его нет, и карточка не оживает. */
+    if (!REDUCED && window.matchMedia &&
+        !window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      var CONTACT_TAP_MS = 800; /* ход подъёма 0.35s + возврат 0.35s */
+      var contactTapTimer = 0;
+      document.addEventListener('click', function (e) {
+        var card = e.target.closest && e.target.closest('#contactsGrid > *, #contactModal .grid > *');
+        if (!card) return;
+        /* Остатки прошлого тапа снимаем сразу: подъём должен быть у одной карточки. */
+        var marked = document.querySelectorAll('.nr-contact-tap');
+        for (var i = 0; i < marked.length; i++) marked[i].classList.remove('nr-contact-tap');
+        void card.offsetWidth;
+        card.classList.add('nr-contact-tap');
+        clearTimeout(contactTapTimer);
+        contactTapTimer = setTimeout(function () {
+          card.classList.remove('nr-contact-tap');
+        }, CONTACT_TAP_MS);
+      });
+    }
+
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', function () {
       safe(refreshScrollMax);
