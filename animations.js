@@ -282,18 +282,35 @@
 
   /* Полоска всегда догоняет цель с easing. Из-за этого она не «дёргается» на
      быстрой прокрутке и не прыгает, когда высота страницы меняется без
-     события scroll (открылся вопрос в FAQ, появился нижний плеер и т.п.). */
-  function runScrollLine() {
+     события scroll (открылся вопрос в FAQ, появился нижний плеер и т.п.).
+
+     ПРАВКА ПРОТИВ ДЁРГАНЬЯ. Раньше догон шёл в СОБСТВЕННОМ rAF-цикле, отдельном
+     от кадра прокрутки: на каждый кадр скролла работали уже ДВЕ независимые
+     rAF-цепочки (handleScrollUpdate + runScrollLine) плюс tick инерционного
+     скролла — три потребителя одного кадра браузера, и на 60 Гц это давало
+     пропуски. Теперь шаг догона делает тот же кадр (stepScrollLine вызывается
+     из handleScrollUpdate), а свой rAF поднимается ТОЛЬКО вне прокрутки —
+     например когда высота страницы изменилась, а колесо не крутится.
+
+     Возвращает true, если догон ещё не завершён (нужен следующий кадр). */
+  function stepScrollLine() {
     var diff = lineTarget - lineValue;
     if (Math.abs(diff) < 0.0006) {
       lineValue = lineTarget;
       lineRunning = false;
       paintScrollLine();
-      return;
+      return false;
     }
     lineValue += diff * 0.14;
     paintScrollLine();
-    requestAnimationFrame(runScrollLine);
+    return true;
+  }
+
+  /* Вне цикла скролла доводим полоску отдельным кадром, пока есть разница. */
+  function runScrollLineIdle() {
+    if (!lineRunning) return;
+    if (stepScrollLine()) requestAnimationFrame(runScrollLineIdle);
+    else lineRunning = false;
   }
 
   function setScrollLineProgress(p, snap) {
@@ -304,9 +321,12 @@
       paintScrollLine();
       return;
     }
+    /* Догон ведёт кадр прокрутки, если он сейчас активен: в handleScrollUpdate
+       вызывается stepScrollLine. Иначе (высота страницы изменилась без
+       прокрутки) — поднимаем разовый rAF. */
     if (!lineRunning) {
       lineRunning = true;
-      requestAnimationFrame(runScrollLine);
+      if (!scrollFrameActive()) requestAnimationFrame(runScrollLineIdle);
     }
   }
 
@@ -984,7 +1004,14 @@
   /* ═══ 14. СТУДИЙНЫЙ ФЕЙДЕР И СКРОЛЛ ══════════════════════════════════ */
 
   var faderTimer = null;
+  var bodyHasFaderactive = false; /* класс уже стоит? — чтобы не писать его каждый кадр */
+  var scrollClassTimer = null;    /* снятие nr-scrolling после остановки прокрутки */
   var isScrollTicking = false;
+
+  /* true, пока запланирован кадр handleScrollUpdate. Полоска прогресса
+     (setScrollLineProgress) по этому флагу решает: доводить себя тем же кадром
+     прокрутки или поднимать собственный rAF (см. runScrollLineIdle). */
+  function scrollFrameActive() { return isScrollTicking; }
   var wasScrolled = false;
 
   function onScroll() {
@@ -1005,9 +1032,19 @@
     var p = computeScrollProgress();
 
     /* Полоска прогресса едет плавно: цель обновляем сразу, а отрисовку догоняем
-       в собственном rAF. При очень большом прыжке (переход по якорю, возврат в
-       начало страницы) переставляем мгновенно, иначе она выглядит «залипшей». */
-    safe(function () { setScrollLineProgress(p, Math.abs(p - lineValue) > 0.3); });
+       В ЭТОМ ЖЕ кадре (см. stepScrollLine). Отдельного rAF-цикла на прокрутке
+       больше нет — иначе на каждый кадр скролла приходилось бы по две
+       конкурирующие rAF-цепочки, и кадры срывались бы на 60 Гц.
+       При очень большом прыжке (переход по якорю, возврат в начало страницы)
+       переставляем мгновенно, иначе она выглядит «залипшей». */
+    safe(function () {
+      if (Math.abs(p - lineValue) > 0.3) {
+        setScrollLineProgress(p, true);
+      } else {
+        lineTarget = p;
+        if (lineRunning) stepScrollLine();
+      }
+    });
 
     /* Фон главного экрана отстаёт от контента (см. initHeroParallax).
        Дёшево: позиция секции не измеряется, а лишние записи в style
@@ -1025,14 +1062,43 @@
       document.body.classList.toggle('nr-scrolled', isScrolled);
     }
 
-    /* Десктопный SSL фейдер — активен только на экранах от 1024px */
+    /* На время прокрутки снимаем дорогое размытие у липких панелей
+       (см. правило html.nr-scrolling в style.css). Класс ставим только если
+       его ещё нет — во время непрерывного скролла кадры не трогают classList,
+       — а снимаем через 180 мс после остановки, чтобы не «моргал» на паузах
+       между щелчками колеса и при инерционном докате. */
+    var root = document.documentElement;
+    if (!root.classList.contains('nr-scrolling')) root.classList.add('nr-scrolling');
+    if (scrollClassTimer !== null) clearTimeout(scrollClassTimer);
+    scrollClassTimer = setTimeout(function () {
+      scrollClassTimer = null;
+      root.classList.remove('nr-scrolling');
+    }, 180);
+
+    /* Десктопный SSL фейдер — активен только на экранах от 1024px.
+       Раньше класс и таймер дёргались на КАЖДОМ кадре прокрутки: браузер
+       каждый раз перезаписывал classList и пересоздавал setTimeout. Теперь
+       всё это происходит только когда состояние реально меняется — во время
+       непрерывного скролла кадры почти не трогают DOM, а гашение через 420мс
+       после остановки работает как прежде. */
     if (window.innerWidth >= 1024) {
-      document.body.classList.add('nr-faderactive');
-      clearTimeout(faderTimer);
+      if (!bodyHasFaderactive) {
+        bodyHasFaderactive = true;
+        document.body.classList.add('nr-faderactive');
+      }
+      if (faderTimer !== null) clearTimeout(faderTimer);
       faderTimer = setTimeout(function () {
+        faderTimer = null;
+        bodyHasFaderactive = false;
         document.body.classList.remove('nr-faderactive');
       }, 420);
     }
+
+    /* Если полоска ещё не догнала цель, а кадр прокрутки на этом заканчивается
+       (колесо остановилось, инерция докатилась), доводим её разовым rAF — иначе
+       она застыла бы на промежуточном значении. Пока прокрутка идёт, догон
+       продолжает следующий кадр handleScrollUpdate, и лишних циклов не плодится. */
+    if (lineRunning) safe(runScrollLineIdle);
   }
 
   /* ═══ 15. ЭКОНОМИЯ РЕСУРСОВ ═════════════════════════════════════════ */
@@ -1107,7 +1173,15 @@
     }
   });
 
-  ['pointerdown', 'keydown', 'touchstart', 'wheel', 'scroll'].forEach(function (ev) {
+  /* ВАЖНО (правка против дёрганья). Раньше в списке были ещё 'wheel' и
+     'scroll' — и главный цикл просыпался на КАЖДОЕ событие прокрутки, то есть
+     во время скролла каждый кадр крутился loop() с updateEngine, синком
+     состояния и отрисовкой canvas-эквалайзера — даже когда секция плеера была
+     за экраном и звук молчал. Простое «не реагировать на прокрутку» здесь
+     безопасно: въезд секции плеера в экран отслеживает отдельный
+     IntersectionObserver (initPlayerSectionEq) и сам будит цикл, а ввод
+     пользователя ловится pointerdown/keydown/touchstart и медиа-событиями. */
+  ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) {
     document.addEventListener(ev, wakeLoop, { passive: true });
   });
   // Медиа-события не всплывают, поэтому слушаем их на фазе перехвата

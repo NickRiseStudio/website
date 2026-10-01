@@ -27,6 +27,11 @@ function scheduleScrollTriggerRefresh(delay) {
   scrollTriggerRefreshTimer = setTimeout(() => {
     scrollTriggerRefreshTimer = 0;
     if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
+    /* Раскладка/высота страницы изменились (смена языка, раскрытие FAQ и
+       отзывов, появление плеера, рост карточек) — значит устарели и кэши
+       геометрии scroll-spy. Обновляем их здесь же, вне кадра прокрутки, чтобы
+       подсветка навигации оставалась точной, а сам скролл не читал раскладку. */
+    if (typeof refreshScrollSpyAnchors === 'function') refreshScrollSpyAnchors();
   }, delay || 0);
 }
 
@@ -6195,14 +6200,27 @@ function initCalcHints() {
     hideCalcHint();
   }, true);
 
-  const reposition = () => {
-    if (!calcHintVisibleId) return;
-    const tip = document.getElementById('calcHintTip');
-    const dot = getCalcHintDot(calcHintVisibleId);
-    if (tip && dot) positionCalcHint(tip, dot);
+  /* Подсказка калькулятора прилипает к своему кружку при прокрутке/повороте.
+     Раньше на КАЖДОЕ событие scroll (да ещё и с capture:true) вызывался
+     positionCalcHint, а он читает getBoundingClientRect — это переклейка
+     раскладки на каждое событие. Теперь считаем положение один раз за кадр:
+     события лишь поднимают флаг, а фактический пересчёт делает rAF. Пока
+     подсказка не показана, колбэк выходит сразу (calcHintVisibleId пуст), так
+     что в обычной прокрутке лишней работы нет вообще. */
+  let calcHintRepositionQueued = false;
+  const queueReposition = () => {
+    if (!calcHintVisibleId || calcHintRepositionQueued) return;
+    calcHintRepositionQueued = true;
+    requestAnimationFrame(() => {
+      calcHintRepositionQueued = false;
+      if (!calcHintVisibleId) return;
+      const tip = document.getElementById('calcHintTip');
+      const dot = getCalcHintDot(calcHintVisibleId);
+      if (tip && dot) positionCalcHint(tip, dot);
+    });
   };
-  window.addEventListener('resize', reposition, { passive: true });
-  window.addEventListener('scroll', reposition, { passive: true, capture: true });
+  window.addEventListener('resize', queueReposition, { passive: true });
+  window.addEventListener('scroll', queueReposition, { passive: true, capture: true });
 }
 
 // --- MOBILE MENU ---
@@ -6427,6 +6445,62 @@ let scrollSpyClickLockTimer = null;
 let lastScrollSpyY = typeof window !== 'undefined' ? (window.pageYOffset || document.documentElement.scrollTop || 0) : 0;
 let scrollSpyDirection = 'down';
 
+/* ─── Кэш геометрии секций для scroll-spy ──────────────────────────────
+   Раньше updateActiveNavSection на КАЖДОМ кадре скролла вызывал
+   getSectionAnchorTop → getBoundingClientRect по 5 секциям (плюс отдельный
+   вызов для первой). Это 6 вынужденных пересчётов раскладки В КАДРЕ, прямо
+   между записями стилей (полоска прогресса, фон шапки) — классический
+   layout thrashing, из-за которого срывались кадры на быстрой прокрутке.
+   Теперь позиции заголовков секций в системе координат ДОКУМЕНТА считаются
+   один раз (и при resize/refresh), а в кадре от них отнимается только
+   текущий scrollY — на страницу, которая между пересчётами не меняла высоту,
+   это точная эквивалентная величина. Пересчёт вешает сам scroll-spy и
+   внешние вызовы (смена языка, раскрытие отзывов/FAQ, появление плеера). */
+const NAV_SECTIONS = ['player', 'services', 'faq', 'contacts', 'reviews'];
+let scrollSpyAnchors = Object.create(null); /* id → top в координатах документа */
+let scrollSpyDocHeight = 0;  /* высота документа на момент замера */
+let scrollSpyHeaderH = 0;    /* высота шапки на момент замера */
+
+function measureSectionAnchorTop(el) {
+  if (!el) return null;
+  /* Топ заголовка раздела в координатах документа = его позиция во вьюпорте
+     плюс текущая прокрутка. Если заголовка нет или он скрыт (нулевой размер —
+     например, свёрнутый блок), берём край контейнера — как было в прежней
+     покадровой версии. */
+  const heading = el.querySelector('h2, h1, [data-section-title], .section-title');
+  if (heading) {
+    const hr = heading.getBoundingClientRect();
+    if (hr.height > 0 || hr.width > 0) return hr.top + (window.pageYOffset || document.documentElement.scrollTop || 0);
+  }
+  const rect = el.getBoundingClientRect();
+  return rect.top + (window.pageYOffset || document.documentElement.scrollTop || 0);
+}
+
+function refreshScrollSpyAnchors() {
+  const cache = Object.create(null);
+  for (let i = 0; i < NAV_SECTIONS.length; i++) {
+    const id = NAV_SECTIONS[i];
+    const el = document.getElementById(id);
+    cache[id] = el ? measureSectionAnchorTop(el) : null;
+  }
+  scrollSpyAnchors = cache;
+  /* Заодно кэшируем высоту документа и шапки: в кадре прокрутки updateActiveNavSection
+     опирается на них, а любое чтение scrollHeight/offsetHeight = переклейка раскладки. */
+  scrollSpyDocHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+  const header = document.querySelector('header');
+  scrollSpyHeaderH = header ? header.offsetHeight : 72;
+}
+
+/* Позиция якоря секции в текущем вьюпорте из кэша (без чтения раскладки). */
+function getSectionAnchorTop(el) {
+  if (!el || !el.id) return null;
+  const top = scrollSpyAnchors[el.id];
+  if (top === undefined) return null;
+  if (top === null) return null;
+  const scrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+  return top - scrollY;
+}
+
 function isDesktopNavActive() {
   if (typeof getDeviceType === 'function') {
     return getDeviceType() === 'desktop';
@@ -6462,21 +6536,6 @@ function setActiveNavSection(sectionId) {
   });
 }
 
-function getSectionAnchorTop(el) {
-  if (!el) return null;
-  // Ищем заголовок раздела (h2, h1 или специализированный класс)
-  // Если заголовок найден — ориентируемся на него как на смысловой центр раздела
-  // Если верстка изменится или заголовка нет — плавно ориентируемся на верхний край контейнера
-  const heading = el.querySelector('h2, h1, [data-section-title], .section-title');
-  if (heading) {
-    const headingRect = heading.getBoundingClientRect();
-    if (headingRect.height > 0 || headingRect.width > 0) {
-      return headingRect.top;
-    }
-  }
-  return el.getBoundingClientRect().top;
-}
-
 function updateActiveNavSection() {
   // На телефонах и планшетах полностью отключаем scrollspy-подсветку
   if (!isDesktopNavActive()) {
@@ -6488,7 +6547,9 @@ function updateActiveNavSection() {
 
   const scrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
   const windowHeight = window.innerHeight || document.documentElement.clientHeight || 0;
-  const documentHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+  /* Высота документа и шапки — из кэша (refreshScrollSpyAnchors): чтение
+     scrollHeight/offsetHeight здесь означало бы пересчёт раскладки в кадре. */
+  const documentHeight = scrollSpyDocHeight || Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
 
   // Определение направления скролла с фильтрацией микро-колебаний
   const scrollDelta = scrollY - lastScrollSpyY;
@@ -6505,7 +6566,7 @@ function updateActiveNavSection() {
   }
 
   const header = document.querySelector('header');
-  const headerH = header ? header.offsetHeight : 72;
+  const headerH = scrollSpyHeaderH || (header ? header.offsetHeight : 72);
 
   // Оптический центр видимой зоны экрана (между фиксированной шапкой и низом вьюпорта):
   // При скролле ВНИЗ: заголовок следующего раздела доходит до центра экрана (~47% видимой высоты) -> активируется этот раздел.
@@ -6515,8 +6576,6 @@ function updateActiveNavSection() {
   const triggerY = scrollSpyDirection === 'down'
     ? visibleCenter
     : headerH + Math.round(visibleHeight * 0.72);
-
-  const NAV_SECTIONS = ['player', 'services', 'faq', 'contacts', 'reviews'];
 
   // Зона Hero: если заголовок первого раздела (player) ещё не поднялся до центра экрана,
   // значит внимание пользователя на главном экране — подсветка выключена
@@ -6564,6 +6623,14 @@ function initScrollSpy() {
 
   window.addEventListener('scroll', onScrollOrResize, { passive: true });
   window.addEventListener('resize', onScrollOrResize, { passive: true });
+
+  /* Геометрию секций пересчитываем здесь, а не в кадре: сразу после старта
+     (когда раскладка устоялась), после загрузки шрифтов и на resize. */
+  refreshScrollSpyAnchors();
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => { refreshScrollSpyAnchors(); updateActiveNavSection(); });
+  }
+  window.addEventListener('load', () => { refreshScrollSpyAnchors(); updateActiveNavSection(); });
 
   // Recalculate on initial render
   updateActiveNavSection();
