@@ -1136,6 +1136,104 @@
     }
   }
 
+  /* ═══ 16.5. СКВОЗНОЙ ФОН — ПЫЛИНКИ-ЧАСТИЦЫ ═══════════════════════════
+     Едва заметные янтарные пылинки медленно плывут вверх по всему тёмному
+     фону сайта. Один fixed-canvas позади контента (см. animations.css,
+     раздел 19): клики пропускает, глубину задаёт разница размеров/яркости.
+     Рисуется в главном цикле loop() по интервалу — второй rAF не заводим.
+     Уважает LITE (телефон/слабое устройство): меньше частиц и реже кадры.
+     При prefers-reduced-motion слой не создаётся вовсе. */
+
+  var dustCanvas = null;     /* { c, ctx, w, h, dpr } — слой частиц */
+  var dustSprite = null;     /* мягкий ореол одной пылинки (нарисован один раз) */
+  var dustParticles = [];    /* массив частиц */
+  var dustPrev = 0;          /* время прошлой отрисовки, мс */
+  var lastDust = 0;          /* отметка интервала отрисовки в цикле, мс */
+  var DUST_TAU = Math.PI * 2;
+
+  function makeDustSprite() {
+    var s = 64;
+    var c = document.createElement('canvas');
+    c.width = s;
+    c.height = s;
+    var g = c.getContext('2d');
+    var rg = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+    rg.addColorStop(0, 'rgba(255, 236, 190, 1)');
+    rg.addColorStop(0.28, 'rgba(251, 191, 36, 0.55)');
+    rg.addColorStop(1, 'rgba(245, 158, 11, 0)');
+    g.fillStyle = rg;
+    g.fillRect(0, 0, s, s);
+    return c;
+  }
+
+  function dustParticle() {
+    var d = Math.random();               /* глубина: 0 — далеко, 1 — близко */
+    return {
+      nx: Math.random(),                 /* базовая доля по X (0..1) */
+      ny: Math.random(),                 /* доля по Y (0..1) */
+      sp: 8 + d * 14,                    /* скорость подъёма, px/с */
+      glow: 5 + (1 - d) * 7,             /* радиус ореола, px (дальние — размытее) */
+      alpha: 0.05 + d * 0.11,            /* яркость (дальние — тусклее) */
+      swayAmp: 4 + d * 8,                /* размах бокового покачивания, px */
+      swaySpd: 0.15 + Math.random() * 0.25,
+      phase: Math.random() * DUST_TAU,
+      flickSpd: 0.4 + Math.random() * 0.9,
+      flickPhase: Math.random() * DUST_TAU
+    };
+  }
+
+  function sizeDust() {
+    if (!dustCanvas) return;
+    var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    var w = Math.max(1, Math.round(window.innerWidth));
+    var h = Math.max(1, Math.round(window.innerHeight));
+    dustCanvas.w = w;
+    dustCanvas.h = h;
+    dustCanvas.dpr = dpr;
+    dustCanvas.c.width = Math.round(w * dpr);
+    dustCanvas.c.height = Math.round(h * dpr);
+    dustCanvas.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function initDust() {
+    if (REDUCED) return;                 /* системная настройка «уменьшить движение» */
+    var c = Object.assign(el('canvas'), { id: 'nr-dust' });
+    c.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(c);
+    dustCanvas = { c: c, ctx: c.getContext('2d'), w: 0, h: 0, dpr: 1 };
+    sizeDust();
+    dustSprite = makeDustSprite();
+    var count = LITE ? 26 : 64;
+    dustParticles = [];
+    for (var i = 0; i < count; i++) dustParticles.push(dustParticle());
+  }
+
+  function drawDust(now) {
+    if (!dustCanvas || !dustSprite || REDUCED) return;
+    if (dustPrev === 0) dustPrev = now;
+    var dt = Math.min(0.1, (now - dustPrev) / 1000) || 0.016;
+    dustPrev = now;
+
+    var ctx = dustCanvas.ctx, w = dustCanvas.w, h = dustCanvas.h;
+    ctx.clearRect(0, 0, w, h);
+    var t = now / 1000;
+
+    for (var i = 0; i < dustParticles.length; i++) {
+      var p = dustParticles[i];
+      p.ny -= (p.sp * dt) / h;
+      if (p.ny < -0.06) {                /* ушла за верх — возвращаем снизу */
+        p.ny = 1.06;
+        p.nx = Math.random();
+      }
+      var x = (p.nx + Math.sin(t * p.swaySpd + p.phase) * (p.swayAmp / w)) * w;
+      var y = p.ny * h;
+      var flick = 0.7 + 0.3 * Math.sin(t * p.flickSpd + p.flickPhase);
+      ctx.globalAlpha = p.alpha * flick;
+      ctx.drawImage(dustSprite, x - p.glow, y - p.glow, p.glow * 2, p.glow * 2);
+    }
+    ctx.globalAlpha = 1;
+  }
+
   /* ═══ 17. ГЛАВНЫЙ ЦИКЛ ══════════════════════════════════════════════ */
 
   var prev = performance.now();
@@ -1148,7 +1246,10 @@
      рисовать нечего, и цикл засыпает: раньше rAF крутился непрерывно всё
      время, пока открыта вкладка, и на телефоне это тратило батарею. */
   function loopNeeded() {
-    return Engine.playing || playerVisible || document.body.classList.contains('modal-open');
+    /* Пылинки сквозного фона (dustCanvas) дышат постоянно, поэтому при
+       включённом эффекте цикл не засыпает, пока вкладка видима. */
+    return Engine.playing || playerVisible || (dustCanvas && !REDUCED) ||
+      document.body.classList.contains('modal-open');
   }
 
   function startLoop() {
@@ -1207,6 +1308,12 @@
       if (now - lastPlayerEq > eqInterval) {
         lastPlayerEq = now;
         safe(function () { drawPlayerEq(now); });
+      }
+      /* сквозной фон: пылинки — заметно реже, чем эквалайзер */
+      var dustInterval = LITE ? 90 : 50;
+      if (now - lastDust > dustInterval) {
+        lastDust = now;
+        safe(function () { drawDust(now); });
       }
     }
 
@@ -1344,19 +1451,24 @@
     setTimeout(runLaterTasks, 4000);
   }
 
-/* ═══ ЗАСТАВКА «ВКЛЮЧЕНИЯ ПУЛЬТА» (BOOT SCREEN) ═══════════════════
-     #nr-boot видна при каждом заходе/обновлении страницы. Полоса
-     плавно доезжает до 100% одним движением (CSS, ~1.1 с) — без
-     финишных «скачков». Как только полоса доехала и страница готова
-     (window.load или страховка) — заставка уходит фейдом. Пока окно
-     видно, страница заморожена (lockPage): скролл выключен, фокус
-     не покидает оверлей, клики съедает #nr-boot. Лок снимается
-     (unlockPage) только в момент #nr-boot-done — display:none. */
+/* ═══ ЗАСТАВКА «ВКЛЮЧЕНИЯ УСИЛИТЕЛЯ» (BOOT SCREEN) ═══════════════
+     #nr-boot видна при каждом заходе/обновлении страницы. Ряд ламп
+     накаливания «прогревается» по одной слева направо (CSS, ~1.5 с) —
+     это видимый индикатор загрузки вместо прежней полосы. Как только
+     страница готова (window.load или страховка) и MIN_HOLD истёк —
+     заставка уходит фейдом. Пока окно видно, страница заморожена
+     (lockPage): скролл выключен, фокус не покидает оверлей, клики
+     съедает #nr-boot. Лок снимается (unlockPage) только в момент
+     #nr-boot-done — display:none. */
   function initBoot() {
     var boot = $('#nr-boot');
     if (!boot) return;
 
-    var MIN_HOLD = 1000;  /* полоса доехала к ~1.0с (1s + delay 0.12s) */
+    /* Прогрев ламп до последней заканчивается у ~1.5 с (см. animation-delay
+       в §01 animations.css). Держим заставку ровно столько, чтобы прогрев
+       читался целиком. При prefers-reduced-motion кадр статичен —
+       держать его долго незачем, поэтому тайминг короткий. */
+    var MIN_HOLD = REDUCED ? 400 : 1500;
     var FADE_MS = 470;    /* чуть больше CSS-перехода opacity 0.42s */
 
     function blockScroll(e) { e.preventDefault(); }
@@ -1411,7 +1523,7 @@
         setTimeout(ready, MIN_HOLD - elapsed + 30);
         return;
       }
-      /* Полоса уже показала ход до конца — просто прячем заставку. */
+      /* Прогрев уже показал полный ход — просто прячем заставку. */
       hideBoot();
     }
 
@@ -1433,6 +1545,7 @@
   function init() {
     safe(initBoot);
     safe(initAmbient);
+    safe(initDust);
     safe(initHeader);
     safe(initHero);
     safe(initHeroParallax);
@@ -1481,6 +1594,7 @@
          и сразу перерисовываем с новой прокруткой. */
       safe(refreshHeroParallaxRange);
       safe(function () { playerCanvas && playerCanvas.resize(); });
+      safe(sizeDust);
       onScroll();
     }, { passive: true });
 

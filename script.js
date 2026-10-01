@@ -259,7 +259,12 @@ function getI18nAnimatedElements() {
     '#servicesContainer .service-card-desc, ' +
     '#servicesContainer .service-card-features, ' +
     '#servicesContainer .service-card-from, ' +
-    '#servicesContainer .service-card-order-btn span'
+    '#servicesContainer .service-card-order-btn span, ' +
+    // Обратная сторона карточки услуги
+    '#servicesContainer .service-card-back-title, ' +
+    '#servicesContainer .service-card-about, ' +
+    '#servicesContainer .service-card-includes-title, ' +
+    '#servicesContainer .service-card-back-btn span'
   ).forEach(el => {
     if (!elements.includes(el)) elements.push(el);
   });
@@ -3923,6 +3928,15 @@ function renderTrackList(animate = false) {
 }
 
 // --- SERVICES SECTION ---
+// Переворот карточки услуги: клик по карточке показывает обратную сторону
+// («что это такое» + «что входит»), повторный клик / кнопка «Назад» возвращает.
+// Крутится внутренний слой .service-card-inner — саму оболочку нельзя: её
+// transform'ом управляют coverflow карусели (телефон) и GSAP-появление карточек.
+function toggleServiceCardFlip(card) {
+  if (!card) return;
+  card.classList.toggle('is-flipped');
+}
+
 function initServices() {
   renderServices();
 }
@@ -3981,9 +3995,15 @@ function renderServices() {
       const descEl = card.querySelector('.service-card-desc');
       if (descEl) descEl.textContent = desc;
 
-      const featEls = card.querySelectorAll('.service-feature-text');
-      features.forEach((fText, fIdx) => {
-        if (featEls[fIdx]) featEls[fIdx].textContent = fText;
+      // Пункты list есть и на передней, и на обратной стороне — обновляем каждую
+      // грань отдельно, чтобы индексы не «перепрыгивали» через обе стороны.
+      const frontFeatEls = card.querySelectorAll('.service-card-face--front .service-feature-text');
+      frontFeatEls.forEach((el, fIdx) => {
+        if (features[fIdx] !== undefined) el.textContent = features[fIdx];
+      });
+      const backFeatEls = card.querySelectorAll('.service-card-face--back .service-feature-text');
+      backFeatEls.forEach((el, fIdx) => {
+        if (features[fIdx] !== undefined) el.textContent = features[fIdx];
       });
 
       const fromEl = card.querySelector('.service-card-from');
@@ -3997,6 +4017,20 @@ function renderServices() {
 
       const btnSpan = card.querySelector('.service-card-order-btn span');
       if (btnSpan) btnSpan.textContent = orderBtnText;
+
+      // Тексты обратной стороны: «что это такое» + «что входит» + кнопка «Назад».
+      const aboutRaw = currentLang === 'ru' ? s.aboutRu : s.aboutEn;
+      const aboutEl = card.querySelector('.service-card-about');
+      if (aboutEl) aboutEl.textContent = resolveDeviceText(aboutRaw, currentDevice);
+
+      const backTitleEl = card.querySelector('.service-card-back-title');
+      if (backTitleEl) backTitleEl.textContent = resolveDeviceText(t.services.backTitle, currentDevice);
+
+      const includesTitleEl = card.querySelector('.service-card-includes-title');
+      if (includesTitleEl) includesTitleEl.textContent = resolveDeviceText(t.services.includesTitle, currentDevice);
+
+      const backBtnSpan = card.querySelector('.service-card-back-btn span');
+      if (backBtnSpan) backBtnSpan.textContent = resolveDeviceText(t.services.backBtn, currentDevice);
     });
 
     updateServicesDots(false);
@@ -4028,17 +4062,17 @@ function renderServices() {
     // Set initial custom attribute
     card.setAttribute('data-card-index', idx);
 
-    // Клик по карточке услуги (кроме кнопки «Заказать»). На телефоне (карусель)
-    // калькулятор открывается только по активной (центральной) карточке, а тап по
-    // соседней листает карусель до неё — она встаёт в центр. На планшете/ПК карточки
-    // видны все сразу (сетка), поэтому там клик по любой открывает калькулятор.
+    // Клик по карточке услуги (кроме кнопок внутри). На телефоне (карусель)
+    // переворот срабатывает только у активной (центральной) карточки, а тап по
+    // соседней сначала листает карусель до неё — она встаёт в центр. На планшете/ПК
+    // карточки видны все сразу (сетка), поэтому там клик по любой переворачивает её.
     card.addEventListener('click', (e) => {
       if (e.target.closest('button')) return;
       if (window.innerWidth < 640 && idx !== servicesActiveIndex) {
         scrollToServiceCard(idx);
         return;
       }
-      if (typeof openPriceCalcModal === 'function') openPriceCalcModal();
+      toggleServiceCardFlip(card);
     });
 
     let featuresHtml = features.map(f => `
@@ -4072,41 +4106,89 @@ function renderServices() {
     const popularBadgeText = resolveDeviceText(t.services.popularBadge, currentDevice);
     const orderBtnText = resolveDeviceText(t.services.orderBtn, currentDevice);
 
+    // Обратная сторона карточки: «что это такое» + «что входит».
+    const aboutRaw = currentLang === 'ru' ? s.aboutRu : s.aboutEn;
+    const about = resolveDeviceText(aboutRaw, currentDevice);
+    const backTitleText = resolveDeviceText(t.services.backTitle, currentDevice);
+    const includesTitleText = resolveDeviceText(t.services.includesTitle, currentDevice);
+    const backBtnText = resolveDeviceText(t.services.backBtn, currentDevice);
+    const backFeaturesHtml = features.map(f => `
+      <li class="service-feature-item flex items-start gap-3 text-sm text-gray-300">
+        <svg class="service-check-icon w-4 h-4 text-emerald-400 flex-shrink-0 mt-1 drop-shadow-[0_0_6px_rgba(52,211,153,0.5)]" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <span class="service-feature-text leading-relaxed">${f}</span>
+      </li>
+    `).join('');
+
     card.innerHTML = `
       ${s.isPopular ? `<div class="service-card-popular absolute -top-3.5 inset-x-0 flex justify-center pointer-events-none z-10"><span class="popular-badge uppercase tracking-wider pointer-events-auto">${popularBadgeText}</span></div>` : ''}
 
-      <div class="service-card-top flex flex-col">
-        <div class="service-card-meta flex justify-between items-center mb-4 opacity-40">
-          <div class="rack-bolt"></div>
-          <div class="text-[10px] font-mono text-gray-400 tracking-widest uppercase">
-            ${rackUnitText}
+      <div class="service-card-inner">
+        <div class="service-card-face service-card-face--front">
+          <div class="service-card-top flex flex-col">
+            <div class="service-card-meta flex justify-between items-center mb-4 opacity-40">
+              <div class="rack-bolt"></div>
+              <div class="text-[10px] font-mono text-gray-400 tracking-widest uppercase">
+                ${rackUnitText}
+              </div>
+              <div class="rack-bolt"></div>
+            </div>
+
+            <h3 class="service-card-title text-xl sm:text-2xl font-extrabold text-white mb-1.5 tracking-tight text-center">${title}</h3>
+            <p class="service-card-desc text-sm text-gray-400 mb-4 leading-relaxed text-center">${desc}</p>
+
+            <ul class="service-card-features space-y-2 sm:space-y-3 mb-3 sm:mb-5">
+              ${featuresHtml}
+            </ul>
           </div>
-          <div class="rack-bolt"></div>
+
+          <div class="service-card-bottom">
+            <div class="service-card-divider h-px bg-gray-800/80 my-3 sm:my-5"></div>
+
+            <div class="service-card-pricing flex items-center justify-between gap-4">
+              <div class="service-card-price-group flex flex-col">
+                <span class="service-card-from text-xs font-mono text-gray-400 uppercase tracking-wider">${fromLabel}</span>
+                <span class="service-card-price text-2xl sm:text-3xl font-extrabold bg-gradient-to-r from-amber-200 via-amber-400 to-amber-500 bg-clip-text text-transparent tracking-tight" data-target-price="${displayPrice}">${displayPrice}</span>
+              </div>
+
+              <button
+                onclick="openContactModal()"
+                class="service-card-order-btn py-2.5 px-5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl transition-all duration-200 shadow-md shadow-amber-500/20 active:scale-95 text-sm sm:text-base cursor-pointer flex items-center gap-1.5 flex-shrink-0"
+              >
+                <span>${orderBtnText}</span>
+              </button>
+            </div>
+          </div>
         </div>
 
-        <h3 class="service-card-title text-xl sm:text-2xl font-extrabold text-white mb-1.5 tracking-tight text-center">${title}</h3>
-        <p class="service-card-desc text-sm text-gray-400 mb-4 leading-relaxed text-center">${desc}</p>
+        <div class="service-card-face service-card-face--back">
+          <div class="service-card-back-top flex flex-col">
+            <div class="service-card-meta flex justify-between items-center mb-4 opacity-40">
+              <div class="rack-bolt"></div>
+              <div class="text-[10px] font-mono text-gray-400 tracking-widest uppercase">
+                ${rackUnitText}
+              </div>
+              <div class="rack-bolt"></div>
+            </div>
 
-        <ul class="service-card-features space-y-2 sm:space-y-3 mb-3 sm:mb-5">
-          ${featuresHtml}
-        </ul>
-      </div>
+            <h3 class="service-card-back-title text-base sm:text-lg font-black text-amber-400 tracking-tight text-center uppercase mb-2">${backTitleText}</h3>
+            <p class="service-card-about text-sm text-gray-300 leading-relaxed mb-4">${about}</p>
 
-      <div class="service-card-bottom">
-        <div class="service-card-divider h-px bg-gray-800/80 my-3 sm:my-5"></div>
-
-        <div class="service-card-pricing flex items-center justify-between gap-4">
-          <div class="service-card-price-group flex flex-col">
-            <span class="service-card-from text-xs font-mono text-gray-400 uppercase tracking-wider">${fromLabel}</span>
-            <span class="service-card-price text-2xl sm:text-3xl font-extrabold bg-gradient-to-r from-amber-200 via-amber-400 to-amber-500 bg-clip-text text-transparent tracking-tight" data-target-price="${displayPrice}">${displayPrice}</span>
+            <h4 class="service-card-includes-title text-xs font-mono text-amber-400/90 tracking-widest uppercase mb-2">${includesTitleText}</h4>
+            <ul class="service-card-back-features space-y-2 mb-3">
+              ${backFeaturesHtml}
+            </ul>
           </div>
 
-          <button
-            onclick="openContactModal()"
-            class="service-card-order-btn py-2.5 px-5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl transition-all duration-200 shadow-md shadow-amber-500/20 active:scale-95 text-sm sm:text-base cursor-pointer flex items-center gap-1.5 flex-shrink-0"
-          >
-            <span>${orderBtnText}</span>
-          </button>
+          <div class="service-card-bottom">
+            <div class="service-card-divider h-px bg-gray-800/80 my-3 sm:my-5"></div>
+            <button
+              class="service-card-back-btn w-full py-2.5 px-5 bg-transparent hover:bg-white/5 text-gray-200 font-bold rounded-xl border border-gray-700 hover:border-amber-500/60 transition-all duration-200 active:scale-95 text-sm cursor-pointer"
+            >
+              <span>${backBtnText}</span>
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -7213,6 +7295,11 @@ function initServicesGsapAnimation() {
     '.service-card-top',
     '.service-feature-item',
     '.service-check-icon',
+    '.service-card-back-top',
+    '.service-card-back-title',
+    '.service-card-about',
+    '.service-card-includes-title',
+    '.service-card-back-features',
     '.service-card-bottom',
     '.service-card-divider',
     '.service-card-price-group',
@@ -7580,7 +7667,16 @@ function initMixerFaderScroll() {
 
   function updateFaderUI(scrollPercent) {
     const topPx = Math.max(0, Math.min(maxTravel, scrollPercent * maxTravel));
-    knob.style.top = `${topPx}px`;
+    /* Позиция ползунка задаётся CSS-переменной --fader-y, а сам transform
+       (translate3d + возможный scale активного состояния) собирается в CSS.
+       ПОЧЕМУ НЕ `top`: запись `top` каждый кадр — это смена layout-свойства,
+       браузер пересобирает раскладку и перерисовывает элемент (reflow+paint)
+       вместо дешёвого сдвига композитного слоя (transform). Плюс на `top`
+       висел transition 0.08–0.15s: при перетаскивании ползунок «догонял»
+       курсор пружиной и подрагивал. Теперь слой двигается по GPU, а в
+       состоянии is-dragging transition и вовсе отключён (см. .fader-knob),
+       поэтому ползунок идёт ровно под указателем. */
+    knob.style.setProperty('--fader-y', `${topPx}px`);
 
     const faderLevel = 1 - Math.max(0, Math.min(1, scrollPercent));
 

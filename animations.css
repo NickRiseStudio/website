@@ -104,119 +104,251 @@ html.nr-boot-active body {
   text-shadow: 0 0 12px rgba(245, 158, 11, 0.5);
 }
 
-.nr-boot-sub {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-family: monospace;
-  font-size: 10px;
-  letter-spacing: 0.32em;
-  color: rgba(148, 163, 184, 0.9);
-  text-align: center;
-  animation: nrBootFadeIn 0.6s var(--nr-ease) 0.16s both;
-}
-
-.nr-boot-rec {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--nr-green);
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
-  animation: nrBootRecBlink 1.3s ease-in-out infinite;
-}
-@keyframes nrBootRecBlink {
-  0%, 100% { opacity: 0.35; }
-  50%      { opacity: 1; }
-}
-
 @keyframes nrBootFadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: none; }
 }
 
-/* Ползунок загрузки: медленно и плавно едет слева направо (scaleX — композитор).
-   Полоса плавными одним движением доезжает до 100% за ~1 с; как только страница
-   готова (window.load) и MIN_HOLD истёк — JS прячет заставку фейдом. */
-.nr-boot-track {
-  position: relative;
-  width: min(300px, 66vw);
-  height: 3px;
-  margin-top: 8px;
-  border-radius: 9999px;
-  background: rgba(148, 163, 184, 0.18);
+/* «Прогрев лампового усилителя»: 1U-панель с brushed-металлом и болтами.
+   Два ряда: сверху — тумблер питания и ряд ламп накаливания (лампы
+   загораются по одной слева направо и служат индикатором загрузки),
+   снизу — два VU-метра, стрелки которых уходят с «нуля» к рабочей
+   отметке. Движение — только opacity/transform (композитор). */
+
+/* Скрытый источник SVG-шкалы VU (инстансы — через <use href="#nrVuDial">).
+   position:absolute убирает его из flex-потока .nr-boot-inner (иначе 0-й
+   элемент добавил бы лишний gap перед панелью). */
+.nr-boot-vu-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
   overflow: hidden;
-  animation: nrBootFadeIn 0.5s var(--nr-ease) 0.24s both;
 }
 
-.nr-boot-fill {
-  position: absolute;
-  inset: 0;
-  border-radius: 9999px;
-  transform: scaleX(0);
-  transform-origin: left;
-  background: linear-gradient(90deg, var(--nr-amber-dk), var(--nr-amber), var(--nr-amber-lt));
-  box-shadow: 0 0 12px rgba(245, 158, 11, 0.65);
-  animation: nrBootFill 1s cubic-bezier(0.4, 0.15, 0.2, 1) 0.12s forwards;
+.nr-boot-rack {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 11px;
+  padding: 13px 20px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 1px, rgba(0, 0, 0, 0.03) 1px 3px),
+    linear-gradient(180deg, #2b303b 0%, #171b24 46%, #0d1017 100%);
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.62),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.75);
+  animation: nrBootFadeIn 0.5s var(--nr-ease) 0.3s both;
 }
 
-.nr-boot-tip {
+/* Болты по углам панели */
+.nr-boot-screw {
   position: absolute;
-  top: -2px;
-  left: 0;
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--nr-amber-lt);
-  box-shadow: 0 0 10px rgba(245, 158, 11, 0.9);
-  opacity: 0;
-  animation: nrBootTip 1s cubic-bezier(0.4, 0.15, 0.2, 1) 0.12s forwards;
+  background: radial-gradient(circle at 35% 30%, #7b8291, #23262e 72%);
+  box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.9), 0 1px 1px rgba(255, 255, 255, 0.12);
 }
-
-@keyframes nrBootFill {
-  0%   { transform: scaleX(0); }
-  100% { transform: scaleX(1); }
+.nr-boot-screw::after {
+  content: '';
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  top: 50%;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.65);
+  transform: rotate(35deg);
 }
+.nr-boot-screw:nth-child(1) { left: 6px; top: 6px; }
+.nr-boot-screw:nth-child(2) { right: 6px; top: 6px; }
+.nr-boot-screw:nth-child(3) { left: 6px; bottom: 6px; }
+.nr-boot-screw:nth-child(4) { right: 6px; bottom: 6px; }
 
-@keyframes nrBootTip {
-  0%   { left: 0%; opacity: 0.45; }
-  55%  { opacity: 1; }
-  100% { left: 100%; opacity: 1; }
-}
-
-/* VU-индикаторы под полосой: «цокот включения», сдержанно и медленно */
-.nr-boot-leds {
+/* Верхний ряд панели: слева тумблер питания, справа — ряд ламп накаливания */
+.nr-boot-rack-top {
   display: flex;
-  gap: 5px;
-  margin-top: 2px;
-  animation: nrBootFadeIn 0.5s var(--nr-ease) 0.32s both;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  width: 100%;
 }
-.nr-boot-leds span {
+
+/* Питание: тумблер и пилот-лампа */
+.nr-boot-power {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.nr-boot-switch {
+  position: relative;
+  width: 16px;
+  height: 24px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #3a4150 0%, #1a1e26 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 2px 5px rgba(0, 0, 0, 0.6);
+}
+.nr-boot-switch::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  top: 2px;
+  height: 11px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #e8eaee 0%, #9aa1ad 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+  animation: nrBootSwitchFlip 0.4s ease-out 0.16s both;
+}
+@keyframes nrBootSwitchFlip {
+  0%   { transform: translateY(9px); }
+  70%  { transform: translateY(-1px); }
+  100% { transform: translateY(0); }
+}
+.nr-boot-pilot {
+  position: relative;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #3a2606;
+  box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.8);
+}
+.nr-boot-pilot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #ff5a4d;
+  box-shadow: 0 0 9px rgba(239, 68, 68, 0.9);
+  opacity: 0;
+  animation: nrBootPilotOn 0.4s ease-out 0.36s both;
+}
+@keyframes nrBootPilotOn {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* VU-метры: светлая шкала, «стекло», стрелка с «нуля» к рабочей отметке */
+.nr-boot-meters { display: flex; gap: 11px; }
+.nr-boot-meter {
+  position: relative;
+  width: 84px;
+  height: 48.7px;
+  border-radius: 4px;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 58%),
+    linear-gradient(180deg, #f3eddf 0%, #e0d7c2 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.4),
+    inset 0 2px 5px rgba(0, 0, 0, 0.32),
+    0 1px 0 rgba(255, 255, 255, 0.12);
+}
+.nr-boot-meter::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
   width: 7px;
   height: 7px;
-  border-radius: 2px;
-  background: rgba(245, 158, 11, 0.18);
-  animation: nrBootLed 1.35s ease-in-out infinite;
+  margin-left: -3.5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 34%, #565b66, #101216 74%);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
 }
-.nr-boot-leds span:nth-child(1) { animation-delay: 0.08s; }
-.nr-boot-leds span:nth-child(2) { animation-delay: 0.2s; }
-.nr-boot-leds span:nth-child(3) { animation-delay: 0.32s; }
-.nr-boot-leds span:nth-child(4) { animation-delay: 0.44s; }
-.nr-boot-leds span:nth-child(5) { animation-delay: 0.56s; }
-.nr-boot-leds span:nth-child(6) { animation-delay: 0.68s; }
-
-@keyframes nrBootLed {
-  0%, 100% { opacity: 0.3; transform: translateY(1px); }
-  50%      { opacity: 0.85; transform: translateY(-1px); background: rgba(245, 158, 11, 0.8); }
+.nr-boot-vu { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* Стрелка: закреплена по оси снизу, уходит с «нуля» к рабочей отметке */
+.nr-boot-needle {
+  position: absolute;
+  left: 50%;
+  bottom: 3.5px;
+  width: 2px;
+  height: 33px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: linear-gradient(180deg, #d13b2e 0 5px, #23262e 5px 100%);
+  transform-origin: 50% 100%;
+  transform: rotate(-52deg);
+  animation: nrBootNeedle 1.05s var(--nr-snap) 0.4s both;
+}
+.nr-boot-glass {
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  pointer-events: none;
+  background: linear-gradient(115deg, rgba(255, 255, 255, 0.36) 0%, rgba(255, 255, 255, 0.07) 25%, rgba(255, 255, 255, 0) 44%, rgba(255, 255, 255, 0) 66%, rgba(255, 255, 255, 0.13) 100%);
+}
+@keyframes nrBootNeedle {
+  0%   { transform: rotate(-52deg); }
+  72%  { transform: rotate(32deg); }
+  100% { transform: rotate(26deg); }
 }
 
-/* Форма позволяет аккуратнее читать полосу на узких экранах */
+/* Лампы накаливания — индикатор загрузки. Загораются по одной слева направо
+   (animation-delay с шагом 0.21 с): так ряд читается как прогресс и заменяет
+   прежнюю полосу. Последняя лампа «доезжает» ровно к ~1.5 с — моменту MIN_HOLD. */
+.nr-boot-tubes { display: flex; gap: 10px; }
+.nr-boot-tubes span {
+  position: relative;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 34%, #4a3a12 0%, #2a2008 60%, #17130a 100%);
+  box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.7);
+}
+.nr-boot-tubes span::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 34%, #fff7dc 0%, #fbbf24 40%, #b45309 76%, rgba(120, 72, 6, 0) 100%);
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.7);
+  opacity: 0;
+  transform: scale(0.72);
+  animation: nrBootTubeOn 0.34s ease-out both;
+}
+.nr-boot-tubes span:nth-child(1)::after { animation-delay: 0.32s; }
+.nr-boot-tubes span:nth-child(2)::after { animation-delay: 0.53s; }
+.nr-boot-tubes span:nth-child(3)::after { animation-delay: 0.74s; }
+.nr-boot-tubes span:nth-child(4)::after { animation-delay: 0.95s; }
+.nr-boot-tubes span:nth-child(5)::after { animation-delay: 1.16s; }
+@keyframes nrBootTubeOn {
+  0%   { opacity: 0; transform: scale(0.72); }
+  55%  { opacity: 1; transform: scale(1.15); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* Узкие экраны: rack уменьшается, чтобы влезал в ширину */
 @media (max-width: 480px) {
-  .nr-boot-track { width: min(260px, 74vw); }
+  .nr-boot-rack { gap: 9px; padding: 11px 14px; }
+  .nr-boot-rack-top { gap: 13px; }
+  .nr-boot-meters { gap: 8px; }
+  .nr-boot-meter { width: 64px; height: 37.1px; }
+  .nr-boot-needle { height: 24px; }
+  .nr-boot-tubes { gap: 7px; }
+  .nr-boot-tubes span { width: 10px; height: 10px; }
 }
 
-/* Пользователям prefers-reduced-motion заставку не показываем вовсе */
+/* Пользователям prefers-reduced-motion заставка показывается статичным
+   кадром «прогрева»: без движения — лампы горят, стрелки в рабочем
+   положении. Скрывается как обычно (по загрузке), но держится недолго:
+   в initBoot для reduced-motion MIN_HOLD короткий. */
 @media (prefers-reduced-motion: reduce) {
-  #nr-boot { display: none !important; }
+  #nr-boot,
+  #nr-boot *,
+  #nr-boot *::before,
+  #nr-boot *::after {
+    animation: none !important;
+  }
+  #nr-boot { transition: none; }
+  #nr-boot .nr-boot-switch::after { transform: none; }
+  #nr-boot .nr-boot-pilot::after { opacity: 1; }
+  #nr-boot .nr-boot-tubes span::after { opacity: 1; transform: scale(1); }
+  #nr-boot .nr-boot-needle { transform: rotate(26deg); }
 }
 
 /* ═══ 02. ГЛОБАЛЬНАЯ АТМОСФЕРА ═════════════════════════════════════════ */
@@ -1692,10 +1824,18 @@ body.nr-playing #side-mixer-strip {
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7), inset 0 1px 1px rgba(255, 255, 255, 0.12), 0 0 26px rgba(245, 158, 11, 0.18);
 }
 
-.fader-knob { transition: top 0.15s cubic-bezier(0.1, 0.85, 0.25, 1), box-shadow 0.35s ease, transform 0.35s var(--nr-snap); }
+/* Позиция ползунка — общий transform, собранный из CSS-переменной --fader-y
+   (её пишет script.js → updateFaderUI). Здесь задаём ТОЛЬКО длительность/кривую
+   догона для случая «колесо», сам transform берём из style.css (.fader-knob).
+   Раньше здесь стоял transition по `top`, который конфликтовал с базовым
+   правилом и подвешивал «пружину» 0.15s на каждое движение — источник
+   дёрганья ползунка. Теперь анимируется transform (композит), а scale
+   активного состояния добавляется в самом transform-выражении, поэтому
+   inline-переменная из JS его не перебивает. */
+.fader-knob { transition: transform 0.15s cubic-bezier(0.1, 0.85, 0.25, 1), box-shadow 0.35s ease; }
 
 body.nr-faderactive .fader-knob {
-  transform: translateX(-50%) scale(1.14);
+  transform: translate3d(-50%, var(--fader-y, 0px), 0) scale(1.14);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 0 18px rgba(245, 158, 11, 0.55);
 }
 
@@ -2066,3 +2206,31 @@ footer p {
     filter: none !important;
   }
 }
+
+/* ═══ 19. СКВОЗНОЙ ФОН — ПЫЛИНКИ-ЧАСТИЦЫ ══════════════════════════════
+   Едва заметные янтарные пылинки медленно плывут вверх по всему тёмному
+   фону сайта (логика и отрисовка — animations.js, раздел 16.5).
+   Один fixed-canvas на всю страницу, позади контента: клики пропускает.
+
+   z-index: -1 уводит слой ЗА содержимое, но НАД фоном страницы; чтобы
+   отрицательный слой не перекрывался фоном body, body объявлен отдельным
+   контекстом наложения (isolation: isolate) — тот же приём уже применяется
+   в проекте (.nr-calc-cta, .hero-mask-container). Внешний вид это не меняет:
+   фон body остаётся под всем содержимым. Слой гасится при reduced-motion
+   (страховка на случай смены настройки на лету — при загрузке он не создаётся). */
+
+body {
+  isolation: isolate;
+}
+
+#nr-dust {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #nr-dust { display: none; }
+}
+

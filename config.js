@@ -84,6 +84,12 @@ const CONFIG = {
         title: 'Услуги и цены',
         popularBadge: 'ЧАСТЫЙ ВЫБОР',
         orderBtn: 'Заказать',
+        // Обратная сторона карточки услуги (появляется при клике на карточку):
+        // «что это такое» (aboutRu) + список «что входит» (featuresRu).
+        backTitle: 'Что это такое',
+        includesTitle: 'Что входит',
+        backBtn: 'Назад',
+        flipHint: 'Нажмите, чтобы узнать подробнее',
         // Всплывающее окно «Рассчитать стоимость услуг» (шаги: предупреждение →
         // длительность → 4 вопроса Да/Нет → итоговая цена).
         priceCalc: {
@@ -244,6 +250,12 @@ const CONFIG = {
         title: 'Services & Pricing',
         popularBadge: 'MOST CHOSEN',
         orderBtn: 'Order',
+        // Back side of a service card (revealed on card click): "what it is"
+        // (aboutEn) + the "what's included" list (featuresEn).
+        backTitle: 'What it is',
+        includesTitle: "What's included",
+        backBtn: 'Back',
+        flipHint: 'Tap to learn more',
         // Service cost calculator modal (steps: warning → duration → 4 Yes/No
         // questions → final price).
         priceCalc: {
@@ -470,7 +482,9 @@ const CONFIG = {
         'Manual vocal tuning & timing correction',
         '3 complimentary revision rounds',
         'Stereo WAV (32-bit) + Instrumental & Acapella'
-      ]
+      ],
+      aboutRu: 'Сведение — это сбалансировать все дорожки трека: вокал, бит, бас и инструменты — в один цельный, мощный и чистый микс. Я убираю частотные конфликты, выстраиваю баланс громкостей и делаю так, чтобы каждый элемент звучал на своём месте.',
+      aboutEn: 'Mixing means balancing all the tracks in your song — vocals, beat, bass and instruments — into one cohesive, powerful, clean mix. I resolve frequency clashes, balance the levels and make sure every element sits exactly where it belongs.'
     },
     {
       id: 'mix-master',
@@ -492,7 +506,9 @@ const CONFIG = {
         'Everything from the Mastering package',
         'Up to 40 tracks processed',
         'Priority turnaround (up to 3 days)'
-      ]
+      ],
+      aboutRu: 'Полный пакет — это путь от сырых мультитреков до готового к релизу мастера. Я свожу ваш трек, а затем финально его обрабатываю, чтобы он звучал громко, плотно и конкурентно на всех площадках — за один заход и без лишних согласований.',
+      aboutEn: 'The full package is the journey from raw multitracks to a release-ready master. I mix your track and then give it the final mastering treatment so it sounds loud, dense and competitive on every platform — all in one pass, with no extra back-and-forth.'
     },
     {
       id: 'mastering',
@@ -514,7 +530,9 @@ const CONFIG = {
         'Frequency balance & dynamics control',
         'Mid/Side balance control',
         'Distribution-ready streaming masters'
-      ]
+      ],
+      aboutRu: 'Мастеринг — это финальная обработка уже сведённого микса. Я выстраиваю частотный баланс и динамику, добавляю ширину и глубину, а также привожу громкость к стандартам стримингов, чтобы трек звучал дорого и уверенно рядом с мировыми релизами.',
+      aboutEn: 'Mastering is the final treatment of an already mixed track. I shape the frequency balance and dynamics, add width and depth, and match the loudness to streaming standards so your song sounds premium and confident next to world-class releases.'
     }
   ],
 

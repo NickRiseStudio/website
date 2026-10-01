@@ -96,9 +96,11 @@
 <body class="bg-[#0C0E12] text-[#F3F4F6] selection:bg-amber-500 selection:text-black min-h-screen relative overflow-x-hidden antialiased">
 
 <!-- ============================================================
-       BOOT SCREEN — заставка «включения пульта».
+       BOOT SCREEN — заставка «включения усилителя».
        Видна при каждом заходе/обновлении страницы. Внутри: логотип
-       (main hero) по центру + ползунок загрузки слева направо.
+       и надпись по центру + rack-панель: сверху ряд ламп накаливания
+       (они и показывают прогресс загрузки — загораются по одной
+       слева направо), снизу два VU-метра со стрелками.
        Скрытие делает animations.js (initBoot): оверлей гаснет
        (opacity), и В МОМЕНТ display:none страница разблокируется
        (класс html.nr-boot-active снимается). До этого — никаких
@@ -110,16 +112,50 @@
         <img src="./image/logo-256.webp" alt="" width="96" height="96" class="nr-boot-logo-img">
       </div>
       <div class="nr-boot-title">NICK RISE <span class="nr-boot-title-accent">STUDIO</span></div>
-      <div class="nr-boot-sub">
-        <span class="nr-boot-rec" aria-hidden="true"></span>
-        // SESSION LOADING
-      </div>
-      <div class="nr-boot-track" role="presentation">
-        <div class="nr-boot-fill"></div>
-        <div class="nr-boot-tip"></div>
-      </div>
-      <div class="nr-boot-leds" aria-hidden="true">
-        <span></span><span></span><span></span><span></span><span></span><span></span>
+      <svg class="nr-boot-vu-defs" width="0" height="0" aria-hidden="true" focusable="false">
+        <defs>
+          <g id="nrVuDial" fill="none">
+            <path d="M15.33 28.91 A44 44 0 0 1 84.67 28.91" stroke="#23262e" stroke-width="1.6"/>
+            <path d="M77.69 21.81 A44 44 0 0 1 84.67 28.91" stroke="#cf3a2c" stroke-width="2.4"/>
+            <line x1="15.33" y1="28.91" x2="20.06" y2="32.60" stroke="#23262e" stroke-width="1.2"/>
+            <line x1="22.31" y1="21.81" x2="26.09" y2="26.47" stroke="#23262e" stroke-width="0.7"/>
+            <line x1="30.71" y1="16.45" x2="33.34" y2="21.85" stroke="#23262e" stroke-width="1.2"/>
+            <line x1="40.10" y1="13.13" x2="41.45" y2="18.97" stroke="#23262e" stroke-width="0.7"/>
+            <line x1="50" y1="12" x2="50" y2="18" stroke="#23262e" stroke-width="1.2"/>
+            <line x1="59.90" y1="13.13" x2="58.55" y2="18.97" stroke="#23262e" stroke-width="0.7"/>
+            <line x1="69.29" y1="16.45" x2="66.66" y2="21.85" stroke="#23262e" stroke-width="1.2"/>
+            <line x1="77.69" y1="21.81" x2="73.91" y2="26.47" stroke="#23262e" stroke-width="0.7"/>
+            <line x1="84.67" y1="28.91" x2="79.94" y2="32.60" stroke="#23262e" stroke-width="1.2"/>
+            <text x="50" y="45" text-anchor="middle" fill="#23262e" font-family="monospace" font-size="9" font-weight="700" letter-spacing="0.5">VU</text>
+          </g>
+        </defs>
+      </svg>
+      <div class="nr-boot-rack" aria-hidden="true">
+        <span class="nr-boot-screw"></span>
+        <span class="nr-boot-screw"></span>
+        <span class="nr-boot-screw"></span>
+        <span class="nr-boot-screw"></span>
+        <div class="nr-boot-rack-top">
+          <div class="nr-boot-power">
+            <span class="nr-boot-switch"></span>
+            <span class="nr-boot-pilot"></span>
+          </div>
+          <div class="nr-boot-tubes">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+        <div class="nr-boot-meters">
+          <div class="nr-boot-meter">
+            <svg class="nr-boot-vu" viewBox="0 0 100 58" aria-hidden="true"><use href="#nrVuDial"/></svg>
+            <span class="nr-boot-needle"></span>
+            <span class="nr-boot-glass"></span>
+          </div>
+          <div class="nr-boot-meter">
+            <svg class="nr-boot-vu" viewBox="0 0 100 58" aria-hidden="true"><use href="#nrVuDial"/></svg>
+            <span class="nr-boot-needle"></span>
+            <span class="nr-boot-glass"></span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -167,7 +203,7 @@
 
       <!-- Металлический рельс и фейдер -->
       <div class="fader-rail">
-        <div id="side-fader-knob" class="fader-knob" style="top: 0px;"></div>
+        <div id="side-fader-knob" class="fader-knob" style="--fader-y: 0px;"></div>
       </div>
     </div>
 
@@ -1307,8 +1343,12 @@
   <script>
     (function () {
       var smoothConfig = {
-        // Время скролла 1000мс (1 сек) для мягкого студийного скольжения
-        animationTime    : 1000,
+        // Время скролла: было 1000мс. Умеренная правка до 800 — компромисс:
+        // инерция остаётся длинной и «студийной», но затухание не тянется до
+        // таких малых дробных приростов, на которых движение «залипало» по
+        // пикселям (замер в !tmp: доля пустых кадров 23% → 4%). Короче 700
+        // делать не стоит — начнёт читаться как рывок, а не скольжение.
+        animationTime    : 800,
         // Размер шага в пикселях
         stepSize         : 75,
         // Ускорение при непрерывном скролле
