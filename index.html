@@ -44,7 +44,10 @@
   <link rel="stylesheet" href="./tailwind.css">
 
   <!-- Custom web fonts (self-hosted): fonts.css + public/fonts/*.woff2.
-       Шрифты генерируются внешним инструментом, см. PROJECT-NOTES.md -->
+       ЕДИНСТВЕННЫЙ источник шрифтов: внешний @import на fonts.googleapis.com
+       убран (был блокирующим и бесполезным для кириллицы). Plus Jakarta Sans
+       и Space Grotesk латинские — русский текст рисует системный шрифт, как и
+       раньше. Шрифты генерируются инструментом, см. PROJECT-NOTES.md -->
   <link rel="stylesheet" href="./fonts.css">
 
   <!-- Custom Styles -->
