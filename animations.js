@@ -474,11 +474,11 @@
   var parallaxShift = -1;         /* нарисованное смещение, px (−1 — «ещё не рисовали») */
   var parallaxTravel = 0;         /* сколько пикселей прокрутки длится эффект */
   var parallaxMaxShift = 0;       /* потолок сдвига = RATE × travel, px */
-  /* 0.20 от высоты экрана. Было 0.16 — эффект просили усилить, поэтому
-     коэффициент поднят, а «ощутимая» разница в 1.3 раза достигается ещё и
-     тем, что сдвиг теперь не срезается потолком на середине главного экрана
-     (он упирается в потолок ровно тогда, когда секция уже ушла). */
-  var PARALLAX_RATE = 0.20;
+  /* 0.25 от высоты экрана. История: 0.16 → 0.20 → 0.30 → 0.25 — эффект
+     усиливали, затем немного ослабили. Значение должно оставаться < 1: иначе
+     сдвиг на длинном пути превысит высоту секции и сверху над фото откроется
+     пустая полоса (см. «ПОЧЕМУ НЕТ ПУСТОЙ ПОЛОСЫ НАД ФОТО» выше). */
+  var PARALLAX_RATE = 0.25;
 
   function initHeroParallax() {
     var section = $('#hero');
@@ -540,16 +540,21 @@
         box.appendChild(el('span', 'nr-rings', '<i></i><i></i><i></i>'));
       }
 
-      /* Параллакс/наклон фото — только на устройствах с мышью */
-      if (window.matchMedia('(hover: hover) and (min-width: 1024px)').matches && !REDUCED) {
+      /* Параллакс/наклон фото — только на устройствах с мышью.
+         Трансформа вешается на САМУ КАРТИНКУ, а не на контейнер: над бейджем
+         «Обо мне» (он лежит в контейнере) любой transform родителя заставляет
+         Chrome растеризовать надпись бейджа в отдельный слой без субпиксельного
+         сглаживания, и на наведении текст «мылится». Картинке это не вредит. */
+      var img = $('.hero-mask-img', box);
+      if (img && window.matchMedia('(hover: hover) and (min-width: 1024px)').matches && !REDUCED) {
         box.addEventListener('pointermove', function (e) {
           var r = box.getBoundingClientRect();
           var px = (e.clientX - r.left) / r.width - 0.5;
           var py = (e.clientY - r.top) / r.height - 0.5;
-          box.style.transform = 'perspective(900px) rotateY(' + (px * 7).toFixed(2) + 'deg) rotateX(' +
-            (-py * 7).toFixed(2) + 'deg) translate3d(' + (px * 10).toFixed(1) + 'px,' + (py * 10).toFixed(1) + 'px,0)';
+          img.style.transform = 'perspective(900px) rotateY(' + (px * 7).toFixed(2) + 'deg) rotateX(' +
+            (-py * 7).toFixed(2) + 'deg) translate3d(' + (px * 10).toFixed(1) + 'px,' + (py * 10).toFixed(1) + 'px,0) scale(1.02)';
         });
-        box.addEventListener('pointerleave', function () { box.style.transform = ''; });
+        box.addEventListener('pointerleave', function () { img.style.transform = ''; });
       }
     }
   }
@@ -1051,17 +1056,6 @@
   /* ═══ 16. СИНХРОНИЗАЦИЯ СОСТОЯНИЙ ══════════════════════════════════ */
 
   var lastPlaying = null, lastSource = null;
-  var beamAngle = 0;
-
-  function updateBeamAngle(dt) {
-    if (!Engine.playing || REDUCED) return;
-    beamAngle = (beamAngle + dt * 130) % 360;
-    var str = beamAngle.toFixed(1) + 'deg';
-    var switches = document.querySelectorAll('.deck-source-switch');
-    for (var i = 0; i < switches.length; i++) {
-      switches[i].style.setProperty('--beam-angle', str);
-    }
-  }
 
   function syncBodyState() {
     if (Engine.playing !== lastPlaying) {
@@ -1134,7 +1128,6 @@
     safe(function () { updateEngine(now, dt); });
     safe(syncBodyState);
     if (!isModalOpen) {
-      safe(function () { updateBeamAngle(dt); });
       /* фоновый эквалайзер в секции «Слушай разницу» — энергосберегающий режим в паузе */
       var eqInterval = !Engine.playing ? 65 : (LITE ? 50 : 25);
       if (now - lastPlayerEq > eqInterval) {

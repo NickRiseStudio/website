@@ -529,7 +529,6 @@ body.nr-scrolled #mainHeader {
 /* Фото — рамка захвата сигнала + сканирующая полоса */
 .hero-mask-container {
   transition: transform 0.5s var(--nr-ease);
-  transform-style: preserve-3d;
   isolation: isolate;
 }
 
@@ -1185,18 +1184,7 @@ body.nr-playing #deckProgressBar::after { opacity: 1; }
   50%      { opacity: 1; }
 }
 
-@property --beam-angle {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 0deg;
-}
-
-@keyframes nrBorderBeam {
-  0% { --beam-angle: 0deg; }
-  100% { --beam-angle: 360deg; }
-}
-
-/* Переключатель BEFORE / AFTER: мягкое свечение рамки + скользящий по контуру блик + пульсирующая капля */
+/* Переключатель BEFORE / AFTER: мягкое свечение рамки при воспроизведении */
 .deck-source-switch {
   position: relative;
   transition: border-color 0.4s ease, box-shadow 0.4s ease;
@@ -1206,59 +1194,6 @@ body.nr-playing #deckProgressBar::after { opacity: 1; }
 body.nr-playing .deck-source-switch {
   border-color: rgba(245, 158, 11, 0.45) !important;
   box-shadow: 0 0 14px rgba(245, 158, 11, 0.25), inset 0 0 8px rgba(245, 158, 11, 0.12);
-}
-
-/* 1. Расплывающаяся капля / пульс */
-.deck-source-switch::before {
-  content: '';
-  position: absolute;
-  inset: -4px;
-  border-radius: inherit;
-  border: 1.5px solid rgba(245, 158, 11, 0.6);
-  opacity: 0;
-  pointer-events: none;
-}
-
-body.nr-playing .deck-source-switch::before {
-  animation: nrSwitchPulse 1.9s ease-out infinite;
-}
-
-@keyframes nrSwitchPulse {
-  0% { transform: scale(0.96); opacity: 0.85; }
-  80%, 100% { transform: scale(1.16, 1.32); opacity: 0; }
-}
-
-/* 2. Яркий блик, скользящий строго по контуру рамки */
-.deck-source-switch::after {
-  content: '';
-  position: absolute;
-  inset: -1.5px;
-  border-radius: inherit;
-  padding: 1.5px;
-  background: conic-gradient(
-    from var(--beam-angle, 0deg) at 50% 50%,
-    transparent 0deg,
-    transparent 260deg,
-    rgba(245, 158, 11, 0.25) 295deg,
-    rgba(251, 191, 36, 0.8) 330deg,
-    rgba(255, 255, 255, 1) 350deg,
-    rgba(245, 158, 11, 0.8) 358deg,
-    transparent 360deg
-  );
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.35s ease;
-  z-index: 10;
-  filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.9));
-}
-
-body.nr-playing .deck-source-switch::after {
-  opacity: 1;
-  animation: nrBorderBeam 2.8s linear infinite;
 }
 
 /* Кнопка Play: чистая, без свечений и пульса */

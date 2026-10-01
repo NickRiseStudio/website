@@ -893,7 +893,24 @@
 
       <!-- STEP 2: мастеринг -->
       <div class="nr-calc-step" data-calc-step="2">
-        <h3 class="nr-calc-question" data-i18n="services.priceCalc.qMastering">Вам нужен мастеринг?</h3>
+        <h3 class="nr-calc-question">
+          <span data-i18n="services.priceCalc.qMastering">Вам нужен мастеринг?</span>
+          <!-- Кружок «i» с подсказкой: наведение/фокус — показ, тап — переключение
+               (script.js → showCalcHint / hideCalcHint). Текст — config.js →
+               hintMastering, вид бабла — как у подсказки BEFORE / AFTER. -->
+          <button
+            type="button"
+            class="nr-calc-hint-dot"
+            data-calc-hint="mastering"
+            aria-label="Что такое мастеринг?"
+            data-i18n-aria-label="services.priceCalc.hintMasteringAria"
+            onclick="toggleCalcHint('mastering')"
+            onmouseenter="showCalcHint('mastering')"
+            onmouseleave="hideCalcHint('mastering')"
+            onfocus="showCalcHint('mastering')"
+            onblur="hideCalcHint('mastering')"
+          >i</button>
+        </h3>
         <div class="nr-calc-choice" data-calc-option="mastering">
           <button type="button" class="nr-calc-choice-btn" data-value="yes" onclick="setCalcAnswer('mastering', true)">
             <span data-i18n="services.priceCalc.yes">Да</span>
@@ -921,7 +938,22 @@
 
       <!-- STEP 4: сведение trackout бита и доработка бита -->
       <div class="nr-calc-step" data-calc-step="4">
-        <h3 class="nr-calc-question" data-i18n="services.priceCalc.qTrackout">Вам нужно сведение trackout бита (бит по дорожкам) / доработка бита?</h3>
+        <h3 class="nr-calc-question">
+          <span data-i18n="services.priceCalc.qTrackout">Вам нужно сведение trackout бита (бит по дорожкам) / доработка бита?</span>
+          <!-- Кружок «i» с подсказкой про trackout (бит по дорожкам). -->
+          <button
+            type="button"
+            class="nr-calc-hint-dot"
+            data-calc-hint="trackout"
+            aria-label="Что такое бит по дорожкам (trackout)?"
+            data-i18n-aria-label="services.priceCalc.hintTrackoutAria"
+            onclick="toggleCalcHint('trackout')"
+            onmouseenter="showCalcHint('trackout')"
+            onmouseleave="hideCalcHint('trackout')"
+            onfocus="showCalcHint('trackout')"
+            onblur="hideCalcHint('trackout')"
+          >i</button>
+        </h3>
         <div class="nr-calc-choice" data-calc-option="trackout">
           <button type="button" class="nr-calc-choice-btn" data-value="yes" onclick="setCalcAnswer('trackout', true)">
             <span data-i18n="services.priceCalc.yes">Да</span>
@@ -949,8 +981,8 @@
 
       <!-- STEP 6: итоговая стоимость -->
       <div class="nr-calc-step" data-calc-step="6">
-        <h3 class="text-xl sm:text-2xl font-black text-white tracking-tight mb-2" data-i18n="services.priceCalc.resultTitle">Ориентировочная стоимость</h3>
-        <p class="text-xs sm:text-sm text-gray-400 mb-5 max-w-md mx-auto leading-relaxed" data-i18n="services.priceCalc.resultSub">
+        <h3 class="nr-calc-result-title text-xl sm:text-2xl font-black text-white tracking-tight mb-2" data-i18n="services.priceCalc.resultTitle">Ориентировочная стоимость</h3>
+        <p class="nr-calc-result-sub text-xs sm:text-sm text-gray-400 mb-5 max-w-md mx-auto leading-relaxed" data-i18n="services.priceCalc.resultSub">
           Это предварительный расчёт — точную цену я назову после прослушивания вашего материала.
         </p>
 
@@ -986,8 +1018,39 @@
     </div>
   </div>
 
+  <!-- ПОДСКАЗКА ПРО КНОПКУ BEFORE / AFTER: показывается один раз за сессию, при
+       первом включении трека (script.js → maybeShowAbHint). Оверлей гасит и
+       размывает страницу, ловит клик «по фону» и держит прокрутку; сам бабл
+       живёт вне пульта, чтобы затемнение его не гасило, и ставится по кнопке
+       (script.js → positionAbHint). Стили — style.css, блок «ПОДСКАЗКА ПРО
+       ПЕРЕКЛЮЧАТЕЛЬ BEFORE / AFTER». -->
+  <div
+    id="abHintOverlay"
+    class="nr-ab-overlay"
+    aria-hidden="true"
+    onclick="hideAbHint()"
+  ></div>
+
+  <div id="abHintTip" class="nr-ab-hint-tip">
+    <span data-i18n="player.abHint">Здесь вы можете переключать<br>версии <span class="nr-ab-hint-accent">до</span> и <span class="nr-ab-hint-accent">после</span> обработки</span>
+  </div>
+
+  <!-- ПОДСКАЗКА ПРО ВОПРОСЫ КАЛЬКУЛЯТОРА (кружок «i»): один общий бабл, который
+       переиспользует вид подсказки BEFORE / AFTER (style.css → .nr-ab-hint-tip).
+       Текст и позиция задаются из script.js → showCalcHint / positionCalcHint. -->
+  <div id="calcHintTip" class="nr-ab-hint-tip nr-calc-hint-tip" aria-hidden="true">
+    <span id="calcHintTipText" data-i18n="services.priceCalc.hintMastering">Мастеринг — это финальная обработка готового микса.</span>
+  </div>
+
   <!-- 8. STICKY BOTTOM AUDIO PLAYER BAR -->
-  <div id="stickyPlayerBar" class="sticky-player-bar transform translate-y-full">
+  <!-- Клик по затемнению пульта (см. style.css → #stickyPlayerBar::after) тоже
+       убирает подсказку: клик по самой кнопке BEFORE / AFTER доходит до неё
+       (она выше слоя затемнения) и всплывает сюда же. -->
+  <div
+    id="stickyPlayerBar"
+    class="sticky-player-bar transform translate-y-full"
+    onclick="hideAbHint()"
+  >
     
     <!-- Top Progress / Seek Bar with Expanded Touch Hit Area -->
     <div
@@ -1083,7 +1146,6 @@
           tabindex="0"
         >
           <div class="deck-slider-pill deck-slider-pill-mobile pointer-events-none"></div>
-
           <div class="deck-btn-before relative z-10 py-1 px-2 text-[9px] font-extrabold rounded-md flex items-center justify-between gap-1.5 w-full pointer-events-none">
             <span class="deck-led-before w-1.5 h-1.5 rounded-full bg-gray-600 flex-shrink-0"></span>
             <span class="deck-text-before">BEFORE</span>
@@ -1157,7 +1219,6 @@
           tabindex="0"
         >
           <div class="deck-slider-pill deck-slider-pill-desktop pointer-events-none"></div>
-
           <div class="deck-btn-before relative z-10 flex-1 min-w-[104px] py-2 px-3 text-xs font-black tracking-wide rounded-xl flex items-center justify-center gap-2 pointer-events-none">
             <span class="deck-led-before w-2.5 h-2.5 rounded-full bg-gray-600 flex-shrink-0"></span>
             <span class="deck-text-before">BEFORE</span>

@@ -43,6 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initSmoothAnchorNavigation();
   initScrollSpy();
   initScrollToTop();
+  initCalcHints();
 });
 
 window.addEventListener('load', () => {
@@ -2491,6 +2492,9 @@ function showStickyPlayer() {
         window.NickRiseAnimations.updateRevealObserver();
       }
     }, 960);
+    // Первое включение трека за сессию — подсказка о кнопке BEFORE / AFTER
+    // (показывается, когда пульт уже доехал: см. AB_HINT_DELAY_MS).
+    maybeShowAbHint();
   }
 }
 
@@ -2522,6 +2526,10 @@ function closeStickyPlayer() {
   playerBar.classList.add('nr-closing');
   playerBar.classList.remove('active');
   document.body.classList.remove('has-sticky-player');
+
+  // Подсказка о кнопке BEFORE / AFTER уезжает вместе с пультом: иначе её
+  // затемнение осталось бы висеть над закрытым пультом.
+  hideAbHint();
 
   scheduleScrollTriggerRefresh(0);
   if (window.NickRiseAnimations && window.NickRiseAnimations.updateRevealObserver) {
@@ -2712,6 +2720,8 @@ function switchDeckSource(src) {
 }
 
 function toggleDeckSource() {
+  // Клик по самой кнопке BEFORE / AFTER тоже гасит подсказку о ней.
+  hideAbHint();
   const enabledTracks = getEnabledTracks();
   if (!activeTrackId && enabledTracks.length > 0) {
     activeTrackId = enabledTracks[0].id;
@@ -2723,6 +2733,177 @@ function toggleDeckSource() {
 
   const nextSrc = item.source === 'before' ? 'after' : 'before';
   switchDeckSource(nextSrc);
+}
+
+/* ── ПОДСКАЗКА ПРО КНОПКУ BEFORE / AFTER ──────────────────────────────────
+   Первое включение трека за сессию: пульт выезжает, через секунду (когда он
+   уже стоит на месте) страница уходит в затемнение, а над переключателем
+   появляется подсказка с хвостиком. Гаснет плавно по клику на фон, на
+   затемнение пульта или на саму кнопку (см. style.css → блок «ПОДСКАЗКА ПРО
+   ПЕРЕКЛЮЧАТЕЛЬ BEFORE / AFTER»).
+
+   Флаг — в sessionStorage (как язык в localStorage: с try/catch): в новой
+   вкладке подсказка покажется снова, а обновление страницы, повторный запуск
+   того же трека и переход к следующему — нет.
+   ────────────────────────────────────────────────────────────────────── */
+
+const AB_HINT_KEY = 'nick_rise_ab_hint';
+const AB_HINT_DELAY_MS = 950;   // ждём, пока пульт доедет (0.95s — style.css)
+const AB_HINT_GAP_PX = 12;      // зазор между хвостиком бабла и кромкой пульта
+const AB_HINT_CENTER_VW = 640;  // узкое окно (телефон): пульт показывает мобильный ряд — бабл ставим по центру
+const AB_HINT_TAIL_MARGIN_PX = 28;  // хвостик не ближе этого к углу плашки (скругление 20px + половина хвостика 16px)
+/* ВРЕМЕННО, ДЛЯ ПРОВЕРКИ: true — подсказка показывается один раз за загрузку
+   страницы (флаг живёт в памяти, обновление страницы его сбрасывает). Вернуть
+   false, когда проверка закончится: включится обычный режим — один раз за
+   сессию (sessionStorage). */
+const AB_HINT_EVERY_LOAD = true;
+
+let abHintTimer = null;
+let abHintVisible = false;
+let abHintShownThisLoad = false;
+
+function abHintSeen() {
+  if (AB_HINT_EVERY_LOAD) return abHintShownThisLoad;
+  try {
+    return sessionStorage.getItem(AB_HINT_KEY) === '1';
+  } catch (e) {
+    return false;
+  }
+}
+
+function markAbHintSeen() {
+  if (AB_HINT_EVERY_LOAD) {
+    abHintShownThisLoad = true;
+    return;
+  }
+  try {
+    sessionStorage.setItem(AB_HINT_KEY, '1');
+  } catch (e) {}
+}
+
+/* Бабл ставим правым краем по кнопке (у мобильного и компьютерного рядов пульта
+   переключатели свои — берём видимый) и над верхней кромкой пульта, чтобы
+   внутри пульта он ничего не перекрывал. Хвостик указывает на середину кнопки,
+   но не вылезает за скругление плашки. Размеры читаем при скрытом бабле — он
+   поэтому и не убирается через display: none (см. style.css). */
+function positionAbHint() {
+  const tip = document.getElementById('abHintTip');
+  const bar = document.getElementById('stickyPlayerBar');
+  if (!tip || !bar) return false;
+
+  let sw = null;
+  document.querySelectorAll('.deck-source-switch').forEach((el) => {
+    if (!sw && el.getBoundingClientRect().width > 0) sw = el;
+  });
+  if (!sw) return false;
+
+  const swRect = sw.getBoundingClientRect();
+  const barRect = bar.getBoundingClientRect();
+  const tipRect = tip.getBoundingClientRect();
+
+  /* На телефонах плашка стоит по центру экрана: кнопка там жмётся к правому
+     краю, и выравнивание по ней уводило бы текст в угол. Хвостик всё равно
+     указывает на кнопку — его место считается от того же края. */
+  const left = window.innerWidth < AB_HINT_CENTER_VW
+    ? Math.max(8, Math.round((window.innerWidth - tipRect.width) / 2))
+    : Math.min(
+        Math.max(8, window.innerWidth - tipRect.width - 8),
+        Math.max(8, swRect.right - tipRect.width)
+      );
+  const top = Math.max(8, barRect.top - tipRect.height - AB_HINT_GAP_PX);
+  const tailX = Math.min(
+    tipRect.width - AB_HINT_TAIL_MARGIN_PX,
+    Math.max(AB_HINT_TAIL_MARGIN_PX, swRect.left + swRect.width / 2 - left)
+  );
+
+  tip.style.left = left + 'px';
+  tip.style.top = top + 'px';
+  tip.style.setProperty('--nr-ab-tail-x', tailX + 'px');
+  return true;
+}
+
+/* Прокрутка на время подсказки. Приём тот же, что у заставки (animations.js →
+   blockScroll/blockKeys): перехват на входе (capture) и preventDefault. Колесо
+   гасится ещё и потому, что собственный плавный скролл (smoothscroll-nr.js →
+   onWheel) выходит сразу, увидев defaultPrevented. Клавиши он разбирает раньше
+   нас (его слушатель тоже capture на window), поэтому уже набранный ход снимаем
+   через SmoothScroll.cancel: иначе страница поехала бы программно, а такой ход
+   overflow: hidden не держит. */
+function abHintCancelScrollMotion() {
+  try {
+    if (window.SmoothScroll && typeof window.SmoothScroll.cancel === 'function') {
+      window.SmoothScroll.cancel();
+    }
+  } catch (e) {}
+}
+
+function abHintBlockScroll(e) {
+  e.preventDefault();
+  abHintCancelScrollMotion();
+}
+
+function abHintBlockKeys(e) {
+  const k = e.key || '';
+  /* Tab и Enter не трогаем: с клавиатуры на кнопку нужно попасть и нажать её. */
+  if (k === 'Tab' || k === 'Enter') return;
+  if (k === ' ' || k === 'Spacebar' || /^(Arrow|PageUp|PageDown|Home|End)/.test(k)) {
+    e.preventDefault();
+    abHintCancelScrollMotion();
+  }
+}
+
+function showAbHint() {
+  const bar = document.getElementById('stickyPlayerBar');
+  const tip = document.getElementById('abHintTip');
+  const overlay = document.getElementById('abHintOverlay');
+  if (abHintVisible || !bar || !tip || !overlay) return;
+  // Пока подсказка ждала свою секунду, пульт могли закрыть крестиком.
+  if (!bar.classList.contains('active')) return;
+  if (!positionAbHint()) return;
+
+  markAbHintSeen();
+  tip.classList.add('show');
+  overlay.classList.add('show');
+  document.documentElement.classList.add('nr-ab-hint');
+  abHintVisible = true;
+  // Пока подсказка висит, держим её на кнопке (поворот экрана, масштаб окна).
+  window.addEventListener('resize', positionAbHint);
+  /* И держим на месте страницу: колесо, свайп и клавиши-скролл. Заодно гасим
+     уже набранный ход колеса — если страница в этот момент «доезжала». */
+  abHintCancelScrollMotion();
+  window.addEventListener('wheel', abHintBlockScroll, { passive: false, capture: true });
+  window.addEventListener('touchmove', abHintBlockScroll, { passive: false, capture: true });
+  window.addEventListener('keydown', abHintBlockKeys, { capture: true });
+}
+
+/* Убирается и по клику на фон (оверлей и затемнение пульта), и по клику на саму
+   кнопку — она выше затемнения, её onclick зовёт toggleDeckSource. Ожидание
+   показа здесь не гасим: клик по пульту (например, по Play) сам включает трек,
+   и подсказка после него показаться должна — её и запускает showStickyPlayer. */
+function hideAbHint() {
+  if (!abHintVisible) return;
+
+  abHintVisible = false;
+  window.removeEventListener('resize', positionAbHint);
+  window.removeEventListener('wheel', abHintBlockScroll, { capture: true });
+  window.removeEventListener('touchmove', abHintBlockScroll, { capture: true });
+  window.removeEventListener('keydown', abHintBlockKeys, { capture: true });
+  abHintCancelScrollMotion();
+  document.documentElement.classList.remove('nr-ab-hint');
+
+  const tip = document.getElementById('abHintTip');
+  const overlay = document.getElementById('abHintOverlay');
+  if (tip) tip.classList.remove('show');
+  if (overlay) overlay.classList.remove('show');
+}
+
+function maybeShowAbHint() {
+  if (abHintSeen() || abHintVisible) return;
+  clearTimeout(abHintTimer);
+  abHintTimer = setTimeout(() => {
+    abHintTimer = null;
+    showAbHint();
+  }, AB_HINT_DELAY_MS);
 }
 
 function changeDeckVolume(val) {
@@ -5306,7 +5487,8 @@ function closePriceCalcModal() {
   if (modal && modal.classList.contains('active')) {
     modal.classList.remove('active');
     // Отменяем запланированный авто-переход и незавершённые переходы шагов,
-    // снимаем «замороженную» высоту окна.
+    // снимаем «замороженную» высоту окна и убираем подсказку у кружка «i».
+    if (typeof hideCalcHint === 'function') hideCalcHint();
     cancelCalcAutoAdvance();
     calcStepAnimId++;
     cancelCalcStepFade();
@@ -5347,6 +5529,8 @@ function isCalcStepAnswered(step) {
 
 function goToCalcStep(step) {
   calcStep = Math.max(0, Math.min(CALC_LAST_STEP, step));
+  // Уходящий шаг мог оставить открытую подсказку у кружка «i» — гасим её.
+  if (typeof hideCalcHint === 'function') hideCalcHint();
   renderPriceCalcStep();
 }
 
@@ -5736,6 +5920,12 @@ function renderPriceCalcStep() {
   renderPriceCalcChoices();
   renderPriceCalcSummary();
 
+  // Открытая подсказка у кружка «i» могла остаться от прежнего языка — перелистываем
+  // её текст на текущий язык, сохранив позицию.
+  if (typeof calcHintVisibleId !== 'undefined' && calcHintVisibleId) {
+    showCalcHint(calcHintVisibleId);
+  }
+
   // Смета на последнем шаге выстраивается каскадом: строки → итог
   if (calcStep === CALC_LAST_STEP) playCalcReceiptCascade();
 }
@@ -5892,6 +6082,127 @@ function renderPriceCalcSummary() {
   }
 
   if (totalEl) totalEl.textContent = formatCalcPrice(result.total, currentLang);
+}
+
+// ── Подсказки к вопросам калькулятора (кружок «i») ────────────────────────
+// Кружок стоит рядом с вопросом; наведение/фокус показывают бабл, уход курсора —
+// скрывают. На телефоне наведения нет, поэтому тап по кружку переключает бабл.
+// Вид бабла — как у подсказки BEFORE / AFTER (тот же класс .nr-ab-hint-tip),
+// позицию и место хвостика считает positionCalcHint.
+const CALC_HINT_KEYS = { mastering: 'hintMastering', trackout: 'hintTrackout' };
+let calcHintVisibleId = null;
+// Момент последнего показа: на телефоне тап по кружку сначала даёт focus (показ),
+// а затем click (переключение). Без этой отметки click тут же погасил бы бабл.
+let calcHintShownAt = 0;
+
+function getCalcHintDot(id) {
+  return document.querySelector(`.nr-calc-hint-dot[data-calc-hint="${id}"]`);
+}
+
+// Ключи подсказок лежат в services.priceCalc (i18n.ru / i18n.en).
+function getCalcHintText(id) {
+  const key = CALC_HINT_KEYS[id];
+  if (!key) return '';
+  return getI18nValue(currentLang, 'services.priceCalc.' + key, getDeviceType());
+}
+
+function positionCalcHint(tip, dot) {
+  const rect = dot.getBoundingClientRect();
+  const margin = 12;
+  // Бабл ставим над кружком, по центру; подсказки к вопросам внизу страницы —
+  // поэтому если сверху мало места, показываем под кружком.
+  const tipRect = tip.getBoundingClientRect();
+  const tipHeight = tipRect.height || 0;
+  let top = rect.top - tipHeight - margin;
+  let placeBelow = false;
+  if (top < margin) {
+    top = rect.bottom + margin;
+    placeBelow = true;
+  }
+  const half = tipRect.width / 2 || 0;
+  let left = rect.left + rect.width / 2;
+  left = Math.max(margin + half, Math.min(left, window.innerWidth - margin - half));
+
+  tip.style.left = left + 'px';
+  tip.style.top = top + 'px';
+  tip.classList.toggle('nr-calc-hint-tip--below', placeBelow);
+  // Хвостик держим точно под/над кружком, даже когда бабл прижат к краю экрана.
+  const tailX = rect.left + rect.width / 2 - (left - half);
+  tip.style.setProperty('--nr-ab-tail-x', Math.round(tailX) + 'px');
+}
+
+function showCalcHint(id) {
+  const text = getCalcHintText(id);
+  const dot = getCalcHintDot(id);
+  const tip = document.getElementById('calcHintTip');
+  const tipText = document.getElementById('calcHintTipText');
+  if (!text || !dot || !tip || !tipText) return;
+
+  calcHintVisibleId = id;
+  tipText.innerHTML = text;
+  // Сначала отдаём баблу размеры, потом считаем позицию (иначе ширина/высота = 0).
+  tip.classList.add('show');
+  tip.setAttribute('aria-hidden', 'false');
+  positionCalcHint(tip, dot);
+  calcHintShownAt = Date.now();
+}
+
+function hideCalcHint(id) {
+  // Кружок может быть неактивной «половиной» пары hover/focus/blur — сверяемся
+  // с тем, что реально показано, чтобы не погасить бабл по лишнему событию.
+  if (id && calcHintVisibleId !== id) return;
+  const tip = document.getElementById('calcHintTip');
+  if (!tip || !calcHintVisibleId) return;
+  calcHintVisibleId = null;
+  tip.classList.remove('show');
+  tip.setAttribute('aria-hidden', 'true');
+}
+
+// Тап/клик по кружку: на телефоне наведения нет, поэтому тап переключает бабл.
+// На устройствах с мышью (hover) показ/скрытие и так делает наведение — клик
+// оставляем «пустым», чтобы бабл не мигал под курсором.
+function toggleCalcHint(id) {
+  const canHover = typeof window.matchMedia === 'function' &&
+    window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  if (canHover) return;
+  // Тот же тап уже показал бабл через focus — не закрываем его этим же нажатием.
+  if (calcHintVisibleId === id && Date.now() - calcHintShownAt < 500) return;
+  if (calcHintVisibleId === id) {
+    hideCalcHint(id);
+    // Снимаем фокус, иначе кружок на телефоне остаётся в «нажатом» виде (:focus).
+    const dot = getCalcHintDot(id);
+    if (dot && typeof dot.blur === 'function') dot.blur();
+  } else {
+    showCalcHint(id);
+  }
+}
+
+// Глобальные правила для подсказок: тап мимо кружка закрывает бабл, а при
+// прокрутке/повороте экрана уже открытый бабл прилипает к своему кружку.
+function initCalcHints() {
+  document.addEventListener('click', e => {
+    // Тап мимо кружка и бабла: на телефоне снимаем фокус с кружка, иначе он
+    // остаётся «залипшим» в нажатом виде до следующего касания.
+    if (!e.target.closest('.nr-calc-hint-dot') && !e.target.closest('#calcHintTip')) {
+      const dots = document.querySelectorAll('.nr-calc-hint-dot');
+      dots.forEach(d => {
+        if (d === document.activeElement && typeof d.blur === 'function') d.blur();
+      });
+    }
+    if (!calcHintVisibleId) return;
+    if (e.target.closest('.nr-calc-hint-dot')) return;
+    if (e.target.closest('#calcHintTip')) return;
+    hideCalcHint();
+  }, true);
+
+  const reposition = () => {
+    if (!calcHintVisibleId) return;
+    const tip = document.getElementById('calcHintTip');
+    const dot = getCalcHintDot(calcHintVisibleId);
+    if (tip && dot) positionCalcHint(tip, dot);
+  };
+  window.addEventListener('resize', reposition, { passive: true });
+  window.addEventListener('scroll', reposition, { passive: true, capture: true });
 }
 
 // --- MOBILE MENU ---
@@ -7013,10 +7324,13 @@ function initServicesGsapAnimation() {
 
   // Count-up цен запускаем отдельным триггером (без повторного фейда
   // bottomContainer — его opacity уже управляется общим мягким светом выше).
+  // Порог 100% — нижняя видимая кромка (при активной панели плеера считается
+  // над ней): отсчёт стартует ровно в момент появления блока цены на экране.
+  // При прежних 80% блок успевал подняться на 20% высоты экрана и стоял нулём.
   if (priceData.length) {
     ScrollTrigger.create({
       trigger: bottomContainer,
-      start: computeDynamicStart(80),
+      start: computeDynamicStart(100),
       once: true,
       onEnter: startPriceCountUp
     });

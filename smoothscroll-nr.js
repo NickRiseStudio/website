@@ -71,6 +71,18 @@
     return null;
   }
 
+  /* Активно ли модальное окно (окно поверх страницы). Пока оно открыто, сама
+     страница не скроллится (lockPageScroll → overflow: hidden), а колесо внутри
+     окна гасит обработчик script.js. Если модуль всё же поймает такой ход,
+     страницу нельзя двигать программно: scrollBy обошёл бы замок overflow и
+     фон «уехал» бы под окном. */
+  function isModalOpen() {
+    var d = document.documentElement;
+    if (d.classList.contains('modal-open') || d.classList.contains('nr-menu-open')) return true;
+    var m = document.querySelector('.modal-overlay.active');
+    return !!m;
+  }
+
   /* Pulse-кривая — байт-в-байт как в оригинале (форма ощущения инерции). */
   function pulseV(v) {
     v *= opts.pulseScale;
@@ -211,6 +223,9 @@
     if (e.ctrlKey || e.metaKey) return;
     // Пока висит boot-заставка, страница не скроллится (её гасит animations.js).
     if (document.documentElement.classList.contains('nr-boot-active')) return;
+    // Открыто окно поверх страницы: фон не двигаем ни программно, ни инерцией —
+    // иначе окно «обо мне» без своей прокрутки пропускало бы ход на страницу.
+    if (isModalOpen()) { stopMotion(); return; }
     if (!maxY() && !maxX()) return;
     if (innerScrollable(e.target)) return;
 

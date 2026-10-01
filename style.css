@@ -535,8 +535,12 @@ html, body {
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease, box-shadow 0.2s ease;
 }
 
+/* Наведение: БЕЗ transform. Масштаб (scale) на бейдже заставлял Chrome
+   растеризовать надпись «Обо мне» отдельным слоем и ронял субпиксельное
+   сглаживание — на Windows текст «сереет» и мылится. Вместо роста плитки
+   даём подсветку фоном (group-hover:bg-amber-400 в разметке) и свечение. */
 .hero-mask-container:hover .hero-about-badge {
-  transform: translateX(-50%) scale(1.05) !important;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.4), 0 12px 28px rgba(245, 158, 11, 0.5);
 }
 
 /* ── Главный экран: телефон и планшет ────────────────────────────────────
@@ -1220,8 +1224,6 @@ body.nr-menu-open {
   will-change: transform, opacity, filter;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(245, 158, 11, 0.4) transparent;
 }
 
 /* Mobile optimizations: disable costly full-screen backdrop-filter blur and optimize animations */
@@ -1251,19 +1253,26 @@ body.nr-menu-open {
   }
 }
 
+/* Полоса прокрутки окон — только кастомная (::-webkit-scrollbar).
+   Стандартные scrollbar-width/scrollbar-color у .modal-content убраны: пока они
+   заданы, браузер (Chrome/Яндекс на Android/планшетах) рисует СИСТЕМНУЮ
+   overlay-полосу по краю окна и полностью игнорирует ::-webkit-scrollbar —
+   она торчит за скруглением .rack-card (border-radius 18px) сверху справа и
+   снизу справа. Без стандартных свойств работает кастомная отрисовка, а
+   border-radius дорожки/ползунка 18px держит её внутри скругления. */
 .modal-content::-webkit-scrollbar {
   display: block !important;
   width: 6px !important;
 }
 
 .modal-content::-webkit-scrollbar-track {
-  background: rgba(18, 22, 34, 0.5);
-  border-radius: 6px;
+  background: transparent;
+  border-radius: 18px;
 }
 
 .modal-content::-webkit-scrollbar-thumb {
   background: rgba(245, 158, 11, 0.35);
-  border-radius: 6px;
+  border-radius: 18px;
 }
 
 .modal-content::-webkit-scrollbar-thumb:hover {
@@ -1334,6 +1343,49 @@ body.nr-menu-open {
    overflow-y к overflow-hidden (см. абзац «У ОКНА «КОНТАКТЫ»» выше). */
 #contactModal .modal-content {
   overflow-y: auto;
+}
+
+/* ОКНО «ОБО МНЕ»: НЕСТАНДАРТНЫЕ ОТСТУПЫ (шага 15px в шкале Tailwind нет).
+
+   Оба блока ниже размечены утилитами Tailwind, но нужные значения (15px)
+   в шкале отсутствуют, а произвольных утилит (my-[15px] / mb-[15px]) в
+   собранном tailwind.css тоже нет — пересобирать его по правилам проекта
+   нельзя (см. PROJECT-NOTES, §5). Поэтому отступы задаются здесь.
+
+   Специфичность: селектор (1,2,0) выше утилит .my-6 и .mb-8 (обe 0,1,0)
+   и перебивает их без !important — style.css подключён после tailwind.css. */
+
+/* 1) Плашка со статистикой (200+ / 6+ лет / 100%): my-6 = 24px сверху и
+      снизу -> 15px. Селектор по :has() привязан к самой плашке, а не к
+      позиции в разметке, поэтому не зацепит соседние блоки с .my-6. */
+#aboutModal .modal-content > .my-6:has(> .border-x) {
+  margin-top: 15px;
+  margin-bottom: 15px;
+}
+
+/* 2) Блок кнопок быстрого перехода к FAQ: mb-8 = 32px снизу -> 15px. */
+#aboutModal .modal-content > .mb-8 {
+  margin-bottom: 15px;
+}
+
+/* 3) Шапка профиля (логотип, «Александр (Nick Rise)», подпись): pb-6 = 24px
+      нижнего внутреннего отступа -> 15px. Это зазор между подписью и линией
+      border-b, отделяющей шапку от плашки статистики. Селектор привязан к
+      классам самой шапки (pb-6 + border-b), а не к позиции в разметке. */
+#aboutModal .modal-content > .pb-6.border-b {
+  padding-bottom: 15px;
+}
+
+/* 4) Внутренние отступы самого окна: утилиты p-5 sm:p-8 (на десктопе 32px
+      со всех сторон) -> 25px. Значения 25px в шкале Tailwind нет, утилит
+      p-[25px] в собранном tailwind.css тоже нет. Работает только на широких
+      экранах (min-width: 640px), чтобы не сломать мобильный вариант p-5,
+      который рассчитан на узкий экран. Специфичность (1,2,0) выше .sm\:p-8
+      (0,1,0), лишний !important не нужен. */
+@media (min-width: 640px) {
+  #aboutModal .modal-content {
+    padding: 25px;
+  }
 }
 
 /* Toast Notifications */
@@ -2038,10 +2090,288 @@ a, button, [role="button"], input, select, textarea, .cursor-pointer {
   opacity: 1 !important;
 }
 
-.deck-source-switch[data-source="after"] .deck-led-before {
-  background-color: #4b5563 !important;
-  box-shadow: none !important;
-  opacity: 0.3 !important;
+/* ═══════════════════════════════════════════════════════════════════════
+   ПОДСКАЗКА ПРО ПЕРЕКЛЮЧАТЕЛЬ BEFORE / AFTER
+   Первое включение трека: страница и пульт плавно уходят в затемнение с
+   размытием, над кнопкой BEFORE / AFTER появляется подсказка с хвостиком,
+   прокрутка на это время заблокирована. Убирается так же плавно — по клику
+   на фон, на затемнение пульта или на саму кнопку (script.js → hideAbHint).
+
+   Почему так, а не «просто накрыть всё оверлеем»: пульт — собственный контекст
+   наложения (transform + z-index 90 выше), и поднять кнопку изнутри него над
+   полноэкранным оверлеем нельзя. Поэтому в состоянии html.nr-ab-hint пульт
+   целиком поднимается над оверлеем (z-index 200), его ряды перестают быть
+   отдельными контекстами (перебиваем .sticky-player-bar > div из
+   animations.css), начинку пульта гасит внутренний слой #stickyPlayerBar::after,
+   а сама кнопка идёт поверх этого слоя (z-index 30 против 20). Бабл живёт на
+   уровне body и выше всех (z-index 300): в пульте он уехал бы вниз вместе с ним.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Затемнение и размытие страницы ──────────────────────────────────── */
+
+.nr-ab-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background-color: rgba(4, 6, 10, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  /* Пока подсказка на экране, протяжка пальцем по фону не прокручивает
+     страницу. Колесо, клавиши и собственный плавный скролл гасит script.js
+     (abHintBlockScroll / abHintBlockKeys), overflow: hidden — страховка. */
+  touch-action: none;
+  overscroll-behavior: contain;
+  transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+              visibility 0.45s step-end;
+}
+
+.nr-ab-overlay.show {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+              visibility 0s;
+}
+
+/* Прокрутка заблокирована, пока подсказка висит: у самого документа её больше
+   нет, поэтому и своя плавная прокрутка сдвинуть страницу не может. Позиция
+   чтения при снятии блока сохраняется — overflow вернётся на место.
+   overscroll-behavior — как у блокировки под мобильным меню (nr-menu-open):
+   на телефоне жест не «протаскивает» страницу и не дёргает pull-to-refresh. */
+html.nr-ab-hint,
+html.nr-ab-hint body {
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+/* ── Бабл с подсказкой ───────────────────────────────────────────────── */
+
+.nr-ab-hint-tip {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 300;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 14px 18px;
+  /* Плавные грани: общее скругление плашки и мягкая тень без резких кромок */
+  border-radius: 20px;
+  background: linear-gradient(160deg, rgba(18, 22, 34, 0.98), rgba(9, 12, 18, 0.98));
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.75), 0 0 26px rgba(245, 158, 11, 0.2);
+  color: #F3F4F6;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: center;
+  /* Позицию и место хвостика считает script.js → positionAbHint */
+  --nr-ab-tail-x: 50%;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translate3d(0, 10px, 0);
+  transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+              visibility 0.45s step-end;
+}
+
+.nr-ab-hint-tip.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translate3d(0, 0, 0);
+  transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+              visibility 0s;
+}
+
+/* Хвостик к кнопке: тот же поворот квадрата с двумя рёбрами, что у плашек сайта */
+.nr-ab-hint-tip::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: var(--nr-ab-tail-x);
+  width: 16px;
+  height: 16px;
+  transform: translateX(-50%) rotate(45deg);
+  background-color: rgba(10, 13, 20, 0.98);
+  border-right: 1px solid rgba(245, 158, 11, 0.45);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.45);
+  border-bottom-right-radius: 5px;
+}
+
+/* Оранжевые «до» и «после» (см. config.js → player.abHint) */
+.nr-ab-hint-accent {
+  color: #F59E0B;
+  font-weight: 800;
+}
+
+/* ── Состояние подсказки: яркими остаются кнопка и бабл ──────────────── */
+
+html.nr-ab-hint #stickyPlayerBar {
+  z-index: 200;
+}
+
+html.nr-ab-hint .sticky-player-bar > div {
+  z-index: auto;
+}
+
+html.nr-ab-hint #stickyPlayerBar .deck-source-switch {
+  z-index: 30;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.55), 0 0 26px rgba(245, 158, 11, 0.45);
+}
+
+/* Внутренний слой затемнения пульта. Лежит в пульте всегда, но в обычном
+   состоянии прозрачен и пропускает нажатия — поэтому уход подсказки получается
+   плавным: гасится только прозрачность (см. слой выше). */
+#stickyPlayerBar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background-color: rgba(5, 7, 12, 0.8);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html.nr-ab-hint #stickyPlayerBar::after {
+  opacity: 1;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+/* «Уменьшить движение»: подсказка просто проявляется, без подъезда снизу */
+@media (prefers-reduced-motion: reduce) {
+  .nr-ab-hint-tip,
+  .nr-ab-hint-tip.show {
+    transform: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ПОДСКАЗКИ К ВОПРОСАМ КАЛЬКУЛЯТОРА (кружок «i»)
+   Кружок стоит рядом с вопросом Да/Нет; наведение, фокус или тап показывают
+   бабл (script.js → showCalcHint). Вид бабла переиспользован у подсказки
+   BEFORE / AFTER (.nr-ab-hint-tip) — поэтому здесь только кружок и поправки
+   к позиции/хвостику для случаев «над кружком» и «под кружком».
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.nr-calc-hint-dot {
+  display: inline-block;
+  margin-left: 7px;
+  vertical-align: 2px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(245, 158, 11, 0.85);
+  background: rgba(245, 158, 11, 0.12);
+  color: #F59E0B;
+  /* Классическое центрирование текста в кружке: бокс — по содержимому
+     (content-box), line-height равен высоте содержимого, text-align центрирует по
+     горизонтали сама текстовая раскладка. Так буква встаёт ровно по центру кружка
+     независимо от кегля и метрик шрифта. Внешний диаметр = содержимое + 2 рамки. */
+  box-sizing: content-box;
+  width: 15px;
+  height: 15px;
+  line-height: 15px;
+  text-align: center;
+  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  font-style: normal;
+  cursor: help;
+  flex-shrink: 0;
+  /* Гасим системную подсветку тапа: иначе на телефоне поверх кружка на миг
+     всплывает серый квадрат, который «залипает» до следующего касания. */
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.35s ease, color 0.35s ease,
+              border-color 0.35s ease, box-shadow 0.35s ease,
+              transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@media (min-width: 640px) {
+  .nr-calc-hint-dot {
+    width: 17px;
+    height: 17px;
+    line-height: 17px;
+    font-size: 13px;
+  }
+}
+.nr-calc-hint-dot:hover,
+.nr-calc-hint-dot:focus-visible {
+  background: #F59E0B;
+  border-color: #F59E0B;
+  color: #0C0E12;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.6);
+  outline: none;
+}
+/* Нажатие: только для мыши. На сенсорных экранах состояние :active может «залипнуть»
+   после тапа до следующего касания — из-за этого кружок остаётся сжатым. Поэтому
+   анимацию нажатия включаем лишь там, где есть настоящий hover/курсор. */
+@media (hover: hover) and (pointer: fine) {
+  .nr-calc-hint-dot:active { transform: scale(0.92); }
+}
+
+/* Бабл подсказки: позицию (left/top) и место хвостика задаёт positionCalcHint —
+   поэтому держим X-центрирование прямо в трансформации (в дополнение к общему
+   подъезду снизу у .nr-ab-hint-tip), а не инлайном, чтобы анимация играла. */
+.nr-calc-hint-tip {
+  text-align: left;
+  font-weight: 600;
+  transform: translateX(-50%) translate3d(0, 10px, 0);
+  /* Хвостик смотрит вниз — на кружок под баблом (по умолчанию). */
+}
+.nr-calc-hint-tip.show {
+  transform: translateX(-50%) translate3d(0, 0, 0);
+}
+/* Телефон: бабл занимает почти всю ширину экрана — текст ложится ровно, без
+   рваных переносов по одному слову. Ширину держим чуть меньше окна, чтобы по
+   краям оставался воздух; позиционирование (positionCalcHint) уже учитывает
+   clamp по краям, поэтому широкий бабл не вылезает за экран. */
+@media (max-width: 640px) {
+  .nr-calc-hint-tip {
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+    padding: 13px 16px;
+    font-size: 0.9375rem;
+  }
+}
+/* Если бабл показан ПОД кружком (мало места сверху) — разворачиваем хвостик вверх. */
+.nr-calc-hint-tip.nr-calc-hint-tip--below::after {
+  top: -8px;
+  bottom: auto;
+  background-color: rgba(10, 13, 20, 0.98);
+  border-right: none;
+  border-bottom: none;
+  border-left: 1px solid rgba(245, 158, 11, 0.45);
+  border-top: 1px solid rgba(245, 158, 11, 0.45);
+  border-bottom-right-radius: 0;
+  border-top-left-radius: 5px;
+}
+
+/* «Уменьшить движение»: бабл просто проявляется на месте */
+@media (prefers-reduced-motion: reduce) {
+  .nr-calc-hint-tip,
+  .nr-calc-hint-tip.show {
+    transform: translateX(-50%);
+  }
+}
+
+/* ── Финал калькулятора: заголовок «Ориентировочная стоимость» и подпись ────── */
+/* На телефонах заголовок должен всегда укладываться в одну строку. Текст длинный,
+   поэтому: запрещаем перенос и слегка прижимаем кегль к ширине экрана (vw), чтобы
+   строка гарантированно влезала и на 320px. Со sm-брейкпакта возвращаем обычный
+   размер из класса text-2xl. */
+@media (max-width: 639px) {
+  .nr-calc-result-title {
+    white-space: nowrap;
+    font-size: clamp(0.95rem, 5.1vw, 1.25rem);
+  }
+}
+/* На телефонах убираем пояснение «Это предварительный расчёт…» — оставляем только
+   заголовок и итог. На планшетах/десктопе подпись остаётся. */
+@media (max-width: 639px) {
+  .nr-calc-result-sub { display: none; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════

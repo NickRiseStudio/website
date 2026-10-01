@@ -72,7 +72,13 @@ const CONFIG = {
         afterLabel: 'AFTER (MASTERED)',
         prevBtn: 'Назад',
         nextBtn: 'Вперед',
-        audioError: 'Не удалось загрузить файл трека. Проверьте соединение и нажмите на трек ещё раз.'
+        audioError: 'Не удалось загрузить файл трека. Проверьте соединение и нажмите на трек ещё раз.',
+        // Подсказка над кнопкой BEFORE / AFTER — появляется при первом
+        // включении трека (script.js → maybeShowAbHint). «до» и «после»
+        // выделены оранжевым, а <br> делит подсказку на две строки: inline-HTML
+        // внутри строки допустим, renderI18nText вставит его как HTML
+        // (классы и вид — в style.css).
+        abHint: 'Здесь вы можете переключать<br>версии <span class="nr-ab-hint-accent">до</span> и <span class="nr-ab-hint-accent">после</span> обработки'
       },
       services: {
         title: 'Услуги и цены',
@@ -91,8 +97,19 @@ const CONFIG = {
           durationMin: 'мин',
           individualNote: 'Обговаривается индивидуально',
           qMastering: 'Вам нужен мастеринг?',
+          // Подсказка к вопросу о мастеринге: появляется по наведению/тапу на
+          // кружок «i» рядом с вопросом (script.js → showCalcHint). Вид — тот же,
+          // что у подсказки про BEFORE / AFTER (бабл с хвостиком), оранжевые
+          // акценты — тем же классом nr-ab-hint-accent. Текст идёт сплошным
+          // потоком (переносы расставляет браузер под ширину бабла), <br> — только
+          // там, где разрыв нужен по смыслу (например, перед «Делается…»).
+          hintMastering: 'Мастеринг — это финальная обработка готового микса: баланс частот, <span class="nr-ab-hint-accent">громкость под стриминги</span>, плотность и «дорогой» звук. Делается <span class="nr-ab-hint-accent">после сведения</span>.',
+          hintMasteringAria: 'Что такое мастеринг?',
           qVocalRhythm: 'Вам нужна коррекция ритмики / выравнивание громкости вокала?',
           qTrackout: 'Вам нужно сведение trackout бита (бит по дорожкам) / доработка бита?',
+          // Подсказка к вопросу про trackout бита (бит по дорожкам).
+          hintTrackout: 'Trackout (бит по дорожкам) — это бит, разбитый на <span class="nr-ab-hint-accent">отдельные дорожки</span> (кик, снейр, хэты, бас и т. д.), а не один готовый файл. Так можно глубже свести вокал с битом и <span class="nr-ab-hint-accent">доработать сам бит</span>.',
+          hintTrackoutAria: 'Что такое бит по дорожкам (trackout)?',
           qVocalNotes: 'Вам нужна ручная коррекция нот вокала?',
           yes: 'Да',
           no: 'Нет',
@@ -215,7 +232,13 @@ const CONFIG = {
         afterLabel: 'AFTER (MASTERED)',
         prevBtn: 'Previous',
         nextBtn: 'Next',
-        audioError: 'Could not load the track file. Check your connection and tap the track again.'
+        audioError: 'Could not load the track file. Check your connection and tap the track again.',
+        // Hint above the BEFORE / AFTER switch — shown on the first track start
+        // (script.js → maybeShowAbHint). "before" and "after" are highlighted in
+        // orange and the <br> splits the hint into two lines: inline HTML inside
+        // a string is allowed, renderI18nText inserts it as HTML (the look lives
+        // in style.css).
+        abHint: 'Here you can switch between<br>the <span class="nr-ab-hint-accent">before</span> and <span class="nr-ab-hint-accent">after</span> versions'
       },
       services: {
         title: 'Services & Pricing',
@@ -234,8 +257,17 @@ const CONFIG = {
           durationMin: 'min',
           individualNote: 'Quoted individually',
           qMastering: 'Do you need mastering?',
+          // Hint for the mastering question: shown on hover/tap of the "i" circle
+          // next to the question (script.js → showCalcHint). The look matches the
+          // BEFORE / AFTER hint bubble; orange accents use nr-ab-hint-accent.
+          // The text flows naturally (the browser wraps it to the bubble width).
+          hintMastering: 'Mastering is the final treatment of a finished mix: frequency balance, <span class="nr-ab-hint-accent">streaming loudness</span>, density and a polished sound. It comes <span class="nr-ab-hint-accent">after mixing</span>.',
+          hintMasteringAria: 'What is mastering?',
           qVocalRhythm: 'Do you need vocal timing correction / loudness leveling?',
           qTrackout: 'Do you need beat trackout mixing (beat stems) / beat refinement?',
+          // Hint for the beat trackout question (beat stems).
+          hintTrackout: 'Trackout (beat stems) is a beat split into <span class="nr-ab-hint-accent">separate tracks</span> (kick, snare, hats, bass, etc.) instead of a single finished file. It lets us blend the vocal with the beat and <span class="nr-ab-hint-accent">refine the beat itself</span>.',
+          hintTrackoutAria: 'What are beat stems (trackout)?',
           qVocalNotes: 'Do you need manual vocal pitch correction?',
           yes: 'Yes',
           no: 'No',
