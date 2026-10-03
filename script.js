@@ -2833,23 +2833,9 @@ function positionAbHint() {
 }
 
 /* Прокрутка на время подсказки. Приём тот же, что у заставки (animations.js →
-   blockScroll/blockKeys): перехват на входе (capture) и preventDefault. Колесо
-   гасится ещё и потому, что собственный плавный скролл (smoothscroll-nr.js →
-   onWheel) выходит сразу, увидев defaultPrevented. Клавиши он разбирает раньше
-   нас (его слушатель тоже capture на window), поэтому уже набранный ход снимаем
-   через SmoothScroll.cancel: иначе страница поехала бы программно, а такой ход
-   overflow: hidden не держит. */
-function abHintCancelScrollMotion() {
-  try {
-    if (window.SmoothScroll && typeof window.SmoothScroll.cancel === 'function') {
-      window.SmoothScroll.cancel();
-    }
-  } catch (e) {}
-}
-
+   blockScroll/blockKeys): перехват на входе (capture) и preventDefault. */
 function abHintBlockScroll(e) {
   e.preventDefault();
-  abHintCancelScrollMotion();
 }
 
 function abHintBlockKeys(e) {
@@ -2858,7 +2844,6 @@ function abHintBlockKeys(e) {
   if (k === 'Tab' || k === 'Enter') return;
   if (k === ' ' || k === 'Spacebar' || /^(Arrow|PageUp|PageDown|Home|End)/.test(k)) {
     e.preventDefault();
-    abHintCancelScrollMotion();
   }
 }
 
@@ -2878,9 +2863,7 @@ function showAbHint() {
   abHintVisible = true;
   // Пока подсказка висит, держим её на кнопке (поворот экрана, масштаб окна).
   window.addEventListener('resize', positionAbHint);
-  /* И держим на месте страницу: колесо, свайп и клавиши-скролл. Заодно гасим
-     уже набранный ход колеса — если страница в этот момент «доезжала». */
-  abHintCancelScrollMotion();
+  /* И держим на месте страницу: колесо, свайп и клавиши-скролл. */
   window.addEventListener('wheel', abHintBlockScroll, { passive: false, capture: true });
   window.addEventListener('touchmove', abHintBlockScroll, { passive: false, capture: true });
   window.addEventListener('keydown', abHintBlockKeys, { capture: true });
@@ -7754,15 +7737,9 @@ function initMixerFaderScroll() {
     }
   }
 
-  // Останавливаем активную анимацию плавного скролла (инерцию колеса или
-  // GSAP-якорь), иначе её tick дерётся за window.scrollTo с фейдером микшера:
-  // страница «откатывается» к старой цели колеса. Вызов дёшев (сброс состояния).
+  // Останавливаем активную анимацию GSAP-якоря, иначе её tick дерётся за
+  // window.scrollTo с фейдером микшера. Вызов дёшев (сброс состояния).
   function stopSmoothMotion() {
-    try {
-      if (window.nrSmoothScroll && typeof window.nrSmoothScroll.cancel === 'function') {
-        window.nrSmoothScroll.cancel();
-      }
-    } catch (err) {}
     if (typeof activeScrollTween !== 'undefined' && activeScrollTween) {
       try {
         activeScrollTween.kill();

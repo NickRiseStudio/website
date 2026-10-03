@@ -1549,13 +1549,6 @@
       window.removeEventListener('wheel', blockScroll, { capture: true });
       window.removeEventListener('touchmove', blockScroll, { capture: true });
       window.removeEventListener('keydown', blockKeys, { capture: true });
-      /* Плавный скролл: либа могла «проснуться», пока страница была заморожена
-         (overflow:hidden) и не успела толком стартовать. Пересоздаём её заново
-         в момент, когда страница стала интерактивной, чтобы она сразу работала —
-         даже если юзер крутит колесо тут же после загрузки. */
-      if (typeof window.nrApplySmoothScroll === 'function') {
-        safe(window.nrApplySmoothScroll);
-      }
     }
 
     function hideBoot() {
