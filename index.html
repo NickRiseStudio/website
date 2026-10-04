@@ -65,6 +65,15 @@
        расставляет script.js). Заставка #nr-boot живёт в начале body и видна при
        каждом заходе/обновлении — её скрывает animations.js после готовности. -->
   <script>
+    /* После перезагрузки всегда открываем главный экран. Браузер сам
+       восстанавливает прошлую позицию прокрутки — из-за этого на миг мелькало
+       прежнее место (а заставка #nr-boot затем это перекрывала/сбрасывала).
+       Отключаем авто-восстановление и убираем якорь из адреса; делаем это как
+       можно раньше — до разбора <body>, чтобы прыжка не было вовсе. */
+    try {
+      if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+      if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+    } catch (e) {}
     try {
       if ((navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) ||
           (navigator.connection && (navigator.connection.saveData || /2g|3g/.test(navigator.connection.effectiveType)))) {

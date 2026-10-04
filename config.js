@@ -604,8 +604,6 @@ const CONFIG = {
      Длинные отзывы стоят так, чтобы попадать в верхнюю ленту: у них в ленте есть
      подпись «Читать далее…», и увидеть их нужно первыми. */
   reviewsData: [
-    /* REVIEWS:START — маркеры для !NickRiseStudio-lab\optimize-review-photos.cjs:
-       новые записи вставляются перед REVIEWS:END. Не удалять. */
     {
       name: 'Артём Фартович',
       url: 'https://vk.ru/gel_genius',
@@ -780,14 +778,6 @@ const CONFIG = {
       avatar: './image/reviews/iman-mamedov.webp',
       textRu: 'Работали с Ником около года назад, недавно снова списались… Пиздец. Таких boost’ов в качестве я не видел давно, при этом в общении и своём подходе к делу Ник остался таким же приятным и компетентным. Очень рекомендую!',
       textEn: 'We worked with Nick about a year ago, and recently got back in touch… Damn. I haven\'t seen such boosts in quality in a long time, and at the same time Nick has stayed just as pleasant and competent in communication and in his approach to the work. Highly recommend!'
-    },
-    {
-      name: 'Владислав Малыгин',
-      url: 'https://vk.ru/drvng',
-      avatar: './image/reviews/vladislav-malygin.webp',
-      textRu: 'Сделал все быстро, а главное качественно. Звук на уровне, подсказал пару моментов и вообще человек заинтересован в результате, будем работать еще!',
-      textEn: 'Did everything fast, and most importantly with quality. The sound is on point, he gave a couple of tips, and overall he\'s genuinely invested in the result — we\'ll keep working together!'
     }
-    /* REVIEWS:END */
   ]
 };

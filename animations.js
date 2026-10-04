@@ -1551,6 +1551,11 @@
       if (typeof window.nrApplySmoothScroll === 'function') {
         safe(window.nrApplySmoothScroll);
       }
+      /* Страница стала интерактивной и раскладка окончательна — пересчитываем
+         геометрию разделов и подсветку навигации, чтобы она сразу совпадала с
+         текущим местом (после перезагрузки это главный экран). */
+      if (typeof window.refreshScrollSpyAnchors === 'function') safe(window.refreshScrollSpyAnchors);
+      if (typeof window.updateActiveNavSection === 'function') safe(window.updateActiveNavSection);
     }
 
     function hideBoot() {
