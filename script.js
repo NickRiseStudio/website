@@ -1629,7 +1629,11 @@ function streamFetchChunk(st) {
     .then(response => { if (!response.ok || !response.headers.get('Content-Range')) throw new Error('HTTP ' + response.status); return response.arrayBuffer(); })
     .then(buffer => {
       if (st.fetchToken !== token) return;   // это ответ отменённого запроса
-      st.fetching = false; st.aborter = null; st.failCount = 0;
+      /* failCount сбрасываем НЕ здесь, а когда порция реально легла в буфер
+         (streamAfterAppend): иначе сбой проверки offset после перемотки
+         обнулял счётчик на каждой удачной загрузке, страховка «3 попытки»
+         не срабатывала никогда и один и тот же фрагмент качался бесконечно. */
+      st.fetching = false; st.aborter = null;
       if (!st.wanted || !st.meta) return;
       streamQueueChunk(st, new Uint8Array(buffer), from, to >= last);
     })
@@ -1685,6 +1689,7 @@ function streamAfterAppend(st) {
         st.nextTime = at; st.fresh = true;
       } else { st.fresh = false; }
     } else {
+      st.failCount = 0;   // порция легла на место — счётчик повторов обнулён
       st.nextByte = chunk.nextByte; st.nextTime = chunk.time + chunk.frames * st.meta.frameSec;
       st.appended += chunk.payload.length;
       if (chunk.tail) { st.done = true; st.nextTime = st.meta.duration; streamEndOfStream(st); }
@@ -1696,7 +1701,10 @@ function streamAfterAppend(st) {
 
 function streamCheckOffset(st, chunk) {
   if (!chunk.fresh || chunk.time < 0.5) return true;
-  if (getBufferedEndAt(st.el, chunk.time) > chunk.time) return true;
+  /* Проверяем не «ровно в отметке», а с допуском: декодер mp3 может отдать
+     участок на доли секунды позже timestampOffset, и строгая проверка считала
+     это промахом — порция снова качалась с той же позиции, и так по кругу. */
+  if (getBufferedEndAt(st.el, chunk.time + 0.5) > chunk.time + 0.5) return true;
   /* Порция с перемотки легла не туда. Раньше здесь режим выключался целиком,
      а streamRevertToFile переводил элемент на файл и браузер качал его С НАЧАЛА.
      Повторяем порцию с той же позиции — режим порций остаётся рабочим. */
@@ -3142,6 +3150,10 @@ function initDeckSeekBar() {
   if (!seekArea) return;
 
   let isSeeking = false;
+  /* true, если ползунок реально потянули. Обычный тап обрабатывает onclick
+     у #deckSeekHitArea (seekDeckTrack) — иначе одно нажатие уходило бы в
+     перемотку дважды: и здесь (pointerdown/up), и там. */
+  let seekMoved = false;
 
   const handleSeekFromEvent = (e) => {
     if (!activeTrackId) return;
@@ -3172,12 +3184,13 @@ function initDeckSeekBar() {
   // Pointer drag events
   seekArea.addEventListener('pointerdown', (e) => {
     isSeeking = true;
+    seekMoved = false;
     try { seekArea.setPointerCapture(e.pointerId); } catch (err) {}
-    handleSeekFromEvent(e);
   });
 
   seekArea.addEventListener('pointermove', (e) => {
     if (!isSeeking) return;
+    seekMoved = true;
     handleSeekFromEvent(e);
   });
 
@@ -3185,6 +3198,8 @@ function initDeckSeekBar() {
     if (!isSeeking) return;
     isSeeking = false;
     try { seekArea.releasePointerCapture(e.pointerId); } catch (err) {}
+    /* Тап без перемещения — не наша забота: его доводит onclick (seekDeckTrack). */
+    if (!seekMoved) return;
 
     // Прокрутка закончилась: выравниваем вторую дорожку по звучащей одним движением
     if (activeTrackId) {
@@ -3209,6 +3224,7 @@ function initDeckSeekBar() {
 
   // Touch fallback
   seekArea.addEventListener('touchmove', (e) => {
+    seekMoved = true;
     handleSeekFromEvent(e);
   }, { passive: true });
 }
@@ -3347,7 +3363,7 @@ function getBufferedEndAt(el, pos) {
   try {
     const t = Math.max(0, pos || 0);
     for (let i = 0; i < el.buffered.length; i++) {
-      if (el.buffered.start(i) > t + 0.25) break; // ближайший участок — дальше позиции
+      if (el.buffered.start(i) > t) break; // участок начинается правее точки — здесь дыра
       const end = el.buffered.end(i);
       if (end >= t) return end;
     }
@@ -3369,6 +3385,70 @@ function getPairBufferedAhead(item, pos) {
   if (!item) return 0;
   return Math.min(getBufferedAhead(item.audioA, pos), getBufferedAhead(item.audioB, pos));
 }
+
+/* Начало ближайшего скачанного участка ВПЕРЁД от позиции (-1 — дальше данных нет). */
+function getBufferedNextStart(el, pos) {
+  if (!el) return -1;
+  try {
+    const t = Math.max(0, pos || 0);
+    for (let i = 0; i < el.buffered.length; i++) {
+      const start = el.buffered.start(i);
+      if (start > t) return start;
+    }
+    return -1;
+  } catch (err) {
+    return -1;
+  }
+}
+
+const AUDIO_STALL_MS = 1200;     // мс: столько пара может стоять на месте — дальше лечим
+const AUDIO_STALL_TICK_MS = 500; // мс: как часто проверяем залипание
+
+/* Залипание после перемотки. Позиция перемотки может попасть в дыру буфера:
+   первый кадр порции встаёт не ровно на свою отметку, поэтому между уже
+   скачанным участком и только что добавленным остаётся щель в доли секунды.
+   В этой точке данных нет, элемент застревает в seeking, новых запросов не
+   уходит — звук не идёт, кнопка всё крутится, а беззвучная дорожка пары уходит
+   вперёд (syncAudioPair молчит, пока идёт seek). Ручная перемотка это лечит:
+   она сдвигает позицию к началу имеющихся данных. Здесь делаем то же самое
+   автоматически — если пара «играет», а звучащая дорожка замерла в точке без
+   данных, уводим её к ближайшим данным (не дальше AUDIO_PAIR_HEAD) и просим
+   порцию оттуда. */
+function watchAudioStall() {
+  if (!activeTrackId) return;
+  const item = trackAudioMap[activeTrackId];
+  if (!item || !item.wantPlay) return;
+
+  const { audible } = getAudiblePair(item);
+  const pos = audible.currentTime || 0;
+  /* Хвост трека: там ждать нечего — либо пара доигрывает, либо данных в самом
+     конце уже не будет (та же оговорка, что в checkPairBufferGate). */
+  const dur = audible.duration || 0;
+  if (dur > 0 && dur - pos <= AUDIO_PAIR_HEAD) { item.stallAt = 0; return; }
+  const stuck = !audible.paused && !audible.ended &&
+    getBufferedEndAt(audible, pos) <= pos;
+  if (!stuck) { item.stallAt = 0; return; }
+
+  const now = performance.now();
+  /* Позиция сдвинулась — это ещё не залипание, а обычная загрузка. */
+  if (!item.stallAt || Math.abs(pos - (item.stallPos || 0)) > 0.05) {
+    item.stallAt = now; item.stallPos = pos;
+    return;
+  }
+  /* Порция уже в пути или ждёт повтора — не мешаем своему же запросу. */
+  const st = audioStreamOf(audible);
+  if (st && (st.fetching || (st.retryAt && now < st.retryAt))) { item.stallAt = now; return; }
+  if (now - item.stallAt < AUDIO_STALL_MS) return;
+  item.stallAt = now;
+
+  const next = getBufferedNextStart(audible, pos);
+  const at = (next > pos && next - pos <= AUDIO_PAIR_HEAD) ? next : pos;
+  if (at > pos) { try { audible.currentTime = at; } catch (err) {} }
+  streamSeekTo(activeTrackId, at);
+  if (!isPairWarm(item)) warmOnSeek(activeTrackId, at);
+}
+
+setInterval(watchAudioStall, AUDIO_STALL_TICK_MS);
 
 /* Полоса буфера и спиннер загрузки — показываем и включаем, только когда
    трек слушают (wantPlay), а не при фоновой загрузке. */
@@ -3429,6 +3509,17 @@ function releasePairBufferGate(trackId) {
        страховка на случай, если порция для второй дорожки не попросилась сама
        (её событие seeking не пришло) — просим её отсюда, и пауза снимется. */
     streamSeekTo(trackId, pos);
+    /* Порционный режим выключен: streamSeekTo ничего не качает, и дыра в буфере
+       отстающей дорожки сама не закроется — гейт запирал пару навсегда (звук не
+       идёт, кнопка всё крутится). Просим пропущенный участок у браузера обычной
+       перемоткой этой дорожки: она беззвучна, а данные придут Range-запросом. */
+    if (!audioChunkSupported()) {
+      const silent = (item.audioA === audible) ? item.audioB : item.audioA;
+      if (silent && getBufferedAhead(silent, pos) < AUDIO_PAIR_HEAD &&
+          Math.abs((silent.currentTime || 0) - pos) > 0.3) {
+        try { silent.currentTime = pos; } catch (err) {}
+      }
+    }
     return;
   }
 
