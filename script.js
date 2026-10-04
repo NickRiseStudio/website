@@ -2881,7 +2881,10 @@ function hideAbHint() {
   window.removeEventListener('wheel', abHintBlockScroll, { capture: true });
   window.removeEventListener('touchmove', abHintBlockScroll, { capture: true });
   window.removeEventListener('keydown', abHintBlockKeys, { capture: true });
-  abHintCancelScrollMotion();
+  /* Отмена своей плавной прокрутки — её блок подгружается отдельно. Пока
+     функции нет, вызов пропускаем: иначе ReferenceError обрывал бы уборку
+     подсказки, и классы .show / nr-ab-hint оставались бы висеть. */
+  if (typeof abHintCancelScrollMotion === 'function') abHintCancelScrollMotion();
   document.documentElement.classList.remove('nr-ab-hint');
 
   const tip = document.getElementById('abHintTip');
