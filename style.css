@@ -1965,53 +1965,6 @@ html.nr-scrolling .sticky-player-bar {
   background-color: rgba(9, 11, 18, 0.98);
 }
 
-/* ═══ ВРЕМЕННО: ДИАГНОСТИКА ДЁРГАНЬЯ ПРОКРУТКИ (удалить после проверки) ═══
-   Гасим СРАЗУ все подозреваемые места, чтобы понять: уйдёт ли дёрганье на
-   живом сайте (github.io) в полноразмерном окне на ПК. Если уйдёт — виновник
-   в этом списке, дальше включаем по одному (биссекция). Удаляется ВЕСЬ блок
-   целиком, когда причина найдена.
-     1) пылинки-канвас (#nr-dust)       — полноэкранная перерисовка ~каждые 50 мс
-     2) все backdrop-filter              — дорогое размытие подложек под скроллом
-     3) боковой микшер (.mixer-track-fixed) — fixed + blur, виден только ≥1024px
-     4) принудительные GPU-слои          — промоушен крупных секций (перерисовка тайлов)
-     5) will-change/параллакс фона героя — постоянный слой + сдвиг каждый кадр
-     6) бегущие ленты отзывов            — вечная анимация на широком элементе */
-#nr-dust { display: none !important; }
-
-/* Размытие подложек снято целиком (в покое оно тоже не считается). */
-*, *::before, *::after {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-
-/* Blur убран — подложке модалки возвращаем плотность (как в режиме nr-lite). */
-.modal-overlay { background-color: rgba(8, 10, 15, 0.96) !important; }
-
-.mixer-track-fixed { display: none !important; }
-
-#mainHeader,
-.hero-mask-img,
-#playerContentContainer,
-#servicesContainer,
-#faqContainer > *,
-#contactsGrid > * {
-  transform: none !important;
-  backface-visibility: visible !important;
-  -webkit-backface-visibility: visible !important;
-}
-
-#mainHeader,
-.hero-bg-layer {
-  will-change: auto !important;
-}
-
-.hero-bg-layer { transform: none !important; }
-
-.nr-marquee-track {
-  animation: none !important;
-  will-change: auto !important;
-}
-
 /* Fast touch response: eliminates mobile tap delay */
 a, button, [role="button"], input, select, textarea, .cursor-pointer {
   touch-action: manipulation;

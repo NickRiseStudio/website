@@ -1086,14 +1086,10 @@
        низ страницы). Якорные прыжки и возврат в начало по-прежнему ставятся
        мгновенно — их обрабатывает setScrollLineProgress(p, true) в
        initHeader/ResizeObserver. */
-    /* ВРЕМЕННО (диагностика дёрганья прокрутки): выключены ПОКАДРОВЫЕ записи в
-       стили фиксированных элементов — ширина полоски прогресса (width) и
-       растворение фона шапки (background-color). Если дёрганье пропадёт,
-       включать по одному: сначала полоску, потом фон шапки. */
-    // safe(function () {
-    //   lineTarget = p;
-    //   advanceScrollLine();
-    // });
+    safe(function () {
+      lineTarget = p;
+      advanceScrollLine();
+    });
 
     /* Фон главного экрана отстаёт от контента (см. initHeroParallax).
        Дёшево: позиция секции не измеряется, а лишние записи в style
@@ -1103,7 +1099,7 @@
     /* Фон шапки растворяется на первых HERO_FADE_DISTANCE пикселях —
        см. paintHeaderFade. Считается от той же текущей позиции, что и
        полоска прогресса, поэтому лишних чтений scrollY здесь нет. */
-    // safe(function () { paintHeaderFade(currentY); });
+    safe(function () { paintHeaderFade(currentY); });
 
     var isScrolled = currentY > 40;
     if (isScrolled !== wasScrolled) {
@@ -1116,17 +1112,13 @@
        его ещё нет — во время непрерывного скролла кадры не трогают classList,
        — а снимаем через 180 мс после остановки, чтобы не «моргал» на паузах
        между щелчками колеса и при инерционном докате. */
-    /* ВРЕМЕННО (диагностика дёрганья прокрутки): класс nr-scrolling больше не
-       вешаем. Размытие уже снято навсегда (см. блок в style.css), а само
-       переключение класса заставляло компоситор пересобирать слои на старте и
-       остановке скролла. Вернуть — раскомментировать строки ниже. */
-    // var root = document.documentElement;
-    // if (!root.classList.contains('nr-scrolling')) root.classList.add('nr-scrolling');
-    // if (scrollClassTimer !== null) clearTimeout(scrollClassTimer);
-    // scrollClassTimer = setTimeout(function () {
-    //   scrollClassTimer = null;
-    //   root.classList.remove('nr-scrolling');
-    // }, 180);
+    var root = document.documentElement;
+    if (!root.classList.contains('nr-scrolling')) root.classList.add('nr-scrolling');
+    if (scrollClassTimer !== null) clearTimeout(scrollClassTimer);
+    scrollClassTimer = setTimeout(function () {
+      scrollClassTimer = null;
+      root.classList.remove('nr-scrolling');
+    }, 180);
 
     /* Десктопный SSL фейдер — активен только на экранах от 1024px.
        Раньше класс и таймер дёргались на КАЖДОМ кадре прокрутки: браузер
@@ -1603,12 +1595,10 @@
   function init() {
     safe(initBoot);
     safe(initAmbient);
-    /* ВРЕМЕННО (диагностика дёрганья прокрутки): пылинки-канвас и параллакс
-       фона героя отключены. Вернуть — раскомментировать две строки ниже. */
-    // safe(initDust);
+    safe(initDust);
     safe(initHeader);
     safe(initHero);
-    // safe(initHeroParallax);
+    safe(initHeroParallax);
     safe(initReveal);
     safe(initViewportGate);
     safe(animateHeroTitle);
