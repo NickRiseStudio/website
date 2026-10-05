@@ -3,11 +3,11 @@
 
    Движок — Lenis (darkroom.engineering), локальный vendor/lenis.min.js —
    сборка «1.3.25-framer» (та же, что ставит Framer/Rep Republic; глобал
-   window.Lenis). Модуль оставляет ПРЕЖНИЙ публичный API, поэтому
-   index.html, animations.js, script.js и lab-инструменты менять не нужно:
+   window.Lenis). Модуль сохраняет тот публичный API, которым пользуются
+   index.html, animations.js, script.js и lab-инструменты:
 
-     SmoothScroll.enable(opts) / init(opts) / destroy() / cancel() /
-     stop() / resync() / isEnabled() / scrollTo(y, opts) / _dbg();
+     SmoothScroll.enable(opts) / destroy() / cancel() / resync() /
+     isEnabled() / scrollTo(y, opts);  SmoothScroll(opts);
      window.SmoothScroll;  window.nrSmoothScroll.
 
    Роли:
@@ -31,7 +31,6 @@
     duration: 1.2,              // сек — длина «доезда» одного щелчка колеса
     easing: null,               // null → кривая Lenis по умолчанию
     wheelMultiplier: 1,         // множитель шага колеса
-    touchMultiplier: 1.5,       // множитель шага тача (если включат syncTouch)
     smoothWheel: true,
     syncTouch: false            // тач на планшетах — нативный, как было
   };
@@ -153,7 +152,6 @@
     var conf = {
       duration: opts.duration,
       wheelMultiplier: opts.wheelMultiplier,
-      touchMultiplier: opts.touchMultiplier,
       smoothWheel: opts.smoothWheel,
       syncTouch: opts.syncTouch,
       autoRaf: false,            // rAF гоним тикером GSAP (hookGsap)
@@ -183,24 +181,11 @@
 
   function SmoothScroll(options) { enable(options); }
   SmoothScroll.enable = enable;
-  SmoothScroll.init = enable;
   SmoothScroll.destroy = destroy;
   SmoothScroll.cancel = cancel;
-  SmoothScroll.stop = cancel;          // совместимость: «стоп инерции»
   SmoothScroll.resync = resync;
   SmoothScroll.scrollTo = scrollTo;
   SmoothScroll.isEnabled = function () { return enabled; };
-  SmoothScroll._dbg = function () {
-    return {
-      module: 'lenis',
-      enabled: enabled,
-      stopped: !!(lenis && lenis.isStopped),
-      locked: pageLocked(),
-      y: lenis ? Math.round(lenis.actualScroll * 100) / 100 : null,
-      limit: lenis ? Math.round(lenis.limit * 100) / 100 : null,
-      progress: lenis ? lenis.progress : null
-    };
-  };
 
   window.SmoothScroll = SmoothScroll;
   window.nrSmoothScroll = SmoothScroll;
