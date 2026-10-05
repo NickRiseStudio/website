@@ -45,7 +45,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initMobileMenuScrollLock();
   initGsapAnimations();
   initMixerFaderScroll();
-  initSmoothScroll();
   initSmoothAnchorNavigation();
   initScrollSpy();
   initScrollToTop();
@@ -2842,10 +2841,23 @@ function positionAbHint() {
 }
 
 /* Прокрутка на время подсказки. Приём тот же, что у заставки (animations.js →
-   blockScroll/blockKeys): перехват на входе (capture) и preventDefault, плюс
-   overflow: hidden на <html> (класс nr-ab-hint) — страница стоит на месте. */
+   blockScroll/blockKeys): перехват на входе (capture) и preventDefault. Колесо
+   гасится ещё и потому, что собственный плавный скролл (smoothscroll-nr.js →
+   onWheel) выходит сразу, увидев defaultPrevented. Клавиши он разбирает раньше
+   нас (его слушатель тоже capture на window), поэтому уже набранный ход снимаем
+   через SmoothScroll.cancel: иначе страница поехала бы программно, а такой ход
+   overflow: hidden не держит. */
+function abHintCancelScrollMotion() {
+  try {
+    if (window.SmoothScroll && typeof window.SmoothScroll.cancel === 'function') {
+      window.SmoothScroll.cancel();
+    }
+  } catch (e) {}
+}
+
 function abHintBlockScroll(e) {
   e.preventDefault();
+  abHintCancelScrollMotion();
 }
 
 function abHintBlockKeys(e) {
@@ -2854,6 +2866,7 @@ function abHintBlockKeys(e) {
   if (k === 'Tab' || k === 'Enter') return;
   if (k === ' ' || k === 'Spacebar' || /^(Arrow|PageUp|PageDown|Home|End)/.test(k)) {
     e.preventDefault();
+    abHintCancelScrollMotion();
   }
 }
 
@@ -2873,8 +2886,9 @@ function showAbHint() {
   abHintVisible = true;
   // Пока подсказка висит, держим её на кнопке (поворот экрана, масштаб окна).
   window.addEventListener('resize', positionAbHint);
-  /* И держим на месте страницу: колесо, свайп и клавиши-скролл
-     (overflow: hidden висит классом nr-ab-hint на <html>). */
+  /* И держим на месте страницу: колесо, свайп и клавиши-скролл. Заодно гасим
+     уже набранный ход колеса — если страница в этот момент «доезжала». */
+  abHintCancelScrollMotion();
   window.addEventListener('wheel', abHintBlockScroll, { passive: false, capture: true });
   window.addEventListener('touchmove', abHintBlockScroll, { passive: false, capture: true });
   window.addEventListener('keydown', abHintBlockKeys, { capture: true });
@@ -2892,6 +2906,7 @@ function hideAbHint() {
   window.removeEventListener('wheel', abHintBlockScroll, { capture: true });
   window.removeEventListener('touchmove', abHintBlockScroll, { capture: true });
   window.removeEventListener('keydown', abHintBlockKeys, { capture: true });
+  abHintCancelScrollMotion();
   document.documentElement.classList.remove('nr-ab-hint');
 
   const tip = document.getElementById('abHintTip');
@@ -5488,10 +5503,6 @@ function lockPageScroll() {
   if (isPageScrollLocked) return;
   isPageScrollLocked = true;
 
-  /* Движок тоже замирает: под overflow: hidden он продолжал бы копить
-     «целевую» позицию, и после закрытия окна страница прыгнула бы туда. */
-  nrSmoothScrollStop();
-
   // Prevent scrollbar layout shift on desktop without altering document scroll position
   const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
   if (scrollbarWidth > 0) {
@@ -5512,8 +5523,6 @@ function unlockPageScroll() {
 
   if (!isPageScrollLocked) return;
   isPageScrollLocked = false;
-
-  nrSmoothScrollStart();
 
   document.documentElement.classList.remove('modal-open');
   document.body.classList.remove('modal-open');
@@ -6418,8 +6427,6 @@ function openMobileMenu() {
   drawer.classList.add('is-open');
   if (overlay) overlay.classList.add('is-open');
   // Блокируем скролл страницы под открытым меню (см. initMobileMenuScrollLock)
-  // и заодно ставим на паузу движок плавной прокрутки (см. nrSmoothScrollStop).
-  if (!document.documentElement.classList.contains('nr-menu-open')) nrSmoothScrollStop();
   document.documentElement.classList.add('nr-menu-open');
   document.body.classList.add('nr-menu-open');
 
@@ -6448,13 +6455,8 @@ function closeMobileMenu() {
   drawer.classList.remove('is-open');
   if (overlay) overlay.classList.remove('is-open');
   // Снимаем блокировку скролла страницы
-  const wasMenuOpen = document.documentElement.classList.contains('nr-menu-open');
   document.documentElement.classList.remove('nr-menu-open');
   document.body.classList.remove('nr-menu-open');
-  /* Меню и правда было открыто — отпускаем и движок. Проверка нужна потому,
-     что closeMobileMenu() зовут и просто «на всякий случай»: клик по якорю,
-     переход на широкий экран, открытие окна контактов. */
-  if (wasMenuOpen) nrSmoothScrollStart();
 
   if (hamIcon) {
     hamIcon.classList.remove('scale-50', 'opacity-0', '-rotate-90');
@@ -6503,102 +6505,6 @@ function initMobileMenuScrollLock() {
   }
 }
 
-/* ═══ ПЛАВНАЯ ПРОКРУТКА (Lenis) ═════════════════════════════════════════
-   Как работает. Lenis перехватывает колесо и клавиши, ведёт собственную
-   «целевую» позицию и каждый кадр мягко доводит до неё НАТИВНУЮ прокрутку
-   страницы. Обёртки и transform на контенте нет — поэтому position: fixed
-   (шапка, плеер, микшер, модалки, тосты), window.scrollY, scroll-spy,
-   параллакс главного экрана и ScrollTrigger работают как раньше.
-
-   ПОЧЕМУ НЕ ДЁРГАЕТСЯ (четыре причины прежних рывков — все сняты):
-     1) сглаживание считается по РЕАЛЬНОМУ времени между кадрами (внутри
-        движка: value += (target − value) · (1 − e^(−λ·dt))), поэтому
-        ощущение одинаково на 60, 144 и 200 Гц. Наивный «шаг долей за
-        кадр» на 200 Гц разгонялся втрое — отсюда и были рывки;
-     2) кадр даёт ОДИН цикл — тикер GSAP; собственный rAF движка выключен
-        (autoRaf: false), отдельного цикла у страницы нет;
-     3) прокрутку пишет ОДИН владелец — движок. Прямой window.scrollTo
-        остался только у фейдера микшера, и он идёт в режиме immediate
-        (протяжка 1:1, без спора со сглаживанием);
-     4) в кадре прокрутки нет чтений раскладки: высота документа и
-        геометрия секций в проекте и так кэшируются по событиям.
-
-   Настройки ниже — «медленно и плавно». Ориентиры: lerp 0.05 — очень
-   тяжело и медленно, 0.075 — базовое, 0.1 — заметно отзывчивее. Меньше
-   0.06 ставить нельзя: шаг станет около одного физического пикселя за
-   кадр, и на 200 Гц это читается ступеньками.
-   wheelMultiplier — длина шага колеса: 1 и больше — резче и быстрее,
-   0.85–0.95 — короче и мягче.
-
-   Где движок НЕ включается (остаётся нативный скролл — так задумано):
-   системная настройка «уменьшить движение»; слабое устройство
-   (html.nr-lite); тач/грубый указатель — там родной скролл ожидаемее, и
-   на нём держатся свайп ленты треков и мобильное меню; нет библиотеки. */
-const NR_SCROLL = {
-  lerp: 0.075,
-  wheelMultiplier: 0.9,
-  anchorDuration: 1.15  /* сек: доводка к якорю — меню, «наверх», вопрос FAQ */
-};
-
-let nrLenis = null;    /* экземпляр движка; null — значит работает нативный скролл */
-let nrLenisLocks = 0;  /* лок движка — СЧЁТЧИК: заставка + модалка + меню */
-
-function initSmoothScroll() {
-  if (typeof Lenis === 'undefined') return;
-  try {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    if (document.documentElement.classList.contains('nr-lite')) return;
-    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
-  } catch (e) { return; }
-
-  nrLenis = new Lenis({
-    lerp: NR_SCROLL.lerp,
-    wheelMultiplier: NR_SCROLL.wheelMultiplier,
-    smoothWheel: true,
-    /* Тач не сглаживаем: родной скролл отзывчивее, и на нём держатся
-       мобильное меню (тач-жесты вне него отменяются) и свайп ленты. */
-    syncTouch: false,
-    autoResize: true,
-    /* Кадр даёт тикер GSAP (ниже) — один цикл на всю страницу. */
-    autoRaf: false,
-    /* Якоря ведём сами: клик по # обрабатывает smoothScrollTo() и сам
-       вычитает высоту шапки. Встроенный перехват якорей тут лишний. */
-    anchors: false
-  });
-
-  if (typeof gsap !== 'undefined' && gsap.ticker) {
-    gsap.ticker.add(function (time) { nrLenis.raf(time * 1000); });
-  } else {
-    /* GSAP не загрузился — ведём движок собственным кадром. */
-    (function nrRaf(t) { nrLenis.raf(t); requestAnimationFrame(nrRaf); })(performance.now());
-  }
-
-  /* ScrollTrigger должен получать позицию, которую выставил движок.
-     scrollerProxy при этом НЕ нужен: прокрутка осталась нативной. */
-  if (typeof ScrollTrigger !== 'undefined') nrLenis.on('scroll', ScrollTrigger.update);
-
-  /* Заставка #nr-boot могла уже заморозить страницу — тогда молчим. */
-  if (document.documentElement.classList.contains('nr-boot-active')) nrSmoothScrollStop();
-}
-
-/* Лок движка — счётчик, чтобы заставка, модалка и меню блокировали
-   прокрутку по отдельности и не снимали лок друг друга. */
-function nrSmoothScrollStop() {
-  if (!nrLenis) return;
-  nrLenisLocks++;
-  if (nrLenisLocks === 1) nrLenis.stop();
-}
-
-function nrSmoothScrollStart() {
-  if (!nrLenis) return;
-  nrLenisLocks = Math.max(0, nrLenisLocks - 1);
-  if (nrLenisLocks === 0) nrLenis.start();
-}
-
-/* Нужны и animations.js (заставка), и inline-страховке в index.html. */
-window.nrSmoothScrollStop = nrSmoothScrollStop;
-window.nrSmoothScrollStart = nrSmoothScrollStart;
-
 // --- SMOOTH & LUXURIOUS ANCHOR NAVIGATION (Header buttons & in-page anchors) ---
 let activeScrollTween = null;
 
@@ -6610,18 +6516,6 @@ function smoothScrollTo(targetY, customDuration) {
 
   if (distance < 3) return;
 
-  /* Движок активен — доезд ведёт он: сам мягко доводит позицию и сам отдаёт
-     управление пользователю, как только тот тронул колесо, палец или клавишу.
-     Поэтому весь блок с прерыванием и твином ниже в этом случае не нужен —
-     иначе в одном кадре за одну позицию дрались бы два владельца. */
-  if (nrLenis) {
-    nrLenis.scrollTo(clampedTargetY, {
-      duration: customDuration || NR_SCROLL.anchorDuration,
-      easing: function (t) { return 1 - Math.pow(1 - t, 3.2); }
-    });
-    return;
-  }
-
   if (activeScrollTween) {
     activeScrollTween.kill();
     activeScrollTween = null;
@@ -6632,6 +6526,23 @@ function smoothScrollTo(targetY, customDuration) {
 
   // Smooth, gradual duration based on distance (1.1s for short, up to 1.55s for long distances)
   const animDuration = customDuration || Math.min(1.55, Math.max(1.1, 0.95 + (distance / 3800) * 0.6));
+
+  // Если плавный скролл ведёт Lenis — отдаём якорь ему: GSAP ScrollToPlugin и
+  // Lenis одновременно пишут в window.scrollTo и дерутся за позицию каждый кадр.
+  if (window.nrSmoothScroll && typeof window.nrSmoothScroll.scrollTo === 'function' &&
+      typeof window.nrSmoothScroll.isEnabled === 'function' && window.nrSmoothScroll.isEnabled()) {
+    /* Якорь — не «щелчок колеса»: у колеса импульсная кривая из smoothConfig
+       (быстрый старт, длинный хвост), а переходу между разделами нужен
+       симметричный разгон и торможение. Поэтому кривую задаём здесь (как в
+       GSAP-ветке ниже), а не берём движковую. force: true — иначе Lenis
+       молча выходит из scrollTo, пока висит класс-замок страницы. */
+    window.nrSmoothScroll.scrollTo(clampedTargetY, {
+      duration: animDuration,
+      easing: (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2),
+      force: true
+    });
+    return;
+  }
 
   // Allow a short 220ms grace window after click so trackpad/mouse lift momentum never aborts scroll
   let allowInterrupt = false;
@@ -6717,18 +6628,6 @@ function smoothScrollTo(targetY, customDuration) {
     }
     requestAnimationFrame(step);
   }
-}
-
-/* Доезд к секции плеера. Заменяет прежний нативный
-   scrollIntoView({behavior:'smooth'}) у кнопки «Слушать A/B демо» в окне
-   «Обо мне»: с движком тот шёл бы мимо него и не вычитал высоту шапки. */
-function scrollToPlayer() {
-  const player = document.getElementById('player');
-  if (!player) return;
-  const header = document.querySelector('header');
-  const headerH = header ? header.offsetHeight : 72;
-  const currentY = window.pageYOffset || document.documentElement.scrollTop || 0;
-  smoothScrollTo(currentY + player.getBoundingClientRect().top - headerH - 14);
 }
 
 let currentActiveNavSection = undefined;
@@ -7963,10 +7862,15 @@ function initMixerFaderScroll() {
     }
   }
 
-  // Останавливаем активную анимацию прокрутки (GSAP-доезд к якорю), иначе её
-  // tick дерётся за window.scrollTo с фейдером микшера: страница «откатывается»
-  // к старой цели. Вызов дёшев (сброс состояния).
+  // Останавливаем активную анимацию плавного скролла (инерцию колеса или
+  // GSAP-якорь), иначе её tick дерётся за window.scrollTo с фейдером микшера:
+  // страница «откатывается» к старой цели колеса. Вызов дёшев (сброс состояния).
   function stopSmoothMotion() {
+    try {
+      if (window.nrSmoothScroll && typeof window.nrSmoothScroll.cancel === 'function') {
+        window.nrSmoothScroll.cancel();
+      }
+    } catch (err) {}
     if (typeof activeScrollTween !== 'undefined' && activeScrollTween) {
       try {
         activeScrollTween.kill();
@@ -7990,16 +7894,7 @@ function initMixerFaderScroll() {
     const { maxScroll } = getScrollMetrics();
     const targetScrollY = ratio * maxScroll;
 
-    /* Ползунок микшера — это «свой скроллбар» страницы: он обязан идти строго
-       под указателем, поэтому ведём прокрутку в режиме immediate (сглаживание
-       выключено) и с force — двигать даже при чужом локе. Обычный
-       window.scrollTo так не умеет: движок переписал бы позицию своим
-       сглаженным значением и ползунок «поехал» бы назад. */
-    if (nrLenis) {
-      nrLenis.scrollTo(targetScrollY, { immediate: true, force: true });
-    } else {
-      window.scrollTo(0, targetScrollY);
-    }
+    window.scrollTo(0, targetScrollY);
     updateFaderUI(ratio);
   }
 

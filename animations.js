@@ -253,11 +253,13 @@
   var lineVisible = false;
 
   /* Высота документа нужна для прогресса прокрутки. Читать scrollHeight в
-     каждом кадре скролла — это принудительная переклейка тяжёлой раскладки:
-     лишний layout в кадре бьёт по плавности. Поэтому на ПК высоту держим
-     свежей СОБЫТИЯМИ (ResizeObserver на <html> и <body> ниже и resize окна),
-     а в кадре пользуемся кэшем; на узком экране (телефон) меряем живую высоту —
-     там она «дышит» вместе с адресной строкой (см. liveScrollMax). */
+     каждом кадре скролла — это принудительная переклейка тяжёлой раскладки, и
+     именно она дёргала прокрутку НА ПК: там скролл ведёт наш модуль
+     smoothscroll-nr.js в rAF, и лишний layout в кадре бьёт по плавности. На
+     телефоне скролл нативный (компоситорный) — замер в кадре кадру не вредит.
+     Поэтому на ПК высоту держим свежей СОБЫТИЯМИ (ResizeObserver на <html> и
+     <body> ниже и resize окна), а в кадре пользуемся кэшем; на телефоне меряем
+     живую высоту (см. liveScrollMax). */
   var scrollMax = 0;
 
   function refreshScrollMax() {
@@ -265,12 +267,20 @@
     scrollMax = Math.max(0, doc.scrollHeight - window.innerHeight);
   }
 
-  /* Предел прокрутки по ЖИВОЙ высоте документа — только для узких экранов
+  /* Предел прокрутки по ЖИВОЙ высоте документа — только для нативного скролла
      (телефон): там он не мешает кадру и держит полоску точной при «дыхании»
      адресной строки. */
   function liveScrollMax() {
     scrollMax = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
     return scrollMax;
+  }
+
+  /* Ведёт ли прокрутку наш плавный модуль (ПК). Пока да — замер в кадре не
+     делаем (см. liveScrollMax). Вызов лёгкий: модуль отдаёт состояние без
+     аллокаций. Если модуля на странице нет (скролл нативный) — вернём false. */
+  function smoothScrollDrives() {
+    var ns = window.nrSmoothScroll;
+    return !!(ns && typeof ns.isEnabled === 'function' && ns.isEnabled());
   }
 
   function computeScrollProgress() {
@@ -1060,9 +1070,8 @@
 
     /* Предел прокрутки: на ПК берём из кэша (он обновляется по событиям —
        иначе принудительный layout в кадре ломает плавность, см.
-       refreshScrollMax), а на узком экране меряем живой: там высота «дышит»
-       вместе с адресной строкой (см. liveScrollMax). */
-    if (window.innerWidth >= 1024) {
+       refreshScrollMax), а на телефоне меряем живой (там скролл нативный). */
+    if (smoothScrollDrives()) {
       if (scrollMax <= 0) refreshScrollMax();
     } else {
       liveScrollMax();
@@ -1515,10 +1524,6 @@
       if (boot.dataset.locked) return;
       boot.dataset.locked = '1';
       document.documentElement.classList.add('nr-boot-active');
-      /* Пока заставка видна, замирает и движок плавной прокрутки: иначе
-         колесо/клавиши копили бы цель под замком и после разблокировки
-         страница прыгнула бы. Снимается парным вызовом в unlockPage(). */
-      if (typeof window.nrSmoothScrollStop === 'function') safe(window.nrSmoothScrollStop);
       window.addEventListener('wheel', blockScroll, { passive: false, capture: true });
       window.addEventListener('touchmove', blockScroll, { passive: false, capture: true });
       window.addEventListener('keydown', blockKeys, { capture: true });
@@ -1527,10 +1532,16 @@
       if (!boot.dataset.locked) return;
       delete boot.dataset.locked;
       document.documentElement.classList.remove('nr-boot-active');
-      if (typeof window.nrSmoothScrollStart === 'function') safe(window.nrSmoothScrollStart);
       window.removeEventListener('wheel', blockScroll, { capture: true });
       window.removeEventListener('touchmove', blockScroll, { capture: true });
       window.removeEventListener('keydown', blockKeys, { capture: true });
+      /* Плавный скролл: либа могла «проснуться», пока страница была заморожена
+         (overflow:hidden) и не успела толком стартовать. Пересоздаём её заново
+         в момент, когда страница стала интерактивной, чтобы она сразу работала —
+         даже если юзер крутит колесо тут же после загрузки. */
+      if (typeof window.nrApplySmoothScroll === 'function') {
+        safe(window.nrApplySmoothScroll);
+      }
       /* Страница стала интерактивной и раскладка окончательна — пересчитываем
          геометрию разделов и подсветку навигации, чтобы она сразу совпадала с
          текущим местом (после перезагрузки это главный экран). */
