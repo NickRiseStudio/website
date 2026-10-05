@@ -28,10 +28,6 @@
   'use strict';
 
   var defaults = {
-    // Режим сглаживания: либо lerp (непрерывный, по умолчанию в этом проекте),
-    // либо duration+easing («доезд по времени»). Если задан lerp — duration и
-    // easing не передаются вовсе, иначе библиотека выберет режим времени.
-    lerp: null,                 // доля пути к цели за кадр (0.08 ≈ прежние 1000 мс)
     duration: 1.2,              // сек — длина «доезда» одного щелчка колеса
     easing: null,               // null → кривая Lenis по умолчанию
     wheelMultiplier: 1,         // множитель шага колеса
@@ -154,6 +150,7 @@
     if (isTouchOnlyDevice() && window.innerWidth < 1024) { destroy(); return; }
 
     var conf = {
+      duration: opts.duration,
       wheelMultiplier: opts.wheelMultiplier,
       smoothWheel: opts.smoothWheel,
       syncTouch: opts.syncTouch,
@@ -161,16 +158,7 @@
       autoResize: true,
       prevent: function (node) { return !!innerScrollable(node); }
     };
-    /* Режим сглаживания. lerp — непрерывный (скорость без разрывов, шаг не
-       зависит от частоты кадров); иначе — «доезд по времени» (duration+easing),
-       где каждый щелчок колеса заново запускает кривую. Одновременно lerp и
-       duration+easing передавать нельзя: библиотека отдаст приоритет времени. */
-    if (typeof opts.lerp === 'number' && opts.lerp > 0) {
-      conf.lerp = opts.lerp;
-    } else {
-      conf.duration = opts.duration;
-      if (typeof opts.easing === 'function') conf.easing = opts.easing;
-    }
+    if (typeof opts.easing === 'function') conf.easing = opts.easing;
 
     lenis = new window.Lenis(conf);
     enabled = true;
