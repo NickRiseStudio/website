@@ -40,6 +40,9 @@
   var lastDirY = 0;
   var lastEventAt = 0;     // отметка времени для акселерации
   var pulseN = 1;          // ленивая нормализация pulse-кривой
+  var lastTickAt = 0;      // время прошлого кадра rAF (монотонное)
+  var FRAME_MS = 16.7;     // номинальная длительность кадра (60 fps) — старт
+  var MAX_FRAME_MS = 32;   // потолок дельты кадра: поздний кадр режется
 
   function isTouchOnlyDevice() {
     try {
@@ -106,11 +109,24 @@
     rafId = 0;
     if (!enabled || !buffer.length) { running = false; return; }
     try {
-      var nowT = Date.now();
+      var nowT = (window.performance && performance.now) ? performance.now() : Date.now();
+      /* ПОТОЛОК ДЕЛЬТЫ КАДРА (правка против рывков на живом сайте).
+         Прогресс «щелчка» считаем не по стенным часам, а по времени кадров
+         с потолком. Если главный поток «провис» и кадр пришёл поздним
+         (параллельно работает композитор/сеть), раньше накопленная дельта
+         разом прыгала — и движение читалось рывком. Теперь одна дельта не
+         может превысить MAX_FRAME_MS: лишнее просто переносится на следующие
+         кадры, движение остаётся ровным, а хвост инерции доигрывает чуть
+         позже. На нормальных 60 fps потолок не срабатывает, ощущение не
+         меняется. */
+      var dtMs = lastTickAt ? (nowT - lastTickAt) : FRAME_MS;
+      lastTickAt = nowT;
+      if (dtMs > MAX_FRAME_MS) dtMs = MAX_FRAME_MS;
+      else if (dtMs < 0) dtMs = 0;
       var accX = 0, accY = 0;
       for (var i = 0; i < buffer.length; i++) {
         var a = buffer[i];
-        var age = nowT - a.start;
+        var age = (a.elapsed += dtMs);
         var done = age >= opts.animationTime;
         var c = done ? 1 : age / opts.animationTime;
         if (opts.pulseAlgorithm && c < 1) c = pulseNorm(c);
@@ -146,6 +162,7 @@
         lastDirX = 0;
         lastDirY = 0;
         lastEventAt = 0;
+        lastTickAt = 0;
       }
     } catch (err) {
       if (window.console && console.warn) console.warn('[smoothscroll-nr] tick:', err);
@@ -189,7 +206,10 @@
          Math.round он, наоборот, добавлял к первому шагу лишние 0.99px. */
       lastX: 0,
       lastY: 0,
-      start: Date.now()
+      /* elapsed — накопленное «доигранное» время щелчка, мс. Растёт не по
+         стенным часам, а по времени кадров с потолком дельты (см. tick):
+         так поздний кадр не превращается в рывок. */
+      elapsed: 0
     });
     // Защита от бесконечного роста буфера (тачпад/долгий скролл): держим не
     // больше 64 живых щелчков — при animationTime=800 их реально ~25 максимум.
@@ -211,6 +231,7 @@
     lastDirX = 0;
     lastDirY = 0;
     lastEventAt = 0;
+    lastTickAt = 0;
   }
 
   /* Лёгкий пересчёт после resize/zoom: гасим инерцию и направление, но
