@@ -1049,7 +1049,6 @@
 
   var faderTimer = null;
   var bodyHasFaderactive = false; /* класс уже стоит? — чтобы не писать его каждый кадр */
-  var scrollClassTimer = null;    /* снятие nr-scrolling после остановки прокрутки */
   var isScrollTicking = false;
 
   /* true, пока запланирован кадр handleScrollUpdate. Полоска прогресса
@@ -1107,18 +1106,10 @@
       document.body.classList.toggle('nr-scrolled', isScrolled);
     }
 
-    /* На время прокрутки снимаем дорогое размытие у липких панелей
-       (см. правило html.nr-scrolling в style.css). Класс ставим только если
-       его ещё нет — во время непрерывного скролла кадры не трогают classList,
-       — а снимаем через 180 мс после остановки, чтобы не «моргал» на паузах
-       между щелчками колеса и при инерционном докате. */
-    var root = document.documentElement;
-    if (!root.classList.contains('nr-scrolling')) root.classList.add('nr-scrolling');
-    if (scrollClassTimer !== null) clearTimeout(scrollClassTimer);
-    scrollClassTimer = setTimeout(function () {
-      scrollClassTimer = null;
-      root.classList.remove('nr-scrolling');
-    }, 180);
+    /* Размытие подложек (backdrop-filter) убрано из проекта целиком — вместе с
+       ним больше нет и класса html.nr-scrolling, который снимал размытие на
+       время прокрутки (см. style.css). Кадры скролла стали чуть дешевле:
+       classList здесь больше не трогается. */
 
     /* Десктопный SSL фейдер — активен только на экранах от 1024px.
        Раньше класс и таймер дёргались на КАЖДОМ кадре прокрутки: браузер

@@ -1125,8 +1125,6 @@ html, body {
   align-items: center;
   justify-content: space-between;
   padding: 14px 6px;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   transition: opacity 0.3s ease;
 }
 
@@ -1271,21 +1269,17 @@ body.nr-menu-open {
 
 .modal-overlay {
   background: rgba(8, 10, 15, 0.82);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
   transition: opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1),
-              visibility 0.5s step-end,
-              backdrop-filter 0.5s cubic-bezier(0.25, 1, 0.5, 1),
-              -webkit-backdrop-filter 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+              visibility 0.5s step-end;
   z-index: 100;
   overscroll-behavior: contain;
   touch-action: none;
   transform: translate3d(0, 0, 0);
   -webkit-transform: translate3d(0, 0, 0);
-  will-change: opacity, backdrop-filter;
+  will-change: opacity;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
@@ -1295,9 +1289,7 @@ body.nr-menu-open {
   visibility: visible;
   pointer-events: auto;
   transition: opacity 1.0s cubic-bezier(0.16, 1, 0.3, 1),
-              visibility 0s linear,
-              backdrop-filter 1.0s cubic-bezier(0.16, 1, 0.3, 1),
-              -webkit-backdrop-filter 1.0s cubic-bezier(0.16, 1, 0.3, 1);
+              visibility 0s linear;
 }
 
 .modal-content {
@@ -1316,12 +1308,10 @@ body.nr-menu-open {
   -webkit-backface-visibility: hidden;
 }
 
-/* Mobile optimizations: disable costly full-screen backdrop-filter blur and optimize animations */
+/* Mobile optimizations for modal animations */
 @media (max-width: 768px), (hover: none) {
   .modal-overlay {
     background: rgba(8, 10, 15, 0.94);
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
     transition: opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1),
                 visibility 0.5s step-end;
   }
@@ -1534,8 +1524,6 @@ body:has(#stickyPlayerBar.active) {
   right: 0;
   z-index: 90;
   background-color: rgba(9, 11, 18, 0.96);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid rgba(245, 158, 11, 0.35);
   box-shadow: 0 0 0 rgba(0, 0, 0, 0);
   transform: translate3d(0, calc(100% + 24px), 0);
@@ -1658,8 +1646,6 @@ body:has(#stickyPlayerBar.active) {
   border: none !important;
   border-radius: 0 !important;
   box-shadow: none !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
   color: #F59E0B;
   opacity: 0;
   visibility: hidden;
@@ -1853,6 +1839,26 @@ body:has(#stickyPlayerBar.active) #scrollToTopBtn {
   -webkit-backface-visibility: hidden;
 }
 
+/* ═══ ВРЕМЕННО (проверка дёрганья в РАЗДЕЛЕ УСЛУГ) ════════════════════════
+   Секция услуг — единственная, где крупные элементы удерживаются в постоянных
+   GPU-слоях: контейнер карусели промоутится (одна большая текстура на всю
+   секцию), а внутри карточек вечно висит will-change (внутренний 3D-слой
+   переворота + аура популярной карточки). Промоушен огромной секции — это
+   память под текстуру и перерастеризация тайлов на кадрах прокрутки.
+
+   ВИЗУАЛ НЕ МЕНЯЕТСЯ: transform:none / backface:visible — это тождество
+   (translateZ(0) и hidden-backface ничего не рисуют), will-change вообще не
+   влияет на картинку. Если дёрганье в услугах уйдёт — оставляем; если нет —
+   причина в тяжёлой отрисовке самих карточек (drop-shadow галочек, bg-clip-text
+   цены, 3D) и решаем отдельно. Удаляется ВЕСЬ блок целиком. */
+#servicesContainer {
+  transform: none !important;
+  backface-visibility: visible !important;
+  -webkit-backface-visibility: visible !important;
+}
+.service-card-inner { will-change: auto !important; }
+.popular-rack-card::before { will-change: auto !important; }
+
 /* ═══════════════════════════════════════════════════════════════════════
    ШАПКА: НЕПРОЗРАЧНОСТЬ ФОНА — ЗДЕСЬ, А НЕ КЛАССОМ В РАЗМЕТКЕ
    ═══════════════════════════════════════════════════════════════════════
@@ -1901,69 +1907,16 @@ body:has(#stickyPlayerBar.active) #scrollToTopBtn {
   border-bottom-color: transparent;
 }
 
-/* High-efficiency rendering on mobile & weak devices while keeping visual fidelity */
-html.nr-lite #mainHeader {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  /* Фон шапки здесь БОЛЬШЕ НЕ ЗАДАЁТСЯ (правка 27.09). Было
-     background-color: rgba(12,14,18,0.97) !important — это правило перебивало
-     и класс в разметке, и общий оверрайд #mainHeader выше, поэтому на
-     телефонах и слабых машинах шапка оставалась почти непрозрачной, и
-     прозрачность «не менялась». Теперь фон считает animations.js
-     (paintHeaderFade): 100% вверху страницы, равномерное растворение до 0% на
-     отрезке 50…550px прокрутки — и на всех устройствах одинаково, включая
-     LITE.
-     LITE по-прежнему отключает дорогое размытие фона — ради этого режим и
-     существует. При открытом мобильном меню плотный фон задаёт отдельное
-     правило #mainHeader.mobile-menu-active (см. animations.css). */
-}
+/* Размытия фона у панелей больше нет (backdrop-filter убран из проекта —
+   см. правки у .mixer-track-fixed, .sticky-player-bar, .modal-overlay,
+   .nr-ab-overlay). Прежнее правило html.nr-lite #mainHeader{backdrop-filter:none}
+   было нужно только для удалённого размытия шапки. */
 
-html.nr-lite .sticky-player-bar {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  background-color: rgba(9, 11, 18, 0.98) !important;
-}
-
-html.nr-lite .modal-overlay {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  background-color: rgba(8, 10, 15, 0.96) !important;
-}
-
-/* ─── Размытие снимается ТОЛЬКО НА ВРЕМЯ ПРОКРУТКИ (правка против дёрганья) ───
-   backdrop-filter на липкой шапке (#mainHeader) и нижнем плеере
-   (.sticky-player-bar) — самая дорогая часть кадра при скролле: браузер
-   обязан пересчитать размытие под каждым таким слоем на КАЖДОМ кадре, а
-   сдвигающийся под ними контент не даёт закэшировать картинку. На мощном
-   железе это не отключалось (nr-lite включается только на слабых машинах),
-   поэтому рывки ловились как раз на живом сайте, где рендер идёт через
-   настоящий GPU-композитор.
-
-   Решение сохраняет визуал «в покое»: класс nr-scrolling вешается на <html>
-   ровно на время движения и снимается через ~180 мс после остановки. В
-   статике (когда размытие и видно) всё остаётся как было — тот же blur, тот
-   же оттенок; а во время движения, когда фон и так непрерывно меняется и
-   размытие глазом не читается, оно снимается и композитор освобождается.
-   Фон панелей при этом не «прыгает»: и у шапки, и у плеера непрозрачная
-   подложка обеспечивается их же базовыми правилами. */
-html.nr-scrolling #mainHeader,
-html.nr-scrolling .mixer-track-fixed,
-html.nr-scrolling .sticky-player-bar {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-
-/* Подложка на время движения: снятый blur не должен обнажать полупрозрачный
-   фон (иначе панель на миг «светлеет» и читается как мерцание). Значения те же,
-   что и у nr-lite, — так «в покое» и «в движении» панели выглядят одинаково
-   плотными, меняется только наличие размытия. */
-html.nr-scrolling .mixer-track-fixed {
-  background: linear-gradient(180deg, #161A24 0%, #0E1017 100%);
-}
-
-html.nr-scrolling .sticky-player-bar {
-  background-color: rgba(9, 11, 18, 0.98);
-}
+/* Правила html.nr-lite/.nr-scrolling, которые гасили backdrop-filter на время
+   прокрутки и повышали плотность подложки, удалены вместе с самим размытием:
+   размытия в проекте больше нет, а фон панелей теперь НЕ меняется при скролле
+   (раньше он «прыгал» 0.96 ↔ 0.98 — отсюда и ощущение то прозрачной, то
+   непрозрачной панели). Класс nr-scrolling убран и из animations.js. */
 
 /* Fast touch response: eliminates mobile tap delay */
 a, button, [role="button"], input, select, textarea, .cursor-pointer {
@@ -2239,8 +2192,6 @@ a, button, [role="button"], input, select, textarea, .cursor-pointer {
   inset: 0;
   z-index: 150;
   background-color: rgba(4, 6, 10, 0.72);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
