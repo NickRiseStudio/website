@@ -6531,7 +6531,16 @@ function smoothScrollTo(targetY, customDuration) {
   // Lenis одновременно пишут в window.scrollTo и дерутся за позицию каждый кадр.
   if (window.nrSmoothScroll && typeof window.nrSmoothScroll.scrollTo === 'function' &&
       typeof window.nrSmoothScroll.isEnabled === 'function' && window.nrSmoothScroll.isEnabled()) {
-    window.nrSmoothScroll.scrollTo(clampedTargetY, { duration: animDuration });
+    /* Якорь — не «щелчок колеса»: у колеса импульсная кривая из smoothConfig
+       (быстрый старт, длинный хвост), а переходу между разделами нужен
+       симметричный разгон и торможение. Поэтому кривую задаём здесь (как в
+       GSAP-ветке ниже), а не берём движковую. force: true — иначе Lenis
+       молча выходит из scrollTo, пока висит класс-замок страницы. */
+    window.nrSmoothScroll.scrollTo(clampedTargetY, {
+      duration: animDuration,
+      easing: (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2),
+      force: true
+    });
     return;
   }
 
