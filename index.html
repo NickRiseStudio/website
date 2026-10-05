@@ -50,6 +50,11 @@
        раньше. Шрифты генерируются инструментом, см. PROJECT-NOTES.md -->
   <link rel="stylesheet" href="./fonts.css">
 
+  <!-- Lenis (плавный скролл): минимальный служебный CSS библиотеки.
+       Лежит локально в vendor/, как GSAP. Подключаем ПЕРЕД style.css,
+       чтобы правила самого сайта шли после и в спорных местах побеждали. -->
+  <link rel="stylesheet" href="./vendor/lenis.css">
+
   <!-- Custom Styles -->
   <link rel="stylesheet" href="./style.css">
 
@@ -1328,50 +1333,48 @@
   </div>
 
   <!-- Scripts -->
-  <!-- GSAP, ScrollTrigger & ScrollToPlugin.
+  <!-- GSAP, ScrollTrigger, ScrollToPlugin, Lenis.
        Лежат ЛОКАЛЬНО (public/vendor): так парсер не ждёт сторонний CDN, нет
        лишнего соединения и сайт не зависит от доступности cdnjs.
 
        Все внешние скрипты стоят с defer: браузер не блокирует отрисовку на их
        загрузке, а выполняет их после разбора разметки — но в прежнем порядке
-       (gsap → ScrollTrigger → ScrollToPlugin → config → smoothscroll-nr →
+       (gsap → ScrollTrigger → ScrollToPlugin → lenis → config → smoothscroll-nr →
        script → animations) и всегда до DOMContentLoaded. Inline-блок
        плавного скролла подписывается на DOMContentLoaded, поэтому SmoothScroll
        к моменту вызова уже загружен. -->
   <script defer src="./vendor/gsap.min.js"></script>
   <script defer src="./vendor/ScrollTrigger.min.js"></script>
   <script defer src="./vendor/ScrollToPlugin.min.js"></script>
+  <script defer src="./vendor/lenis.min.js"></script>
   <script defer src="./config.js"></script>
-  <!-- Плавный скролл: собственный модуль smoothscroll-nr.js.
-       Ядро — как у Balázs Galambosi (per-notch pulse-инерция через scrollBy),
-       но без localStorage-эвристики «мышь vs тачпад» и без destroy/enable на
-       resize/zoom: они ломали плавность после изменения масштаба/размера окна.
-       Плавность работает сразу после загрузки. API: SmoothScroll.enable(opts) /
-       destroy() / cancel() / stop() / resync(); window.nrSmoothScroll. -->
+  <!-- Плавный скролл: обёртка smoothscroll-nr.js над библиотекой Lenis.
+       Lenis (darkroom.engineering) гладит обычный нативный скролл — position:
+       sticky, якоря и доступность работают как есть. Модуль оставляет прежний
+       API (SmoothScroll.enable(opts) / destroy() / cancel() / stop() /
+       resync() / scrollTo(); window.nrSmoothScroll) и склеивает Lenis с GSAP
+       ScrollTrigger. Настройки — smoothConfig ниже. -->
   <script defer src="./smoothscroll-nr.js"></script>
   <script>
     (function () {
+      // Настройки Lenis (движок — vendor/lenis.min.js, обёртка — smoothscroll-nr.js).
+      // Подобрано под ощущение ПРЕЖНЕГО собственного движка (legacy
+      // smoothscroll-nr.js): stepSize 75/120 → ~62 px за щелчок, animationTime
+      // 1000 мс и импульсная кривая «быстрый старт, длинный хвост».
       var smoothConfig = {
-        // Время скролла: 1000мс — как на melonmusicrecords (тот же шаг 75,
-        // но щелчок доигрывает дольше — хвост инерции длиннее). Ниже 700
-        // делать не стоит — начнёт читаться как рывок, а не скольжение.
-        // Старое «залипание по пикселям» не вернётся: оно лечится в
-        // smoothscroll-nr.js накоплением дробного остатка (Math.round).
-        animationTime    : 1000,
-        // Размер шага в пикселях
-        stepSize         : 75,
-        // Ускорение при непрерывном скролле
-        accelerationDelta: 30,
-        accelerationMax  : 2,
-        // Поддержка клавиатуры (стрелки, пробел, PgUp/PgDown)
-        keyboardSupport  : true,
-        arrowScroll      : 50,
-        // Pulse-алгоритм кинетической инерции
-        pulseAlgorithm   : true,
-        pulseScale       : 4,
-        pulseNormalize   : 1,
-        // Поддержка тачпада
-        touchpadSupport  : true
+        // Длина «доезда» одного щелчка колеса, сек (в прежнем — 1000 мс).
+        duration             : 1.0,
+        // Кривая доезда: аппроксимация прежней pulse-кривой — на половине
+        // времени пройдено ~79% пути. У кривой Lenis по умолчанию ~97%
+        // (почти весь путь в первой половине), из-за чего движение читалось
+        // как «рывок с остановкой», а не как плавное скольжение.
+        easing               : function (t) { return 1 - Math.pow(1 - t, 2.25); },
+        // Шаг колеса: ~62 px за щелчок (в прежнем — 75/120 от родной дельты).
+        wheelMultiplier      : 0.625,
+        // Тач на планшетах оставляем нативным (как было)
+        touchMultiplier      : 1.5,
+        smoothWheel          : true,
+        syncTouch            : false
       };
 
       function applySmoothScroll() {

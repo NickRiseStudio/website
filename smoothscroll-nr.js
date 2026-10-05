@@ -1,48 +1,46 @@
 /* ======================================================================
-   NICK RISE STUDIO — плавный скролл (собственный модуль).
-   Ядро — как у скролл-либы Balázs Galambosi (раньше подключалась как
-   smoothscroll.min.js; файл удалён из проекта): per-notch pulse-инерция
-   через scrollBy. Убраны её хрупкие эвристики:
-   localStorage-буфер и «прогрев» после resize/zoom, phantom-div,
-   MutationObserver, ctrlKey-рассинхронизация; на resize/zoom — лёгкий
-   resync() вместо destroy()+enable().
+   NICK RISE STUDIO — плавный скролл на библиотеке Lenis.
 
-   API: SmoothScroll.enable(opts) / destroy() / cancel() / stop() /
-        resync() / init() / isEnabled();  window.nrSmoothScroll;
-        window.SmoothScroll;  SmoothScroll._dbg()  (отладочный доступ).
+   Движок — Lenis (darkroom.engineering), локальный vendor/lenis.min.js —
+   сборка «1.3.25-framer» (та же, что ставит Framer/Rep Republic; глобал
+   window.Lenis). Модуль оставляет ПРЕЖНИЙ публичный API, поэтому
+   index.html, animations.js, script.js и lab-инструменты менять не нужно:
+
+     SmoothScroll.enable(opts) / init(opts) / destroy() / cancel() /
+     stop() / resync() / isEnabled() / scrollTo(y, opts) / _dbg();
+     window.SmoothScroll;  window.nrSmoothScroll.
+
+   Роли:
+     • enable()  — создаёт Lenis, склеивает его с GSAP ScrollTrigger и
+                   подписывается на «замки» страницы; на touch-онли
+                   устройствах < 1024px скролл остаётся нативным.
+     • destroy() — снимает движок и всё, что он повесил.
+     • cancel()  — гасит незавершённую инерцию, движок остаётся
+                   (фейдер микшера, якорная навигация).
+     • resync()  — пересчёт размеров после resize/zoom.
+     • scrollTo(y, opts) — программный плавный скролл (якоря в script.js).
+
+   Настройки задаются в index.html (smoothConfig). Ощущение-ориентир —
+   шаблон Rep Republic: у Framer под капотом та же Lenis.
    ====================================================================== */
 
 (function () {
   'use strict';
 
   var defaults = {
-    frameRate: 150,          // fps (резерв, если нет requestAnimationFrame)
-    animationTime: 1000,     // мс — длительность инерции одного «щелчка»
-    stepSize: 75,            // базовый шаг (совместим с прежним конфигом)
-    accelerationDelta: 30,   // мс — при более частых дельтах «ускоряем»
-    accelerationMax: 1.6,    // множитель ускорения (мягче родных 2)
-    keyboardSupport: true,
-    arrowScroll: 50,
-    touchpadSupport: true,   // мелкие фракционные движения — нативные
-    pulseAlgorithm: true,
-    pulseScale: 4,
-    pulseNormalize: 1
+    duration: 1.2,              // сек — длина «доезда» одного щелчка колеса
+    easing: null,               // null → кривая Lenis по умолчанию
+    wheelMultiplier: 1,         // множитель шага колеса
+    touchMultiplier: 1.5,       // множитель шага тача (если включат syncTouch)
+    smoothWheel: true,
+    syncTouch: false            // тач на планшетах — нативный, как было
   };
 
   var opts = {};
+  var lenis = null;
   var enabled = false;
-  var onWheel, onKey, onVisChange;
-
-  var rafId = 0;           // id текущего rAF-цикла
-  var running = false;     // идёт ли цикл
-  var buffer = [];         // незавершённые «щелчки» колеса
-  var lastDirX = 0;        // последнее направление (сброс при развороте)
-  var lastDirY = 0;
-  var lastEventAt = 0;     // отметка времени для акселерации
-  var pulseN = 1;          // ленивая нормализация pulse-кривой
-  var lastTickAt = 0;      // время прошлого кадра rAF (монотонное)
-  var FRAME_MS = 16.7;     // номинальная длительность кадра (60 fps) — старт
-  var MAX_FRAME_MS = 32;   // потолок дельты кадра: поздний кадр режется
+  var tickerAttached = false;
+  var lockObserver = null;
 
   function isTouchOnlyDevice() {
     try {
@@ -51,15 +49,9 @@
     } catch (e) { return false; }
   }
 
-  function getEl() { return document.scrollingElement || document.documentElement; }
-  function getY() { return window.pageYOffset || getEl().scrollTop || 0; }
-  function getX() { return window.pageXOffset || getEl().scrollLeft || 0; }
-  function maxY() { return Math.max(0, (document.documentElement.scrollHeight || 0) - window.innerHeight); }
-  function maxX() { return Math.max(0, (document.documentElement.scrollWidth || 0) - window.innerWidth); }
-
-  /* Есть ли «внутренний» скролл-контейнер в предке цели (модал, мобильное
-     меню, карусель отзывов)? Если да — колесо должно крутить ЕГО, поэтому
-     событие не перехватываем и не гасим нативный скролл. */
+  /* Внутренний скролл-контейнер над целью события (мобильное меню, карусель
+     услуг, тело модалки): такие события Lenis не гладит — их крутит сам
+     контейнер. Логика 1:1 с прежним собственным движком. */
   function innerScrollable(target) {
     var el = (target && target.nodeType === 1) ? target : null;
     if (!el || el === window || el === document) return null;
@@ -74,287 +66,139 @@
     return null;
   }
 
-  /* Активно ли модальное окно (окно поверх страницы). Пока оно открыто, сама
-     страница не скроллится (lockPageScroll → overflow: hidden), а колесо внутри
-     окна гасит обработчик script.js. Если модуль всё же поймает такой ход,
-     страницу нельзя двигать программно: scrollBy обошёл бы замок overflow и
-     фон «уехал» бы под окном. */
-  function isModalOpen() {
-    var d = document.documentElement;
-    if (d.classList.contains('modal-open') || d.classList.contains('nr-menu-open')) return true;
-    var m = document.querySelector('.modal-overlay.active');
-    return !!m;
+  /* «Замок» страницы: пока висит хоть один — фон не двигаем. Классы ставит
+     site-JS (заставка, модалки, мобильное меню, подсказка A/B). */
+  function pageLocked() {
+    var d = document.documentElement, b = document.body;
+    return d.classList.contains('nr-boot-active') ||
+           d.classList.contains('nr-ab-hint') ||
+           b.classList.contains('modal-open') ||
+           b.classList.contains('nr-menu-open');
   }
 
-  /* Pulse-кривая — байт-в-байт как в оригинале (форма ощущения инерции). */
-  function pulseV(v) {
-    v *= opts.pulseScale;
-    if (v < 1) return v - (1 - Math.exp(-v));
-    v -= 1;
-    var t = Math.exp(-1);
-    return (t + (1 - Math.exp(-v)) * (1 - t)) * pulseN;
-  }
-  function pulseNorm(c) {
-    if (c >= 1) return 1;
-    if (c <= 0) return 0;
-    if (pulseN === 1) pulseN = 1 / pulseV(1);   // ленивая нормализация, как в оригинале
-    return pulseV(c);
-  }
-
-  /* rAF-цикл: каждый кадр «доигрывает» все живые щелчки из буфера.
-     Ключ плавности — дельта режется на под-шаги (delta*progress - last) и
-     применяется через scrollBy: браузер сам клампит на 0/max, поэтому доезд
-     до краёв точный, а не «1–99%». */
-  function tick() {
-    rafId = 0;
-    if (!enabled || !buffer.length) { running = false; return; }
-    try {
-      var nowT = (window.performance && performance.now) ? performance.now() : Date.now();
-      /* ПОТОЛОК ДЕЛЬТЫ КАДРА (правка против рывков на живом сайте).
-         Прогресс «щелчка» считаем не по стенным часам, а по времени кадров
-         с потолком. Если главный поток «провис» и кадр пришёл поздним
-         (параллельно работает композитор/сеть), раньше накопленная дельта
-         разом прыгала — и движение читалось рывком. Теперь одна дельта не
-         может превысить MAX_FRAME_MS: лишнее просто переносится на следующие
-         кадры, движение остаётся ровным, а хвост инерции доигрывает чуть
-         позже. На нормальных 60 fps потолок не срабатывает, ощущение не
-         меняется. */
-      var dtMs = lastTickAt ? (nowT - lastTickAt) : FRAME_MS;
-      lastTickAt = nowT;
-      if (dtMs > MAX_FRAME_MS) dtMs = MAX_FRAME_MS;
-      else if (dtMs < 0) dtMs = 0;
-      var accX = 0, accY = 0;
-      for (var i = 0; i < buffer.length; i++) {
-        var a = buffer[i];
-        var age = (a.elapsed += dtMs);
-        var done = age >= opts.animationTime;
-        var c = done ? 1 : age / opts.animationTime;
-        if (opts.pulseAlgorithm && c < 1) c = pulseNorm(c);
-        /* ОКРУГЛЕНИЕ К БЛИЖАЙШЕМУ С НАКОПЛЕНИЕМ ОСТАТКА (правка против
-           «дёрганья по пикселям»). Раньше здесь стояло `>> 0` — отбрасывание
-           дробной части ВНИЗ к нулю. На медленном движении и на хвосте
-           инерции прирост за кадр был меньше 1 px, `>> 0` съедал его целиком,
-           и страница «стояла» по несколько кадров, потом прыгала на целый
-           пиксель — это и читалось как движение ступеньками.
-
-           Теперь цель последнего кадра округляется к ближайшему ЦЕЛОМУ
-           (`Math.round`), а lastX/lastY хранят ИМЕННО эту целую позицию.
-           Из-за этого дробный «долг» не теряется: копится в разнице
-           (want - lastY) и в следующий кадр переходит в честный +1 px.
-           Замер: доля «пустых» кадров на медленном потоке падает с ~23–31%
-           до ~4% (см. !tmp отчёты), при том же итоговом пути и том же
-           ощущении инерции. `Math.round` вместо `>> 0` — не косметика:
-           trunc по определению неполноценен для накопления, round — нет. */
-        var sx = Math.round(a.x * c) - a.lastX;
-        var sy = Math.round(a.y * c) - a.lastY;
-        accX += sx;
-        accY += sy;
-        a.lastX = Math.round(a.x * c);
-        a.lastY = Math.round(a.y * c);
-        if (done) { buffer.splice(i, 1); i--; }
-      }
-      if (accX || accY) window.scrollBy(accX, accY);
-      if (buffer.length) {
-        running = true;
-        rafId = requestAnimationFrame(tick);
-      } else {
-        running = false;
-        lastDirX = 0;
-        lastDirY = 0;
-        lastEventAt = 0;
-        lastTickAt = 0;
-      }
-    } catch (err) {
-      if (window.console && console.warn) console.warn('[smoothscroll-nr] tick:', err);
-      stopMotion();
+  function syncLock() {
+    if (!lenis) return;
+    if (pageLocked()) {
+      if (!lenis.isStopped) lenis.stop();
+    } else if (lenis.isStopped) {
+      lenis.start();
     }
   }
 
-  /* Добавить «щелчок» (колесо/клавиатура) в буфер и запустить цикл. */
-  function pushWheel(xDelta, yDelta) {
-    if (!xDelta && !yDelta) return;
-    var dx = xDelta > 0 ? 1 : xDelta < 0 ? -1 : 0;
-    var dy = yDelta > 0 ? 1 : yDelta < 0 ? -1 : 0;
-    // Разворот направления — сбрасываем незавершённую инерцию (как в оригинале),
-    // иначе остаток старого хода «тянет» в противоположную сторону.
-    if (lastDirX && dx && dx !== lastDirX) { buffer = []; lastEventAt = 0; }
-    if (lastDirY && dy && dy !== lastDirY) { buffer = []; lastEventAt = 0; }
-    if (dx) lastDirX = dx;
-    if (dy) lastDirY = dy;
+  function onTicker(time) {
+    if (lenis) lenis.raf(time * 1000);
+  }
 
-    // Акселерация при частом скролле (как в оригинале: ускоряем, если щелчки чаще 30 мс)
-    if (opts.accelerationMax !== 1) {
-      var e = Date.now() - lastEventAt;
-      if (e < opts.accelerationDelta) {
-        var acc = (1 + 50 / e) / 2;
-        if (acc > 1) {
-          acc = Math.min(acc, opts.accelerationMax);
-          xDelta *= acc;
-          yDelta *= acc;
-        }
-      }
+  /* Склейка с GSAP/ScrollTrigger: scroll-событие Lenis обновляет триггеры, а
+     его rAF гоним тикером GSAP — один общий кадр, без рассинхрона. */
+  function hookGsap() {
+    if (tickerAttached) return;
+    if (window.ScrollTrigger && typeof window.ScrollTrigger.update === 'function') {
+      lenis.on('scroll', window.ScrollTrigger.update);
     }
-    lastEventAt = Date.now();
-
-    buffer.push({
-      x: xDelta,
-      y: yDelta,
-      /* lastX/lastY — уже применённая (целая) позиция этого «щелчка».
-         Стартуем с 0: формула кадра now `Math.round(y*c) - last`, и дробный
-         остаток копится в самом (y*c), поэтому старый костыль ±0.99 (он
-         компенсировал потерю пикселя при trunc) больше не нужен — с
-         Math.round он, наоборот, добавлял к первому шагу лишние 0.99px. */
-      lastX: 0,
-      lastY: 0,
-      /* elapsed — накопленное «доигранное» время щелчка, мс. Растёт не по
-         стенным часам, а по времени кадров с потолком дельты (см. tick):
-         так поздний кадр не превращается в рывок. */
-      elapsed: 0
-    });
-    // Защита от бесконечного роста буфера (тачпад/долгий скролл): держим не
-    // больше 64 живых щелчков — при animationTime=800 их реально ~25 максимум.
-    if (buffer.length > 64) buffer.splice(0, buffer.length - 64);
-
-    if (!rafId) {
-      running = true;
-      rafId = requestAnimationFrame(tick);
+    if (window.gsap && window.gsap.ticker) {
+      window.gsap.ticker.add(onTicker);
+      window.gsap.ticker.lagSmoothing(0);
+      tickerAttached = true;
     }
   }
 
-  /* Остановить текущую инерцию, НЕ снимая обработчики (enabled остаётся).
-     Нужно фейдеру микшера и якорной навигации: их window.scrollTo не должен
-     драться с «доезжанием» колеса. */
-  function stopMotion() {
-    if (rafId) { try { cancelAnimationFrame(rafId); } catch (e) {} rafId = 0; }
-    running = false;
-    buffer = [];
-    lastDirX = 0;
-    lastDirY = 0;
-    lastEventAt = 0;
-    lastTickAt = 0;
+  function unhookGsap() {
+    if (!tickerAttached) return;
+    tickerAttached = false;
+    if (window.gsap && window.gsap.ticker) {
+      try { window.gsap.ticker.remove(onTicker); } catch (e) {}
+    }
   }
 
-  /* Лёгкий пересчёт после resize/zoom: гасим инерцию и направление, но
-     слушатели НЕ трогаем (иначе каждый resize = рывок колеса, как было при
-     destroy()+enable()). Опции/обработчики остаются теми же. */
-  function resync() { stopMotion(); }
+  /* Следим за классами-замками на <html>/<body>: появился — lenis.stop(),
+     снялся — lenis.start(). Наблюдатель лёгкий: только атрибут class. */
+  function watchLocks() {
+    if (lockObserver || !window.MutationObserver) return;
+    lockObserver = new MutationObserver(syncLock);
+    lockObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    lockObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  }
+
+  function unwatchLocks() {
+    if (!lockObserver) return;
+    lockObserver.disconnect();
+    lockObserver = null;
+  }
+
+  /* Гасим незавершённую инерцию, движок оставляем: цель = текущая позиция.
+     Нужно фейдеру микшера (он сам двигает window.scrollTo) и якорям. */
+  function cancel() {
+    if (!lenis) return;
+    try { lenis.scrollTo(lenis.actualScroll, { immediate: true, force: true }); } catch (e) {}
+  }
 
   function destroy() {
+    unwatchLocks();
+    unhookGsap();
+    if (lenis) {
+      try { lenis.destroy(); } catch (e) {}
+      lenis = null;
+    }
     enabled = false;
-    stopMotion();
-    detach();
   }
 
   function enable(options) {
     var k;
     if (options) for (k in options) if (defaults.hasOwnProperty(k)) opts[k] = options[k];
-    // Уже включён — только resync: внешние вызовы destroy()+enable() на resize
-    // больше не пересоздают обработчики.
-    if (enabled) { resync(); return; }
+    if (lenis) { resync(); return; }
+    if (typeof window.Lenis !== 'function') return;   // библиотека не загрузилась
     if (isTouchOnlyDevice() && window.innerWidth < 1024) { destroy(); return; }
+
+    var conf = {
+      duration: opts.duration,
+      wheelMultiplier: opts.wheelMultiplier,
+      touchMultiplier: opts.touchMultiplier,
+      smoothWheel: opts.smoothWheel,
+      syncTouch: opts.syncTouch,
+      autoRaf: false,            // rAF гоним тикером GSAP (hookGsap)
+      autoResize: true,
+      prevent: function (node) { return !!innerScrollable(node); }
+    };
+    if (typeof opts.easing === 'function') conf.easing = opts.easing;
+
+    lenis = new window.Lenis(conf);
     enabled = true;
-    resync();
-    attach();
+    hookGsap();
+    watchLocks();
+    syncLock();
   }
 
-  onWheel = function (e) {
-    if (!enabled || e.defaultPrevented) return;
-    // Ctrl/Cmd + колесо — масштаб браузера: не мешаем ему и не портим состояние.
-    if (e.ctrlKey || e.metaKey) return;
-    // Пока висит boot-заставка, страница не скроллится (её гасит animations.js).
-    if (document.documentElement.classList.contains('nr-boot-active')) return;
-    // Открыто окно поверх страницы: фон не двигаем ни программно, ни инерцией —
-    // иначе окно «обо мне» без своей прокрутки пропускало бы ход на страницу.
-    if (isModalOpen()) { stopMotion(); return; }
-    if (!maxY() && !maxX()) return;
-    if (innerScrollable(e.target)) return;
-
-    var dy = e.deltaY || (-e.wheelDeltaY) || 0;
-    var dx = e.deltaX || (-e.wheelDeltaX) || 0;
-    if (e.deltaMode === 1) { dy *= 40; dx *= 40; }                       // строки
-    else if (e.deltaMode === 2) { dy *= window.innerHeight; dx *= window.innerWidth; } // страницы
-
-    // Мелкие фракционные дельты (тачпад) отдаём браузеру: нативный скролл
-    // тачпада плавнее любой эмуляции — так же ведёт себя и оригинал.
-    if (opts.touchpadSupport && Math.abs(dx) < 40 && Math.abs(dy) < 40) return;
-
-    // Крупный «щелчок» нормализуем к stepSize (120 → 75) — как в оригинале.
-    if (Math.abs(dx) > 1.2) dx *= opts.stepSize / 120;
-    if (Math.abs(dy) > 1.2) dy *= opts.stepSize / 120;
-    if (!dx && !dy) return;
-
-    e.preventDefault();
-    pushWheel(dx, dy);
-  };
-
-  onKey = function (e) {
-    if (!enabled || !opts.keyboardSupport || e.defaultPrevented) return;
-    var t = e.target;
-    if (t && t.nodeType === 1 &&
-        (/^(textarea|select|button|a)$/i.test(t.nodeName) ||
-         t.isContentEditable ||
-         (t.nodeName === 'INPUT' && !/^(button|submit|checkbox|radio|file|color|image)$/i.test(t.type)))) return;
-    if (e.ctrlKey || e.altKey || e.metaKey) return;
-    if (document.documentElement.classList.contains('nr-boot-active')) return;
-    if (!maxY() && !maxX()) return;
-
-    var dh = 0, dv = 0, k = e.keyCode || e.which || e.key;
-    switch (k) {
-      case 38: case 'ArrowUp':    dv = -opts.arrowScroll; break;
-      case 40: case 'ArrowDown':  dv = opts.arrowScroll; break;
-      case 37: case 'ArrowLeft':  dh = -opts.arrowScroll; break;
-      case 39: case 'ArrowRight': dh = opts.arrowScroll; break;
-      case 32: case 'Spacebar': case ' ':
-        dv = (e.shiftKey ? -1 : 1) * Math.round(window.innerHeight * 0.9); break;
-      case 33: case 'PageUp':   dv = -Math.round(window.innerHeight * 0.9); break;
-      case 34: case 'PageDown': dv = Math.round(window.innerHeight * 0.9); break;
-      case 36: case 'Home': e.preventDefault(); stopMotion(); window.scrollTo(0, 0); return;
-      case 35: case 'End':  e.preventDefault(); stopMotion(); window.scrollTo(0, maxY()); return;
-      default: return;
-    }
-    e.preventDefault();
-    pushWheel(dh, dv);
-  };
-
-  // Если вкладка ушла в фон, rAF вставал — по возвращении просто продолжаем цикл.
-  onVisChange = function () {
-    if (!document.hidden && buffer.length && !rafId) rafId = requestAnimationFrame(tick);
-  };
-
-  function attach() {
-    window.addEventListener('wheel', onWheel, { passive: false });
-    window.addEventListener('keydown', onKey, { capture: true });
-    document.addEventListener('visibilitychange', onVisChange);
-  }
-  function detach() {
-    window.removeEventListener('wheel', onWheel);
-    window.removeEventListener('keydown', onKey, { capture: true });
-    document.removeEventListener('visibilitychange', onVisChange);
+  function resync() {
+    if (!lenis) return;
+    try { lenis.resize(); } catch (e) {}
+    syncLock();
   }
 
-  /* Публичный API — совместим с прежним (inline-блок, animations.js,
-     script.js/фейдер микшера продолжают работать без правок). */
+  /* Программный плавный скролл (якоря). true — если повёл Lenis. */
+  function scrollTo(y, options) {
+    if (!lenis) return false;
+    try { lenis.scrollTo(y, options || {}); return true; } catch (e) { return false; }
+  }
+
   function SmoothScroll(options) { enable(options); }
   SmoothScroll.enable = enable;
   SmoothScroll.init = enable;
   SmoothScroll.destroy = destroy;
-  SmoothScroll.cancel = stopMotion;   // стоп инерции без снятия обработчиков
-  SmoothScroll.stop = stopMotion;
-  SmoothScroll.resync = resync;       // лёгкий пересчёт после resize/zoom
-  SmoothScroll.isEnabled = function () { return enabled; }; // ведёт ли прокрутку именно модуль
+  SmoothScroll.cancel = cancel;
+  SmoothScroll.stop = cancel;          // совместимость: «стоп инерции»
+  SmoothScroll.resync = resync;
+  SmoothScroll.scrollTo = scrollTo;
+  SmoothScroll.isEnabled = function () { return enabled; };
   SmoothScroll._dbg = function () {
     return {
-      module: 'smoothscroll-nr',
+      module: 'lenis',
       enabled: enabled,
-      targetY: null, targetX: null,
-      y: Math.round(getY() * 100) / 100,
-      x: Math.round(getX() * 100) / 100,
-      max: Math.round(maxY() * 100) / 100,
-      buffer: buffer.length,
-      running: running,
-      raf: !!rafId,
-      dirY: lastDirY,
-      dirX: lastDirX
+      stopped: !!(lenis && lenis.isStopped),
+      locked: pageLocked(),
+      y: lenis ? Math.round(lenis.actualScroll * 100) / 100 : null,
+      limit: lenis ? Math.round(lenis.limit * 100) / 100 : null,
+      progress: lenis ? lenis.progress : null
     };
   };
 

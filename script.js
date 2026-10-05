@@ -6527,6 +6527,14 @@ function smoothScrollTo(targetY, customDuration) {
   // Smooth, gradual duration based on distance (1.1s for short, up to 1.55s for long distances)
   const animDuration = customDuration || Math.min(1.55, Math.max(1.1, 0.95 + (distance / 3800) * 0.6));
 
+  // Если плавный скролл ведёт Lenis — отдаём якорь ему: GSAP ScrollToPlugin и
+  // Lenis одновременно пишут в window.scrollTo и дерутся за позицию каждый кадр.
+  if (window.nrSmoothScroll && typeof window.nrSmoothScroll.scrollTo === 'function' &&
+      typeof window.nrSmoothScroll.isEnabled === 'function' && window.nrSmoothScroll.isEnabled()) {
+    window.nrSmoothScroll.scrollTo(clampedTargetY, { duration: animDuration });
+    return;
+  }
+
   // Allow a short 220ms grace window after click so trackpad/mouse lift momentum never aborts scroll
   let allowInterrupt = false;
   const graceTimer = setTimeout(() => {
