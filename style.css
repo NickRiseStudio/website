@@ -1515,6 +1515,34 @@ body:has(#stickyPlayerBar.active) {
   }
 }
 
+/* ── Виртуальный скролл (движок — smoothscroll-nr.js) ─────────────────────
+   Пока движок активен (на <html> висит класс nr-virtual), отступ под нижним
+   плеером вешаем не на body, а на обёртку содержимого #nr-content. Иначе
+   body-padding «повисает» пустой полосой под концом обёртки: содержимое
+   сдвигается трансформом и лежит в потоке единым блоком, а сам body уже не
+   содержит прокручиваемого текста. Селектором html.nr-virtual перебиваем
+   правила выше (специфичность выше). Переход оставлен как у body. */
+html.nr-virtual body.has-sticky-player,
+html.nr-virtual body:has(#stickyPlayerBar.active) {
+  padding-bottom: 0;
+}
+
+html.nr-virtual #nr-content {
+  transition: padding-bottom 0.95s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html.nr-virtual body.has-sticky-player #nr-content,
+html.nr-virtual body:has(#stickyPlayerBar.active) #nr-content {
+  padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 640px) {
+  html.nr-virtual body.has-sticky-player #nr-content,
+  html.nr-virtual body:has(#stickyPlayerBar.active) #nr-content {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 /* Sticky Bottom Player Bar */
 .sticky-player-bar,
 #stickyPlayerBar {

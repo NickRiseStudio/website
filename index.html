@@ -319,6 +319,12 @@
     </div>
   </div>
 
+  <!-- SCROLLABLE CONTENT (обёртка виртуального скролла — см. smoothscroll-nr.js).
+       Внутрь входит всё, что должно прокручиваться (<main> и <footer>).
+       Все position:fixed элементы остаются СНАРУЖИ: transform на обёртке делает
+       её containing block и сломал бы им позиционирование. -->
+  <div id="nr-content">
+
   <!-- MAIN CONTENT -->
   <main class="pt-16 lg:pt-0 space-y-8 sm:space-y-16 lg:space-y-20">
 
@@ -668,6 +674,8 @@
       </p>
     </div>
   </footer>
+
+  </div><!-- /#nr-content -->
 
   <!-- 7. CONTACT MODAL -->
   <div id="contactModal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -1348,28 +1356,29 @@
   <script defer src="./vendor/ScrollToPlugin.min.js"></script>
   <script defer src="./vendor/lenis.min.js"></script>
   <script defer src="./config.js"></script>
-  <!-- Плавный скролл: обёртка smoothscroll-nr.js над библиотекой Lenis.
-       Lenis (darkroom.engineering) гладит обычный нативный скролл — position:
-       sticky, якоря и доступность работают как есть. Модуль оставляет прежний
-       API (SmoothScroll.enable(opts) / destroy() / cancel() / stop() /
-       resync() / scrollTo(); window.nrSmoothScroll) и склеивает Lenis с GSAP
-       ScrollTrigger. Настройки — smoothConfig ниже. -->
+  <!-- Плавный скролл: собственный движок smoothscroll-nr.js («виртуальный» скролл).
+       Страница не прокручивается нативно: содержимое лежит в обёртке #nr-content
+       (см. разметку выше) и каждый кадр сдвигается трансформом translate3d, а
+       колесо гладко «доезжает» до цели. Пока движок активен, он подменяет чтение
+       window.scrollY/pageYOffset и запись window.scrollTo — остальной код без правок.
+       API прежний (SmoothScroll.enable/destroy/cancel/resync/isEnabled/scrollTo;
+       window.nrSmoothScroll). Настройки — smoothConfig ниже.
+       vendor/lenis.min.js и vendor/lenis.css остаются подключёнными (порядок не
+       меняем), но новый движок их не использует. -->
   <script defer src="./smoothscroll-nr.js"></script>
   <script>
     (function () {
-      // Настройки Lenis (движок — vendor/lenis.min.js, обёртка — smoothscroll-nr.js).
-      // Подобрано под ощущение ПРЕЖНЕГО собственного движка (legacy
-      // smoothscroll-nr.js): stepSize 75/120 → ~62 px за щелчок, animationTime
-      // 1000 мс и импульсная кривая «быстрый старт, длинный хвост».
+      // Настройки движка прокрутки (реализация — smoothscroll-nr.js).
+      // Подобрано под ощущение прежнего модуля: ~62 px за щелчок колеса и
+      // импульсная кривая якорного доезда «быстрый старт, длинный хвост».
       var smoothConfig = {
-        // Длина «доезда» одного щелчка колеса, сек (в прежнем — 1000 мс).
-        duration             : 1.0,
-        // Кривая доезда: аппроксимация прежней pulse-кривой — на половине
-        // времени пройдено ~79% пути. У кривой Lenis по умолчанию ~97%
-        // (почти весь путь в первой половине), из-за чего движение читалось
-        // как «рывок с остановкой», а не как плавное скольжение.
+        // Время «доезда», сек: столько едет один щелчок колеса и якорь —
+        // как вёл прежний Lenis (перезапуск доезда от текущей позиции).
+        duration             : 1.2,
+        // Кривая доезда: на половине времени пройдено ~79% пути — быстрый
+        // старт и длинный мягкий хвост (как в прежнем конфиге).
         easing               : function (t) { return 1 - Math.pow(1 - t, 2.25); },
-        // Шаг колеса: ~62 px за щелчок (в прежнем — 75/120 от родной дельты).
+        // Шаг колеса: ~62 px за щелчок.
         wheelMultiplier      : 0.625,
         // Гладим колесо/трекпад; тач на планшетах остаётся нативным (как было)
         smoothWheel          : true,
