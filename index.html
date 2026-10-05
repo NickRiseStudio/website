@@ -50,11 +50,6 @@
        раньше. Шрифты генерируются инструментом, см. PROJECT-NOTES.md -->
   <link rel="stylesheet" href="./fonts.css">
 
-  <!-- Lenis (плавный скролл): минимальный служебный CSS библиотеки.
-       Лежит локально в vendor/, как GSAP. Подключаем ПЕРЕД style.css,
-       чтобы правила самого сайта шли после и в спорных местах побеждали. -->
-  <link rel="stylesheet" href="./vendor/lenis.css">
-
   <!-- Custom Styles -->
   <link rel="stylesheet" href="./style.css">
 
@@ -180,6 +175,9 @@
           var b = document.getElementById('nr-boot');
           if (!b || b.classList.contains('nr-boot-done')) return;
           document.documentElement.classList.remove('nr-boot-active');
+          /* Заставка отпускает страницу и в аварийном пути (JS упал):
+             у плавной прокрутки свой лок — снимаем и его. */
+          if (typeof window.nrSmoothScrollStart === 'function') window.nrSmoothScrollStart();
           b.style.pointerEvents = 'none';
           b.style.opacity = '0';
           setTimeout(function () { b.style.display = 'none'; }, 500);
@@ -281,7 +279,7 @@
   <div id="mobileMenuOverlay" onclick="closeMobileMenu()" class="lg:hidden fixed inset-0 z-30 bg-black/75"></div>
 
   <!-- Mobile/Tablet Navigation Drawer (Slides smoothly out from under header) -->
-  <div id="mobileMenuDrawer" class="lg:hidden fixed top-16 sm:top-20 left-0 right-0 z-40 bg-[#0C0E12] border-b border-gray-800/80 px-4 sm:px-6 py-5 shadow-2xl max-h-[calc(100vh-4rem)] sm:max-h-[calc(100vh-5rem)] overflow-y-auto overscroll-contain">
+  <div id="mobileMenuDrawer" class="lg:hidden fixed top-16 sm:top-20 left-0 right-0 z-40 bg-[#0C0E12] border-b border-gray-800/80 px-4 sm:px-6 py-5 shadow-2xl max-h-[calc(100vh-4rem)] sm:max-h-[calc(100vh-5rem)] overflow-y-auto overscroll-contain" data-lenis-prevent>
     <div class="max-w-7xl mx-auto flex flex-col space-y-2 text-base font-semibold text-gray-200">
       
       <a href="#player" onclick="closeMobileMenu()" class="mobile-drawer-item nav-drawer-link px-4 py-3 rounded-xl bg-[#12151D] border border-gray-800/60 hover:bg-[#1A1F2B] hover:text-amber-400 transition-all flex items-center justify-between" data-nav-section="player">
@@ -318,12 +316,6 @@
 
     </div>
   </div>
-
-  <!-- SCROLLABLE CONTENT (обёртка виртуального скролла — см. smoothscroll-nr.js).
-       Внутрь входит всё, что должно прокручиваться (<main> и <footer>).
-       Все position:fixed элементы остаются СНАРУЖИ: transform на обёртке делает
-       её containing block и сломал бы им позиционирование. -->
-  <div id="nr-content">
 
   <!-- MAIN CONTENT -->
   <main class="pt-16 lg:pt-0 space-y-8 sm:space-y-16 lg:space-y-20">
@@ -675,11 +667,9 @@
     </div>
   </footer>
 
-  </div><!-- /#nr-content -->
-
   <!-- 7. CONTACT MODAL -->
   <div id="contactModal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-4">
-    <div class="modal-content rack-card max-w-2xl w-full p-6 sm:p-10 relative overflow-hidden text-center shadow-2xl">
+    <div class="modal-content rack-card max-w-2xl w-full p-6 sm:p-10 relative overflow-hidden text-center shadow-2xl" data-lenis-prevent>
       <!-- Close Button -->
       <button onclick="closeContactModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-2 rounded-xl hover:bg-gray-800/80 transition-colors z-20 cursor-pointer" title="Закрыть" data-i18n-title="a11y.close">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -735,8 +725,8 @@
   </div>
 
   <!-- 7.5 ABOUT MODAL -->
-  <div id="aboutModal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto">
-    <div class="modal-content rack-card max-w-3xl w-full p-5 sm:p-8 relative overflow-hidden shadow-2xl my-auto text-left max-h-[90vh] overflow-y-auto">
+  <div id="aboutModal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto" data-lenis-prevent>
+    <div class="modal-content rack-card max-w-3xl w-full p-5 sm:p-8 relative overflow-hidden shadow-2xl my-auto text-left max-h-[90vh] overflow-y-auto" data-lenis-prevent>
       <!-- Close Button -->
       <button onclick="closeAboutModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-2 rounded-xl hover:bg-gray-800/80 transition-colors z-20 cursor-pointer" title="Закрыть" data-i18n-title="a11y.close">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -862,7 +852,7 @@
         </button>
 
         <button
-          onclick="closeAboutModal(); document.getElementById('player').scrollIntoView({behavior: 'smooth'});"
+          onclick="closeAboutModal(); scrollToPlayer();"
           class="w-full sm:w-auto px-6 py-3 bg-[#14171F] hover:bg-[#1C212E] text-white font-bold rounded-xl border border-gray-800 transition-all text-sm flex items-center justify-center gap-2 cursor-pointer active:scale-95"
         >
           <span data-i18n="aboutModal.btnDemos">Слушать A/B демо</span>
@@ -874,7 +864,7 @@
 
   <!-- 7.6 SERVICE COST CALCULATOR MODAL -->
   <div id="priceCalcModal" class="modal-overlay fixed inset-0 z-[105] flex items-center justify-center p-3 sm:p-5">
-    <div class="modal-content rack-card max-w-xl w-full p-5 sm:p-8 relative overflow-hidden shadow-2xl my-auto max-h-[90vh] overflow-y-auto text-center">
+    <div class="modal-content rack-card max-w-xl w-full p-5 sm:p-8 relative overflow-hidden shadow-2xl my-auto max-h-[90vh] overflow-y-auto text-center" data-lenis-prevent>
 
       <!-- Close Button -->
       <button onclick="closePriceCalcModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-2 rounded-xl hover:bg-gray-800/80 transition-colors z-20 cursor-pointer" title="Закрыть" data-i18n-title="a11y.close">
@@ -1341,102 +1331,25 @@
   </div>
 
   <!-- Scripts -->
-  <!-- GSAP, ScrollTrigger, ScrollToPlugin, Lenis.
+  <!-- GSAP, ScrollTrigger, ScrollToPlugin (плавный доезд к секциям).
        Лежат ЛОКАЛЬНО (public/vendor): так парсер не ждёт сторонний CDN, нет
        лишнего соединения и сайт не зависит от доступности cdnjs.
 
        Все внешние скрипты стоят с defer: браузер не блокирует отрисовку на их
        загрузке, а выполняет их после разбора разметки — но в прежнем порядке
-       (gsap → ScrollTrigger → ScrollToPlugin → lenis → config → smoothscroll-nr →
-       script → animations) и всегда до DOMContentLoaded. Inline-блок
-       плавного скролла подписывается на DOMContentLoaded, поэтому SmoothScroll
-       к моменту вызова уже загружен. -->
+       (gsap → ScrollTrigger → ScrollToPlugin → lenis → config → script →
+       animations) и всегда до DOMContentLoaded. -->
   <script defer src="./vendor/gsap.min.js"></script>
   <script defer src="./vendor/ScrollTrigger.min.js"></script>
   <script defer src="./vendor/ScrollToPlugin.min.js"></script>
+  <!-- Lenis — плавная прокрутка. Двигает НАТИВНЫЙ скролл: обёртки и transform
+       на контенте нет, поэтому position: fixed (шапка, плеер, микшер, модалки,
+       тосты), весь код на window.scrollY и ScrollTrigger работают как раньше.
+       Лежит локально (public/vendor), как и GSAP, — без внешнего CDN.
+       Настройки движка (плавность, шаг колеса) — script.js → NR_SCROLL. -->
   <script defer src="./vendor/lenis.min.js"></script>
   <script defer src="./config.js"></script>
-  <!-- Плавный скролл: собственный движок smoothscroll-nr.js («виртуальный» скролл).
-       Страница не прокручивается нативно: содержимое лежит в обёртке #nr-content
-       (см. разметку выше) и каждый кадр сдвигается трансформом translate3d, а
-       колесо гладко «доезжает» до цели. Пока движок активен, он подменяет чтение
-       window.scrollY/pageYOffset и запись window.scrollTo — остальной код без правок.
-       API прежний (SmoothScroll.enable/destroy/cancel/resync/isEnabled/scrollTo;
-       window.nrSmoothScroll). Настройки — smoothConfig ниже.
-       vendor/lenis.min.js и vendor/lenis.css остаются подключёнными (порядок не
-       меняем), но новый движок их не использует. -->
-  <script defer src="./smoothscroll-nr.js"></script>
-  <script>
-    (function () {
-      // Настройки движка прокрутки (реализация — smoothscroll-nr.js).
-      // Подобрано под ощущение прежнего модуля: ~62 px за щелчок колеса и
-      // импульсная кривая якорного доезда «быстрый старт, длинный хвост».
-      var smoothConfig = {
-        // Время «доезда», сек: столько едет один щелчок колеса и якорь —
-        // как вёл прежний Lenis (перезапуск доезда от текущей позиции).
-        duration             : 1.2,
-        // Кривая доезда: на половине времени пройдено ~79% пути — быстрый
-        // старт и длинный мягкий хвост (как в прежнем конфиге).
-        easing               : function (t) { return 1 - Math.pow(1 - t, 2.25); },
-        // Шаг колеса: ~62 px за щелчок.
-        wheelMultiplier      : 0.625,
-        // Гладим колесо/трекпад; тач на планшетах остаётся нативным (как было)
-        smoothWheel          : true,
-        syncTouch            : false
-      };
 
-      function applySmoothScroll() {
-        // Pure touch-only mobile devices without pointer/mouse
-        var isTouchOnly = ('ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0)) &&
-                          window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
-        var isDesktop = !isTouchOnly || window.innerWidth >= 1024;
-
-        try {
-          if (typeof SmoothScroll === 'function') {
-            if (isDesktop) {
-              if (typeof SmoothScroll.destroy === 'function') {
-                SmoothScroll.destroy();
-              }
-              if (typeof SmoothScroll.enable === 'function') {
-                SmoothScroll.enable(smoothConfig);
-              } else {
-                SmoothScroll(smoothConfig);
-              }
-            } else if (typeof SmoothScroll.destroy === 'function') {
-              SmoothScroll.destroy();
-            }
-          }
-        } catch (err) {
-          console.warn('SmoothScroll init/destroy error caught safely:', err);
-        }
-      }
-
-      // unlockPage() в animations.js дёргает nrApplySmoothScroll сразу, как
-      // только boot-заставка снимает overflow:hidden — плавный скролл
-      // «активируется» в момент разблокировки.
-      window.nrApplySmoothScroll = applySmoothScroll;
-
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', applySmoothScroll);
-      } else {
-        applySmoothScroll();
-      }
-
-      // На resize/zoom достаточно лёгкого resync (сброс незавершённой инерции
-      // без пересоздания обработчиков) — если модуль его поддерживает.
-      // Иначе (внешняя либа) ведём себя как раньше: полный applySmoothScroll.
-      function onViewportChange() {
-        var ns = window.nrSmoothScroll;
-        if (ns && typeof ns.resync === 'function') {
-          try { ns.resync(); } catch (err) { console.warn('smoothscroll resync error:', err); }
-        } else {
-          applySmoothScroll();
-        }
-      }
-      window.addEventListener('resize', onViewportChange, { passive: true });
-      window.addEventListener('orientationchange', onViewportChange, { passive: true });
-    })();
-  </script>
   <script src="./script.js" defer></script>
   <!-- animations.js — визуальные эффекты: канвасы, эквалайзер, ScrollTrigger,
        boot-заставка (initBoot). Подключается последней, после script.js.
