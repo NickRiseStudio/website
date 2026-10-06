@@ -2304,7 +2304,13 @@ html.nr-ab-hint #stickyPlayerBar .deck-source-switch {
 #stickyPlayerBar::after {
   content: '';
   position: absolute;
-  inset: 0;
+  /* Не inset: 0. Слой должен начинаться ВЫШЕ верхней кромки пульта: рамка
+     (border-top), янтарная линия ::before (top: -1px) и свечение полосы
+     прогресса (#deckProgressBar, box-shadow 0 0 12px) торчат за padding-box.
+     Пульт поднят над оверлеем (z-index 200 против 150), поэтому всё, что
+     вылезает за его верх, оверлей не гасит — и над полосой перемотки
+     оставалась светлая полоска. Запас 16px накрывает и её. */
+  inset: -16px 0 0 0;
   z-index: 20;
   background-color: rgba(5, 7, 12, 0.8);
   opacity: 0;

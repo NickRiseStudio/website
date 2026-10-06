@@ -3677,12 +3677,12 @@ function createTrackCard(track, { isVerticalView, currentDevice, withId = true, 
   itemCard.className = (isVerticalView
     ? `p-3 rounded-2xl border transition-all duration-300 cursor-pointer flex flex-col gap-3 group ${
         isSelected
-          ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10'
+          ? 'bg-[#1A1F2B] border-amber-500/60 shadow-lg shadow-amber-500/10'
           : 'bg-[#0B0E15] border-gray-800/80 hover:border-amber-500/40 hover:bg-[#0F131E]'
       }`
     : `p-4 rounded-2xl border transition-all duration-300 cursor-pointer flex items-center justify-between gap-3.5 group ${
         isSelected
-          ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10'
+          ? 'bg-[#1A1F2B] border-amber-500/60 shadow-lg shadow-amber-500/10'
           : 'bg-[#0B0E15] border-gray-800/80 hover:border-amber-500/40 hover:bg-[#0F131E]'
       }`
   );
@@ -3704,7 +3704,7 @@ function createTrackCard(track, { isVerticalView, currentDevice, withId = true, 
   trackCoverBox.appendChild(coverImg);
 
   const liveOverlay = document.createElement('div');
-  liveOverlay.className = 'track-live-overlay absolute inset-0 bg-black/60 items-center justify-center';
+  liveOverlay.className = 'track-live-overlay absolute inset-0 items-center justify-center';
   liveOverlay.style.display = isPlaying ? 'flex' : 'none';
   const liveLed = document.createElement('span');
   liveLed.className = 'w-2.5 h-2.5 rounded-full vu-led-green animate-ping';
@@ -3855,12 +3855,12 @@ function renderTrackList(animate = false) {
       itemCard.className = (isVerticalView
         ? `p-3 rounded-2xl border transition-all duration-300 cursor-pointer flex flex-col gap-3 group ${
             isSelected 
-              ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10' 
+              ? 'bg-[#1A1F2B] border-amber-500/60 shadow-lg shadow-amber-500/10' 
               : 'bg-[#0B0E15] border-gray-800/80 hover:border-amber-500/40 hover:bg-[#0F131E]'
           }`
         : `p-4 rounded-2xl border transition-all duration-300 cursor-pointer flex items-center justify-between gap-3.5 group ${
             isSelected 
-              ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10' 
+              ? 'bg-[#1A1F2B] border-amber-500/60 shadow-lg shadow-amber-500/10' 
               : 'bg-[#0B0E15] border-gray-800/80 hover:border-amber-500/40 hover:bg-[#0F131E]'
           }`
       );
@@ -4158,6 +4158,13 @@ function renderServices() {
     // соседней сначала листает карусель до неё — она встаёт в центр. На планшете/ПК
     // карточки видны все сразу (сетка), поэтому там клик по любой переворачивает её.
     card.addEventListener('click', (e) => {
+      // Кнопка «Назад» на обороте возвращает карточку. Проверять её нужно ДО
+      // общей глушилки кнопок ниже — иначе клик по ней молча гасился и кнопка
+      // выглядела нерабочей. Своё нажатие кнопка показывает сама (active:scale-95).
+      if (e.target.closest('.service-card-back-btn')) {
+        toggleServiceCardFlip(card);
+        return;
+      }
       if (e.target.closest('button')) return;
       if (window.innerWidth < 640 && idx !== servicesActiveIndex) {
         scrollToServiceCard(idx);
