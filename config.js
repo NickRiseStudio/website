@@ -61,7 +61,7 @@ const CONFIG = {
           mobile: 'Превращаю демо-записи и сырые мультитреки в мощный, объемный и конкурентоспособный звук мирового уровня.'
         },
         btnPlayer: 'Примеры работ (A/B)',
-        btnContact: 'Контакты',
+        btnReviews: 'Отзывы',
         aboutPhotoBadge: 'Обо мне'
       },
       player: {
@@ -227,7 +227,7 @@ const CONFIG = {
           mobile: 'I turn raw demos and multitracks into a powerful, wide and competitive world-class sound.'
         },
         btnPlayer: 'Hear A/B Demos',
-        btnContact: 'Contact Me',
+        btnReviews: 'Reviews',
         aboutPhotoBadge: 'About'
       },
       player: {

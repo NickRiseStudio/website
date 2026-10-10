@@ -486,20 +486,20 @@ html, body {
    Плашка «карточек услуг»: у самих карточек отступ p-4 (16px, script.js),
    а 32px сверху и снизу давал контейнер-карусель #servicesContainer
    (py-8 в index.html). Здесь меняются именно его вертикальные отступы:
-   сверху 20px, снизу 10px. Горизонтальные padding'и контейнера не трогаем —
+   сверху 25px, снизу 16px. Горизонтальные padding'и контейнера не трогаем —
    их задаёт телефонный блок выше (padding-left/right под центровку карточки). */
 @media (max-width: 639px) {
   /* Заголовки секций: зазор до содержимого под заголовком */
-  #player > .max-w-6xl > .text-center   { margin-bottom: 20px; }  /* было 32 */
-  #services > .max-w-7xl > .text-center { margin-bottom: 10px; }  /* было 24 */
+  #player > .max-w-6xl > .text-center   { margin-bottom: 10px; }  /* было 32, затем 20 */
+  #services > .max-w-7xl > .text-center { margin-bottom: 0; }     /* было 24, затем 10 */
   #faq > .max-w-4xl > .text-center      { margin-bottom: 20px; }  /* было 32 */
   #contacts > .max-w-4xl > .text-center { margin-bottom: 25px; }  /* было 16 */
   #reviews > .max-w-7xl > .text-center  { margin-bottom: 10px; }  /* было 32 */
 
   /* Лента карточек услуг: вертикальные отступы контейнера-карусели */
   #servicesContainer {
-    padding-top: 20px;      /* было 32 */
-    padding-bottom: 10px;   /* было 32 */
+    padding-top: 25px;      /* было 32, затем 20 */
+    padding-bottom: 16px;   /* было 32, затем 10, затем 15 */
   }
 
   /* ВНУТРИ КАРТОЧКИ: зазор над разделителем убран (правка 27.09). Было
@@ -2571,6 +2571,22 @@ span.faq-q-text.lang-vapor-in {
     min-width: 120px !important;
     padding: 7px 10px !important;
     font-size: 11px !important;
+  }
+}
+
+/* ── ЗАЗОР МЕЖДУ ПЕРЕКЛЮЧАТЕЛЕМ ЯЗЫКА И ЛЕНТОЙ ТРЕКОВ (телефон) ──────────
+   Отступ даёт не сам переключатель, а его родитель #playerContentContainer:
+   класс space-y-6 в Tailwind v4 разворачивается в
+   :where(.space-y-6 > :not(:last-child)) { margin-block-end: 24px }, то есть
+   между плашкой «На английском / На русском» и карточками треков было 24px.
+   На телефоне это много — здесь 15px. Правило заключено в max-width: 639px,
+   поэтому планшет и компьютер (там 24px смотрится нормально) не затронуты.
+   justify-center в селекторе нужен, чтобы не задеть #trackPagination: у неё
+   тоже есть flex items-center, но её выравнивание — justify-between, и она
+   последний ребёнок (значит, space-y-6 ей отступ вообще не даёт). */
+@media (max-width: 639px) {
+  #playerContentContainer > div.flex.items-center.justify-center {
+    margin-bottom: 15px;   /* было 24 (space-y-6) */
   }
 }
 

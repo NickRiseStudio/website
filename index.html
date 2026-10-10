@@ -357,8 +357,8 @@
                 <span data-i18n="hero.btnPlayer">Примеры работ (A/B)</span>
               </a>
 
-              <a href="#contacts" class="w-full sm:w-auto sm:min-w-[145px] px-8 py-4 bg-[#14171F] hover:bg-[#1C212E] text-white font-extrabold rounded-xl border border-gray-800 transition-all flex items-center justify-center gap-3 text-base active:scale-95 whitespace-nowrap">
-                <span data-i18n="hero.btnContact">Контакты</span>
+              <a href="#reviews" class="w-full sm:w-auto sm:min-w-[145px] px-8 py-4 bg-[#14171F] hover:bg-[#1C212E] text-white font-extrabold rounded-xl border border-gray-800 transition-all flex items-center justify-center gap-3 text-base active:scale-95 whitespace-nowrap">
+                <span data-i18n="hero.btnReviews">Отзывы</span>
               </a>
             </div>
 
@@ -514,6 +514,30 @@
 
         </div>
 
+        <!-- Кнопка «Связаться»: открывает модальное окно контактов (#contactModal).
+             Стоит внизу раздела с примерами сведения — сразу под пагинацией
+             треков — и показывается на ВСЕХ устройствах (без sm:-скрытия, в
+             отличие от кнопки в шапке, которая на телефоне живёт в меню).
+             Текст берётся из общего ключа nav.contactBtn («Связаться» /
+             «Contact») — тем же ключом подписаны остальные кнопки связи.
+             Класс .nr-calc-cta (animations.css, раздел 18) — тот же, что у
+             кнопки «Рассчитать стоимость услуг»: дышащее янтарное свечение,
+             бегущий блик и «волна» по контуру. Класс общий на обе CTA,
+             поэтому внешний вид и тайминги у них совпадают до пикселя.
+             Набор утилит рядом — как у кнопки калькулятора: тот же вариант
+             уже проверен в проде (в т.ч. перекрытие active:scale-95 на :active
+             и transition из класса поверх transition-all). -->
+        <div class="flex justify-center mt-8 sm:mt-10">
+          <button
+            type="button"
+            onclick="openContactModal()"
+            class="nr-calc-cta w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 sm:px-9 py-3.5 sm:py-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl transition-all duration-200 shadow-lg shadow-amber-500/30 active:scale-95 text-sm sm:text-base cursor-pointer"
+          >
+            <span data-i18n="nav.contactBtn">Связаться</span>
+            <svg class="w-5 h-5 flex-shrink-0 fill-current" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          </button>
+        </div>
+
       </div>
     </section>
 
@@ -532,7 +556,7 @@
         </div>
 
         <!-- Mobile Carousel Dots for Services (<640px only) -->
-        <div id="servicesDotsContainer" class="flex sm:hidden items-center justify-center gap-2 mt-4">
+        <div id="servicesDotsContainer" class="flex sm:hidden items-center justify-center gap-2 mt-0">
           <button onclick="scrollToServiceCard(0)" class="w-2.5 h-2.5 rounded-full transition-all bg-gray-700 hover:bg-amber-500 cursor-pointer" aria-label="Card 1"></button>
           <button onclick="scrollToServiceCard(1)" class="w-8 h-2.5 rounded-full transition-all bg-amber-500 shadow-sm shadow-amber-500/50 cursor-pointer" aria-label="Card 2"></button>
           <button onclick="scrollToServiceCard(2)" class="w-2.5 h-2.5 rounded-full transition-all bg-gray-700 hover:bg-amber-500 cursor-pointer" aria-label="Card 3"></button>
