@@ -489,14 +489,20 @@ body.nr-scrolled #mainHeader #headerLogoBtn span {
    filter: drop-shadow, он ложится по силуэту плитки и с анимацией не
    конфликтует. */
 body.nr-scrolled #mainHeader #headerLogoBtn > div:first-child {
+  /* Переход для filter задан в общем правиле плитки (см. ниже) и намеренно
+     здесь НЕ переопределяется: раньше строка transition: filter 0.35s ease
+     перебивала базовый transition целиком (специфичность выше), и при
+     прокрутке ховер-наклон анимировался мгновенным скачком — «анимация
+     пропадала». */
   filter: drop-shadow(0 0 1px rgba(6, 8, 12, 0.85)) drop-shadow(0 1px 4px rgba(0, 0, 0, 0.5));
-  transition: filter 0.35s ease;
 }
 
-/* Логотип в шапке. Ховер — лёгкий разворот плитки + вспышка рамки/свечения.
-   Мягкий пульс тени ПОЗАДИ плитки возвращён (усиливается во время проигрывания),
-   но тень теперь СИММЕТРИЧНАЯ: 0 0 … — раньше было смещение 0 8px (вниз),
-   из-за которого свечение выглядело «кривым».
+/* Логотип в шапке. Ховер — лёгкий разворот плитки + янтарная вспышка.
+   Вспышку даёт симметричный filter: drop-shadow (0 0 …) — ровно по центру
+   плитки. Прежний box-shadow 0 8px 33px светил вниз, поэтому свечение
+   выглядело «кривым»; сюда его писать нельзя ещё и потому, что box-shadow
+   занят непрерывным пульсом nrLogoBreath (см. ниже) — анимация перебивает
+   обычные правила и вспышка не появилась бы.
    ВАЖНО про резкость: transform/box-shadow живут на контейнере, а само <img>
    поднято в собственный GPU-слой (translateZ) — Chrome рисует картинку один раз
    в полном разрешении и при наведении только композитит готовую текстуру. */
@@ -504,7 +510,15 @@ body.nr-scrolled #mainHeader #headerLogoBtn > div:first-child {
 #mainHeader button > div:first-child,
 #headerLogoBtn > div:first-child {
   animation: nrLogoBreath 5.5s ease-in-out infinite;
-  transition: transform 0.5s var(--nr-snap), border-color 0.3s ease, box-shadow 0.45s var(--nr-ease);
+  /* Рамка плитки — всегда чуть подсвечена и НЕ меняется при наведении. Раньше
+     после ухода курсора она сначала тускнела, а затем «подскакивала» вместе с
+     перезапустившимся пульсом; константный цвет убирает этот эффект. */
+  border-color: rgba(245, 158, 11, 0.45);
+  /* transform — на --nr-ease (без «перелёта»): у --nr-snap в кривой заложен
+     overshoot 1.4, из-за него наклон на ховере проскакивал цель и откатывался
+     («дёрганая» анимация). filter добавлен в список, чтобы ореол наведения
+     проявлялся и гас плавно. */
+  transition: transform 0.5s var(--nr-ease), border-color 0.3s ease, box-shadow 0.45s var(--nr-ease), filter 0.35s ease;
   will-change: transform;
 }
 
@@ -518,9 +532,23 @@ body.nr-scrolled #mainHeader #headerLogoBtn > div:first-child {
 #mainHeader a:hover > div:first-child,
 #mainHeader button:hover > div:first-child,
 #headerLogoBtn:hover > div:first-child {
+  /* Пульс nrLogoBreath НЕ отключаем: если поставить здесь animation: none, то
+     при уходе курсора он перезапускался с 0% (самое тусклое значение) и рамка
+     сначала тускнела, а потом резко светлела. Пульс идёт непрерывно, вспышку
+     даёт симметричный ореол filter: drop-shadow — без смещения, по центру. */
   transform: rotate(-4deg) scale(1.06);
-  border-color: rgba(245, 158, 11, 0.85);
-  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.30), 0 8px 33px rgba(245, 158, 11, 0.5);
+  filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.6)) drop-shadow(0 0 24px rgba(245, 158, 11, 0.35));
+}
+
+/* При прокрутке у плитки уже есть тёмная обводка (см. body.nr-scrolled выше) —
+   её правило по специфичности сильнее, поэтому янтарный ореол наведения нужно
+   добавить к ней тем же filter, иначе при прокрутке вспышка пропадала бы. */
+body.nr-scrolled #mainHeader #headerLogoBtn:hover > div:first-child {
+  filter:
+    drop-shadow(0 0 1px rgba(6, 8, 12, 0.85))
+    drop-shadow(0 1px 4px rgba(0, 0, 0, 0.5))
+    drop-shadow(0 0 10px rgba(245, 158, 11, 0.6))
+    drop-shadow(0 0 24px rgba(245, 158, 11, 0.35));
 }
 
 body.nr-playing #mainHeader a > div:first-child,

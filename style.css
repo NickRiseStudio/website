@@ -2317,10 +2317,13 @@ html.nr-ab-hint body {
   border-bottom-right-radius: 5px;
 }
 
-/* Оранжевые «до» и «после» (см. config.js → player.abHint) */
+/* Оранжевые акценты в текстах: «до»/«после» подсказки плеера (config.js →
+   player.abHint), «обо мне» в подсказке логотипа (nav.logoHint) и ключевые
+   слова в биографии окна «Обо мне» (aboutModal.bioText*). Вес 700, а не 800:
+   800 в абзаце с обычным текстом выглядел слишком «кричащим». */
 .nr-ab-hint-accent {
   color: #F59E0B;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 /* ── Состояние подсказки: яркими остаются кнопка и бабл ──────────────── */
@@ -2368,6 +2371,75 @@ html.nr-ab-hint #stickyPlayerBar::after {
 @media (prefers-reduced-motion: reduce) {
   .nr-ab-hint-tip,
   .nr-ab-hint-tip.show {
+    transform: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ПОДСКАЗКА ПРО ЛОГОТИП В ШАПКЕ («ОБО МНЕ»)
+   При заходе на сайт под логотипом слева вверху всплывает бабл в том же
+   формате, что и подсказка плеера, но БЕЗ затемнения: страница не гаснет и
+   прокрутка не блокируется. Своей геометрии у бабла нет — берём базовый
+   .nr-ab-hint-tip; здесь только разворот хвостика вверх (бабл стоит ПОД
+   логотипом) и крестик для компьютера.
+   Позицию и место хвостика считает script.js → positionLogoHint.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Хвостик смотрит ВВЕРХ (на логотип) — зеркало хвостика подсказки плеера
+   (.nr-ab-hint-tip::after): те же квадрат с двумя рёбрами и скруглённый угол. */
+.nr-logo-hint-tip::after {
+  top: -8px;
+  bottom: auto;
+  background-color: rgba(10, 13, 20, 0.98);
+  border-right: none;
+  border-bottom: none;
+  border-left: 1px solid rgba(245, 158, 11, 0.45);
+  border-top: 1px solid rgba(245, 158, 11, 0.45);
+  border-bottom-right-radius: 0;
+  border-top-left-radius: 5px;
+}
+
+/* Крестик живёт только на устройствах с курсором (см. media ниже). */
+.nr-logo-hint-close { display: none; }
+
+@media (hover: hover) and (pointer: fine) {
+  /* Пока бабл виден, он принимает клики — иначе не нажать крестик. На тач-экранах
+     остаётся pointer-events: none (базовый .nr-ab-hint-tip): тап проходит сквозь
+     бабл, а сам бабл гасит обработчик действия (script.js → logoHintDismissAny). */
+  .nr-logo-hint-tip.show { pointer-events: auto; }
+
+  /* Запас справа, чтобы надпись не наезжала на крестик в углу. */
+  .nr-logo-hint-tip { padding-right: 40px; }
+
+  .nr-logo-hint-tip.show .nr-logo-hint-close {
+    display: flex;
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #9CA3AF;
+    cursor: pointer;
+    transition: color 0.3s ease, background-color 0.3s ease;
+  }
+  .nr-logo-hint-close:hover,
+  .nr-logo-hint-close:focus-visible {
+    color: #F59E0B;
+    background: rgba(245, 158, 11, 0.14);
+    outline: none;
+  }
+}
+
+/* «Уменьшить движение»: бабл просто проявляется на месте */
+@media (prefers-reduced-motion: reduce) {
+  .nr-logo-hint-tip,
+  .nr-logo-hint-tip.show {
     transform: none;
   }
 }

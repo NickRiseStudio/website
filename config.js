@@ -26,6 +26,10 @@ const CONFIG = {
     ru: {
       nav: {
         logoTitle: 'Nick Rise Studio',
+        // Подсказка про логотип в шапке: всплывает при заходе на сайт под
+        // логотипом (script.js → maybeShowLogoHint). Оранжевый акцент — тем же
+        // классом nr-ab-hint-accent, что у подсказки плеера и калькулятора.
+        logoHint: 'Здесь вы можете узнать <span class="nr-ab-hint-accent">обо мне</span>',
         abPlayer: 'Примеры A/B',
         services: 'Услуги',
         faq: 'FAQ',
@@ -158,11 +162,15 @@ const CONFIG = {
       aboutModal: {
         tag: 'STUDIO ENGINEER PROFILE // NICK RISE',
         title: 'Александр (Nick Rise)',
-        subtitle: 'Звукорежиссер сведения & мастеринга',
+        subtitle: 'Звукорежиссер Сведения / Мастеринга',
         experience: '6+ лет в индустрии',
         bioTitle: 'Обо мне',
-        bioText1: 'Приветствую! Меня зовут Александр, я битмейкер, техник по звуку и звукорежиссёр из Москвы. В моём портфолио — работа с аналоговыми и цифровыми микшерами на концертах и студиях. Отвечал за звук на прямой трансляции Первого канала на ВДНХ, сотрудничал с PRO BATTLE League, Underground Amplitude и другими лейблами и сообществами.',
-        bioText2: 'Проходил обучение у таких звукорежиссёров, как Джон Олин, Константин Матафонов, Илья Лукашев, Павел Уоллен и других.',
+        // Оранжевые акценты в биографии расставлены ПО ПОМЕТКАМ ЗАКАЗЧИКА
+        // (в тексте он помечал нужные слова «звёздочками»). Цвет — тем же
+        // классом nr-ab-hint-accent, что у подсказок плеера и логотипа
+        // (style.css). Ничего сверх пометок не выделяем.
+        bioText1: 'Приветствую! Меня зовут Александр, я битмейкер, техник по звуку и <span class="nr-ab-hint-accent">звукорежиссёр</span> из Москвы. В моём портфолио — работа с <span class="nr-ab-hint-accent">аналоговыми</span> и <span class="nr-ab-hint-accent">цифровыми</span> микшерами на <span class="nr-ab-hint-accent">концертах</span> и <span class="nr-ab-hint-accent">студиях</span>. Отвечал за звук на прямой трансляции <span class="nr-ab-hint-accent">Первого канала</span> на ВДНХ, сотрудничал с PRO BATTLE League, Underground Amplitude и другими лейблами и сообществами.',
+        bioText2: 'Проходил обучение у таких звукорежиссёров, как <span class="nr-ab-hint-accent">Джон Олин, Константин Матафонов, Илья Лукашев, Павел Уоллен</span> и других.',
         bioText3: 'С радостью готов поработать с тобой!',
         stat1Num: '200+',
         stat1Text: 'Завершенных треков',
@@ -200,6 +208,7 @@ const CONFIG = {
     en: {
       nav: {
         logoTitle: 'Nick Rise Studio',
+        logoHint: 'Here you can learn <span class="nr-ab-hint-accent">about me</span>',
         abPlayer: 'A/B Demos',
         services: 'Services',
         faq: 'FAQ',
@@ -210,9 +219,9 @@ const CONFIG = {
       hero: {
         /* Телефон — без принудительного переноса, как в RU (см. комментарий выше). */
         title: {
-          desktop: 'Professional<br><span class="whitespace-nowrap">Mixing / Mastering</span>',
-          tablet: 'Professional<br><span class="whitespace-nowrap">Mixing / Mastering</span>',
-          mobile: 'Professional <span class="whitespace-nowrap">Mixing / Mastering</span>'
+          desktop: 'Professional<br><span class="whitespace-nowrap">Mixing & Mastering</span>',
+          tablet: 'Professional<br><span class="whitespace-nowrap">Mixing & Mastering</span>',
+          mobile: 'Professional <span class="whitespace-nowrap">Mixing & Mastering</span>'
         },
         subtitle: {
           desktop: 'Specialization: Pop/House • Rock/Metal • Rap/R&B',
@@ -325,8 +334,10 @@ const CONFIG = {
         subtitle: 'Mixing & Mastering Engineer',
         experience: '6+ Years Industry Experience',
         bioTitle: 'About Me',
-        bioText1: 'Hello! I\'m Alexander — a beatmaker, audio technician, and sound engineer based in Moscow. My background spans working with both analog and digital consoles across live concert setups and studio sessions. I\'ve managed broadcast sound for live streams and collaborated with labels and communities such as PRO BATTLE League, Underground Amplitude, and others.',
-        bioText2: 'I\'ve trained under renowned audio engineers including John Olin, Konstantin Matafonov, Ilya Lukashev, Pavel Wallen, and more.',
+        // Orange highlights mirror the customer-marked words in the Russian text
+        // (same nr-ab-hint-accent class as the player / logo hints, style.css).
+        bioText1: 'Hello! I\'m Alexander — a beatmaker, audio technician, and <span class="nr-ab-hint-accent">sound engineer</span> based in Moscow. My background spans working with both <span class="nr-ab-hint-accent">analog</span> and <span class="nr-ab-hint-accent">digital</span> consoles across <span class="nr-ab-hint-accent">live concert setups</span> and <span class="nr-ab-hint-accent">studio sessions</span>. I\'ve managed broadcast sound for <span class="nr-ab-hint-accent">live streams</span> and collaborated with labels and communities such as PRO BATTLE League, Underground Amplitude, and others.',
+        bioText2: 'I\'ve trained under renowned audio engineers including <span class="nr-ab-hint-accent">John Olin, Konstantin Matafonov, Ilya Lukashev, Pavel Wallen</span>, and more.',
         bioText3: 'I would be happy to work with you!',
         stat1Num: '200+',
         stat1Text: 'Tracks Mixed & Mastered',
