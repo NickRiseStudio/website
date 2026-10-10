@@ -1007,6 +1007,46 @@ html, body {
   }
 }
 
+/* ─── Тень у карточек УСЛУГ, FAQ, КОНТАКТОВ и ПРИМЕРОВ A/B (правка 10.10) ──
+   Заказчику понравилась тень карточек отзывов — короткая и почти незаметная
+   (см. style.css → #reviews .review-card). Здесь ровно те же значения, и
+   правка действует на ВСЕХ устройствах (не только на компьютере).
+
+   Почему новые правила, а не правка .rack-card: этот же класс носят модалки
+   («Связаться», «Обо мне», калькулятор), а их трогать не просили. Селекторы
+   по id (1,0,0) перебивают .rack-card (0,1,0) без !important.
+
+   ПОЧЕМУ ЗДЕСЬ ЖЕ ПЕРЕОПРЕДЕЛЕНО И НАВЕДЕНИЕ: у правил с id специфичность
+   выше, чем у .rack-card:hover (0,1,1), поэтому без своих hover-правил
+   подъём карточки под курсором пропал бы совсем. Ниже он сохранён и тоже
+   повторяет наведение отзывов. Подъём (translateY) не трогаем.
+   Карточки треков (animations.css) держат те же значения — менять их нужно
+   вместе, иначе разделы разойдутся по виду. */
+#servicesContainer > *,
+#faqContainer > *,
+#contacts .rack-card {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* «Популярный» тариф: тёмная часть тени — как у отзывов, а янтарная аура и
+   внутренняя подсветка остаются увеличенными: по ним карточка и опознаётся
+   как «популярная». */
+#servicesContainer > .popular-rack-card {
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.22), 0 6px 16px rgba(0, 0, 0, 0.35), inset 0 0 16px rgba(245, 158, 11, 0.08);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  #servicesContainer > *:hover,
+  #faqContainer > *:hover,
+  #contacts .rack-card:hover {
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.4), 0 0 20px rgba(245, 158, 11, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  #servicesContainer > .popular-rack-card:hover {
+    box-shadow: 0 0 28px rgba(245, 158, 11, 0.35), 0 10px 22px rgba(0, 0, 0, 0.4), inset 0 0 22px rgba(245, 158, 11, 0.14);
+  }
+}
+
 .popular-rack-card * {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

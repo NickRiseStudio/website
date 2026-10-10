@@ -420,6 +420,7 @@
   var FADE_START = 50;  /* до этой прокрутки панель держится полностью плотной */
   var FADE_END = 550;   /* на этой прокрутке фон растворяется окончательно, 0% */
   var headerBgAlpha = -1; /* кэш последнего записанного значения */
+  var headerNav = null;   /* меню шапки: «овал» под пунктами, см. animations.css */
 
   function paintHeaderFade(y) {
     var t = (y - FADE_START) / (FADE_END - FADE_START);
@@ -445,6 +446,16 @@
     } else {
       header.style.backgroundColor = 'rgba(12, 14, 18, ' + alpha.toFixed(4) + ')';
     }
+
+    /* «Овал» под пунктами меню (десктоп) проявляется ровно в той мере, в
+       какой гаснет фон панели, — обратной величиной 1 − alpha. Вверху
+       страницы капсулы нет вовсе, а при полностью растворённом фоне она
+       держит меню читаемым вместо прежней обводки букв.
+       Отступы и цвет капсулы задаёт CSS (animations.css →
+       #mainHeader nav::before), здесь пишется только прозрачность — в
+       кастомную переменную, чтобы не трогать сам элемент меню. */
+    if (!headerNav) headerNav = $('#mainHeader nav');
+    if (headerNav) headerNav.style.setProperty('--nr-nav-pill', (1 - alpha).toFixed(4));
   }
 
   function initHeader() {
