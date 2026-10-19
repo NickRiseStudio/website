@@ -1213,11 +1213,17 @@
     return c;
   }
 
-  function dustParticle() {
+  /* Частица живёт в ПИКСЕЛЯХ слоя, а не в долях экрана, и её высота считается
+     ОТ НИЖНЕЙ КРОМКИ (d — сколько пикселей от низа слоя). Низ слоя привязан к
+     низу экрана (animations.css, раздел 19), поэтому пылинки не двигаются ни
+     при появлении/скрытии плашек браузера, ни при смене высоты слоя: экранная
+     позиция = низ экрана + d. Раньше хранилась доля экрана — при любом
+     изменении высоты окна вся россыпь мгновенно пересчитывалась и прыгала. */
+  function dustParticle(w, h) {
     var d = Math.random();               /* глубина: 0 — далеко, 1 — близко */
     return {
-      nx: Math.random(),                 /* базовая доля по X (0..1) */
-      ny: Math.random(),                 /* доля по Y (0..1) */
+      x: Math.random() * w,              /* позиция по X, px от левого края */
+      d: Math.random() * h,              /* позиция по Y, px ОТ НИЗА слоя */
       sp: 8 + d * 14,                    /* скорость подъёма, px/с */
       glow: 5 + (1 - d) * 7,             /* радиус ореола, px (дальние — размытее) */
       alpha: 0.05 + d * 0.11,            /* яркость (дальние — тусклее) */
@@ -1231,15 +1237,25 @@
 
   function sizeDust() {
     if (!dustCanvas) return;
+    var c = dustCanvas.c;
     var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-    var w = Math.max(1, Math.round(window.innerWidth));
-    var h = Math.max(1, Math.round(window.innerHeight));
+    /* Размер берём у самого слоя, а не у окна: CSS-высота канваса задана
+       в lvh (animations.css, раздел 19) и от плашки браузера не зависит. */
+    var w = Math.max(1, Math.round(c.clientWidth || window.innerWidth));
+    var h = Math.max(1, Math.round(c.clientHeight || window.innerHeight));
+    if (w === dustCanvas.w && h === dustCanvas.h && dpr === dustCanvas.dpr) return;
     dustCanvas.w = w;
     dustCanvas.h = h;
     dustCanvas.dpr = dpr;
-    dustCanvas.c.width = Math.round(w * dpr);
-    dustCanvas.c.height = Math.round(h * dpr);
+    c.width = Math.round(w * dpr);
+    c.height = Math.round(h * dpr);
     dustCanvas.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    /* Частицы живут в пикселях от нижней кромки: после сужения окна (поворот,
+       ресайз) за правый край уходят только те, кому не хватило ширины.
+       Высота не трогается вовсе — позиция от низа и так не зависит от неё. */
+    for (var i = 0; i < dustParticles.length; i++) {
+      if (dustParticles[i].x > w) dustParticles[i].x = Math.random() * w;
+    }
   }
 
   function initDust() {
@@ -1252,7 +1268,7 @@
     dustSprite = makeDustSprite();
     var count = LITE ? 26 : 64;
     dustParticles = [];
-    for (var i = 0; i < count; i++) dustParticles.push(dustParticle());
+    for (var i = 0; i < count; i++) dustParticles.push(dustParticle(dustCanvas.w, dustCanvas.h));
   }
 
   function drawDust(now) {
@@ -1267,13 +1283,14 @@
 
     for (var i = 0; i < dustParticles.length; i++) {
       var p = dustParticles[i];
-      p.ny -= (p.sp * dt) / h;
-      if (p.ny < -0.06) {                /* ушла за верх — возвращаем снизу */
-        p.ny = 1.06;
-        p.nx = Math.random();
+      /* Вверх по экрану = дальше от нижней кромки слоя. */
+      p.d += p.sp * dt;
+      if (p.d > h + p.glow * 2) {        /* ушла за верх — возвращаем снизу */
+        p.d = -p.glow * 2;
+        p.x = Math.random() * w;
       }
-      var x = (p.nx + Math.sin(t * p.swaySpd + p.phase) * (p.swayAmp / w)) * w;
-      var y = p.ny * h;
+      var x = p.x + Math.sin(t * p.swaySpd + p.phase) * p.swayAmp;
+      var y = h - p.d;
       var flick = 0.7 + 0.3 * Math.sin(t * p.flickSpd + p.flickPhase);
       ctx.globalAlpha = p.alpha * flick;
       ctx.drawImage(dustSprite, x - p.glow, y - p.glow, p.glow * 2, p.glow * 2);
