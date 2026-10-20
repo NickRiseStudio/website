@@ -6779,7 +6779,7 @@ let scrollSpyDirection = 'down';
    текущий scrollY — на страницу, которая между пересчётами не меняла высоту,
    это точная эквивалентная величина. Пересчёт вешает сам scroll-spy и
    внешние вызовы (смена языка, раскрытие отзывов/FAQ, появление плеера). */
-const NAV_SECTIONS = ['player', 'services', 'faq', 'contacts', 'reviews'];
+const NAV_SECTIONS = ['player', 'services', 'reviews', 'contacts', 'faq'];
 let scrollSpyAnchors = Object.create(null); /* id → top в координатах документа */
 let scrollSpyDocHeight = 0;  /* высота документа на момент замера */
 let scrollSpyHeaderH = 0;    /* высота шапки на момент замера */
