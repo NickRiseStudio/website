@@ -420,6 +420,7 @@
   var FADE_START = 50;  /* до этой прокрутки панель держится полностью плотной */
   var FADE_END = 550;   /* на этой прокрутке фон растворяется окончательно, 0% */
   var headerBgAlpha = -1; /* кэш последнего записанного значения */
+  var headerClear = false; /* панель растворена целиком — клики сквозь неё */
   var headerNav = null;   /* меню шапки: «овал» под пунктами, см. animations.css */
 
   function paintHeaderFade(y) {
@@ -439,7 +440,25 @@
     headerBgAlpha = alpha;
     var header = $('#mainHeader');
     if (!header) return;
-    if (alpha <= 0.001) {
+    /* Та же величина, что уходит в фон, но для логотипа: он гаснет вместе с
+       панелью. CSS читает её в opacity кнопки (animations.css →
+       «Растворённая панель»); на планшете и ПК переменная не используется —
+       там логотип остаётся на месте. */
+    header.style.setProperty('--nr-header-fade', alpha.toFixed(4));
+    /* Прокрутка во время затухания бургер-меню: снимаем переход, который
+       повесил closeMobileMenu (там он длится 1.2s — ровно ход шторки).
+       Без этого фон секунду «догонял» бы палец вместо того, чтобы идти 1:1. */
+    if (header.classList.contains('nr-menu-closing')) header.classList.remove('nr-menu-closing');
+    /* Полностью прозрачная панель перестаёт перехватывать клики: под её
+       полосой виден контент сайта, и нажимать нужно на него, а не в пустоту.
+       Видимые элементы шапки (меню, бургер, кнопки) CSS включает обратно
+       поимённо — см. #mainHeader.nr-header-clear. */
+    var isClear = alpha <= 0.001;
+    if (isClear !== headerClear) {
+      headerClear = isClear;
+      header.classList.toggle('nr-header-clear', isClear);
+    }
+    if (isClear) {
       /* Полностью прозрачно — снимаем inline-фон, панель становится чистым
          «стеклом» над контентом (границу и размытие задаёт CSS). */
       header.style.backgroundColor = 'transparent';

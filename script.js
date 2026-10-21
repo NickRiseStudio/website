@@ -7100,6 +7100,7 @@ function initCalcHints() {
 
 // --- MOBILE MENU ---
 let mobileMenuCloseTimer = null;
+let mobileMenuHeaderTimer = null;
 
 function toggleMobileMenu() {
   const drawer = document.getElementById('mobileMenuDrawer');
@@ -7124,8 +7125,18 @@ function openMobileMenu() {
     clearTimeout(mobileMenuCloseTimer);
     mobileMenuCloseTimer = null;
   }
+  if (mobileMenuHeaderTimer) {
+    clearTimeout(mobileMenuHeaderTimer);
+    mobileMenuHeaderTimer = null;
+  }
 
-  if (header) header.classList.add('mobile-menu-active');
+  if (header) {
+    /* Повторное открытие на середине затухания: снимаем переход, иначе фон
+       поплыл бы к плотному цвету плавно, а шапка под открытым меню должна
+       быть плотной сразу. */
+    header.classList.remove('nr-menu-closing');
+    header.classList.add('mobile-menu-active');
+  }
   drawer.classList.add('is-open');
   if (overlay) overlay.classList.add('is-open');
   // Блокируем скролл страницы под открытым меню (см. initMobileMenuScrollLock)
@@ -7153,6 +7164,28 @@ function closeMobileMenu() {
     clearTimeout(mobileMenuCloseTimer);
     mobileMenuCloseTimer = null;
   }
+  if (mobileMenuHeaderTimer) {
+    clearTimeout(mobileMenuHeaderTimer);
+    mobileMenuHeaderTimer = null;
+  }
+
+  /* Шапка перестаёт быть «менюшной» СРАЗУ, а не через 1220ms (столько длится
+     выезд шторки): кнопка языка тут же уезжает обратно в бургер, логотип
+     возвращается к своей прозрачности от прокрутки. nr-menu-closing включает
+     плавный переход фона на 1.2s — ровно столько же едет шторка, поэтому
+     к её приезду шапка уже стоит в состоянии «меню закрыто». Класс
+     снимается по таймеру (иначе он сглаживал бы и обычную прокрутку) или
+     досрочно при скролле — см. animations.css → «Закрытие бургер-меню».
+     Проверка is-open — до его снятия: closeMobileMenu зовут и с десктопа
+     (клик по пункту меню), там закрывать нечего. */
+  if (header && drawer.classList.contains('is-open')) {
+    header.classList.remove('mobile-menu-active');
+    header.classList.add('nr-menu-closing');
+    mobileMenuHeaderTimer = setTimeout(() => {
+      header.classList.remove('nr-menu-closing');
+      mobileMenuHeaderTimer = null;
+    }, 1260);
+  }
 
   drawer.classList.remove('is-open');
   if (overlay) overlay.classList.remove('is-open');
@@ -7168,10 +7201,10 @@ function closeMobileMenu() {
     closeIcon.classList.add('scale-50', 'opacity-0', 'rotate-90');
   }
 
+  /* Шторка едет 1.2s — столько же держим крестик, иначе он исчезнет раньше,
+     чем меню уедет. Класс шапки здесь больше не снимается: это делается
+     сразу при закрытии (см. выше). */
   mobileMenuCloseTimer = setTimeout(() => {
-    if (header && !drawer.classList.contains('is-open')) {
-      header.classList.remove('mobile-menu-active');
-    }
     if (closeIcon && !drawer.classList.contains('is-open')) {
       closeIcon.classList.add('hidden');
     }
@@ -7576,9 +7609,9 @@ function initSmoothAnchorNavigation() {
 
         smoothScrollTo(targetY);
 
-        if (history.pushState) {
-          history.pushState(null, '', href);
-        }
+        /* Адрес НЕ меняем: у сайта одна ссылка, якоря живут только в разметке.
+           Раньше здесь стоял history.pushState(null, '', href) — при клике по
+           меню в адресной строке появлялся #player и прочие хвосты. */
       }
     } catch (err) {
       // Ignore invalid selectors
