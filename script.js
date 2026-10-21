@@ -749,6 +749,9 @@ function createTrackAudioEntry(track) {
 
   const audioA = new Audio();
   const audioB = new Audio();
+  /* По умолчанию звучит AFTER (см. source ниже): BEFORE глушим сразу, иначе до
+     первой расстановки громкостей пара начинала бы играть двумя голосами. */
+  audioA.muted = true;
   if (chunked) {
     audioA.preload = 'none';
     audioB.preload = 'none';
@@ -1296,7 +1299,19 @@ function whenBrowserIdle(callback) {
 function scheduleInitialAudioWarm() {
   if (audioWarmSweepStarted) return;
   audioWarmSweepStarted = true;
-  getInitialWarmOrder().forEach(trackId => warmQueuePush(trackId));
+  const order = getInitialWarmOrder();
+  /* Порционный режим: мегабайты — только по клику, но заголовки файлов (первые
+     килобайты) нужны заранее. Без них первый клик начинается с опроса обоих
+     файлов, то есть с лишнего круга до сервера, — на холодном канале это и есть
+     та задержка, из-за которой первый трек ведёт себя хуже остальных.
+     Опрашиваем первые два трека: самый вероятный клик и следующий за ним. */
+  if (audioChunkSupported()) {
+    order.slice(0, AUDIO_CHUNK_PRIME_TRACKS).forEach(trackId => {
+      const item = trackAudioMap[trackId] || createTrackAudioEntry(getTrackConfigById(trackId));
+      if (item) streamPreparePair(item);
+    });
+  }
+  order.forEach(trackId => warmQueuePush(trackId));
 }
 
 /* Состояние очереди — для проверки в браузере (консоль: nrAudioWarm).
@@ -1308,10 +1323,12 @@ function scheduleInitialAudioWarm() {
    Зачем. Файлы треков — mp3 320 kbps (5.4–11.1 МБ), то есть 11–22 МБ на пару,
    а у двух языков — 47–66 МБ. В обычном режиме браузер, начав загрузку, качает
    файл далеко вперёд: полоса загрузки сразу уходит к концу, а мегабайты — в то,
-   что ещё не слушают. Здесь поток данных режем сами: впереди держим ровно одну
-   порцию — AUDIO_CHUNK_SEC секунд, и просим следующую, когда до её конца
-   остаётся AUDIO_CHUNK_AHEAD секунд. Полоса загрузки после этого честная: она
-   показывает именно то, что скачано.
+   что ещё не слушают. Здесь поток данных режем сами: впереди держим одну–две
+   порции по AUDIO_CHUNK_SEC секунд, и просим следующую, когда до конца текущей
+   остаётся AUDIO_CHUNK_AHEAD секунд (10 с при порции 15 с). Такой запас — не
+   про экономию, а про плавность перехода BEFORE / AFTER: к моменту клика данные
+   должны быть у ОБЕИХ дорожек (см. «гейт общим буфером пары»). Полоса загрузки
+   после этого честная: она показывает именно то, что скачано.
 
    Как. Дорожка играет не файл, а MediaSource (audio/mpeg — тот же mp3, но байты
    в буфер кладём мы). Длительность, битрейт и начало первого кадра известны из
@@ -1337,11 +1354,12 @@ function scheduleInitialAudioWarm() {
 
 const AUDIO_CHUNK_ENABLED = true;    // false — прежняя загрузка файла целиком
 const AUDIO_CHUNK_SEC = 15;          // с: размер порции
-const AUDIO_CHUNK_AHEAD = 5;         // с: за сколько до конца порции просить следующую
+const AUDIO_CHUNK_AHEAD = 10;        // с: за сколько до конца порции просить следующую
 const AUDIO_CHUNK_HEAD_SEC = 2;      // с: первая порция (клик, перемотка)
 const AUDIO_CHUNK_KEEP_BEHIND = 20;  // с: сколько скачанного оставляем позади
 const AUDIO_CHUNK_RETRY_MS = 1500;   // мс: пауза перед повтором
 const AUDIO_CHUNK_PROBE_BYTES = 4096;
+const AUDIO_CHUNK_PRIME_TRACKS = 2; // сколько треков опросить заголовками заранее
 const AUDIO_CHUNK_FRAME_SEEK = 1600;
 const AUDIO_CHUNK_MIME = 'audio/mpeg';
 
@@ -1509,6 +1527,10 @@ function streamPreparePair(item) {
 }
 
 function streamPrepareMeta(st) {
+  /* Опрос уже идёт (наведение, затем клик) — второй не нужен: два ответа на один
+     и тот же файл переписывали st.nextByte/nextTime и делали порцию «свежей»,
+     то есть заставляли качать заново уже скачанный участок. */
+  if (st.meta || st.probing) return;
   st.probing = true;
   readAudioStreamMeta(st.url).then(meta => {
     st.probing = false;
@@ -1654,7 +1676,19 @@ function streamQueueChunk(st, bytes, fromByte, tail) {
   while (atb + 4 <= bytes.length) { const f = mp3FrameAt(bytes, atb); if (!f || f.bitrate !== st.meta.bitrate || atb + f.length > bytes.length) break; atb += f.length; frames++; }
   const end = tail ? bytes.length : atb;
   if (end <= offset) { streamRetryChunk(st, 'порция без полного кадра'); return; }
-  st.chunk = { payload: bytes.subarray(offset, end), time: st.nextTime, frames: frames + (tail ? 1 : 0), nextByte: fromByte + end, tail, fresh: st.fresh };
+  /* Время порции — по ПЕРВОМУ кадру, который реально попал в данные, а не по
+     запрошенной точке. После перемотки граница кадра ищется НАЗАД (режим 'at'):
+     начало порции оказывается раньше st.nextTime — до AUDIO_CHUNK_FRAME_SEEK
+     байт, то есть до сотни миллисекунд звука. Если объявить порцию временем
+     запрошенной точки, содержимое встанет в дорожку позже, чем оно есть: элемент
+     играет звук РАНЬШЕ своего currentTime. На телефоне перемотки частые, порции
+     приходят медленно, и такие сдвиги накапливаются — при переключении
+     BEFORE/AFTER слышится повтор уже прошедшего слога, хотя позиции дорожек
+     совпадают. На ПК пара успевает скачаться целиком, «свежих» порций почти нет,
+     поэтому там ошибка не проявляется. */
+  const shift = (st.nextByte - startByte) / st.meta.bytesPerSec;
+  const time = Math.max(0, st.nextTime - shift);
+  st.chunk = { payload: bytes.subarray(offset, end), time, frames: frames + (tail ? 1 : 0), nextByte: fromByte + end, tail, fresh: st.fresh };
   st.fresh = false; streamFlush(st);
 }
 
@@ -2684,58 +2718,47 @@ function switchDeckSource(src) {
 
   const nextEl = src === 'before' ? item.audioA : item.audioB;
   const prevEl = src === 'before' ? item.audioB : item.audioA;
-  const prevPlaying = !prevEl.paused;
-  const nextPlaying = !nextEl.paused;
 
-  /* Переключение BEFORE/AFTER на непрогруженной паре — это тоже перемотка:
-     второй дорожке нужен тот же участок из сети. Отдаём ей канал так же, как
-     при обычной перемотке (если пара уже целиком в буфере — ничего не делаем,
-     чтобы не держать фон без причины). */
-  if (!isPairWarm(item)) warmOnSeek(activeTrackId, prevEl.currentTime);
+  /* Пара могла остаться без графа (первый клик застал контекст спящим): тогда
+     фейд выродился бы в скачок заглушки. Подключаем сейчас, пока уровни ещё
+     прежние, — это неслышно, зато переключение пойдёт рампами. */
+  if (ensurePairAudioGraph(activeTrackId)) applyAudioVolumes(activeTrackId, false);
 
-  // Логика и интерфейс переключаются мгновенно, звук — микро-фейдом
+  /* Переключение на непрогруженной паре — это тоже перемотка: второй дорожке
+     нужен тот же участок из сети. Отдаём ей канал так же, как при обычной
+     перемотке (если пара уже целиком в буфере — ничего не делаем, чтобы не
+     держать фон без причины). */
+  if (!isPairWarm(item)) warmOnSeek(activeTrackId, pairPos(prevEl));
+
+  /* Источник и интерфейс меняются мгновенно: отклик кнопки не должен зависеть
+     от того, что в этот момент происходит со звуком. */
   item.source = src;
+  item.switchAt = performance.now();
   updateDeckSourceUI();
-  cancelPendingSwitch();
   item.seekPending = false;
-  /* Вторая дорожка вошла в игру на непрогруженной паре: просим её порцию
-     с той же позиции, иначе звук на ней молчал бы до переключения трека. */
-  streamSeekTo(activeTrackId, nextEl.currentTime || 0);
 
-  if (prevPlaying && nextPlaying) {
-    const drift = prevEl.currentTime - nextEl.currentTime;
-    const nextIsSilent = nextEl.volume <= 0.01;
-
-    if (!nextIsSilent || Math.abs(drift) <= AUDIO_SWITCH_ALIGN) {
-      // Дорожки уже стоят в одной точке — переключаем сразу, без задержки.
-      // (Если вторая дорожка сейчас слышна — предыдущий переход в процессе:
-      // seek по ней дал бы щелчок, поэтому просто продолжаем микро-фейд.)
-      nextEl.playbackRate = 1;
-      applyAudioVolumes(activeTrackId, true);
-      return;
-    }
-
-    // Разошлись (буферизация, только что начали играть): подводим неслышимую
-    // дорожку seek'ом и стартуем фейд, как только она встала на место, — иначе
-    // при переходе «повторится» кусок фразы, звучавшей до переключения.
-    nextEl.playbackRate = 1;
-    const onSeeked = () => finishPendingSwitch();
-    pendingSwitch = { item, nextEl, prevEl, src, onSeeked };
-    nextEl.addEventListener('seeked', onSeeked, { once: true });
-    nextEl.currentTime = prevEl.currentTime;
-    pendingSwitchTimer = setTimeout(finishPendingSwitch, AUDIO_SWITCH_ALIGN_TIMEOUT);
+  /* Пара стоит на паузе: звука нет, выравнивание позицией неслышно — уровни
+     переключаем сразу, без фейда. */
+  if (prevEl.paused && nextEl.paused) {
+    cancelDeckSwitch();
+    alignPairTo(item, prevEl);
+    applyAudioVolumes(activeTrackId, false);
     return;
   }
 
-  // Одна из дорожек не играет (пауза или браузер не дал автозапуск): эталон —
-  // та дорожка, которую пользователь только что слушал, выравнивание неслышно,
-  // а переключение делаем мгновенным — без «дыры» в звуке.
-  alignPairTo(item, prevEl);
-  if (prevPlaying && !nextPlaying) {
-    const p = nextEl.play();
-    if (p && p.catch) p.catch(() => {});
+  /* Входящая дорожка не готова звучать (браузер её остановил, нет данных в этой
+     точке): запускаем её, просим порцию с текущей позиции, а кроссфейд отложим
+     до готовности. Звук при этом не рвётся — играет прежняя дорожка. */
+  if (!isDeckReadyToSound(nextEl)) {
+    const played = nextEl.play();
+    if (played && played.catch) played.catch(() => {});
+    streamSeekTo(activeTrackId, pairPos(prevEl));
+    waitDeckReadyThenFade(item, nextEl, prevEl, src);
+    return;
   }
-  applyAudioVolumes(activeTrackId, false);
+
+  /* Обычный путь: обе дорожки уже идут с одной позиции — только кроссфейд. */
+  fadePairToSource(item, nextEl);
 }
 
 function toggleDeckSource() {
@@ -3059,32 +3082,149 @@ function changeDeckVolume(val) {
   applyAudioVolumes(activeTrackId, false);
 }
 
-/* ══ ПЕРЕКЛЮЧЕНИЕ BEFORE / AFTER БЕЗ АРТЕФАКТОВ ═══════════════════════
-   На каждый трек параллельно идут ОБА файла: слышен тот, у которого громкость
-   больше нуля. Переключение — короткий микро-фейд (40 мс, без щелчка), а не
-   длинный кроссфейд: при длинном кроссфейде обе дорожки звучат одновременно, и
-   если их позиции расходятся хотя бы на десятки миллисекунд, окончание фразы
-   слышится дважды. Поэтому:
-     1. позиция «тихой» дорожки постоянно удерживается в одной точке со звучащей
-        (коррекция скорости — её не слышно, громкость = 0);
-     2. в момент клика позиции не перематываются: если дорожки уже совпадают,
-        фейд стартует мгновенно; если разошлись — тихую (неслышимую) дорожку
-        подводим seek'ом и стартуем фейд, как только она встала на место.
+/* ══ ПЕРЕКЛЮЧЕНИЕ BEFORE / AFTER ═══════════════════════════════════════════
+   Обе дорожки пары идут ВСЕГДА: слышна та, у которой уровень больше нуля,
+   вторая беззвучна и стоит в той же точке трека. Переключение — это только
+   уровень:
+     1. клик сразу меняет источник и интерфейс;
+     2. уровень переводится коротким равномощным кроссфейдом (AUDIO_FADE_MS) на
+        звуковых часах AudioContext — сэмпл-в-сэмпл, без зависимости от кадров
+        и от загрузки главного потока;
+     3. позиция при переключении НЕ трогается: ни seek, ни подводки темпом.
+        Расхождение пары всё время держит тикер (syncAudioPair), и только на
+        беззвучной дорожке, поэтому оно не слышно.
+   Отсюда нет задержки между кликом и звуком (кроме самого кроссфейда) и нет
+   скачка по треку: входящая дорожка продолжает с той же точки.
+   Чтобы это работало всегда, пара не играет дальше точки, до которой скачаны
+   ОБА файла: на границе общего буфера звук встаёт на паузу и ждёт данные у
+   обеих дорожек (см. «гейт общим буфером пары»). Тогда к моменту клика
+   входящая дорожка гарантированно готова.
+   И второе условие: пара должна быть подключена к звуковому графу (см. «ЕДИНЫЙ
+   ЗВУКОВОЙ ТРАКТ»). Без графа уровень задаётся флагом muted, и переключение
+   превращается в скачок заглушки — на телефоне это слышно как повтор слога.
+   Поэтому подключение доводится в трёх точках: playPairAudio, ensurePairPlaying
+   (перед первым звуком) и onstatechange контекста (первый клик на iOS застаёт
+   его ещё спящим — раньше пара первого трека так и оставалась без графа до
+   конца трека).
+   Если входящая дорожка всё же не готова (нет данных, браузер её остановил),
+   звук не рвётся: играет прежняя, а фейд начнётся, как только данные дойдут, —
+   не позже AUDIO_SWITCH_WAIT_MS. Не дождались — переключатель возвращается
+   назад, чтобы не показывать то, чего не слышно.
    ══════════════════════════════════════════════════════════════════════ */
 
+const AUDIO_FADE_MS = 30;               // мс: равномощный кроссфейд переключения
+const AUDIO_SWITCH_WAIT_MS = 300;       // мс: сколько ждём готовности входящей дорожки
 const AUDIO_SYNC_TOLERANCE = 0.004;     // мёртвая зона синхронизации (4 мс)
 const AUDIO_SYNC_GAIN = 4;              // усиление коррекции скорости
-const AUDIO_SYNC_RATE_MAX = 0.12;       // предел коррекции скорости (±12 %)
-const AUDIO_SYNC_HARD = 0.2;            // больше — выравниваем позицией
-const AUDIO_FADE_MS = 40;               // микро-фейд переключения
-const AUDIO_SWITCH_ALIGN = 0.015;       // с какого расхождения нужна подводка
-const AUDIO_SWITCH_ALIGN_TIMEOUT = 140; // максимум ожидания подводки, мс
+const AUDIO_SYNC_RATE_MAX = 0.08;       // предел коррекции (±8 %: дорожка беззвучна)
+const AUDIO_SYNC_SEEK_MAX = 0.25;       // с: больше — выравниваем позицией
+const AUDIO_SYNC_TICK_MS = 100;         // мс: подтяжка пары во время воспроизведения
+
+/* ── ОТЧЁТ О ПЕРЕКЛЮЧЕНИИ (для проверки на реальном устройстве) ─────────────
+   Включение: открыть страницу с ?abdbg=1. Внизу экрана появляются числа:
+   расхождение дорожек, их состояния и запас данных. Нужно это потому, что
+   эмуляция телефона в инструментах разработчика не воспроизводит мобильный
+   аудио-стек: на ПК и в эмуляции гладко, а на устройстве иначе. По числам сразу
+   видно, в чём дело — в позиции дорожек или в самом звуковом тракте.
+   Без ?abdbg=1 ничего не создаётся и на работу плеера не влияет. */
+const AB_DEBUG = /[?&]abdbg=1/.test(location.search);
+const abState = {};
+let abBox = null;
+
+function abRender() {
+  if (!AB_DEBUG) return;
+  if (!abBox) {
+    if (!document.body) return;
+    abBox = document.createElement('div');
+    abBox.id = 'abDebugBox';
+    abBox.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:2147483647;' +
+      'background:rgba(0,0,0,.86);color:#8fd8ff;font:11px/1.5 ui-monospace,monospace;' +
+      'padding:6px 8px;white-space:pre-wrap;pointer-events:none;max-height:46vh;overflow:hidden';
+    document.body.appendChild(abBox);
+  }
+  abBox.textContent = Object.keys(abState).map(k => k + ': ' + abState[k]).join('\n');
+}
+
+function abSet(key, value) {
+  if (!AB_DEBUG) return;
+  abState[key] = value;
+  abRender();
+}
+
+/* Запас данных впереди позиции (секунды) */
+function abAhead(el, pos) {
+  if (!el) return 0;
+  try { return Math.max(0, getBufferedEndAt(el, pos) - pos); } catch (err) { return 0; }
+}
+
+function abElState(el) {
+  if (!el) return '—';
+  const lvl = audioLevelMap.has(el) ? ' g' + (audioLevelMap.get(el) || 0).toFixed(2) : '';
+  return (el.paused ? 'пауза' : 'игра') +
+    (el.seeking ? '/seek' : '') +
+    ' rs' + el.readyState +
+    (el.muted ? ' muted' : '') +
+    ' v' + el.volume.toFixed(2) +
+    ' r' + el.playbackRate.toFixed(2) + lvl;
+}
+
+/* Фактический уровень дорожки в звуковом тракте (только при ?abdbg=1 и только
+   когда пара подключена к графу). Это единственный способ проверить на самом
+   устройстве, слышны ли обе дорожки сразу: «тихая» обязана быть около -100 дБ. */
+function abRms(el) {
+  const an = audioAnalyserMap.get(el);
+  if (!an) return '—';
+  try {
+    const buf = new Float32Array(an.fftSize);
+    an.getFloatTimeDomainData(buf);
+    let sum = 0;
+    for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+    const rms = Math.sqrt(sum / buf.length);
+    return (20 * Math.log10(rms + 1e-6)).toFixed(0) + ' дБ';
+  } catch (err) { return '—'; }
+}
 
 let audioFadeRAF = null;
-let pendingSwitch = null;
-let pendingSwitchTimer = null;
 
-/* Какая из двух дорожек звучит сейчас, а какая идёт рядом на нулевой громкости */
+/* ── ТОЧНАЯ ПОЗИЦИЯ ДОРОЖКИ ────────────────────────────────────────────────
+   На телефоне currentTime обновляется рывками: медиа-часы приходят пачками по
+   десятки–сотни миллисекунд, у каждой дорожки в своей фазе. Поэтому разница двух
+   «сырых» currentTime — это ещё НЕ расхождение дорожек: ошибка достигает сотен
+   миллисекунд. Проверка «дорожи стоят в одной точке» по таким числам проходит
+   тогда, когда на самом деле одна отстала, — и переход стартует с чужой точки.
+   Именно это слышится как повтор последнего слога или фразы, и именно поэтому на
+   ПК (там currentTime идёт от звуковых часов гладко) всё в порядке, а на
+   устройстве нет.
+
+   Между обновлениями позицию считаем сами: от последнего замера по
+   performance.now(). На ПК значения меняются на каждом замере и экстраполяция не
+   включается вовсе — там поведение прежнее. */
+const AUDIO_POS_EXTRAP_MAX = 0.12;  // с: дальше этого позицию не досчитываем
+const AUDIO_POS_STALE_MS = 250;     // мс: дольше часы стоят — считаем, что дорожка встала
+const audioPosCache = new WeakMap();
+
+function pairPos(el) {
+  if (!el) return 0;
+  const now = performance.now();
+  const ct = el.currentTime || 0;
+  const prev = audioPosCache.get(el);
+
+  /* Медиа-часы стоят, а дорожка играет: досчитываем позицию по времени. Если
+     часы стоят слишком долго, это уже не рывок обновления, а остановка
+     (буферизация) — тогда позицию не досчитываем, иначе разрыв будет выдуман. */
+  if (prev && prev.ct === ct && !el.paused && !el.seeking && !el.ended &&
+      now - prev.t < AUDIO_POS_STALE_MS) {
+    const dt = (now - prev.t) / 1000 * (el.playbackRate || 1);
+    return ct + Math.min(dt, AUDIO_POS_EXTRAP_MAX);
+  }
+
+  audioPosCache.set(el, { ct, t: now });
+  return ct;
+}
+
+
+/* Какая из двух дорожек звучит сейчас, а какая идёт рядом заглушённой.
+   item.source — единственный источник истины: он меняется в момент клика. */
 function getAudiblePair(item) {
   const audibleIsA = item.source !== 'after';
   return {
@@ -3093,62 +3233,303 @@ function getAudiblePair(item) {
   };
 }
 
-/* Дорожка реально слышна: играет и громкость больше нуля */
-function isAudioAudible(el) {
-  return !el.paused && el.volume > 0.005;
+/* ══ ЕДИНЫЙ ЗВУКОВОЙ ТРАКТ ══════════════════════════════════════════════════
+   До сих пор уровни дорожек задавались свойствами самих <audio>: volume и
+   muted. На телефоне это ненадёжно, и именно там оставался дефект, который не
+   лечился никакой правкой таймингов:
+
+   1. muted — не «громкость 0», а отдельный флаг потока. Браузер на телефоне
+      вправе держать такой поток в облегчённом состоянии, а при снятии флага
+      поднять его заново. У играющей дорожки звуковой тракт уже прогрет, у
+      «тихой» — нет, и первые десятки–сотни миллисекунд после снятия заглушки
+      выходят с другой задержкой. Слышится это ровно как повтор слога: позиции
+      дорожек совпадают, а звук второй приходит позже.
+   2. volume на iOS Safari не действует, поэтому плавного фейда там не было
+      вовсе — заглушка снималась скачком.
+   3. фейд считался по кадрам (requestAnimationFrame): на телефоне кадры
+      приходят неравномерно, и «40 мс» могли растянуться.
+
+   Здесь оба элемента сведены в ОДИН AudioContext со своим GainNode у каждого.
+   Тогда: уровень задаёт граф (а не флаг потока), элементы для системы всегда
+   звучат, у обоих один выход и одна задержка, а фейд планируется на звуковых
+   часах — он не зависит от кадров и работает на iOS.
+
+   Включается на всех устройствах: переключение BEFORE / AFTER делается рампами
+   на звуковых часах, а они работают только в графе. Полный выключатель —
+   AUDIO_GRAPH_ENABLED. */
+const AUDIO_GRAPH_ENABLED = true;
+
+let audioCtx = null;
+let audioGraphFailed = false;
+const audioGainMap = new WeakMap();     // el -> GainNode
+const audioLevelMap = new WeakMap();    // el -> текущий уровень 0..1
+const audioAnalyserMap = new WeakMap(); // el -> AnalyserNode (только для отчёта)
+
+function audioGraphWanted() {
+  return AUDIO_GRAPH_ENABLED;
 }
 
-/* Синхронизация в обычном воспроизведении: трогаем ТОЛЬКО неслышимую дорожку.
-   Звучащая — эталон, её позицию и скорость не меняем никогда. */
+/* Граф подключён к обеим дорожкам пары */
+function audioGraphActive(el) {
+  if (!audioCtx || audioGraphFailed || audioCtx.state === 'closed') return false;
+  return !el || audioGainMap.has(el);
+}
+
+function ensureAudioGraph() {
+  if (audioCtx || audioGraphFailed) return audioCtx;
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) { audioGraphFailed = true; return null; }
+    audioCtx = new Ctx();
+    /* Контекст может уснуть сам (свернули вкладку, заблокировали экран). Если
+       трек при этом слушают, будим обратно: иначе звук просто пропадёт, потому
+       что выход элемента идёт через граф. */
+    audioCtx.onstatechange = () => {
+      if (!audioCtx) return;
+      /* Контекст проснулся — сразу подключаем к нему активную пару, если она ещё
+         на volume/muted. Это и есть лечение «первого трека»: первый контекст на
+         iOS (и на части Android-браузеров) создаётся СПЯЩИМ, resume() отвечает
+         асинхронно, поэтому в момент первого playPairAudio дорожки подключить не
+         удавалось — и весь первый трек переключался скачком заглушки, то есть с
+         тем самым «повтором». Следующий трек уже заставал контекст рабочим и
+         звучал нормально. */
+      if (audioCtx.state === 'running') attachActivePairGraph();
+      if (!activeTrackId) return;
+      const item = trackAudioMap[activeTrackId];
+      if (item && item.wantPlay) resumeAudioGraph();
+    };
+  } catch (err) {
+    audioGraphFailed = true;
+    audioCtx = null;
+  }
+  return audioCtx;
+}
+
+/* Контекст создаётся и будится только из обработчика действия пользователя
+   (клик по треку, play, переключатель): иначе браузер оставит его спящим и
+   звука не будет вообще. */
+function resumeAudioGraph() {
+  if (!audioCtx) return;
+  /* 'interrupted' — состояние iOS: контекст прерывается звонком, будильником или
+     сменой звукового устройства и возвращается тем же resume(), что и из
+     'suspended'. Без этого пара после такого прерывания оставалась без звука. */
+  const state = audioCtx.state;
+  if (state === 'suspended' || state === 'interrupted') {
+    const p = audioCtx.resume();
+    if (p && p.catch) p.catch(() => {});
+  }
+}
+
+/* Подключает дорожку к графу. Вызывается один раз на элемент; повторный вызов
+   вернёт уже созданный узел. Уровень берётся из текущего состояния элемента,
+   поэтому переключение на граф ничего не меняет на слух. */
+function attachAudioGraph(el) {
+  if (!el || !audioGraphWanted()) return null;
+  const known = audioGainMap.get(el);
+  if (known) return known;
+  const ctx = ensureAudioGraph();
+  if (!ctx) return null;
+  /* Подключение необратимо: после createMediaElementSource звук элемента идёт
+     ТОЛЬКО через граф, и «отключить обратно» нельзя. Поэтому подключаем лишь
+     когда контекст уже работает — иначе пара осталась бы молчащей. Не готов —
+     дорожка живёт на volume/muted, а подключение попробуем в следующий раз
+     (контекст будит primeAudioGraph по первому касанию страницы). */
+  if (ctx.state !== 'running') { resumeAudioGraph(); return null; }
+
+  let gain;
+  try {
+    gain = ctx.createGain();
+    gain.gain.value = el.muted ? 0 : (el.volume || 0);
+    gain.connect(ctx.destination);
+  } catch (err) { audioGraphFailed = true; return null; }
+
+  let node;
+  try {
+    node = ctx.createMediaElementSource(el);
+  } catch (err) {
+    /* Элемент уже отдал свой звук другому узлу — граф ему не подходит. Свой
+       GainNode отключаем: без источника он ни на что не влияет. */
+    try { gain.disconnect(); } catch (e) {}
+    return null;
+  }
+
+  try { node.connect(gain); } catch (err) { audioGraphFailed = true; return null; }
+
+  audioGainMap.set(el, gain);
+  audioLevelMap.set(el, el.muted ? 0 : (el.volume || 0));
+  /* Дальше уровень задаёт только граф: элемент для системы всегда звучит в
+     полную силу, поэтому его тракт не «засыпает» и задержка у обеих дорожек
+     одинаковая. */
+  el.muted = false;
+  el.volume = 1;
+
+  if (AB_DEBUG) {
+    try {
+      const an = ctx.createAnalyser();
+      an.fftSize = 1024;
+      gain.connect(an);
+      audioAnalyserMap.set(el, an);
+    } catch (err) {}
+  }
+  return gain;
+}
+
+/* Подключает к графу пару целиком. Возвращает true, только если подключение
+   произошло СЕЙЧАС (вызывающему нужно один раз выставить уровни). Повторные
+   вызовы дешёвые: две проверки в WeakMap.
+   Нужна там, где пара вот-вот зазвучит или где её уровень меняется: если граф не
+   подключён, кроссфейд вырождается в скачок заглушки — на телефоне это слышно
+   как повтор слога (см. «ЕДИНЫЙ ЗВУКОВОЙ ТРАКТ»). */
+function ensurePairAudioGraph(trackId) {
+  const item = trackAudioMap[trackId];
+  if (!item || !audioGraphWanted()) return false;
+  if (audioGainMap.has(item.audioA) && audioGainMap.has(item.audioB)) return false;
+  attachAudioGraph(item.audioA);
+  attachAudioGraph(item.audioB);
+  return audioGainMap.has(item.audioA) && audioGainMap.has(item.audioB);
+}
+
+/* Пара активного трека подключается к графу, как только он заработал. */
+function attachActivePairGraph() {
+  if (!activeTrackId) return;
+  const item = trackAudioMap[activeTrackId];
+  if (!item) return;
+  if (!ensurePairAudioGraph(activeTrackId)) return;
+  /* Уровни те же, что были у элементов: подключение не слышно. */
+  applyAudioVolumes(activeTrackId, false);
+}
+
+/* Уровень мгновенно (пауза, скрытая вкладка, старт) */
+function setAudioLevel(el, level) {
+  const v = Math.max(0, Math.min(1, level));
+  const gain = audioGainMap.get(el);
+  if (!gain || !audioCtx) {
+    el.volume = v;
+    el.muted = v <= 0.005;
+    return;
+  }
+  audioLevelMap.set(el, v);
+  const param = gain.gain;
+  try { param.cancelScheduledValues(audioCtx.currentTime); } catch (err) {}
+  param.value = v;
+}
+
+/* Плавно, по звуковым часам: рампа планируется заранее и выполняется сэмпл-в-
+   сэмпл, независимо от загрузки главного потока и от кадров. */
+function rampAudioLevel(el, level, seconds) {
+  const v = Math.max(0, Math.min(1, level));
+  const gain = audioGainMap.get(el);
+  if (!gain || !audioCtx) {
+    el.volume = v;
+    el.muted = v <= 0.005;
+    return;
+  }
+  const from = gain.gain.value;
+  audioLevelMap.set(el, v);
+  const param = gain.gain;
+  const now = audioCtx.currentTime;
+  try {
+    param.cancelScheduledValues(now);
+    param.setValueAtTime(from, now);
+    param.linearRampToValueAtTime(v, now + Math.max(0.01, seconds));
+  } catch (err) { param.value = v; }
+}
+
+/* Дорожка реально слышна. С графом смотрим на уровень узла: сами элементы там
+   не заглушаются. Без графа — по прежним признакам (muted проверяем отдельно:
+   на iOS Safari громкость элемента не действует, и только muted даёт тишину). */
+function isAudioAudible(el) {
+  if (!el || el.paused) return false;
+  if (audioGainMap.has(el)) return (audioLevelMap.get(el) || 0) > 0.005;
+  return !el.muted && el.volume > 0.005;
+}
+
+/* Контекст мог заснуть, пока вкладка была скрыта: возвращаемся — будим. */
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden || !activeTrackId) return;
+  const item = trackAudioMap[activeTrackId];
+  if (item && item.wantPlay) resumeAudioGraph();
+});
+
+/* Будим контекст как можно раньше — на первом же касании страницы, задолго до
+   клика по треку. К моменту playPairAudio он уже работает, и дорожки можно
+   подключить к графу до начала звука (подключение посреди воспроизведения
+   слышно как щелчок, поэтому важно успеть заранее). */
+function primeAudioGraph() {
+  if (!audioGraphWanted()) return;
+  ensureAudioGraph();
+  resumeAudioGraph();
+}
+document.addEventListener('pointerdown', primeAudioGraph, { capture: true, passive: true });
+document.addEventListener('keydown', primeAudioGraph, { capture: true });
+
+/* Синхронизация пары: трогаем ТОЛЬКО неслышимую дорожку. Звучащая — эталон,
+   её позицию и скорость не меняем никогда.
+   Позиция досчитывается между обновлениями медиа-часов (pairPos), поэтому
+   расхождение видно и на телефоне, где currentTime приходит рывками.
+   Коррекция — темпом: дорожка беззвучна, её ускорение или замедление не слышно,
+   seek не нужен и декодер не перезапускается. Позицией выравниваем только при
+   большом разрыве (дорожку останавливали, пара стояла в буфере, была перемотка). */
 function syncAudioPair(item) {
   if (!item) return;
-  if (pendingSwitch || audioFadeRAF !== null) return; // идёт переход — не вмешиваемся
+  if (audioFadeActive()) return; // идёт кроссфейд — не вмешиваемся
 
   const { audible, silent } = getAudiblePair(item);
   if (!isAudioAudible(audible)) return;
+  if (silent.seeking || silent.ended) return;
 
   // Пользователь тянет полосу прокрутки: пока браузер не закончил seek звучащей
   // дорожки, вторую не трогаем — двойной seek как раз и давал рывок в звуке.
   if (item.seekPending) {
     if (audible.seeking) return;
-    if (Math.abs(audible.currentTime - silent.currentTime) > AUDIO_SYNC_TOLERANCE) {
-      silent.playbackRate = 1;
-      silent.currentTime = audible.currentTime;
+    silent.playbackRate = 1;
+    if (Math.abs(pairPos(audible) - pairPos(silent)) > AUDIO_SYNC_TOLERANCE) {
+      try { silent.currentTime = pairPos(audible); } catch (err) {}
     }
     item.seekPending = false;
+    item.syncDrift = 0;
     return;
   }
 
-  if (isAudioAudible(silent)) return; // ещё затухает после перехода — не трогаем
+  const ref = pairPos(audible);
+  const drift = ref - pairPos(silent); // > 0 — тихая отстаёт
+  /* Сглаживание: у каждой дорожки свои медиа-часы, и разница двух оценок
+     дрожит на несколько миллисекунд. По дрожащей величине темп гулял бы. */
+  item.syncDrift = item.syncDrift === undefined
+    ? drift
+    : item.syncDrift + (drift - item.syncDrift) * 0.4;
 
-  const drift = audible.currentTime - silent.currentTime;
-  const absDrift = Math.abs(drift);
-
-  // Большое расхождение (буферизация, скачок) — выравниваем позицией тихой дорожки
-  if (absDrift > AUDIO_SYNC_HARD) {
-    silent.playbackRate = 1;
-    silent.currentTime = audible.currentTime;
+  if (Math.abs(item.syncDrift) > AUDIO_SYNC_SEEK_MAX) {
+    /* Большой разрыв темпом закрывать секунды. Прыжок по беззвучной дорожке
+       неслышен, но только туда, где данные уже есть: seek в непрогруженное
+       место уходит в сеть и снова ставит дорожку. */
+    if (getBufferedEndAt(silent, ref) > ref) {
+      try { silent.currentTime = ref; } catch (err) {}
+    }
+    if (silent.playbackRate !== 1) silent.playbackRate = 1;
+    item.syncDrift = 0;
     return;
   }
 
-  if (absDrift < AUDIO_SYNC_TOLERANCE) {
+  if (Math.abs(item.syncDrift) <= AUDIO_SYNC_TOLERANCE) {
     if (silent.playbackRate !== 1) silent.playbackRate = 1;
     return;
   }
 
   // Мягкая догонка скоростью: на неслышимой дорожке это незаметно
-  const rate = 1 + Math.max(-AUDIO_SYNC_RATE_MAX, Math.min(AUDIO_SYNC_RATE_MAX, drift * AUDIO_SYNC_GAIN));
-  if (Math.abs(silent.playbackRate - rate) > 0.002) silent.playbackRate = rate;
+  const rate = 1 + Math.max(-AUDIO_SYNC_RATE_MAX, Math.min(AUDIO_SYNC_RATE_MAX, item.syncDrift * AUDIO_SYNC_GAIN));
+  if (Math.abs(silent.playbackRate - rate) > 0.001) silent.playbackRate = rate;
 }
 
 /* Подготовка пары к старту/паузе: на паузе выравнивание позицией неслышно.
    Эталон — звучащая дорожка (по текущему item.source). */
 function prepareAudioPair(item) {
   if (!item) return;
-  cancelPendingSwitch();
+  cancelDeckSwitch();
   const { audible } = getAudiblePair(item);
   alignPairTo(item, audible);
   item.seekPending = false;
+  item.syncDrift = 0;
 }
 
 /* Выравнивает «вторую» дорожку по указанной (эталон не трогаем) */
@@ -3156,16 +3537,38 @@ function alignPairTo(item, referenceEl) {
   if (!item || !referenceEl) return;
   const other = referenceEl === item.audioA ? item.audioB : item.audioA;
   other.playbackRate = 1;
-  if (Math.abs(referenceEl.currentTime - other.currentTime) > AUDIO_SYNC_TOLERANCE) {
-    other.currentTime = referenceEl.currentTime;
+  const ref = pairPos(referenceEl);
+  if (Math.abs(ref - pairPos(other)) > AUDIO_SYNC_TOLERANCE) {
+    other.currentTime = ref;
   }
 }
 
+/* Куда должен прийти текущий фейд: если его прервут, доводим мгновенно */
+let audioFadeTargets = null;
+let audioFadeUntil = 0;      // мс: до этого времени идёт фейд по звуковым часам
+
+/* Идёт ли фейд (по любому из двух путей: граф или кадры) */
+function audioFadeActive() {
+  return audioFadeRAF !== null || performance.now() < audioFadeUntil;
+}
+
+/* Текущий уровень дорожки (в графе — его гейн, иначе volume/muted) */
+function currentAudioLevel(el) {
+  if (!el) return 0;
+  if (audioLevelMap.has(el)) return audioLevelMap.get(el) || 0;
+  return el.muted ? 0 : (el.volume || 0);
+}
+
+/* Останавливает фейд, не доводя уровни до старых целей: все вызывающие сами
+   сразу выставляют нужные уровни, а «доводка до предыдущей цели» после
+   быстрого повторного клика давала бы провал громкости. */
 function stopAudioFade() {
   if (audioFadeRAF !== null) {
     cancelAnimationFrame(audioFadeRAF);
     audioFadeRAF = null;
   }
+  audioFadeUntil = 0;
+  audioFadeTargets = null;
 }
 
 function applyAudioVolumes(trackId, smooth = false) {
@@ -3178,62 +3581,177 @@ function applyAudioVolumes(trackId, smooth = false) {
   // Мгновенно: пауза, скрытая вкладка или режим без сглаживания
   if (!smooth || document.hidden || (item.audioA.paused && item.audioB.paused)) {
     stopAudioFade();
-    item.audioA.volume = targetVolA;
-    item.audioB.volume = targetVolB;
+    setAudioLevel(item.audioA, targetVolA);
+    setAudioLevel(item.audioB, targetVolB);
     return;
   }
 
-  // Микро-фейд по S-кривой считается покадрово: без «ступенек» и без таймеров,
-  // поэтому переход не зависит от загрузки главного потока.
-  stopAudioFade();
+  /* Граф подключён: кроссфейд планируется на звуковых часах. Рампа выполняется
+     сэмпл-в-сэмпл и не зависит от кадров и от загрузки главного потока — это и
+     есть «без задержки» при переключении. */
+  if (audioGraphActive() && audioGainMap.has(item.audioA) && audioGainMap.has(item.audioB)) {
+    audioFadeTargets = { a: item.audioA, b: item.audioB, volA: targetVolA, volB: targetVolB };
+    audioFadeUntil = performance.now() + AUDIO_FADE_MS + 30;
+    rampAudioLevel(item.audioA, targetVolA, AUDIO_FADE_MS / 1000);
+    rampAudioLevel(item.audioB, targetVolB, AUDIO_FADE_MS / 1000);
+    return;
+  }
 
-  const startA = item.audioA.volume;
-  const startB = item.audioB.volume;
+  /* Графа нет (страница без AudioContext) — покадровый фейд по S-кривой: чуть
+     менее точный, но без щелчка. */
+  const startA = currentAudioLevel(item.audioA);
+  const startB = currentAudioLevel(item.audioB);
+  stopAudioFade();
   const t0 = performance.now();
+  audioFadeTargets = { a: item.audioA, b: item.audioB, volA: targetVolA, volB: targetVolB };
 
   const step = (now) => {
     const k = Math.min(1, (now - t0) / AUDIO_FADE_MS);
     const ease = 0.5 - Math.cos(k * Math.PI) / 2;
 
-    item.audioA.volume = Math.max(0, Math.min(1, startA + (targetVolA - startA) * ease));
-    item.audioB.volume = Math.max(0, Math.min(1, startB + (targetVolB - startB) * ease));
+    setAudioLevel(item.audioA, startA + (targetVolA - startA) * ease);
+    setAudioLevel(item.audioB, startB + (targetVolB - startB) * ease);
 
     if (k < 1) {
       audioFadeRAF = requestAnimationFrame(step);
     } else {
       audioFadeRAF = null;
-      item.audioA.volume = targetVolA;
-      item.audioB.volume = targetVolB;
+      audioFadeTargets = null;
+      setAudioLevel(item.audioA, targetVolA);
+      setAudioLevel(item.audioB, targetVolB);
     }
   };
 
   audioFadeRAF = requestAnimationFrame(step);
 }
 
-/* ── Подводка дорожек перед переходом ──────────────────────────────── */
+/* ── Ожидание готовности входящей дорожки ────────────────────────────────
+   В обычном переключении этих функций нет: пара играет всегда, обе дорожки
+   стоят в одной точке, и звук меняется одним кроссфейдом. Сюда попадаем только
+   когда входящая дорожка не готова — браузер её остановил или в этой точке нет
+   данных. Тогда звук не рвём: продолжает играть прежняя дорожка, а фейд
+   начнётся, как только данные дойдут. */
 
-function cancelPendingSwitch() {
-  if (pendingSwitch && pendingSwitch.onSeeked) {
-    try { pendingSwitch.nextEl.removeEventListener('seeked', pendingSwitch.onSeeked); } catch (e) {}
+let deckSwitchToken = 0;
+let deckSwitchTimer = 0;
+
+/* Отменяет отложенный фейд: новый клик, смена трека, пауза, перемотка. */
+function cancelDeckSwitch() {
+  deckSwitchToken++;
+  if (deckSwitchTimer) {
+    clearTimeout(deckSwitchTimer);
+    deckSwitchTimer = null;
   }
-  if (pendingSwitchTimer) {
-    clearTimeout(pendingSwitchTimer);
-    pendingSwitchTimer = null;
-  }
-  pendingSwitch = null;
 }
 
-/* Дорожка встала на место (либо вышло время ожидания) — запускаем микро-фейд */
-function finishPendingSwitch() {
-  const p = pendingSwitch;
-  if (!p) return;
-  cancelPendingSwitch();
+/* Дорожка готова звучать прямо сейчас: играет, не в перемотке, и данных впереди
+   хватает на продолжение (HAVE_FUTURE_DATA). */
+function isDeckReadyToSound(el) {
+  return !!el && !el.paused && !el.ended && !el.seeking && el.readyState >= 3;
+}
 
-  const stillActive = activeTrackId && trackAudioMap[activeTrackId] === p.item && p.item.source === p.src;
-  if (!stillActive) return;
+function waitDeckReadyThenFade(item, nextEl, prevEl, src) {
+  cancelDeckSwitch();
+  const token = deckSwitchToken;
+  const deadline = performance.now() + AUDIO_SWITCH_WAIT_MS;
 
-  p.nextEl.playbackRate = 1;
+  const step = () => {
+    deckSwitchTimer = null;
+    if (token !== deckSwitchToken) return;   // пришёл новый клик
+    if (!activeTrackId || trackAudioMap[activeTrackId] !== item || item.source !== src) return;
+
+    if (isDeckReadyToSound(nextEl)) {
+      fadePairToSource(item, nextEl);
+      return;
+    }
+    if (!item.wantPlay || performance.now() > deadline) {
+      /* Не дождались: возвращаем прежний источник, чтобы переключатель не
+         показывал то, чего не слышно. Сама пара при этом не тронута. */
+      item.source = prevEl === item.audioA ? 'before' : 'after';
+      updateDeckSourceUI();
+      return;
+    }
+    deckSwitchTimer = setTimeout(step, 16);
+  };
+
+  deckSwitchTimer = setTimeout(step, 16);
+}
+
+/* Сам кроссфейд: меняются только уровни. Позиции не трогаем — входящая дорожка
+   уже стоит в той же точке, что и звучащая (её держит syncAudioPair). */
+function fadePairToSource(item, nextEl) {
+  cancelDeckSwitch();
+  /* Входящая могла догонять темпом: возвращаем нормальную скорость, иначе после
+     фейда она зазвучала бы с изменённой. Позиция от этого не прыгает. */
+  if (nextEl.playbackRate !== 1) nextEl.playbackRate = 1;
+  item.syncDrift = 0;
+
+  if (AB_DEBUG) {
+    const ms = item.switchAt ? performance.now() - item.switchAt : 0;
+    abSet('переход', 'фейд ' + AUDIO_FADE_MS + ' мс через ' + ms.toFixed(0) +
+      ' мс после клика: Δ ' + ((pairPos(item.audioA) - pairPos(item.audioB)) * 1000).toFixed(0) + ' мс');
+  }
   applyAudioVolumes(activeTrackId, true);
+}
+
+/* ══ ПОДТЯЖКА ПАРЫ ВО ВРЕМЯ ВОСПРОИЗВЕДЕНИЯ ══════════════════════════════
+   Синхронизация на timeupdate приходила 2–4 раза в секунду, а на телефоне
+   реже: неслышимая дорожка успевала разойтись, и переключение попадало в
+   расхождение. Тик держит дорожки в одной точке всё время, пока трек слушают,
+   поэтому в момент клика они уже совпадают и выравнивать нечего. */
+function syncActivePairTick() {
+  if (!activeTrackId) return;
+  const item = trackAudioMap[activeTrackId];
+  if (!item || !item.wantPlay) return;
+  if (item.bufferGate) return;     // пара ждёт данных — её не трогаем
+  if (audioFadeActive()) return;   // идёт кроссфейд
+
+  const { audible, silent } = getAudiblePair(item);
+  if (!isAudioAudible(audible)) return;
+
+  /* Вторая дорожка встала: браузер мог отжать у неё звук (телефон, смена
+     звукового устройства) или она осталась на паузе. Сама она уже не поедет, и
+     на клике это обернулось бы отставанием на всю длину паузы. Перед запуском
+     ставим её в точку звучащей — дорожка заглушена, прыжок неслышен. */
+  if (silent.paused && !silent.ended) {
+    alignPairTo(item, audible);
+    const p = silent.play();
+    if (p && p.catch) p.catch(() => {});
+  }
+  syncAudioPair(item);
+}
+
+setInterval(syncActivePairTick, AUDIO_SYNC_TICK_MS);
+
+/* Отчёт (только при ?abdbg=1): расхождение пары при обычном прослушивании и
+   фактический уровень каждой дорожки в тракте. Если расхождение маленькое, а
+   повтор при переключении всё равно слышен, — дело не в позиции; тогда смотрим
+   на уровни: у «тихой» дорожки должно быть около -100 дБ. Если там слышимый
+   уровень, значит звучат обе дорожки сразу (эхо, которое воспринимается как
+   повтор), и правки таймингов тут ни при чём. */
+if (AB_DEBUG) {
+  setInterval(() => {
+    if (!activeTrackId) return;
+    const item = trackAudioMap[activeTrackId];
+    if (!item || !item.wantPlay) return;
+    const { audible, silent } = getAudiblePair(item);
+    const raw = (audible.currentTime || 0) - (silent.currentTime || 0);
+    const est = pairPos(audible) - pairPos(silent);
+    abSet('тракт', audioCtx
+      ? 'контекст ' + audioCtx.state + ' | граф: A ' + (audioGainMap.has(item.audioA) ? 'да' : 'НЕТ') +
+        ', B ' + (audioGainMap.has(item.audioB) ? 'да' : 'НЕТ') +
+        ' | ' + abRms(item.audioA) + ' / ' + abRms(item.audioB)
+      : 'volume/muted (без графа)');
+    abSet('в игре', 'Δ сырое ' + (raw * 1000).toFixed(0) + ' мс, с досчётом ' +
+      (est * 1000).toFixed(0) + ' мс | A ' + abElState(item.audioA) +
+      ' | B ' + abElState(item.audioB));
+    /* Запас данных у каждой дорожки: пока он меньше AUDIO_PAIR_GUARD, пара стоит
+       на гейте (ждёт порции для ОБЕИХ дорожек), и переключаться нечем. */
+    const at = audible.currentTime || 0;
+    abSet('буфер', 'впереди пары ' + getPairBufferedAhead(item, at).toFixed(1) +
+      ' с (A ' + abAhead(item.audioA, at).toFixed(1) + ', B ' + abAhead(item.audioB, at).toFixed(1) +
+      ') | ' + (item.bufferGate ? 'гейт: ждём данные' : 'гейт: не нужен'));
+  }, 500);
 }
 
 function seekDeckTrack(e) {
@@ -3473,13 +3991,18 @@ function syncPlayStateUI(trackId) {
 }
 
 /* ── гейт общим буфером пары ───────────────────────────────────────────
-   Пара не должна играть дальше, чем у обеих дорожек есть данные: если звучащая
-   или неслышимая дорожка ушла бы вперёд, звук пропал бы, а полоса показала бы
-   неверное. Запас, при котором пара встаёт на паузу — AUDIO_PAIR_GUARD
-   (0.15 с); отпускаем, когда общий буфер впереди AUDIO_PAIR_HEAD (0.75 с). */
+   Переключение BEFORE / AFTER возможно только тогда, когда данные есть у ОБЕИХ
+   дорожек: если входящая отстала, кроссфейд придётся откладывать, и плавность
+   теряется. Поэтому пара не играет дальше точки, до которой скачаны оба файла:
+   запас AUDIO_PAIR_GUARD (0.6 с) — пауза, запас AUDIO_PAIR_HEAD (1.5 с) —
+   продолжение. Останавливаются ОБЕ дорожки и выравниваются в одной точке, а
+   продолжают вместе: иначе тихая успела бы уехать вперёд и после снятия гейта
+   пара поехала бы с расхождением.
+   Пока пара стоит на паузе, порции продолжают качаться (поток не выключается),
+   поэтому пауза сама снимается, как только данные дошли. */
 
-const AUDIO_PAIR_GUARD = 0.15; // с: запас, при котором пара встаёт на паузу
-const AUDIO_PAIR_HEAD = 0.75;  // с: запас, с которым она продолжает (гистерезис)
+const AUDIO_PAIR_GUARD = 0.6;  // с: запас, при котором пара встаёт на паузу
+const AUDIO_PAIR_HEAD = 1.5;   // с: запас, с которым она продолжает (гистерезис)
 
 /* Конец скачанного участка дорожки РОВНО в этой точке. 0 — данных в позиции нет
    (дыра): впереди может лежать скачанный кусок, но играть до него нельзя, не
@@ -3544,6 +4067,14 @@ function watchAudioStall() {
   if (!activeTrackId) return;
   const item = trackAudioMap[activeTrackId];
   if (!item || !item.wantPlay) return;
+  /* Пара стоит на гейте: timeupdate молчит, поэтому порции просим и снятие
+     гейта проверяем здесь — иначе на медленном канале загрузка могла бы
+     остановиться вместе со звуком. */
+  if (item.bufferGate) {
+    streamTickItem(item);
+    releasePairBufferGate(activeTrackId);
+    return;
+  }
 
   const { audible } = getAudiblePair(item);
   const pos = audible.currentTime || 0;
@@ -3590,7 +4121,7 @@ function updateDeckBufferingUI() {
   const item = trackAudioMap[activeTrackId];
   if (!item || !item.wantPlay) { setDeckBuffering(false); return; }
   const { audible } = getAudiblePair(item);
-  const buffering = audible.readyState < 3;
+  const buffering = item.bufferGate || audible.readyState < 3;
   setDeckBuffering(buffering);
 }
 
@@ -3617,8 +4148,13 @@ function checkPairBufferGate(item) {
 function gatePairByBuffer(item) {
   const { audible } = getAudiblePair(item);
   item.bufferGate = true;
-  alignPairTo(item, audible);  // вторая дорожка — в ту же точку: продолжат вместе
+  /* Останавливаем ОБЕ дорожки и ставим их в одну точку: пока пара стоит, тихая
+     иначе уехала бы вперёд, и после снятия гейта они поехали бы с расхождением —
+     то есть переключение снова пришлось бы начинать с выравнивания. */
+  alignPairTo(item, audible);
   audible.pause();
+  const silent = audible === item.audioA ? item.audioB : item.audioA;
+  if (!silent.paused) silent.pause();
   updateDeckBufferingUI();
 }
 
@@ -3635,6 +4171,9 @@ function releasePairBufferGate(trackId) {
        страховка на случай, если порция для второй дорожки не попросилась сама
        (её событие seeking не пришло) — просим её отсюда, и пауза снимется. */
     streamSeekTo(trackId, pos);
+    /* Пара стоит, timeupdate молчит: просим порции обеих дорожек здесь же, иначе
+       на медленном канале следующая порция могла бы не запроситься вовсе. */
+    streamTickItem(item);
     /* Порционный режим выключен: streamSeekTo ничего не качает, и дыра в буфере
        отстающей дорожки сама не закроется — гейт запирал пару навсегда (звук не
        идёт, кнопка всё крутится). Просим пропущенный участок у браузера обычной
@@ -3650,6 +4189,8 @@ function releasePairBufferGate(trackId) {
   }
 
   item.bufferGate = false;
+  /* Обе дорожки снова в одной точке — и только теперь продолжаем: до этого
+     момента переключение было бы невозможно без потери плавности. */
   alignPairTo(item, audible);
   ensurePairPlaying(trackId);
   updateDeckBufferingUI();
@@ -3660,8 +4201,21 @@ function releasePairBufferGate(trackId) {
 function ensurePairPlaying(trackId) {
   const item = trackAudioMap[trackId];
   if (!item || !item.wantPlay) return;
+  /* Пара вот-вот зазвучит, а контекст к этому моменту уже разбужен кликом:
+     подключаем граф здесь, до первого звука, чтобы переключение сразу шло
+     рампами. Если контекст всё ещё спит, подключение сделает onstatechange. */
+  if (ensurePairAudioGraph(trackId)) applyAudioVolumes(trackId, false);
   [item.audioA, item.audioB].forEach(el => {
     if (!el.paused || el.ended) return;
+    /* Запускаем в точке звучащей дорожки: сама дорожка стояла, её звука нет,
+       поэтому прыжок неслышен — зато пара продолжит синхронно. */
+    const other = el === item.audioA ? item.audioB : item.audioA;
+    if (!other.paused && !other.seeking && !other.ended) {
+      const at = pairPos(other);
+      if (Math.abs((el.currentTime || 0) - at) > 0.02 && getBufferedEndAt(el, at) > at) {
+        try { el.currentTime = at; } catch (err) {}
+      }
+    }
     const p = el.play();
     if (p && p.catch) p.catch(err => {
       if (err && err.name === 'AbortError') return;
@@ -3678,6 +4232,16 @@ function playPairAudio(trackId) {
   const item = trackAudioMap[trackId];
   if (!item) return;
   item.wantPlay = true;
+  /* Звуковой тракт (см. «ЕДИНЫЙ ЗВУКОВОЙ ТРАКТ»): подключаем пару к графу
+     именно здесь — этот вызов всегда идёт из действия пользователя, а браузер
+     только в нём и разрешает создать/разбудить AudioContext. Уровень каждой
+     дорожки берётся из её текущего состояния, так что момент подключения
+     неслышен. Если граф недоступен, пара продолжает жить на volume/muted. */
+  if (audioGraphWanted()) {
+    ensurePairAudioGraph(trackId);
+    resumeAudioGraph();          // будим ПОСЛЕ создания: контекст мог только появиться
+    applyAudioVolumes(trackId, false);
+  }
   /* Поток данных пары: в порционном режиме клик сразу просит первые секунды. */
   if (audioChunkSupported()) streamActivateItem(item, true);
   /* Стоит ли на текущей позиции общий буфер пары (данные ОБЕИХ дорожек)? Если
@@ -3686,6 +4250,9 @@ function playPairAudio(trackId) {
   const { audible } = getAudiblePair(item);
   item.bufferGate = getPairBufferedAhead(item, audible.currentTime || 0) <= AUDIO_PAIR_GUARD;
   if (item.bufferGate) {
+    /* Старт с ожиданием: обе дорожки в одну точку и обе стоят. Продолжим
+       вдвоём, когда данные будут у обеих (releasePairBufferGate). */
+    alignPairTo(item, audible);
     item.audioA.pause();
     item.audioB.pause();
   } else {
@@ -3712,7 +4279,8 @@ function updateDeckProgressUI() {
   const item = trackAudioMap[activeTrackId];
   if (!item) return;
 
-  // Прогресс считаем по звучащей дорожке (BEFORE → audioA, AFTER → audioB)
+  // Прогресс считаем по звучащей дорожке (BEFORE → audioA, AFTER → audioB);
+  // пока идёт переход, звучит ещё прежняя — это учитывает getAudiblePair.
   const { audible, silent } = getAudiblePair(item);
   const cur = audible.currentTime || 0;
   const dur = audible.duration || silent.duration || 0;
