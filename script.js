@@ -5409,6 +5409,7 @@ function resumeReviewsMarquee(card) {
    незаметен. Жест определяем по преобладающей оси, вертикальная прокрутка
    страницы остаётся нативной (touch-action: pan-y в style.css). */
 const REVIEW_SWIPE_AXIS_THRESHOLD = 12; // px: отсекает дрожание пальца при тапе
+const REVIEW_SWIPE_GAIN = 1.4; // усиление свайпа: палец 100 px → лента 140 px (1 — как было)
 const REVIEW_SWIPE_SHIFT_PROP = (window.CSS && CSS.supports && CSS.supports('translate', '0px'))
   ? 'translate'
   : 'marginLeft';
@@ -5487,8 +5488,8 @@ function initReviewSwipe() {
         if (axis !== 'x') return;
       }
 
-      lastDx = dx;
-      setReviewColumnShift(track, wrapReviewColumnShift(dragShift + dx, span));
+      lastDx = dx * REVIEW_SWIPE_GAIN;
+      setReviewColumnShift(track, wrapReviewColumnShift(dragShift + lastDx, span));
     }, { passive: true });
 
     // Палец ушёл: запоминаем, где оставили колонку, и гасим клик после жеста
