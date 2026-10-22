@@ -7648,10 +7648,10 @@ function updateActiveNavSection() {
     lastScrollSpyY = scrollY;
   }
 
-  // Если прокрутили до самого низа страницы — гарантированно активны Отзывы
+  // Если прокрутили до самого низа страницы — гарантированно активен FAQ
   // (последний раздел страницы перед подвалом)
   if (scrollY + windowHeight >= documentHeight - 50) {
-    setActiveNavSection('reviews');
+    setActiveNavSection('faq');
     return;
   }
 
