@@ -410,8 +410,27 @@ html, body {
   #player   { padding: 80px 0; }        /* было 96 / 176 */
   #services { padding: 60px 0; }        /* было 32 / 40  */
   #faq      { padding: 50px 0 70px; }   /* было 64 / 64  */
-  #contacts { padding: 60px 0 80px; }   /* было 24 / 64  */
+  #contacts { padding: 80px 0 80px; }   /* было 24 / 64  */
   #reviews  { padding: 30px 0; }        /* было 24 / 64  */
+
+  /* Зазор ПОСЛЕ отзывов на компьютере убран: под #reviews оставался внешний
+     margin-block-end 80px от lg:space-y-20 (в общий список «margin-bottom: 0»
+     выше #reviews не входил), и между лентами отзывов и «Контактами» висела
+     пустая полоса. Теперь между ними только padding самой секции (30px) и
+     padding-top «Контактов» (80px). На телефоне зазор тоже убран — см. блок
+     «ОТСТУПЫ СЕКЦИЙ НА ТЕЛЕФОНЕ» ниже; на планшете (64px от space-y-16)
+     остаётся как был. */
+  #reviews  { margin-bottom: 0; }
+
+  /* КНОПКИ В «КОНТАКТАХ» — ВЫШЕ НА КОМПЬЮТЕРЕ: вертикальные отступы 16px
+     (p-4 в index.html) → 20px, высота кнопки ≈56 → 64px. Горизонтальные
+     отступы (16px) и сетка не меняются; модалка #contactModal не
+     затрагивается. Селектор с id (1,1,0) перебивает .p-4 без !important. */
+  #contactsGrid > a,
+  #contactsGrid > button {
+    padding-top: 1.25rem;
+    padding-bottom: 1.25rem;
+  }
 
   /* ЗАГОЛОВКИ РАЗДЕЛОВ — ЕДИНЫЙ РАЗМЕР (правка 27.09). До этой правки
      заголовки были разного кегля: у #player в разметке text-2xl
@@ -452,11 +471,19 @@ html, body {
    Граница 639px повторяет Tailwind-брейкпоинт sm (640px): на планшете
    (sm и шире) остаются прежние значения из разметки. */
 @media (max-width: 639px) {
-  #player   { padding: 30px 0 20px; }   /* было 32 / 64 */
+  #player   { padding: 20px 0 25px; }   /* было 32 / 64 */
   #services { padding: 30px 0 40px; }   /* было 16 / 24 */
   #faq      { padding: 30px 0 40px; }   /* было 32 / 32 */
-  #contacts { padding: 40px 0 50px; }   /* было  8 / 24 */
-  #reviews  { padding: 30px 0; }        /* было  8 / 32 */
+  #contacts { padding: 55px 0 60px; }   /* было  8 / 24 */
+  #reviews  { padding: 30px 0 35px; }   /* было  8 / 32 */
+
+  /* Зазор ПОСЛЕ отзывов на телефоне убран: под #reviews оставался внешний
+     margin-block-end 32px от space-y-8 (index.html) — в общий список
+     «margin-bottom: 0» выше #reviews не входил, и под лентами отзывов висела
+     пустая полоса. Остаётся только padding самой секции (30px сверху,
+     35px снизу) и padding-top «Контактов» (55px). На планшете (sm:space-y-16)
+     и компьютере (lg:space-y-20) зазор остаётся как был. */
+  #reviews  { margin-bottom: 0; }
 
   /* ЗАГОЛОВКИ РАЗДЕЛОВ: ТЕЛЕФОН — 24px, как у «Слушай разницу». Раньше
      #player был 24px (text-2xl), а #services и #faq — 30px (text-3xl);
@@ -493,7 +520,7 @@ html, body {
   #player > .max-w-6xl > .text-center   { margin-bottom: 10px; }  /* было 32, затем 20 */
   #services > .max-w-7xl > .text-center { margin-bottom: 0; }     /* было 24, затем 10 */
   #faq > .max-w-4xl > .text-center      { margin-bottom: 20px; }  /* было 32 */
-  #contacts > .max-w-4xl > .text-center { margin-bottom: 25px; }  /* было 16 */
+  #contacts > .max-w-4xl > .text-center { margin-bottom: 0; }     /* было 16, затем 25 */
   #reviews > .max-w-7xl > .text-center  { margin-bottom: 10px; }  /* было 32 */
 
   /* Лента карточек услуг: вертикальные отступы контейнера-карусели */
@@ -2808,6 +2835,16 @@ span.faq-q-text.lang-vapor-in {
     grid-template-columns: minmax(0, 1fr);
     gap: 0.75rem;
   }
+
+  /* Кнопки в «Контактах» на телефоне — те же 20px по вертикали, что на
+     компьютере (см. блок «ОТСТУПЫ СЕКЦИЙ НА КОМПЬЮТЕРЕ» выше): было 16px
+     (p-4 в index.html), стало 20px. Горизонтальные отступы (16px) не
+     меняются, модалка #contactModal не затрагивается. */
+  #contactsGrid > a,
+  #contactsGrid > button {
+    padding-top: 1.25rem;
+    padding-bottom: 1.25rem;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -2890,7 +2927,9 @@ span.faq-q-text.lang-vapor-in {
   display: flex;
   align-items: flex-start;
   width: max-content;
-  padding: 0.75rem 0 1.125rem;
+  /* Снизу отступа нет: под лентами отзывов он давал лишнюю полосу (было
+     18px). Сверху 12px оставлены — карточки не липнут к заголовку раздела. */
+  padding: 0.75rem 0 0;
   animation: nrMarqueeLeft 110s linear infinite;
   will-change: transform;
 }
@@ -3159,7 +3198,8 @@ span.faq-q-text.lang-vapor-in {
   .nr-marquee-track {
     animation: none !important;
     transform: none !important;
-    padding: 0.75rem 1rem 1.125rem;
+    /* Снизу 0 — как у ленты с движением (см. .nr-marquee-track выше). */
+    padding: 0.75rem 1rem 0;
   }
 }
 
