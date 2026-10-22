@@ -5467,6 +5467,8 @@ warmReviewsAvatars();
 function initReviews() {
   renderReviews();
   initReviewSwipe();
+  initReviewDrag();
+  initReviewLinkFocus();
 
   // Фото уже в кэше (warmReviewsAvatars): держать на них loading="lazy"
   // больше незачем — карточка показывает картинку сразу, без доедет-загрузится.
@@ -5483,6 +5485,24 @@ function initReviews() {
       syncReviewCardHeights();
     });
   }
+}
+
+// Ссылка на автора открывается в новой вкладке (target="_blank") и после клика
+// остаётся в фокусе. Возвращаешься на сайт — лента стоит: её держит пауза
+// .nr-marquee:focus-within (style.css), а снимается она только следующим кликом
+// в любом месте страницы. Поэтому после клика мышью или пальцем фокус снимаем —
+// тот же приём, что у «Читать далее…» (toggleReview). С клавиатуры фокус не
+// трогаем: там по нему идёт переход по Tab, и лента под фокусом должна стоять.
+// Слушатель один на всю секцию: карточки пересобираются при смене языка.
+function initReviewLinkFocus() {
+  const section = document.getElementById('reviews');
+  if (!section) return;
+
+  section.addEventListener('click', (event) => {
+    if (event.detail === 0) return; // Enter/Space — это клавиатура
+    const person = event.target.closest('.review-person');
+    if (person) person.blur();
+  });
 }
 
 // Инициалы — подложка под фото: видны, пока картинка не загрузилась.
@@ -5970,17 +5990,14 @@ function resumeReviewsMarquee(card) {
 }
 
 /* Свайп колонок отзывов на сенсорных экранах: колонку можно тянуть пальцем
-   влево-вправо. Лента едет CSS-анимацией (transform), поэтому сдвиг пальцем
-   пишем в отдельное свойство translate на треке — оно складывается с анимацией,
-   останавливать её не нужно. Сдвиг держим в пределах одного «круга» ленты
-   (половины трека): половины одинаковые, поэтому переход через границу
-   незаметен. Жест определяем по преобладающей оси, вертикальная прокрутка
-   страницы остаётся нативной (touch-action: pan-y в style.css). */
+   влево-вправо. Лента едет CSS-анимацией, поэтому сдвиг пальцем пишем в её фазу
+   (animation-delay, см. setReviewColumnShift), а не отдельным свойством: фаза
+   всегда остаётся внутри одного «круга» ленты, поэтому трек никогда не уезжает
+   за свои копии и справа не появляется пустота. На время касания лента стоит.
+   Жест определяем по преобладающей оси, вертикальная прокрутка страницы
+   остаётся нативной (touch-action: pan-y в style.css). */
 const REVIEW_SWIPE_AXIS_THRESHOLD = 12; // px: отсекает дрожание пальца при тапе
 const REVIEW_SWIPE_GAIN = 1.4; // усиление свайпа: палец 100 px → лента 140 px (1 — как было)
-const REVIEW_SWIPE_SHIFT_PROP = (window.CSS && CSS.supports && CSS.supports('translate', '0px'))
-  ? 'translate'
-  : 'marginLeft';
 
 // Есть сенсорный ввод (телефон, планшет, тач-экран ноутбука)? Свайп колонок
 // включаем только для него: там, где есть мышь, колонку ведёт сама лента.
@@ -5989,11 +6006,54 @@ function hasTouchInput() {
     !!(navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
 }
 
-// Сдвиг колонки: translate складывается с анимацией ленты; margin-left — запасной
-// путь для браузеров, где отдельных свойств трансформации ещё нет
-function setReviewColumnShift(track, shift) {
-  if (REVIEW_SWIPE_SHIFT_PROP === 'translate') track.style.translate = shift + 'px 0';
-  else track.style.marginLeft = shift + 'px';
+// Ход ленты в секундах — из style.css (.nr-marquee-track: animation 110s).
+// Читаем его, а не держим своим числом: иначе правка длительности в стилях
+// молча разошлась бы с расчётом сдвига.
+function getReviewMarqueeDuration(track) {
+  const value = parseFloat(getComputedStyle(track).animationDuration);
+  return value > 0 ? value : 110;
+}
+
+// Текущее положение ленты в px — его показывает сама анимация (матрица
+// transform в вычисленных стилях). Нужно в начале жеста: ручной сдвиг живёт в
+// фазе анимации, поэтому «откуда тянуть» знает только она.
+function getReviewTrackOffset(track) {
+  const transform = getComputedStyle(track).transform;
+  const match = transform && transform.match(/matrix(3d)?\(([^)]+)\)/);
+  if (!match) return 0;
+  const parts = match[2].split(',').map(Number);
+  const offset = match[1] ? parts[12] : parts[4];
+  return Number.isFinite(offset) ? offset : 0;
+}
+
+// Положение ленты в начале жеста: видимый сдвиг в px и фаза анимации в секундах.
+// Обе величины снимаются один раз, до первого движения, и дальше сдвиг считается
+// как разница от них. Иначе лента прыгала бы в момент нажатия: анимация к этому
+// времени уже отработала сколько-то времени страницы, и задержка, назначенная
+// «с нуля», сдвинула бы её рывком.
+function getReviewTrackBase(track) {
+  const delay = parseFloat(getComputedStyle(track).animationDelay);
+  return {
+    offset: getReviewTrackOffset(track),
+    delay: Number.isFinite(delay) ? delay : 0
+  };
+}
+
+// Сдвиг колонки — через фазу анимации: animation-delay переносит ленту на нужное
+// место, и она продолжает свой бесконечный ход оттуда. Смещение всегда остаётся
+// внутри одного «круга» (половины трека), поэтому справа никогда не оголяется
+// пустота. Отдельный translate складывался с анимацией: при большом сдвиге сумма
+// доходила до полной ширины трека.
+// shift — куда поставить ленту (px, в пределах (-span, 0]); base — положение в
+// начале жеста (getReviewTrackBase); duration — ход ленты в секундах.
+function setReviewColumnShift(marquee, track, shift, span, duration, base) {
+  // У обратной ленты ход идёт от -50% к 0, поэтому фаза считается от её начала
+  const reverse = marquee.classList.contains('is-reverse');
+  const delta = shift - base.offset;
+  let delay = base.delay + (reverse ? -delta : delta) * duration / span;
+  delay %= duration;
+  if (delay > 0) delay -= duration; // держим в (-duration, 0]
+  track.style.animationDelay = delay.toFixed(3) + 's';
 }
 
 // Сдвиг в пределах одного «круга» ленты: -span < shift <= 0
@@ -6015,8 +6075,9 @@ function initReviewSwipe() {
     marquee.classList.add('nr-swipeable'); // touch-action: pan-y (style.css)
 
     let span = 0;       // половина трека = один «круг» ленты
-    let shift = 0;      // накопленный сдвиг колонки
-    let dragShift = 0;  // сдвиг на момент распознавания жеста
+    let duration = 0;   // ход ленты в секундах (style.css → animation)
+    let base = { offset: 0, delay: 0 }; // положение ленты в начале касания
+    let dragShift = 0;  // оно же на момент распознавания жеста
     let startX = 0;
     let startY = 0;
     let lastDx = 0;
@@ -6039,6 +6100,7 @@ function initReviewSwipe() {
       lastDx = 0;
       axis = null;
       span = track.scrollWidth / 2; // копии ленты одинаковые: половина — «круг»
+      duration = getReviewMarqueeDuration(track);
     }, { passive: true });
 
     marquee.addEventListener('touchmove', (event) => {
@@ -6047,32 +6109,135 @@ function initReviewSwipe() {
       const dx = touch.clientX - startX;
       const dy = touch.clientY - startY;
 
-      // Ось жеста определяем один раз по первым сантиметрам движения
+      // Ось жеста определяем один раз по первым сантиметрам движения.
+      // Пауза и замер — только здесь: при вертикальной прокрутке страницы лента
+      // продолжает ехать, как и раньше, а сдвиг считается от того положения,
+      // в котором ленту застал горизонтальный жест.
       if (axis === null) {
         if (Math.abs(dx) < REVIEW_SWIPE_AXIS_THRESHOLD &&
             Math.abs(dy) < REVIEW_SWIPE_AXIS_THRESHOLD) return;
         axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
-        dragShift = shift;
         if (axis !== 'x') return;
+        marquee.classList.add('nr-dragging');
+        base = getReviewTrackBase(track);
+        dragShift = base.offset;
       }
 
       lastDx = dx * REVIEW_SWIPE_GAIN;
-      setReviewColumnShift(track, wrapReviewColumnShift(dragShift + lastDx, span));
+      setReviewColumnShift(marquee, track, wrapReviewColumnShift(dragShift + lastDx, span), span, duration, base);
     }, { passive: true });
 
-    // Палец ушёл: запоминаем, где оставили колонку, и гасим клик после жеста
+    // Палец ушёл: лента продолжает ход с того места, где её оставили,
+    // и клик после жеста гасим.
     const finishSwipe = () => {
       if (axis === 'x') {
-        shift = wrapReviewColumnShift(dragShift + lastDx, span);
         swiped = true;
         setTimeout(() => { swiped = false; }, 400);
       }
+      marquee.classList.remove('nr-dragging');
       axis = null;
       lastDx = 0;
     };
 
     marquee.addEventListener('touchend', finishSwipe, { passive: true });
     marquee.addEventListener('touchcancel', finishSwipe, { passive: true });
+  });
+}
+
+/* Перетаскивание лент отзывов мышью: на компьютере свайпа пальцем нет, и колонку
+   можно было только ждать, пока лента доедет сама. Тянем её курсором так же, как
+   пальцем на сенсорном экране: сдвиг пишем в фазу анимации (setReviewColumnShift),
+   поэтому лента остаётся бесконечной, а не спорит с анимацией. Пока держим, она
+   стоит (style.css → .nr-marquee.nr-dragging) и едет ровно за курсором.
+   Короткое нажатие без движения остаётся кликом — по нему работают «Читать
+   далее…» и ссылка на автора. На тач-экранах жест по-прежнему ведёт initReviewSwipe. */
+const REVIEW_DRAG_THRESHOLD = 6; // px: меньше — это клик, а не перетаскивание
+
+function initReviewDrag() {
+  // «Уменьшить движение»: колонка прокручивается нативно (style.css) — тянуть нечего
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  // Только точный указатель: у тач-экранов свой свайп (initReviewSwipe)
+  if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+
+  document.querySelectorAll('#reviews .nr-marquee').forEach((marquee) => {
+    const track = marquee.querySelector('.nr-marquee-track');
+    if (!track) return;
+
+    marquee.classList.add('nr-draggable'); // cursor: grab (style.css)
+
+    let span = 0;         // половина трека = один «круг» ленты
+    let duration = 0;     // ход ленты в секундах (style.css → animation)
+    let base = { offset: 0, delay: 0 }; // положение ленты в начале нажатия
+    let dragShift = 0;    // оно же, снятое в момент нажатия
+    let startX = 0;
+    let lastDx = 0;
+    let pointerId = null; // мышь, которая держит ленту
+    let dragging = false; // порог пройден — это перетаскивание, а не клик
+    let dragged = false;  // только что перетащили — следующий клик гасим
+
+    // Клик, который браузер шлёт после перетаскивания, не должен нажимать
+    // «Читать далее…» или открывать страницу автора
+    marquee.addEventListener('click', (event) => {
+      if (!dragged) return;
+      dragged = false;
+      event.preventDefault();
+      event.stopPropagation();
+    }, true);
+
+    // Тянуть карточку — это жест ленты, а не «перетащить ссылку/картинку» браузером
+    marquee.addEventListener('dragstart', (event) => event.preventDefault());
+
+    const onMove = (event) => {
+      if (event.pointerId !== pointerId) return;
+      // Кнопку отпустили вне окна — pointerup мог не дойти, завершаем сами
+      if (!event.buttons) { finishDrag(event); return; }
+      const dx = event.clientX - startX;
+      if (!dragging) {
+        if (Math.abs(dx) < REVIEW_DRAG_THRESHOLD) return;
+        dragging = true;
+      }
+      event.preventDefault();
+      lastDx = dx; // 1:1 — лента едет ровно за курсором
+      setReviewColumnShift(marquee, track, wrapReviewColumnShift(dragShift + lastDx, span), span, duration, base);
+    };
+
+    // Кнопка отпущена или указатель потерян: лента продолжает ход с того места,
+    // где её оставили (фаза анимации уже стоит на нём).
+    const finishDrag = (event) => {
+      if (event && event.pointerId !== pointerId) return;
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', finishDrag);
+      window.removeEventListener('pointercancel', finishDrag);
+      pointerId = null;
+      marquee.classList.remove('nr-dragging');
+      if (!dragging) return;
+      dragging = false;
+      dragged = true;
+      setTimeout(() => { dragged = false; }, 400);
+      clearReviewsSelection();
+    };
+
+    marquee.addEventListener('pointerdown', (event) => {
+      // Только левая кнопка: правая — контекстное меню, средняя — автоскролл
+      if (event.pointerType !== 'mouse' || event.button !== 0) return;
+      if (pointerId !== null) return;
+      span = track.scrollWidth / 2; // копии ленты одинаковые: половина — «круг»
+      if (!span) return;
+      duration = getReviewMarqueeDuration(track);
+      pointerId = event.pointerId;
+      startX = event.clientX;
+      lastDx = 0;
+      dragging = false;
+      // Класс сразу: лента стоит под нажатием, а текст карточки не выделяется
+      // мышью ещё до того, как стало ясно, тянут её или просто кликают.
+      // Замер — после класса, чтобы лента не успела уехать на кадр.
+      marquee.classList.add('nr-dragging');
+      base = getReviewTrackBase(track);
+      dragShift = base.offset;
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', finishDrag);
+      window.addEventListener('pointercancel', finishDrag);
+    });
   });
 }
 

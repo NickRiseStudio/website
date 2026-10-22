@@ -2968,6 +2968,24 @@ span.faq-q-text.lang-vapor-in {
    resumeReviewsMarquee (тап по «Свернуть») или collapseAllReviews (уход секции). */
 .nr-marquee .nr-marquee-track.nr-paused { animation-play-state: paused; }
 
+/* Ленту можно тянуть рукой: мышью (script.js → initReviewDrag) и пальцем на
+   сенсорных экранах (initReviewSwipe). Курсор-«лапка» подсказывает, что колонку
+   двигают, а не только ждут, пока доедет. Пока тянут, лента стоит (иначе сдвиг
+   догонял бы уезжающую ленту) и не выделяет текст карточки. Сам сдвиг живёт не
+   в translate, а в фазе анимации (animation-delay) — так смещение не выходит за
+   один «круг» ленты и справа никогда не оголяется пустота.
+   Правило паузы обязано стоять после правил паузы выше — специфичность у них
+   одинаковая. */
+.nr-marquee.nr-draggable { cursor: grab; }
+
+.nr-marquee.nr-dragging {
+  cursor: grabbing;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.nr-marquee.nr-dragging .nr-marquee-track { animation-play-state: paused; }
+
 @keyframes nrMarqueeLeft {
   from { transform: translate3d(0, 0, 0); }
   to   { transform: translate3d(-50%, 0, 0); }
