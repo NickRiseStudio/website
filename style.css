@@ -48,9 +48,9 @@ html, body {
   height: 0px !important;
 }
 
-/* Hero Background Image (hero-bg-1..4.webp) — фото студии на весь главный экран.
+/* Hero Background Image (hero-bg-1..5.webp) — фото студии на весь главный экран.
    Слой лежит первым в #hero и растянут на всю секцию (inset: 0). Внутри слоя —
-   четыре кадра .hero-bg-slide: они по кругу сменяют друг друга плавным
+   пять кадров .hero-bg-slide: они по кругу сменяют друг друга плавным
    растворением (animations.js → initHeroSlideshow), поэтому кадр — отдельный
    элемент, а не background-image самого слоя. background-size: cover — кадр
    заливает экран целиком, человек остаётся по центру (background-position:

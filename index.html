@@ -324,11 +324,11 @@
 
     <!-- 2. HERO SECTION -->
     <section id="hero" class="relative min-h-[75vh] sm:min-h-[82vh] lg:min-h-[85vh] flex items-center justify-center pt-4 sm:pt-10 lg:pt-28 pb-4 sm:pb-10 lg:pb-8 overflow-hidden">
-      <!-- Фон главного экрана: 4 кадра студии (hero-bg-1..4.webp), которые по
+      <!-- Фон главного экрана: 5 кадров студии (hero-bg-1..5.webp), которые по
            кругу сменяют друг друга плавным растворением (animations.js →
            initHeroSlideshow). Слой НЕ имеет класса .absolute — иначе перехватил
            бы анимацию «дыхания» подсветки (#hero > div.absolute:first-of-type).
-           Кадр 1 отдан прямо в разметке (виден и без JS), остальные три
+           Кадр 1 отдан прямо в разметке (виден и без JS), остальные четыре
            подгружает скрипт из data-bg. Затемнение поверх кадров — ::after
            слоя (см. style.css). -->
       <div class="hero-bg-layer" aria-hidden="true">
@@ -336,6 +336,7 @@
         <div class="hero-bg-slide" data-bg="./image/hero-bg-2.webp" style="--nr-hero-focus-x:58%;--nr-hero-shift-y:-2.8vw"></div>
         <div class="hero-bg-slide" data-bg="./image/hero-bg-3.webp" style="--nr-hero-focus-x:41%"></div>
         <div class="hero-bg-slide" data-bg="./image/hero-bg-4.webp" style="--nr-hero-focus-x:70%"></div>
+        <div class="hero-bg-slide" data-bg="./image/hero-bg-5.webp" style="--nr-hero-focus-x:50%"></div>
       </div>
 
       <!-- Ambient Studio Lighting Effect -->
