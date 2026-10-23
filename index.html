@@ -62,8 +62,11 @@
   <link rel="stylesheet" href="./animations.css">
 
   <!-- Главное фото hero (элемент LCP): грузим заранее, не дожидаясь разбора разметки.
-       Один оригинал — без srcset. -->
+       Один оригинал — без srcset. media: на телефоне и планшете фото героя не
+       показывается вовсе (style.css → «ФОТО ГЕРОЯ И КНОПКА „ОБО МНЕ“»), поэтому
+       там предзагрузка не нужна и файл не качается. -->
   <link rel="preload" as="image"
+        media="(min-width: 1024px)"
         href="./image/Main%20hero.webp">
   <!-- Мгновенный LITE режим + ранний выбор языка (атрибут lang у <html> нужен
        поисковикам и скринридерам до загрузки script.js; сами тексты по-прежнему
@@ -373,7 +376,7 @@
 
           </div>
 
-          <div class="lg:col-span-5 flex justify-center order-1 lg:order-2">
+          <div class="hero-photo-col lg:col-span-5 flex justify-center order-1 lg:order-2">
             <div
               onclick="openAboutModal()"
               class="hero-mask-container max-w-xs sm:max-w-sm lg:max-w-md w-full cursor-pointer group relative mx-auto"
