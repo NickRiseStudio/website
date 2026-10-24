@@ -392,7 +392,7 @@
                    object-fit: cover) — визуальный кадр тот же. -->
               <img
                 src="./image/Main hero.webp"
-                width="1042" height="1024"
+                width="896" height="881"
                 alt="Nick Rise Studio Engineer"
                 class="hero-mask-img"
                 decoding="async"
@@ -828,7 +828,7 @@
           Обо мне
         </h4>
         <p class="text-sm sm:text-base text-gray-300 leading-relaxed font-medium" data-i18n="aboutModal.bioText1">
-          Приветствую! Меня зовут Александр, я битмейкер, техник по звуку и звукорежиссёр из Москвы. В моём портфолио — работа с аналоговыми и цифровыми микшерами на концертах и студиях. Отвечал за звук на прямой трансляции Первого канала на ВДНХ, сотрудничал с PRO BATTLE League, Underground Amplitude и другими лейблами и сообществами.
+          Приветствую! Меня зовут Александр, я битмейкер, техник по звуку и звукорежиссёр из Москвы. В моём портфолио — работа с аналоговыми и цифровыми микшерами на концертах и студиях. Работаю с артистами, а не с потоком заявок: отвечаю в тот же день, объясняю простым языком и не пропадаю на середине проекта.
         </p>
         <p class="text-sm sm:text-base text-gray-300 leading-relaxed font-medium" data-i18n="aboutModal.bioText2">
           Проходил обучение у таких звукорежиссёров, как Джон Олин, Константин Матафонов, Илья Лукашев, Павел Уоллен и других.
@@ -895,6 +895,183 @@
         >
           <span data-i18n="aboutModal.btnDemos">Слушать A/B демо</span>
         </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 7.5.1 ABOUT SHOWCASE — «ОБО МНЕ» НА КОМПЬЮТЕРЕ (от 1024px)
+       С 1024px тот же контент, что в модалке #aboutModal, открывается как
+       полноэкранный раздел: три кадра about-1..3.webp (1672x941) листаются по
+       одному за щелчок колеса. Рамка держит пропорцию фото, поэтому на 16:9
+       раздел занимает экран целиком, а на мониторе шире 16:9 остаётся 16:9 по
+       центру (поля затемнены, сайт за ними виден, клик по ним закрывает
+       раздел). Текст стоит в свободных от персонажа зонах кадра: кадр 1 — имя
+       справа у головы, биография слева (крупнее, строки обтекают силуэт),
+       кадр 2 — справа, кадр 3 — слева, вопросы выше кнопок. Подсказка
+       «Листайте» — крупно по центру внизу, видна на первых двух кадрах; на первом
+       светится вспышками до первого листания.
+       Открытие и листание — script.js → initAboutShowcase(),
+       вид — style.css → «РАЗДЕЛ „ОБО МНЕ“ — ТОЛЬКО КОМПЬЮТЕР». -->
+  <div id="aboutShowcase" class="nr-about-overlay" role="dialog" aria-modal="true" aria-labelledby="nrAboutShowcaseTitle" aria-hidden="true">
+    <div class="nr-about-frame">
+
+      <!-- КАДР 1 — персонаж в центре-справа. Класс is-active ставит script.js
+           при открытии: тогда же запускается анимация текста. Имя стоит справа
+           на уровне головы (размер прежний), биография — слева и крупнее, её
+           строки выровнены по левому краю. -->
+      <div class="nr-about-slide" data-about-slide="0">
+        <img src="./image/about-1.webp" width="1672" height="941" alt="Nick Rise" class="nr-about-photo" loading="lazy" decoding="async">
+        <div class="nr-about-scrim nr-about-scrim--left"></div>
+        <div class="nr-about-scrim nr-about-scrim--right"></div>
+
+        <!-- Кадр 1: имя — справа, у головы. Подзаголовок — две строки, и у каждой
+             своё появление в таймлайне (animations.js → ABOUT1.subAt / sub2At),
+             поэтому это два span.nr-about-subtitle-line в одном <p>: сам <p>
+             остаётся одним элементом колонки. Двумя отдельными <p> строки
+             разъехались бы на gap колонки (.nr-about-text — flex с gap 1.1cqw). -->
+        <div class="nr-about-text nr-about-text--right">
+          <div class="nr-about-kicker" data-i18n="aboutModal.experience">6+ лет в индустрии</div>
+          <h2 class="nr-about-title" id="nrAboutShowcaseTitle" data-i18n="aboutModal.title">Александр (Nick Rise)</h2>
+          <p class="nr-about-subtitle">
+            <span class="nr-about-subtitle-line" data-i18n="aboutModal.subtitle1">Звукорежиссер</span>
+            <span class="nr-about-subtitle-line" data-i18n="aboutModal.subtitle2">Сведения / Мастеринга</span>
+          </p>
+        </div>
+
+        <!-- Кадр 1: биография — слева, крупнее, по левому краю. Каждая строка —
+             отдельный span.nr-about-line (как и в config.js → bioText1): строки не
+             переносятся, их длину задаёт эта разбивка, а положение — таблица
+             сдвигов в style.css («Сдвиги строк биографии кадра 1»).
+             Печать идёт абзацами (animations.js → about1TypePara): все строки
+             абзаца стартуют одновременно и набираются слева направо, потом так же
+             следующий абзац. Первая строка нового абзаца помечена классом
+             nr-about-para — по нему строки делятся на группы. Пометка должна быть
+             и здесь, и в config.js у обоих языков. -->
+        <div class="nr-about-text nr-about-text--left">
+          <p class="nr-about-body nr-about-bio" data-i18n="aboutModal.bioText1">
+            <span class="nr-about-line">Приветствую! Меня зовут Александр,</span>
+            <span class="nr-about-line">я битмейкер, техник по звуку и <span class="nr-ab-hint-accent">звукорежиссёр</span></span>
+            <span class="nr-about-line">из Москвы. В моём портфолио — работа с</span>
+            <span class="nr-about-line"><span class="nr-ab-hint-accent">аналоговыми</span> и <span class="nr-ab-hint-accent">цифровыми</span> мик<span class="nr-ab-hyphen">-</span></span>
+            <span class="nr-about-line">шерами на <span class="nr-ab-hint-accent">концертах</span> и <span class="nr-ab-hint-accent">студиях</span>.</span>
+            <span class="nr-about-line nr-about-para">Работаю <span class="nr-ab-hint-accent">с артистами</span>, а не с</span>
+            <span class="nr-about-line">потоком заявок: отвечаю <span class="nr-ab-hint-accent">в тот</span></span>
+            <span class="nr-about-line"><span class="nr-ab-hint-accent">же день</span>, объясняю <span class="nr-ab-hint-accent">простым</span></span>
+            <span class="nr-about-line">языком и <span class="nr-ab-hint-accent">не пропадаю</span></span>
+            <span class="nr-about-line">на середине проекта.</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- КАДР 2 — персонаж слева, текст справа -->
+      <div class="nr-about-slide" data-about-slide="1">
+        <img src="./image/about-2.webp" width="1672" height="941" alt="Nick Rise" class="nr-about-photo" loading="lazy" decoding="async">
+        <div class="nr-about-scrim nr-about-scrim--right"></div>
+
+        <div class="nr-about-text nr-about-text--right">
+          <!-- Обучение: заголовок колонки и четыре кнопки-ссылки. Подписи свои
+               у языка — aboutModal.trainer1..4; адреса одни для обоих языков и
+               стоят прямо в href, поэтому renderI18nText() их не трогает.
+               Заголовок — h3.nr-about-subhead: крупно, жирно, по центру колонки,
+               двумя строками (<br>), печатается по буквам (размер и
+               центрирование — style.css, блок кадра 2). Заголовка «Обо мне» на
+               кадре нет: он остался в мобильной модалке #aboutModal. -->
+          <h3 class="nr-about-subhead" data-i18n="aboutModal.bioTraining">Проходил обучение<br>у лучших в индустрии:</h3>
+
+          <div class="nr-about-trainers">
+            <a class="nr-about-trainer" href="https://mixwiththemasters.com" target="_blank" rel="noopener noreferrer" data-i18n="aboutModal.trainer1">MIX With The MASTERS</a>
+            <a class="nr-about-trainer" href="https://www.waves.com/courses" target="_blank" rel="noopener noreferrer" data-i18n="aboutModal.trainer2">Waves Audio Courses</a>
+            <a class="nr-about-trainer" href="https://genius.com/artists/Ilya-lukashev" target="_blank" rel="noopener noreferrer" data-i18n="aboutModal.trainer3">Илья Лукашев</a>
+            <a class="nr-about-trainer" href="https://genius.com/artists/Konstantin-matafonov" target="_blank" rel="noopener noreferrer" data-i18n="aboutModal.trainer4">Константин Матафонов</a>
+          </div>
+
+          <!-- Разделяющая линия перед цифрами: отдельный элемент, а не
+               border-top у .nr-about-stats, — её «прочерчивание» слева направо
+               анимируется (animations.css, секция 20; таймлайн —
+               animations.js → playAboutSlideTwo()). -->
+          <div class="nr-about-rule"></div>
+
+          <div class="nr-about-stats">
+            <div class="nr-about-stat">
+              <div class="nr-about-stat-num" data-i18n="aboutModal.stat1Num">200+</div>
+              <div class="nr-about-stat-text" data-i18n="aboutModal.stat1Text">Завершенных треков</div>
+            </div>
+            <div class="nr-about-stat">
+              <div class="nr-about-stat-num" data-i18n="aboutModal.stat2Num">6+ лет</div>
+              <div class="nr-about-stat-text" data-i18n="aboutModal.stat2Text">Студийного опыта</div>
+            </div>
+            <div class="nr-about-stat">
+              <div class="nr-about-stat-num" data-i18n="aboutModal.stat3Num">100%</div>
+              <div class="nr-about-stat-text" data-i18n="aboutModal.stat3Text">Готовность к радио &amp; стримингам</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- КАДР 3 — персонаж справа, текст слева: финал и кнопки -->
+      <div class="nr-about-slide" data-about-slide="2">
+        <img src="./image/about-3.webp" width="1672" height="941" alt="Nick Rise" class="nr-about-photo" loading="lazy" decoding="async">
+        <div class="nr-about-scrim nr-about-scrim--left"></div>
+
+        <div class="nr-about-text nr-about-text--left">
+          <p class="nr-about-lead" data-i18n="aboutModal.bioText3">С радостью готов поработать с тобой!</p>
+
+          <!-- Строка со скидкой. Промокод — кнопка, а не span: по клику он
+               копируется в буфер, а внизу всплывает тост (script.js →
+               initAboutShowcase(), действие copy-discount). Оформление —
+               style.css → «Строка со скидкой». -->
+          <p class="nr-about-discount" data-i18n="aboutModal.discount">Забери скидку в 10% <button type="button" class="nr-about-discount-code" data-about-action="copy-discount" title="Скопировать промокод">«NRSDiscount»</button></p>
+
+          <!-- Сначала вопросы, ниже — кнопки действий. Обработчик клика живёт
+               в script.js → initAboutShowcase() (data-about-action), а не в
+               onclick: так клик по кнопке не уходит в оверлей и раздел не
+               закрывается «сам по себе». -->
+          <div class="nr-about-links">
+            <button type="button" class="nr-about-link" data-about-action="faq-0">
+              <span data-i18n="aboutModal.btnFaqWhy">Почему стоит выбрать именно меня?</span>
+              <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+            </button>
+            <button type="button" class="nr-about-link" data-about-action="faq-1">
+              <span data-i18n="aboutModal.btnFaqWorkflow">Как происходит процесс работы?</span>
+              <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+            </button>
+          </div>
+
+          <div class="nr-about-actions">
+            <button type="button" class="nr-about-btn nr-about-btn--primary" data-about-action="contact">
+              <span data-i18n="aboutModal.btnDiscuss">Обсудить проект</span>
+              <svg fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            </button>
+            <button type="button" class="nr-about-btn" data-about-action="demos">
+              <span data-i18n="aboutModal.btnDemos">Примеры работ (A/B)</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Служебная строка, крестик и точки-индикаторы живут над кадрами -->
+      <div class="nr-about-tag" data-i18n="aboutModal.tag">STUDIO ENGINEER PROFILE // NICK RISE</div>
+
+      <button type="button" class="nr-about-close" onclick="closeAboutShowcase()" title="Закрыть" data-i18n-title="a11y.close" aria-label="Закрыть" data-i18n-aria-label="a11y.close">
+        <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+
+      <div class="nr-about-dots">
+        <button type="button" class="nr-about-dot" data-about-dot="0" aria-label="Кадр 1 из 3" data-i18n-aria-label="aboutModal.dot1"></button>
+        <button type="button" class="nr-about-dot" data-about-dot="1" aria-label="Кадр 2 из 3" data-i18n-aria-label="aboutModal.dot2"></button>
+        <button type="button" class="nr-about-dot" data-about-dot="2" aria-label="Кадр 3 из 3" data-i18n-aria-label="aboutModal.dot3"></button>
+      </div>
+
+      <!-- Подсказка «Листайте» — крупно, по центру внизу кадра. Стоит вне
+           слайдов и видна на первых двух: на финальном кадре внизу кнопки,
+           подсказка там не нужна (гасит CSS по data-about-active).
+           На первом кадре она выходит последней, после печати текста, и светится
+           вспышками, пока зритель не листнёт первый раз (animations.js →
+           aboutHintShow / aboutHintStopGlow). -->
+      <div class="nr-about-hint" aria-hidden="true">
+        <span data-i18n="aboutModal.hint">Листайте</span>
+        <svg class="nr-about-hint-arrow" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
       </div>
 
     </div>

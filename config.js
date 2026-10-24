@@ -4,8 +4,8 @@
  * FAQ_PROMO_RU/EN — общий промо-блок со скидкой, добавляется в конец ответов FAQ.
  */
 
-const FAQ_PROMO_RU = '<div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200/90 text-sm flex items-start sm:items-center gap-3"><svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V6a2 2 0 10-2 2h2zm0 13C10.832 21 2 20 2 15V8a2 2 0 012-2h16a2 2 0 012 2v7c0 5-8.832 6-10 6z"/></svg><span>Вижу вам интересно сотрудничество со мной! Напишите мне в Телеграм <strong class="text-amber-400 font-bold">"NRSDiscount"</strong> и получите скидку на первый заказ в размере <strong class="text-amber-400 font-bold">10%</strong></span></div>';
-const FAQ_PROMO_EN = '<div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200/90 text-sm flex items-start sm:items-center gap-3"><svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V6a2 2 0 10-2 2h2zm0 13C10.832 21 2 20 2 15V8a2 2 0 012-2h16a2 2 0 012 2v7c0 5-8.832 6-10 6z"/></svg><span>Interested in working together? Message me <strong class="text-amber-400 font-bold">"NRSDiscount"</strong> on Telegram and get <strong class="text-amber-400 font-bold">10% off</strong> your first order.</span></div>';
+const FAQ_PROMO_RU = '<div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200/90 text-sm flex items-start sm:items-center gap-3"><svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V6a2 2 0 10-2 2h2zm0 13C10.832 21 2 20 2 15V8a2 2 0 012-2h16a2 2 0 012 2v7c0 5-8.832 6-10 6z"/></svg><span>Вижу вам интересно сотрудничество со мной! Напишите мне в Телеграм <button type="button" class="faq-promo-code" data-copy-promo title="Скопировать промокод">«NRSDiscount»</button> и получите скидку на первый заказ в размере <strong class="text-amber-400 font-bold">10%</strong></span></div>';
+const FAQ_PROMO_EN = '<div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200/90 text-sm flex items-start sm:items-center gap-3"><svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V6a2 2 0 10-2 2h2zm0 13C10.832 21 2 20 2 15V8a2 2 0 012-2h16a2 2 0 012 2v7c0 5-8.832 6-10 6z"/></svg><span>Interested in working together? Message me <button type="button" class="faq-promo-code" data-copy-promo title="Copy promo code">«NRSDiscount»</button> on Telegram and get <strong class="text-amber-400 font-bold">10% off</strong> your first order.</span></div>';
 
 const CONFIG = {
   /* ── Отладочный обход HTTP-кэша аудио (в обычной работе ВЫКЛЮЧЕН) ────────
@@ -162,16 +162,46 @@ const CONFIG = {
       aboutModal: {
         tag: 'STUDIO ENGINEER PROFILE // NICK RISE',
         title: 'Александр (Nick Rise)',
-        subtitle: 'Звукорежиссер Сведения / Мастеринга',
+        subtitle: 'Звукорежиссер<br>Сведения / Мастеринга',
+        // Кадр 1 #aboutShowcase: те же две строки, но порознь — у каждой своё
+        // появление в таймлайне (animations.js → ABOUT1.subAt / sub2At), поэтому
+        // ключа два (index.html → span.nr-about-subtitle-line). Ключ subtitle
+        // выше остаётся для мобильной модалки #aboutModal: там фраза стоит одной
+        // строкой через <br>, и кадры её не используют.
+        subtitle1: 'Звукорежиссер',
+        subtitle2: 'Сведения / Мастеринга',
         experience: '6+ лет в индустрии',
         bioTitle: 'Обо мне',
         // Оранжевые акценты в биографии расставлены ПО ПОМЕТКАМ ЗАКАЗЧИКА
         // (в тексте он помечал нужные слова «звёздочками»). Цвет — тем же
         // классом nr-ab-hint-accent, что у подсказок плеера и логотипа
         // (style.css). Ничего сверх пометок не выделяем.
-        bioText1: 'Приветствую! Меня зовут Александр, я битмейкер, техник по звуку и <span class="nr-ab-hint-accent">звукорежиссёр</span> из Москвы. В моём портфолио — работа с <span class="nr-ab-hint-accent">аналоговыми</span> и <span class="nr-ab-hint-accent">цифровыми</span> микшерами на <span class="nr-ab-hint-accent">концертах</span> и <span class="nr-ab-hint-accent">студиях</span>. Отвечал за звук на прямой трансляции <span class="nr-ab-hint-accent">Первого канала</span> на ВДНХ, сотрудничал с PRO BATTLE League, Underground Amplitude и другими лейблами и сообществами.',
+        // Биография кадра 1 (#aboutShowcase) разбита на строки-элементы
+        // .nr-about-line: каждая строка — отдельный span, поэтому её можно
+        // править и сдвигать по отдельности (сдвиги — style.css, таблица
+        // «Сдвиги строк биографии кадра 1»). Переносов «само собой» там нет:
+        // строки не переносятся, длина строки задана этой разбивкой.
+        bioText1: '<span class="nr-about-line">Приветствую! Меня зовут Александр,</span> <span class="nr-about-line">я битмейкер, техник по звуку и <span class="nr-ab-hint-accent">звукорежиссёр</span></span> <span class="nr-about-line">из Москвы. В моём портфолио — работа с</span> <span class="nr-about-line"><span class="nr-ab-hint-accent">аналоговыми</span> и <span class="nr-ab-hint-accent">цифровыми</span> мик<span class="nr-ab-hyphen">-</span></span> <span class="nr-about-line">шерами на <span class="nr-ab-hint-accent">концертах</span> и <span class="nr-ab-hint-accent">студиях</span>.</span> <span class="nr-about-line nr-about-para">Работаю <span class="nr-ab-hint-accent">с артистами</span>, а не с</span> <span class="nr-about-line">потоком заявок: отвечаю <span class="nr-ab-hint-accent">в тот</span></span> <span class="nr-about-line"><span class="nr-ab-hint-accent">же день</span>, объясняю <span class="nr-ab-hint-accent">простым</span></span> <span class="nr-about-line">языком и <span class="nr-ab-hint-accent">не пропадаю</span></span> <span class="nr-about-line">на середине проекта.</span>',
+        // Мобильная модалка #aboutModal использует этот же ключ: текст один
+        // для компьютера и телефона (в модалке строки-спаны идут потоком).
         bioText2: 'Проходил обучение у таких звукорежиссёров, как <span class="nr-ab-hint-accent">Джон Олин, Константин Матафонов, Илья Лукашев, Павел Уоллен</span> и других.',
+        // Кадр 2 раздела #aboutShowcase на компьютере: заголовок колонки перед
+        // кнопками обучения. Полная фраза с именами (bioText2 выше) осталась
+        // мобильной модалке #aboutModal — там кнопок нет. Адреса кнопок — в
+        // index.html. <br> — перенос строки: печать по буквам (animations.js →
+        // aboutType()) понимает этот тег и рвёт на нём строку.
+        bioTraining: 'Проходил обучение<br>у лучших в индустрии:',
+        trainer1: 'MIX With The MASTERS',
+        trainer2: 'Waves Audio Courses',
+        trainer3: 'Илья Лукашев',
+        trainer4: 'Константин Матафонов',
         bioText3: 'С радостью готов поработать с тобой!',
+        // Строка под «С радостью готов поработать с тобой!» на финальном кадре
+        // #aboutShowcase. Промокод — кнопка (data-about-action="copy-discount"):
+        // по клику копируется value в буфер (script.js → initAboutShowcase)
+        // и всплывает тост toastDiscountCopied. Подпись title — своя у языка.
+        discount: 'Забери скидку в 10% <button type="button" class="nr-about-discount-code" data-about-action="copy-discount" title="Скопировать промокод">«NRSDiscount»</button>',
+        toastDiscountCopied: 'Промокод NRSDiscount скопирован!',
         stat1Num: '200+',
         stat1Text: 'Завершенных треков',
         stat2Num: '6+ лет',
@@ -181,7 +211,13 @@ const CONFIG = {
         btnFaqWhy: 'Почему стоит выбрать именно меня?',
         btnFaqWorkflow: 'Как происходит процесс работы?',
         btnDiscuss: 'Обсудить проект',
-        btnDemos: 'Примеры работ (A/B)'
+        btnDemos: 'Примеры работ (A/B)',
+        // Полноэкранный раздел на компьютере (#aboutShowcase): подсказка
+        // «листайте» на первом кадре и подписи точек-индикаторов справа.
+        hint: 'Листайте',
+        dot1: 'Кадр 1 из 3',
+        dot2: 'Кадр 2 из 3',
+        dot3: 'Кадр 3 из 3'
       },
 
       // Метаданные страницы: title и meta description подставляются по языку
@@ -331,14 +367,39 @@ const CONFIG = {
       aboutModal: {
         tag: 'STUDIO ENGINEER PROFILE // NICK RISE',
         title: 'Alexander (Nick Rise)',
-        subtitle: 'Mixing & Mastering Engineer',
+        subtitle: 'Mixing &<br>Mastering Engineer',
+        // Slide 1 of #aboutShowcase: the same two lines, printed one after the
+        // other (animations.js → ABOUT1.subAt / sub2At). The `subtitle` key above
+        // stays for the mobile #aboutModal, where the phrase is one <br> line.
+        subtitle1: 'Mixing &',
+        subtitle2: 'Mastering Engineer',
         experience: '6+ Years Industry Experience',
         bioTitle: 'About Me',
         // Orange highlights mirror the customer-marked words in the Russian text
         // (same nr-ab-hint-accent class as the player / logo hints, style.css).
-        bioText1: 'Hello! I\'m Alexander — a beatmaker, audio technician, and <span class="nr-ab-hint-accent">sound engineer</span> based in Moscow. My background spans working with both <span class="nr-ab-hint-accent">analog</span> and <span class="nr-ab-hint-accent">digital</span> consoles across <span class="nr-ab-hint-accent">live concert setups</span> and <span class="nr-ab-hint-accent">studio sessions</span>. I\'ve managed broadcast sound for <span class="nr-ab-hint-accent">live streams</span> and collaborated with labels and communities such as PRO BATTLE League, Underground Amplitude, and others.',
+        // Line-by-line split for English (11 .nr-about-line spans: first
+        // paragraph 1–6, second 7–11). Per-line offsets in style.css are shared
+        // by both languages, the paragraph gap there is set per language.
+        bioText1: '<span class="nr-about-line">Hello! I\'m Alexander — a beatmaker, audio</span> <span class="nr-about-line">technician, and <span class="nr-ab-hint-accent">sound engineer</span> based in</span> <span class="nr-about-line">Moscow. My background spans working</span> <span class="nr-about-line">with both <span class="nr-ab-hint-accent">analog</span> and <span class="nr-ab-hint-accent">digital</span></span> <span class="nr-about-line">consoles across <span class="nr-ab-hint-accent">live concerts</span></span> <span class="nr-about-line">and <span class="nr-ab-hint-accent">studio sessions</span>.</span> <span class="nr-about-line nr-about-para">I work <span class="nr-ab-hint-accent">with artists</span>, not a</span> <span class="nr-about-line">stream of orders: I reply the</span> <span class="nr-about-line"><span class="nr-ab-hint-accent">same day</span>, explain things in</span> <span class="nr-about-line"><span class="nr-ab-hint-accent">plain words</span> and <span class="nr-ab-hint-accent">never go silent</span></span> <span class="nr-about-line">mid-project.</span>',
+        // Mobile #aboutModal uses the same key: one text for desktop and phone
+        // (in the modal the line spans simply flow as a paragraph).
         bioText2: 'I\'ve trained under renowned audio engineers including <span class="nr-ab-hint-accent">John Olin, Konstantin Matafonov, Ilya Lukashev, Pavel Wallen</span>, and more.',
+        // Slide 2 of the desktop #aboutShowcase: heading above the training
+        // buttons. The full sentence with names (bioText2 above) stays in the
+        // mobile #aboutModal — it has no buttons. Button URLs live in index.html.
+        // <br> is a line break: the typewriter (animations.js → aboutType())
+        // understands the tag and starts a new line on it.
+        bioTraining: 'Trained with<br>the best in the industry:',
+        trainer1: 'MIX With The MASTERS',
+        trainer2: 'Waves Audio Courses',
+        trainer3: 'Ilya Lukashev',
+        trainer4: 'Konstantin Matafonov',
         bioText3: 'I would be happy to work with you!',
+        // Promo line under the lead on the last #aboutShowcase slide. The code is
+        // a button (data-about-action="copy-discount"): a click copies it and
+        // shows the toastDiscountCopied toast.
+        discount: 'Grab a 10% discount with <button type="button" class="nr-about-discount-code" data-about-action="copy-discount" title="Copy promo code">«NRSDiscount»</button>',
+        toastDiscountCopied: 'Promo code NRSDiscount copied!',
         stat1Num: '200+',
         stat1Text: 'Tracks Mixed & Mastered',
         stat2Num: '6+ Years',
@@ -348,7 +409,13 @@ const CONFIG = {
         btnFaqWhy: 'Why choose me?',
         btnFaqWorkflow: 'How does the process work?',
         btnDiscuss: 'Discuss Project',
-        btnDemos: 'Hear A/B Demos'
+        btnDemos: 'Hear A/B Demos',
+        // Full-screen about section on desktop (#aboutShowcase): scroll hint on
+        // the first slide and the dot indicator labels on the right.
+        hint: 'Scroll',
+        dot1: 'Slide 1 of 3',
+        dot2: 'Slide 2 of 3',
+        dot3: 'Slide 3 of 3'
       },
 
       // Page metadata: title and meta description are set per language

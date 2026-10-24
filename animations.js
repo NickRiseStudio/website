@@ -778,17 +778,29 @@
          Трансформа вешается на САМУ КАРТИНКУ, а не на контейнер: над бейджем
          «Обо мне» (он лежит в контейнере) любой transform родителя заставляет
          Chrome растеризовать надпись бейджа в отдельный слой без субпиксельного
-         сглаживания, и на наведении текст «мылится». Картинке это не вредит. */
+         сглаживания, и на наведении текст «мылится». Картинке это не вредит.
+
+         Класс nr-tilt-live переключает переход картинки на короткий шаг
+         (animations.css, у .hero-mask-container): без него общий переход
+         transform 0.65 с из style.css стартовал на каждом pointermove заново — и
+         пока указатель ехал, фото топталось в начале кривой, а наклон проявлялся
+         только после остановки мыши. Снимаем класс на pointerleave ДО сброса
+         transform: тогда возврат в покой идёт с прежними 0.65 с и остаётся
+         плавным. */
       var img = $('.hero-mask-img', box);
       if (img && window.matchMedia('(hover: hover) and (min-width: 1024px)').matches && !REDUCED) {
         box.addEventListener('pointermove', function (e) {
           var r = box.getBoundingClientRect();
           var px = (e.clientX - r.left) / r.width - 0.5;
           var py = (e.clientY - r.top) / r.height - 0.5;
+          box.classList.add('nr-tilt-live');
           img.style.transform = 'perspective(900px) rotateY(' + (px * 7).toFixed(2) + 'deg) rotateX(' +
             (-py * 7).toFixed(2) + 'deg) translate3d(' + (px * 10).toFixed(1) + 'px,' + (py * 10).toFixed(1) + 'px,0) scale(1.02)';
         });
-        box.addEventListener('pointerleave', function () { img.style.transform = ''; });
+        box.addEventListener('pointerleave', function () {
+          box.classList.remove('nr-tilt-live');
+          img.style.transform = '';
+        });
       }
     }
   }
@@ -1085,6 +1097,707 @@
     })(t0);
   }
 
+  /* ═══ 09.1 КАДРЫ 1–3 «ОБО МНЕ»: ВХОД ПО ТАЙМЛАЙНУ ═══════════════════
+     Только полноэкранный раздел на компьютере (#aboutShowcase). При переходе
+     на кадр текст собирается по шагам.
+
+     Кадр 1:
+       1) появляется плашка «6+ лет в индустрии»;
+       2) имя печатается по буквам (1 с);
+       3) под именем по очереди встают две строки подзаголовка —
+          «Звукорежиссер» и «Сведения / Мастеринга» (aboutModal.subtitle1/2);
+       4) биография слева печатается по буквам — абзацами: все строки абзаца
+          стартуют одновременно и идут слева направо, потом так же второй;
+       5) последней всплывает подсказка «Листайте» и светится — вспышка,
+          затухание, вспышка — пока зритель не листнёт первый раз
+          (animations.css, секция 20).
+
+     Кадр 2:
+       1) заголовок «Проходил обучение у» печатается по буквам (1 с);
+       2) кнопки обучения вставляются по одной;
+       3) после последней кнопки слева направо проходит разделяющая линия;
+       4) в тот же кадр, что и линия (она ещё идёт), по одной появляются три
+          цифры (countUp выше) с печатью подписи.
+
+     Кадр 3:
+       1) «С радостью готов поработать с тобой!» печатается по буквам (1 с);
+       2) строка со скидкой выезжает слева — сразу, как легла последняя буква;
+       3) вопросы выезжают слева по одному;
+       4) кнопки появляются снизу по одной — сразу за последним вопросом.
+
+     РИТМ ОДИН НА ОБА КАДРА: между любыми двумя шагами ровно ABOUT_GAP —
+     0.3 с от конца предыдущей анимации до старта следующей. Появление кнопок
+     и цифр длится столько же (ABOUT_SHOW_MS = 0.3 с, transition в
+     animations.css), поэтому шаги идут встык, без наложений: элемент встал на
+     место — через 0.3 с стартует следующий. Долгие «фазы» (печать 1 с и
+     прочерчивание линии 1 с) считаются целиком: следующая группа ждёт их
+     конца, а не старта. Исключения:
+     • линия кадра 2 идёт без паузы после последней кнопки (ABOUT2_RULE_GAP = 0):
+       провал в 0.3 с на неподвижной колонке был заметен, линия подхватывает
+       движение сразу, как кнопка села на место;
+     • цифры кадра 2 стартуют вровень с линией (ABOUT2_RULE_TO_STAT = 0), а не
+       после её конца: полоса ползёт секунду, и все три карточки успевают встать,
+       пока она идёт, — цифры и линия читаются одним движением;
+     • кадр 3 идёт без пауз между группами (ABOUT3_GAP = 0): скидка, вопросы и
+       кнопки подхватывают друг друга в тот же кадр. Три зазора по 0.3 с подряд
+       растягивали финал до 3.4 с, и колонка трижды замирала на пустом месте.
+       Шаг ВНУТРИ группы (ABOUT_GAP = длительность появления) остался прежним —
+       поэтому пары «вопрос-вопрос» и «кнопка-кнопка» по-прежнему идут встык.
+
+     Темп правится одной константой ABOUT_GAP — моменты старта ниже посчитаны
+     от неё, руками их менять не нужно. Исключение — правая колонка кадра 1: она
+     идёт своим, чуть более плотным ритмом ABOUT1_GAP, чтобы кадр не «зависал»
+     на пустом экране (плашка → имя → подзаголовок); строки подзаголовка идут
+     друг за другом через ABOUT1_SUB_GAP. Биография кадра 1 живёт по
+     своим правилам: это печать по буквам, скорость — ABOUT1_TYPE_SPEED, паузы
+     между абзацами нет (ABOUT1_PARA_GAP = 0 — второй абзац стартует в тот же
+     кадр, когда легла последняя буква первого, биография читается одним
+     потоком), длительность абзаца считается по его самой длинной строке (строки
+     абзаца печатаются одновременно), поэтому у русского и английского текста
+     она своя. Отдельный зазор ABOUT1_HINT_GAP оставлен только на выход
+     подсказки «Листайте» — ей нужно чуть-чуть воздуха после последней буквы.
+     Состояния — animations.css (секция 20), запуск — хук на aboutGoToSlide()
+     в разделе 18.
+     Полный таймлайн играется ОДИН раз за загрузку страницы (флаги
+     about1Played / about2Played / about3Played живут в памяти модуля): при
+     повторном входе кадр уже собран, а колонки просто всплывают лесенкой
+     nrAboutTextIn. Перезагрузка страницы сбрасывает флаги, и полный таймлайн
+     проигрывается снова. */
+
+  var ABOUT_GAP = 300;        /* пауза между всеми шагами, мс */
+  var ABOUT_SHOW_MS = 300;    /* длительность появления кнопки/цифры (CSS) */
+  var ABOUT_TYPE_MS = 1000;   /* печать заголовка кадра 2 и лида кадра 3 */
+  var ABOUT_RULE_MS = 1000;   /* прочерчивание линии кадра 2 (CSS) */
+
+  /* Задержки на открытии раздела нет: таймлайн кадра 1 стартует сразу по клику,
+     одновременно с проявлением рамки (0.7 с, style.css → .nr-about-overlay.active).
+     Раньше первые шаги ждали конца проявления, а содержимое всё это время держал
+     отдельный класс-придержка на оверлее: раздел открывался пустым и оживал с
+     задержкой. Теперь начальные состояния держат только armed-классы кадра
+     (плашка, строки подзаголовка, имя и буквы биографии невидимы до своего
+     шага), поэтому печать начинается под ещё проявляющейся рамкой — и ничего не
+     мелькает: показывать раньше времени нечего. */
+
+  /* Кадр 1: плашка → имя → подзаголовок (две строки порознь) → биография по
+     абзацам → подсказка «Листайте» со свечением.
+     Правая колонка идёт тем же ритмом, что кадры 2–3, но плотнее: свой
+     ABOUT1_GAP вместо общего ABOUT_GAP (0.3 с → 0.18 с). Биография слева
+     печатается по буквам, как заголовки кадров 2–3, только абзацами: все строки
+     абзаца стартуют одновременно и идут слева направо, абзацы — друг за другом.
+     Скорость — ABOUT1_TYPE_SPEED (мс на букву), длительность абзаца считается
+     по его самой длинной строке, поэтому у русского и английского текста она
+     своя. Паузы между абзацами нет: второй начинается ровно в тот момент, когда
+     легла последняя буква первого, — биография идёт одним потоком, без провала
+     посередине. Последним шагом выходит подсказка «Листайте» — через
+     ABOUT1_HINT_GAP после последней буквы, чтобы не вспыхнуть на самой букве. */
+  var ABOUT1_GAP = 180;        /* пауза между шагами правой колонки, мс */
+  var ABOUT1_SUB_GAP = 260;    /* пауза между строками подзаголовка, мс */
+  /* Печать биографии: мс на букву, считается по самой длинной строке абзаца.
+     Строки абзаца идут одновременно, поэтому время абзаца — это время одной
+     строки, а не сумма строк: при прежних 9 мс/букву весь абзац проявлялся бы
+     за 0,34 с и читался как рывок, а не как печать. 30 мс/букву возвращают
+     прежний ритм — самый длинный ряд набирается ≈1,1–1,4 с, но теперь все ряды
+     абзаца растут вместе. */
+  var ABOUT1_TYPE_SPEED = 30;  /* печать биографии: мс на букву */
+  /* Паузы между абзацами нет: пока первый абзац дописывает последнюю букву,
+     второй уже начинает набор. 240 мс зазора читались как «печать споткнулась» —
+     текст шёл рывками, хотя по смыслу это одно повествование. */
+  var ABOUT1_PARA_GAP = 0;     /* пауза между абзацами биографии, мс */
+  /* А вот подсказке «Листайте» воздух нужен: без него она вспыхивала бы в тот
+     же кадр, когда легла последняя буква биографии. Зазор отдельный, чтобы
+     убирание паузы между абзацами не тащило за собой и подсказку. */
+  var ABOUT1_HINT_GAP = 240;   /* последний абзац → подсказка «Листайте», мс */
+
+  var about1TitleAt = ABOUT_SHOW_MS + ABOUT1_GAP;                /* 480 */
+  var about1SubAt = about1TitleAt + ABOUT_TYPE_MS + ABOUT1_GAP;  /* 1660 */
+  var about1Sub2At = about1SubAt + ABOUT1_SUB_GAP;               /* 1920 */
+  /* Биография стартует, пока вторая строка подзаголовка ещё садится (0.3 с):
+     колонки разные — правая и левая, — и ждать её конца незачем. */
+  var about1BioAt = about1Sub2At + ABOUT1_GAP;                   /* 2100 */
+
+  var ABOUT1 = {
+    kickerAt: 0,                /* 0 — плашка «6+ лет в индустрии» */
+    titleAt: about1TitleAt,     /* 480 — печать имени */
+    typeMs: ABOUT_TYPE_MS,      /* 1000 */
+    subAt: about1SubAt,         /* 1660 — первая строка подзаголовка */
+    subStep: ABOUT1_SUB_GAP,    /* 1660 / 1920 — строки подзаголовка */
+    bioAt: about1BioAt,         /* 2100 — печать первого абзаца */
+    typeSpeed: ABOUT1_TYPE_SPEED,
+    paraGap: ABOUT1_PARA_GAP,   /* 0 — абзацы встык, без зазора */
+    hintGap: ABOUT1_HINT_GAP    /* 240 — воздух перед «Листайте» */
+  };
+
+  /* Кадр 2: печать → 4 кнопки → линия → 3 цифры.
+     Линия и цифры идут вровень: ABOUT2_RULE_TO_STAT = 0, первая цифра появляется
+     в тот же миг, когда полоса начинает прочерчиваться. Линия идёт 1 с, поэтому
+     все три цифры успевают встать, пока она ползёт по колонке (2500 / 2800 /
+     3100 против конца линии в 3500). Раньше первая цифра ждала 0.5 с — это
+     читалось как пауза между полосой и цифрами.
+     Паузы между последней кнопкой и линией нет (ABOUT2_RULE_GAP = 0): линия
+     начинает идти в тот же момент, когда последняя кнопка села на место. Общий
+     ABOUT_GAP здесь не годится — с ним после кнопок был виден провал в 0.3 с
+     на неподвижной колонке. */
+  var ABOUT2_RULE_TO_STAT = 0;                                        /* линия → цифры */
+  var ABOUT2_RULE_GAP = 0;                                            /* кнопки → линия */
+  var about2BtnAt = ABOUT_TYPE_MS + ABOUT_GAP;                        /* 1300 */
+  var about2BtnLastEnd = about2BtnAt + 3 * ABOUT_GAP + ABOUT_SHOW_MS; /* 2500 */
+  var about2RuleAt = about2BtnLastEnd + ABOUT2_RULE_GAP;              /* 2500 */
+  var about2StatAt = about2RuleAt + ABOUT2_RULE_TO_STAT;              /* 2500 */
+
+  var ABOUT2 = {
+    typeMs: ABOUT_TYPE_MS,
+    btnAt: about2BtnAt,        /* 1300 — первая кнопка */
+    btnStep: ABOUT_GAP,        /* 1300 / 1600 / 1900 / 2200 */
+    ruleAt: about2RuleAt,      /* 2500 — линия, как только встала последняя кнопка */
+    ruleMs: ABOUT_RULE_MS,     /* идёт до 3500 */
+    statAt: about2StatAt,      /* 2500 — первая цифра, вместе с полосой */
+    statStep: ABOUT_GAP,       /* 2500 / 2800 / 3100 */
+    statTypeMs: 700            /* печать подписи под цифрой */
+  };
+
+  /* Кадр 3: печать → скидка → 2 вопроса → 2 кнопки.
+     Пауз между группами нет (ABOUT3_GAP = 0): скидка подхватывается в тот кадр,
+     когда легла последняя буква лида, первый вопрос — когда встала скидка, кнопки —
+     когда встал последний вопрос. Раньше на каждом стыке стояло по 0.3 с (общий
+     ABOUT_GAP), и три зазора подряд растягивали финал до 3.4 с: колонка трижды
+     замирала на пустом месте. Внутри группы шаг остаётся ABOUT_GAP и равен
+     длительности появления (ABOUT_SHOW_MS), поэтому пары идут встык: элемент встал —
+     следующий уже трогается. */
+  var ABOUT3_GAP = 0;                                                 /* группа → группа */
+  var about3DiscountAt = ABOUT_TYPE_MS + ABOUT3_GAP;                  /* 1000 */
+  var about3DiscountEnd = about3DiscountAt + ABOUT_SHOW_MS;           /* 1300 */
+  var about3LinkAt = about3DiscountEnd + ABOUT3_GAP;                  /* 1300 */
+  var about3LinkLastEnd = about3LinkAt + ABOUT_GAP + ABOUT_SHOW_MS;   /* 1900 */
+  var about3BtnAt = about3LinkLastEnd + ABOUT3_GAP;                   /* 1900 */
+
+  var ABOUT3 = {
+    typeMs: ABOUT_TYPE_MS,
+    discountAt: about3DiscountAt,  /* 1000 — скидка, сразу за печатью */
+    linkAt: about3LinkAt,          /* 1300 — первый вопрос, сразу за скидкой */
+    linkStep: ABOUT_GAP,           /* 1300 / 1600 */
+    btnAt: about3BtnAt,            /* 1900 — кнопки, сразу за последним вопросом */
+    btnStep: ABOUT_GAP             /* 1900 / 2200 */
+  };
+
+  var aboutTimers = [];
+
+  /* Анимации кадров играются один раз за загрузку страницы: флаги живут в
+     памяти модуля, поэтому повторный вход на кадр (и листание туда-обратно)
+     уже ничего не запускает, а перезагрузка страницы сбрасывает их. */
+  var about1Played = false;
+  var about2Played = false;
+  var about3Played = false;
+
+  function aboutClearTimers() {
+    aboutTimers.forEach(function (t) { clearTimeout(t); });
+    aboutTimers = [];
+  }
+
+  function aboutLater(fn, ms) {
+    aboutTimers.push(setTimeout(fn, ms));
+  }
+
+  function about1Slide() {
+    return $('#aboutShowcase [data-about-slide="0"]');
+  }
+
+  function about2Slide() {
+    return $('#aboutShowcase [data-about-slide="1"]');
+  }
+
+  function about3Slide() {
+    return $('#aboutShowcase [data-about-slide="2"]');
+  }
+
+  /* ── Подсказка «Листайте» (вёрстка и цвета — style.css) ────────────────
+     Лежит вне кадров, поэтому по кадрам не переключается: CSS гасит её только
+     на финальном (data-about-active="2"). На первом кадре она — последний шаг
+     таймлайна: пока идёт печать, её нет вовсе (класс nr-hint-wait держит
+     opacity: 0), а в конце она всплывает и светится — вспышка, затухание,
+     вспышка (класс is-in, анимации в animations.css, секция 20).
+     Свечение живёт до первого листания: как только зритель ушёл с первого кадра,
+     пульсация снимается и больше не возвращается (aboutHintGlowDone) — подсказка
+     «Листайте» своё дело сделала, мигать на втором кадре ей незачем. */
+  var aboutHintGlowDone = false;
+
+  function aboutHint() {
+    return $('#aboutShowcase .nr-about-hint');
+  }
+
+  /* Ожидание: подсказки не видно, пульсация снята. Ставится при загрузке
+     страницы, вместе с первым кадром. */
+  function aboutHintWait() {
+    var hint = aboutHint();
+    if (!hint) return;
+    hint.classList.remove('is-in');
+    hint.classList.add('nr-hint-wait');
+  }
+
+  /* Показ: снять ожидание и включить пульсацию свечения (is-in). Повторный
+     вызов ничего не перезапускает — класс уже стоит, анимация продолжается с
+     той же фазы. Поэтому одна функция годится и для последнего шага таймлайна,
+     и для повторного входа на кадр. После первого листания свечение не
+     включается (aboutHintGlowDone): подсказка просто видна. */
+  function aboutHintShow() {
+    var hint = aboutHint();
+    if (!hint) return;
+    hint.classList.remove('nr-hint-wait');
+    if (!aboutHintGlowDone) hint.classList.add('is-in');
+  }
+
+  /* Первое листание: гасим пульсацию навсегда. Флаг нужен, потому что кадр 1
+     при возврате собирается заново (about1ShowFinal → aboutHintShow) — без него
+     свечение вспыхнуло бы снова. */
+  function aboutHintStopGlow() {
+    aboutHintGlowDone = true;
+    var hint = aboutHint();
+    if (hint) hint.classList.remove('is-in');
+  }
+
+  /* Печать по буквам (кадры 1–3): текст режется на слова (перенос — только по
+     словам), слова — на буквы. Каждая буква проявляется со своей задержкой,
+     поэтому весь текст набирается за duration. Исходная разметка берётся из
+     элемента, так что смена языка подхватывается сама.
+
+     Вложенная разметка сохраняется: буквы оборачиваются прямо внутри своих
+     узлов, поэтому акценты биографии кадра 1 (.nr-ab-hint-accent) и её дефис
+     (.nr-ab-hyphen) остаются на месте, а <br> не трогаем — он и есть перенос.
+
+     Печать разделена на два шага: aboutTypeArm() только разбивает текст на
+     буквы (они прозрачны, пока у узла нет nr-type-on), aboutTypeRun() задаёт
+     задержки и включает появление. Так биографию кадра 1 можно «зарядить»
+     заранее — при загрузке страницы, — и она не мелькнёт готовым текстом до
+     своего шага таймлайна. */
+  function aboutTypeArm(node) {
+    if (!node || REDUCED) return [];
+
+    /* Уже разряжен — второй раз не разбиваем. */
+    if (node.dataset.nrTypeHtml != null && $('.nr-about-type-char', node)) return [];
+
+    var html = node.innerHTML;
+    var text = html.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '');
+    if (!text || !text.trim()) return [];
+
+    node.dataset.nrTypeHtml = html;
+    node.classList.remove('nr-type-on');
+
+    var chars = [];
+
+    /* Обход с сохранением разметки: текстовые узлы режем на слова и буквы,
+       элементы (акценты, <br>) оставляем как есть и заходим внутрь них. */
+    (function walk(parent) {
+      Array.prototype.slice.call(parent.childNodes).forEach(function (kid) {
+        if (kid.nodeType === 3) {
+          var frag = document.createDocumentFragment();
+          kid.nodeValue.split(/(\s+)/).forEach(function (part) {
+            if (!part) return;
+            if (/^\s+$/.test(part)) {
+              frag.appendChild(document.createTextNode(part));
+              return;
+            }
+            var word = el('span', 'nr-about-type-word');
+            part.split('').forEach(function (chr) {
+              var c = el('span', 'nr-about-type-char');
+              c.textContent = chr;
+              word.appendChild(c);
+              chars.push(c);
+            });
+            frag.appendChild(word);
+          });
+          parent.replaceChild(frag, kid);
+          return;
+        }
+        if (kid.nodeType !== 1 || kid.tagName === 'BR') return;
+        walk(kid);
+      });
+    })(node);
+
+    return chars;
+  }
+
+  /* Запуск печати: буквы проявляются слева направо за duration. */
+  function aboutTypeRun(node, chars, duration) {
+    if (!node || !chars || !chars.length) return;
+    var step = duration / chars.length;
+    chars.forEach(function (c, i) {
+      c.style.transitionDelay = Math.round(i * step) + 'ms';
+    });
+    /* Стартовое состояние (opacity: 0) фиксируем принудительным пересчётом —
+       иначе браузер может впервые посчитать стиль уже вместе с nr-type-on,
+       переход не стартует и весь текст появляется сразу. */
+    void node.offsetWidth;
+    node.classList.add('nr-type-on');
+  }
+
+  function aboutType(node, duration) {
+    if (!node || REDUCED || !duration) return;
+    /* Прошлая печать: сначала вернуть исходную разметку, иначе в «текст»
+       попали бы спаны букв. */
+    aboutUntype(node);
+    aboutTypeRun(node, aboutTypeArm(node), duration);
+  }
+
+  /* Возврат напечатанного текста к обычному: спаны собираются обратно в
+     исходную разметку (при повторном входе на кадр и при
+     prefers-reduced-motion). Разметку берём из dataset — так возвращается и
+     <br> в заголовке кадра 2. Если букв в узле уже нет (язык успели сменить —
+     renderI18nText() переписал innerHTML), ничего не трогаем, только чистим
+     устаревший слепок и класс печати. */
+  function aboutUntype(node) {
+    if (!node) return;
+    if ($('.nr-about-type-char', node) && node.dataset.nrTypeHtml != null) {
+      node.innerHTML = node.dataset.nrTypeHtml;
+    }
+    delete node.dataset.nrTypeHtml;
+    node.classList.remove('nr-type-on');
+  }
+
+  /* ── Кадр 1 ────────────────────────────────────────────────────────────
+     Первый кадр открывает раздел, поэтому его таймлайн — это и есть вход:
+     плашка, имя, подзаголовок, биография. Повторный вход (после листания
+     вперёд-назад) кадр показывает уже собранным — как кадры 2 и 3.
+
+     Биография печатается по буквам, абзацами: все строки абзаца стартуют
+     одновременно и идут слева направо, затем так же следующий абзац. Абзацы —
+     это группы подряд идущих .nr-about-line; начало нового помечено классом
+     nr-about-para на первой строке (разметка — index.html и config.js →
+     bioText1, пометка есть у обоих языков). Пометок нет — весь текст считается
+     одним абзацем и печатается сплошняком, ничего не ломается. */
+  function about1Paragraphs(slide) {
+    var groups = [];
+    $$('.nr-about-line', slide).forEach(function (line) {
+      if (!groups.length || line.classList.contains('nr-about-para')) groups.push([]);
+      groups[groups.length - 1].push(line);
+    });
+    return groups;
+  }
+
+  /* Число букв в абзаце — по нему считается, сколько он печатается. Строки
+     абзаца печатаются ОДНОВРЕМЕННО (см. about1TypePara), поэтому абзац длится
+     столько, сколько его самая длинная строка: берём максимум, а не сумму. */
+  function about1ParaChars(lines) {
+    var n = 0;
+    lines.forEach(function (line) {
+      var len = $$('.nr-about-type-char', line).length;
+      if (len > n) n = len;
+    });
+    return n;
+  }
+
+  /* Печать абзаца: все его строки стартуют одновременно, каждая идёт слева
+     направо с одной и той же скоростью (мс на букву). Раньше строки
+     набирались одна за другой — со сдвигом по числу букв; теперь абзац
+     проявляется блоком, как будто печатают сразу по всем строкам. Короткие
+     строки заканчиваются раньше длинных: скорость у всех общая, а длину строки
+     задаёт разбивка текста (config.js → bioText1). */
+  function about1TypePara(lines, speed) {
+    lines.forEach(function (line) {
+      var chars = $$('.nr-about-type-char', line);
+      if (!chars.length) return;
+      aboutTypeRun(line, chars, chars.length * speed);
+    });
+  }
+
+  /* Заряжаем биографию: текст разбивается на буквы, но не печатается — буквы
+     прозрачны, пока у строки нет nr-type-on. Повторный вызов ничего не делает. */
+  function about1BioArm(slide) {
+    $$('.nr-about-line', slide).forEach(function (line) { aboutTypeArm(line); });
+  }
+
+  function about1BioUntype(slide) {
+    $$('.nr-about-line', slide).forEach(function (line) { aboutUntype(line); });
+  }
+
+  function about1ClearIn(slide) {
+    $$('.nr-about-kicker, .nr-about-title, .nr-about-subtitle-line', slide)
+      .forEach(function (n) { n.classList.remove('is-in'); });
+  }
+
+  function about1ShowFinal(slide) {
+    slide.classList.add('nr-one-reset');
+    slide.classList.remove('nr-one-armed');
+    aboutUntype($('.nr-about-title', slide));
+    about1BioUntype(slide);
+    about1ClearIn(slide);
+    /* Подсказка «Листайте» уже была в конце таймлайна — без вспышки. */
+    aboutHintShow();
+    void slide.offsetWidth;
+    slide.classList.remove('nr-one-reset');
+  }
+
+  function playAboutSlideOne() {
+    var slide = about1Slide();
+    if (!slide) return;
+
+    aboutClearTimers();
+
+    /* Второй и последующие входы: полный таймлайн не переигрываем — кадр
+       сразу собран, а колонки всплывают обычной лесенкой (nrAboutTextIn). */
+    if (about1Played) {
+      about1ShowFinal(slide);
+      return;
+    }
+    about1Played = true;
+
+    var kicker = $('.nr-about-kicker', slide);
+    var title = $('.nr-about-title', slide);
+    var subLines = $$('.nr-about-subtitle-line', slide);
+    var paras = about1Paragraphs(slide);
+
+    /* Биография разбита на буквы ещё при загрузке (initAboutSlideOne), но смена
+       языка переписывает разметку через renderI18nText() — тогда разбиваем
+       заново. Повторный вызов ничего не делает. */
+    about1BioArm(slide);
+
+    /* Возврат в исходное состояние: снимаем is-in и возвращаем напечатанный
+       текст, переходы на эти несколько строк гасим (nr-one-reset) — иначе блоки
+       гасли бы на глазах.
+       ВАЖНО: класс nr-one-armed здесь НЕ снимается. Он и так стоит с загрузки
+       страницы (initAboutSlideOne) и как раз держит блоки невидимыми. Если его
+       снять — на принудительном пересчёте ниже браузер посчитает блоки видимыми,
+       а возврат класса запустит обратный переход 1 → 0 уже с включёнными
+       переходами: текст мигнёт и быстро погаснет перед началом анимации. */
+    slide.classList.add('nr-one-reset');
+    aboutUntype(title);
+    about1ClearIn(slide);
+    void slide.offsetWidth;
+    slide.classList.remove('nr-one-reset');
+
+    /* При отключённых анимациях показываем всё сразу, без таймлайна. Биографию
+       возвращаем к обычному тексту: её могли разрядить при загрузке, а потом
+       настройку «меньше движения» включили — иначе буквы остались бы
+       прозрачными навсегда. Подсказку «Листайте» тоже отпускаем: ждать ей
+       нечего, ожидание ставится только для таймлайна. */
+    if (REDUCED) {
+      slide.classList.remove('nr-one-armed');
+      about1BioUntype(slide);
+      aboutHintShow();
+      return;
+    }
+
+    slide.classList.add('nr-one-armed');
+
+    aboutLater(function () {
+      if (kicker) kicker.classList.add('is-in');
+    }, ABOUT1.kickerAt);
+
+    aboutLater(function () {
+      aboutType(title, ABOUT1.typeMs);
+      if (title) title.classList.add('is-in');
+    }, ABOUT1.titleAt);
+
+    /* Подзаголовок: «Звукорежиссер» и «Сведения / Мастеринга» — отдельными
+       строками, каждая своим шагом (ABOUT1.subAt / subStep). */
+    subLines.forEach(function (line, i) {
+      aboutLater(function () { line.classList.add('is-in'); },
+                 ABOUT1.subAt + i * ABOUT1.subStep);
+    });
+
+    /* Биография: абзац за абзацем, но без зазора между ними — paraGap = 0.
+       Внутри абзаца строки печатаются одновременно, поэтому длительность
+       абзаца — буквы его самой длинной строки × скорость; у RU и EN она своя. */
+    var bioAt = ABOUT1.bioAt;
+    paras.forEach(function (para) {
+      var startAt = bioAt;
+      bioAt = startAt + about1ParaChars(para) * ABOUT1.typeSpeed + ABOUT1.paraGap;
+      aboutLater(function () { about1TypePara(para, ABOUT1.typeSpeed); }, startAt);
+    });
+
+    /* И последний шаг — подсказка «Листайте»: всплывает и начинает светиться
+       (вспышка → затухание → вспышка, без остановки), когда печать уже
+       закончилась. bioAt после цикла — конец последнего абзаца, а hintGap даёт
+       ей небольшую паузу, чтобы не вспыхнуть на последней букве. Время считается
+       по длине текста, поэтому у русского с английским оно разное. */
+    aboutLater(aboutHintShow, bioAt + ABOUT1.hintGap);
+  }
+
+  /* Начальные состояния (скрытые плашка, строки подзаголовка) ставим заранее, а
+     не в момент первого входа: иначе при первом показе кадра они мигнули бы
+     видимыми. Биографию здесь же разбиваем на буквы — пока у строк нет
+     nr-type-on, буквы прозрачны, поэтому готовый текст не мелькнёт ни при
+     загрузке, ни в момент открытия раздела: печать просто включается на своём
+     шаге таймлайна. Подсказку «Листайте» тоже придерживаем здесь: на первом
+     кадре она выходит последней, после биографии. */
+  function initAboutSlideOne() {
+    if (REDUCED) return;
+    aboutHintWait();
+    var slide = about1Slide();
+    if (!slide) return;
+    slide.classList.add('nr-one-armed');
+    about1BioArm(slide);
+  }
+
+  /* Цифру мог прервать уход с кадра — тогда в ней стоит промежуточное число.
+     Исходное значение берём из CONFIG по ключу data-i18n самого элемента. */
+  function about2RestoreNum(node) {
+    var key = node.getAttribute('data-i18n');
+    if (!key || typeof getI18nValue !== 'function') return;
+    var lang = (typeof currentLang === 'string') ? currentLang : 'ru';
+    var val = getI18nValue(lang, key);
+    if (typeof val === 'string' && val) node.textContent = val;
+  }
+
+  /* Финальное состояние кадра 2 при повторном входе: всё на месте, без
+     таймлайна. Переходы на этот момент гасим, чтобы ничего не мигало, а
+     всплытие даёт обычная лесенка nrAboutTextIn (она снова стартует вместе с
+     is-active). */
+  function about2ShowFinal(slide) {
+    /* Переходы на этот момент гасим: кадр должен быть уже собранным, а не
+       проявляться на глазах (таймлайн могли оборвать на середине). */
+    slide.classList.add('nr-two-reset');
+    slide.classList.remove('nr-two-armed');
+    slide.classList.add('nr-two-rule');
+    aboutUntype($('.nr-about-subhead', slide));
+    $$('.nr-about-stat-text', slide).forEach(aboutUntype);
+    $$('.nr-about-stat-num', slide).forEach(about2RestoreNum);
+    void slide.offsetWidth;
+    slide.classList.remove('nr-two-reset');
+  }
+
+  function playAboutSlideTwo() {
+    var slide = about2Slide();
+    if (!slide) return;
+
+    aboutClearTimers();
+
+    /* Второй и последующие входы: полный таймлайн не переигрываем — кадр
+       сразу собран, а колонка всплывает обычной лесенкой (nrAboutTextIn). */
+    if (about2Played) {
+      about2ShowFinal(slide);
+      return;
+    }
+    about2Played = true;
+
+    var trainers = $$('.nr-about-trainer', slide);
+    var stats = $$('.nr-about-stat', slide);
+    var title = $('.nr-about-subhead', slide);
+    var ruleOn = function () { slide.classList.add('nr-two-rule'); };
+
+    /* Возврат в исходное состояние — на случай повторного входа на кадр.
+       Переходы на эти несколько строк отключаем (nr-two-reset), иначе элементы
+       гасли бы на глазах, а линия уезжала бы назад. */
+    slide.classList.add('nr-two-reset');
+    slide.classList.remove('nr-two-rule');
+    aboutUntype(title);
+    trainers.concat(stats).forEach(function (n) { n.classList.remove('is-in'); });
+    stats.forEach(function (card) {
+      aboutUntype($('.nr-about-stat-text', card));
+      var num = $('.nr-about-stat-num', card);
+      if (num) { about2RestoreNum(num); num.dataset.nrDone = ''; }
+    });
+    void slide.offsetWidth;
+    slide.classList.remove('nr-two-reset');
+
+    /* При отключённых анимациях показываем всё сразу, без таймлайна. */
+    if (REDUCED) {
+      slide.classList.remove('nr-two-armed');
+      ruleOn();
+      return;
+    }
+
+    slide.classList.add('nr-two-armed');
+
+    aboutLater(function () { aboutType(title, ABOUT2.typeMs); }, 0);
+
+    trainers.forEach(function (btn, i) {
+      aboutLater(function () { btn.classList.add('is-in'); }, ABOUT2.btnAt + i * ABOUT2.btnStep);
+    });
+
+    aboutLater(ruleOn, ABOUT2.ruleAt);
+
+    stats.forEach(function (card, i) {
+      aboutLater(function () {
+        card.classList.add('is-in');
+        var num = $('.nr-about-stat-num', card);
+        if (num) {
+          num.dataset.nrDone = '';
+          countUp(num);
+        }
+        aboutType($('.nr-about-stat-text', card), ABOUT2.statTypeMs);
+      }, ABOUT2.statAt + i * ABOUT2.statStep);
+    });
+  }
+
+  /* Начальные состояния (скрытые кнопки и цифры) ставим заранее, а не в момент
+     первого входа: иначе при первом показе кадра они мигнули бы видимыми. */
+  function initAboutSlideTwo() {
+    var slide = about2Slide();
+    if (!slide || REDUCED) return;
+    slide.classList.add('nr-two-armed');
+  }
+
+  /* ── Кадр 3 ────────────────────────────────────────────────────────────
+     Повторный вход: снимаем «заряженные» классы (всё сразу на месте),
+     собираем напечатанный лид обратно в текст и убираем is-in. Переходы на
+     этот момент гасим — иначе блоки гасли бы на глазах. Дальше колонка
+     всплывает обычной лесенкой: общий вход nrAboutTextIn снова действует,
+     потому что класс nr-three-armed снят (animations.css, секция 20). */
+  function about3ShowFinal(slide) {
+    slide.classList.add('nr-three-reset');
+    slide.classList.remove('nr-three-armed');
+    aboutUntype($('.nr-about-lead', slide));
+    $$('.nr-about-discount, .nr-about-link, .nr-about-btn', slide)
+      .forEach(function (n) { n.classList.remove('is-in'); });
+    void slide.offsetWidth;
+    slide.classList.remove('nr-three-reset');
+  }
+
+  function playAboutSlideThree() {
+    var slide = about3Slide();
+    if (!slide) return;
+
+    aboutClearTimers();
+
+    /* Второй и последующие входы: полный таймлайн не переигрываем — кадр
+       сразу собран, а колонка всплывает обычной лесенкой (nrAboutTextIn). */
+    if (about3Played) {
+      about3ShowFinal(slide);
+      return;
+    }
+    about3Played = true;
+
+    var lead = $('.nr-about-lead', slide);
+    var discount = $('.nr-about-discount', slide);
+    var links = $$('.nr-about-link', slide);
+    var btns = $$('.nr-about-btn', slide);
+
+    /* Возврат в исходное состояние (переходы гасим на эти несколько строк). */
+    slide.classList.add('nr-three-reset');
+    aboutUntype(lead);
+    links.concat(btns).forEach(function (n) { n.classList.remove('is-in'); });
+    if (discount) discount.classList.remove('is-in');
+    void slide.offsetWidth;
+    slide.classList.remove('nr-three-reset');
+
+    /* При отключённых анимациях показываем всё сразу, без таймлайна. */
+    if (REDUCED) {
+      slide.classList.remove('nr-three-armed');
+      return;
+    }
+
+    slide.classList.add('nr-three-armed');
+
+    aboutLater(function () { aboutType(lead, ABOUT3.typeMs); }, 0);
+
+    if (discount) {
+      aboutLater(function () { discount.classList.add('is-in'); }, ABOUT3.discountAt);
+    }
+
+    links.forEach(function (btn, i) {
+      aboutLater(function () { btn.classList.add('is-in'); }, ABOUT3.linkAt + i * ABOUT3.linkStep);
+    });
+
+    btns.forEach(function (btn, i) {
+      aboutLater(function () { btn.classList.add('is-in'); }, ABOUT3.btnAt + i * ABOUT3.btnStep);
+    });
+  }
+
+  function initAboutSlideThree() {
+    var slide = about3Slide();
+    if (!slide || REDUCED) return;
+    slide.classList.add('nr-three-armed');
+  }
+
   /* ═══ 10. УСЛУГИ: индикаторы, наклон, списки, цены ══════════════════ */
 
   function decorateServices() {
@@ -1209,7 +1922,9 @@
   }
 
   function countModalStats() {
-    $$('#aboutModal [data-i18n$="Num"]').forEach(function (n) {
+    // Статистика живёт и в модалке (телефон), и в полноэкранном разделе на
+    // компьютере — цифры считаются в обоих.
+    $$('#aboutModal [data-i18n$="Num"], #aboutShowcase [data-i18n$="Num"]').forEach(function (n) {
       n.dataset.nrDone = '';
       countUp(n);
     });
@@ -1563,6 +2278,22 @@
   hook('seekDeckTrack', seekPulse);
   hook('showToast', restartToastMeter);
   hook('openAboutModal', function () { setTimeout(countModalStats, 220); });
+  /* Кадры 1–3 «Обо мне»: вход по таймлайну при первом переходе на кадр,
+     уход с кадра (и закрытие раздела) обрывает ещё не сработавшие шаги.
+     Таймлайн стартует сразу — и при открытии раздела тоже, не дожидаясь, пока
+     рамка проявится: начальные состояния держат armed-классы кадров, поэтому
+     показывать раньше времени нечего, а ждать 0.7 с проявления раздела незачем.
+     Листание заодно гасит пульсацию «Листайте»: свечение живёт до первого ухода
+     с первого кадра. */
+  hook('aboutGoToSlide', function (index) {
+    if (index === 0) playAboutSlideOne();
+    else if (index === 1) playAboutSlideTwo();
+    else if (index === 2) playAboutSlideThree();
+    else aboutClearTimers();
+    if (index !== 0) aboutHintStopGlow();
+  });
+  /* При закрытии раздела обрываем ещё не сработавшие шаги таймлайна. */
+  hook('closeAboutShowcase', aboutClearTimers);
   hook('setLanguage', function (lang, savePref, animate) {
     // Keep hero title stable on language toggle - run decoration after language render
     var delay = animate ? 330 : 0;
@@ -1783,6 +2514,9 @@
     safe(initReveal);
     safe(initViewportGate);
     safe(animateHeroTitle);
+    safe(initAboutSlideOne);
+    safe(initAboutSlideTwo);
+    safe(initAboutSlideThree);
 
     /* зелёная вспышка на кнопках «копировать» */
     document.addEventListener('click', function (e) {

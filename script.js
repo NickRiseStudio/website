@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initFaq();
   initReviews();
   initModalAndToast();
+  initAboutShowcase();
   initMobileMenuScrollLock();
   initGsapAnimations();
   initMixerFaderScroll();
@@ -5337,6 +5338,21 @@ function updateServicesDots(withTransition = false) {
 // --- FAQ SECTION ---
 function initFaq() {
   renderFaq();
+
+  // Промокод в промо-блоке ответа (config.js → FAQ_PROMO_RU / FAQ_PROMO_EN)
+  // копируется по клику. Обработчик висит на контейнере, а не на самой кнопке:
+  // карточки FAQ перерисовываются при смене языка (renderFaq → innerHTML),
+  // контейнер же остаётся тем же, и подписка не теряется.
+  const container = document.getElementById('faqContainer');
+  if (container) {
+    container.addEventListener('click', function (e) {
+      const codeEl = e.target.closest ? e.target.closest('[data-copy-promo]') : null;
+      if (!codeEl) return;
+      e.preventDefault();
+      e.stopPropagation();
+      copyPromoCode(codeEl);
+    });
+  }
 }
 
 // FAQ-ответы в config.js заканчиваются промо-блоком со скидкой (FAQ_PROMO_RU / FAQ_PROMO_EN).
@@ -6386,7 +6402,8 @@ function unlockPageScroll() {
   const contactActive = document.getElementById('contactModal')?.classList.contains('active');
   const aboutActive = document.getElementById('aboutModal')?.classList.contains('active');
   const calcActive = document.getElementById('priceCalcModal')?.classList.contains('active');
-  if (contactActive || aboutActive || calcActive) return;
+  const showcaseActive = document.getElementById('aboutShowcase')?.classList.contains('active');
+  if (contactActive || aboutActive || calcActive || showcaseActive) return;
 
   if (!isPageScrollLocked) return;
   isPageScrollLocked = false;
@@ -6466,8 +6483,195 @@ function closeContactModal() {
   }
 }
 
+// --- «ОБО МНЕ»: ПОЛНОЭКРАННЫЙ РАЗДЕЛ НА КОМПЬЮТЕРЕ (от 1024px) ---
+// Телефону и планшету остаётся модалка #aboutModal; с 1024px тот же контент
+// открывается как раздел #aboutShowcase: три кадра about-1..3.webp, по одному
+// за жест. Обычного скролла здесь нет намеренно — иначе кадры пролетали бы
+// пачкой; один жест = один кадр, поэтому у колеса есть накопление дельты и
+// замок ABOUT_STEP_LOCK мс. Ввод: колесо, стрелки / PageUp / PageDown / пробел,
+// свайп, клик по точке. Страница под разделом стоит на паузе (lockPageScroll).
+const ABOUT_SHOWCASE_MQ = '(min-width: 1024px)';
+const ABOUT_STEP_LOCK = 700;   // мс: столько кадр держит следующий жест
+const ABOUT_WHEEL_STEP = 30;   // px: минимальная дельта, считающаяся жестом
+// Промокод со скидкой: одно значение на всё — строка на финальном кадре
+// «Обо мне» (aboutModal.discount) и промо-блок ответов FAQ (FAQ_PROMO_RU/EN).
+// Именно оно уходит в буфер обмена по клику; в текстах код показан как
+// «NRSDiscount» — при смене кода менять в трёх местах: здесь и в текстах.
+const PROMO_CODE = 'NRSDiscount';
+let aboutSlideIndex = 0;
+let aboutSlideLockedUntil = 0;
+let aboutWheelAccum = 0;
+let aboutTouchStartY = null;
+let aboutPhotosWarmed = false;
+
+function isAboutShowcaseViewport() {
+  return typeof window.matchMedia === 'function' &&
+    window.matchMedia(ABOUT_SHOWCASE_MQ).matches;
+}
+
+function aboutSlides() {
+  return document.querySelectorAll('#aboutShowcase .nr-about-slide');
+}
+
+// Кадры грузятся лениво: прогреваем их при наведении на то, что открывает
+// «Обо мне», и при открытии — первый кадр не мигает пустотой.
+function warmAboutPhotos() {
+  if (aboutPhotosWarmed) return;
+  aboutPhotosWarmed = true;
+  ['1', '2', '3'].forEach(function (n) {
+    const img = new Image();
+    img.src = './image/about-' + n + '.webp';
+  });
+}
+
+function aboutGoToSlide(index) {
+  const slides = aboutSlides();
+  if (!slides.length) return;
+  const next = Math.max(0, Math.min(slides.length - 1, index));
+  aboutSlideIndex = next;
+
+  slides.forEach(function (slide, i) {
+    slide.classList.toggle('is-active', i === next);
+  });
+
+  document.querySelectorAll('#aboutShowcase .nr-about-dot').forEach(function (dot, i) {
+    dot.classList.toggle('is-active', i === next);
+    if (i === next) dot.setAttribute('aria-current', 'true');
+    else dot.removeAttribute('aria-current');
+  });
+
+  // Текущий кадр нужен и вёрстке: по нему CSS гасит подсказку «Листайте» на
+  // финальном кадре (style.css → .nr-about-overlay[data-about-active="2"]).
+  const box = document.getElementById('aboutShowcase');
+  if (box) box.setAttribute('data-about-active', String(next));
+}
+
+// Один шаг листания; с краёв дальше первого/последнего кадра не уходим.
+function aboutStep(delta) {
+  const now = Date.now();
+  if (now < aboutSlideLockedUntil) return;
+  const next = aboutSlideIndex + delta;
+  if (next < 0 || next > aboutSlides().length - 1) return;
+  aboutSlideLockedUntil = now + ABOUT_STEP_LOCK;
+  aboutGoToSlide(next);
+}
+
+function openAboutShowcase() {
+  const box = document.getElementById('aboutShowcase');
+  if (!box) return;
+  warmAboutPhotos();
+  aboutGoToSlide(0);                                    // всегда с первого кадра
+  aboutSlideLockedUntil = Date.now() + 350;              // гасим «хвост» клика
+  aboutWheelAccum = 0;
+  box.classList.add('active');
+  box.setAttribute('aria-hidden', 'false');
+  lockPageScroll();
+}
+
+function closeAboutShowcase() {
+  const box = document.getElementById('aboutShowcase');
+  if (!box || !box.classList.contains('active')) return;
+  box.classList.remove('active');
+  box.setAttribute('aria-hidden', 'true');
+  unlockPageScroll();
+}
+
+function initAboutShowcase() {
+  const box = document.getElementById('aboutShowcase');
+  if (!box) return;
+
+  // Колесо: страницу под разделом не двигаем вообще, кадры листаем по одному.
+  box.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    if (Date.now() < aboutSlideLockedUntil) { aboutWheelAccum = 0; return; }
+    aboutWheelAccum += e.deltaY;
+    if (Math.abs(aboutWheelAccum) < ABOUT_WHEEL_STEP) return;
+    const delta = aboutWheelAccum > 0 ? 1 : -1;
+    aboutWheelAccum = 0;
+    aboutStep(delta);
+  }, { passive: false });
+
+  // Тачскрин/тачпад: короткий свайп = один кадр.
+  box.addEventListener('touchstart', function (e) {
+    aboutTouchStartY = e.touches[0] ? e.touches[0].clientY : null;
+  }, { passive: true });
+
+  box.addEventListener('touchmove', function (e) {
+    e.preventDefault();
+  }, { passive: false });
+
+  box.addEventListener('touchend', function (e) {
+    if (aboutTouchStartY === null) return;
+    const endY = e.changedTouches[0] ? e.changedTouches[0].clientY : aboutTouchStartY;
+    const dy = aboutTouchStartY - endY;
+    aboutTouchStartY = null;
+    if (Math.abs(dy) < 40) return;
+    aboutStep(dy > 0 ? 1 : -1);
+  });
+
+  // Клавиатура — только пока раздел открыт.
+  document.addEventListener('keydown', function (e) {
+    if (!box.classList.contains('active')) return;
+    if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
+      e.preventDefault();
+      aboutStep(1);
+    } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+      e.preventDefault();
+      aboutStep(-1);
+    }
+  });
+
+  // Точки, кнопки кадра 3 и закрытие по клику на затемнение за рамкой (сам
+  // кадр не закрывает). Кнопки слайда 3 разбираем здесь по data-about-action,
+  // а не в onclick: клик по кнопке не должен «протечь» в обработчик оверлея.
+  box.addEventListener('click', function (e) {
+    const actionEl = e.target.closest ? e.target.closest('[data-about-action]') : null;
+    if (actionEl) {
+      e.preventDefault();
+      e.stopPropagation();
+      const action = actionEl.getAttribute('data-about-action') || '';
+      if (action === 'contact') {
+        closeAboutShowcase();
+        openContactModal();
+      } else if (action === 'demos') {
+        closeAboutShowcase();
+        scrollPageToElement('player');
+      } else if (action.indexOf('faq-') === 0) {
+        goToFaqItem(parseInt(action.slice(4), 10) || 0);
+      } else if (action === 'copy-discount') {
+        // Промокод со скидкой: копируем значение и коротко подсвечиваем кнопку.
+        copyPromoCode(actionEl);
+      }
+      return;
+    }
+
+    const dot = e.target.closest ? e.target.closest('.nr-about-dot') : null;
+    if (dot) {
+      aboutGoToSlide(parseInt(dot.getAttribute('data-about-dot'), 10) || 0);
+      return;
+    }
+    if (e.target === box) closeAboutShowcase();
+  });
+
+  // Прогрев фото при наведении на логотип и фото в hero — только на компьютере.
+  if (isAboutShowcaseViewport()) {
+    document.querySelectorAll('[onclick="openAboutModal()"]').forEach(function (el) {
+      el.addEventListener('pointerenter', warmAboutPhotos);
+    });
+  }
+
+  // Окно сузили ниже 1024px — там своя модалка, раздел закрываем.
+  window.addEventListener('resize', function () {
+    if (box.classList.contains('active') && !isAboutShowcaseViewport()) closeAboutShowcase();
+  });
+}
+
 function openAboutModal() {
   closeMobileMenu();
+  if (isAboutShowcaseViewport()) {
+    openAboutShowcase();
+    return;
+  }
   const modal = document.getElementById('aboutModal');
   if (modal) {
     modal.classList.add('active');
@@ -6476,6 +6680,7 @@ function openAboutModal() {
 }
 
 function closeAboutModal() {
+  closeAboutShowcase();
   const modal = document.getElementById('aboutModal');
   if (modal && modal.classList.contains('active')) {
     modal.classList.remove('active');
@@ -7823,6 +8028,29 @@ function initScrollToTop() {
   updateScrollToTopVisibility();
 }
 
+/* Переход к блоку страницы из раздела «Обо мне» (и вообще из модалок).
+   Раздел к этому моменту уже закрыт, замок прокрутки снят, но Lenis узнаёт об
+   этом из MutationObserver — то есть уже ПОСЛЕ текущего вызова, а его start()
+   внутри делает reset() и гасит только что запущенную анимацию: раздел
+   закрывался, а перехода не было. Поэтому движок будим и пересчитываем сами,
+   синхронно и до старта прокрутки. */
+function syncScrollEngine() {
+  if (window.nrSmoothScroll && typeof window.nrSmoothScroll.resync === 'function') {
+    window.nrSmoothScroll.resync();
+  }
+}
+
+function scrollPageToElement(id, customDuration) {
+  syncScrollEngine();
+  const el = document.getElementById(id);
+  if (!el) return;
+  const header = document.querySelector('header');
+  const headerH = header ? header.offsetHeight : 72;
+  const rect = el.getBoundingClientRect();
+  const currentY = window.pageYOffset || document.documentElement.scrollTop || 0;
+  smoothScrollTo(Math.max(0, currentY + rect.top - headerH - 18), customDuration || 1.2);
+}
+
 function goToFaqItem(faqIndex) {
   closeAboutModal();
   setActiveNavSection('faq');
@@ -7832,15 +8060,9 @@ function goToFaqItem(faqIndex) {
     updateActiveNavSection();
   }, 1300);
 
-  const faqSection = document.getElementById('faq');
-  if (faqSection) {
-    const header = document.querySelector('header');
-    const headerH = header ? header.offsetHeight : 72;
-    const rect = faqSection.getBoundingClientRect();
-    const currentY = window.pageYOffset || document.documentElement.scrollTop || 0;
-    const targetY = Math.max(0, currentY + rect.top - headerH - 18);
-    smoothScrollTo(targetY, 1.2);
-  }
+  // Скролл — после пробуждения движка прокрутки (см. syncScrollEngine выше).
+  scrollPageToElement('faq', 1.2);
+
   const itemKey = `faq-${faqIndex}`;
   setTimeout(() => {
     openFaqItem(itemKey);
@@ -7873,9 +8095,11 @@ function getLocalizedCopyToast(text, fallbackMsg) {
   return (typeof resolved === 'string' && resolved) ? resolved : fallbackMsg;
 }
 
-function copyText(text, toastMsg) {
-  const resolvedToastMsg = getLocalizedCopyToast(text, toastMsg);
-  const onSuccess = () => showToast(resolvedToastMsg);
+// Копирование в буфер обмена: основной путь — navigator.clipboard, запасной —
+// скрытая textarea (старый браузер или небезопасный контекст). Вызывающему
+// отдаётся только сигнал «готово»: показать тост или подсветить кнопку решает он.
+function writeToClipboard(text, onSuccess) {
+  const done = typeof onSuccess === 'function' ? onSuccess : function () {};
 
   const fallbackCopy = () => {
     try {
@@ -7898,17 +8122,37 @@ function copyText(text, toastMsg) {
       textArea.setSelectionRange(0, 99999);
       document.execCommand('copy');
       document.body.removeChild(textArea);
-      onSuccess();
+      done();
     } catch (err) {
-      onSuccess();
+      done();
     }
   };
 
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).then(onSuccess).catch(fallbackCopy);
+    navigator.clipboard.writeText(text).then(done).catch(fallbackCopy);
   } else {
     fallbackCopy();
   }
+}
+
+function copyText(text, toastMsg) {
+  const resolvedToastMsg = getLocalizedCopyToast(text, toastMsg);
+  writeToClipboard(text, () => showToast(resolvedToastMsg));
+}
+
+// Промокод со скидкой копируется одинаково из двух мест: строка на финальном
+// кадре «Обо мне» и промо-блок в ответах FAQ. Одно значение (PROMO_CODE), один
+// тост (aboutModal.toastDiscountCopied) и одна короткая подсветка кнопки.
+function copyPromoCode(el) {
+  const t = (typeof CONFIG !== 'undefined' && CONFIG && CONFIG.i18n) ? CONFIG.i18n[currentLang] : null;
+  const msg = (t && t.aboutModal && t.aboutModal.toastDiscountCopied) || 'Промокод скопирован!';
+
+  writeToClipboard(PROMO_CODE, function () {
+    showToast(msg);
+    if (!el || !el.classList) return;
+    el.classList.add('is-copied');
+    setTimeout(function () { el.classList.remove('is-copied'); }, 1500);
+  });
 }
 
 // --- GSAP ANIMATIONS: STRICT POSITION-BOUND CASCADE WITH DYNAMIC PLAYER BAR OFFSET ---
