@@ -1,6 +1,7 @@
 /* Шрифты НЕ подключаются отсюда через @import. Весь нужный набор уже лежит
-   локально и подключён отдельным файлом ./fonts.css (см. <head> index.html,
-   он идёт перед этим файлом). @import на fonts.googleapis.com убран осознанно:
+   локально и подключён одним файлом ./fonts.css (см. <head> index.html, он идёт
+   перед этим файлом): латинские сабсеты Plus Jakarta Sans и Space Grotesk плюс
+   кириллица Manrope. @import на fonts.googleapis.com убран осознанно:
 
      1) он был БЛОКИРУЮЩИМ: браузер, разбирая этот файл, обязан был сперва
         сходить на fonts.googleapis.com, получить CSS, затем за
@@ -8,17 +9,22 @@
         построение стилей. На живом домене это давало поздний приход метрик
         текста и пересчёт раскладки прямо во время прокрутки (те самые
         подёргивания, которых нет на localhost с прогретым кэшем);
-     2) он был БЕСПОЛЕЗНЫМ для русского текста: и Plus Jakarta Sans, и
-        Space Grotesk — латинские гарнитуры (GF Latin Pro/Plus + Vietnamese),
-        кириллицы в них нет ни на Google, ни в self-host файлах. Русские
-        буквы всегда рисовал и рисует системный шрифт (Roboto/Segoe UI) —
-        это следующий шрифт в стеке (см. font-family ниже);
-     3) внешний вид не меняется: латиница, цифры и логотип берутся из тех же
-        самых гарнитур, только из локальных woff2 (fonts.css), а не от Google. */
+     2) он был бесполезен для русского текста: и Plus Jakarta Sans, и Space
+        Grotesk — латинские гарнитуры (GF Latin Pro/Plus + Vietnamese),
+        кириллицы в них нет ни на Google, ни в self-host файлах. Русские буквы
+        берёт Manrope (fonts.css) — одинаково на всех устройствах, а не
+        системный шрифт, который на Windows, Android и iOS разный (из-за этого
+        вёрстка на телефоне отличалась от эмуляции на ПК);
+     3) внешний вид латиницы не меняется: буквы, цифры и логотип берутся из тех
+        же самых гарнитур, только из локальных woff2, а не от Google. */
 
 html {
   scroll-behavior: auto !important;
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  /* Порядок важен: сначала латинские гарнитуры (Plus Jakarta Sans), затем
+     кириллица (Manrope). Manrope объявлен с unicode-range, поэтому латиницу он
+     не перехватывает — она всегда остаётся в Plus Jakarta Sans. -apple-system и
+     дальше — фолбэк на случай, если woff2 не загрузился. */
+  font-family: 'Plus Jakarta Sans', 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: #0B0D12;
   color: #F3F4F6;
   overflow-x: hidden;
@@ -30,6 +36,19 @@ html {
   text-size-adjust: 100%;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* КИРИЛЛИЦА В «МОНО»-УТИЛИТАХ TAILWIND.
+   Утилита font-mono берёт стек из переменной --font-mono (tailwind.css,
+   слой theme). В этом стеке только системные моноширинные шрифты — у каждой
+   платформы свои, поэтому русские ярлыки в них («6+ лет», подписи калькулятора)
+   на телефоне выглядели иначе, чем на ПК. Ставим Manrope ПЕРВЫМ: латиницы и
+   цифр в его кириллическом сабсете нет вообще, поэтому «200+», «0.0dB» и прочие
+   латинские моно-надписи по-прежнему рисует системный моноширинный шрифт, а
+   кириллицу получает только Manrope — одинаково на всех устройствах.
+   Правило вне @layer, поэтому перекрывает значение из tailwind.css. */
+:root {
+  --font-mono: 'Manrope', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
 }
 
 /* ПОТОЛОК ЯРКОСТИ ТЕКСТА — #F3F4F6.
@@ -1010,10 +1029,13 @@ html, body {
      и на широких системных шрифтах (OEM-шрифты Android) строка выходила
      за колонку и обрезалась: html и #hero гасят переполнение по X
      (overflow-x: hidden / clip), поэтому правый край просто срезался.
-     Кириллицу рисует системный шрифт телефона (у Plus Jakarta Sans её
-     нет, см. fonts.css), поэтому запас считается по самому широкому:
+     Кириллицу теперь рисует Manrope (fonts.css) — один и тот же на
+     всех устройствах, поэтому прежнего разброса между Segoe UI, Roboto и
+     SF Pro больше нет. Запас 0.88 при этом ОСТАВЛЕН намеренно: потолок под
+     метрики Manrope не пересчитывался, а цена ошибки несимметрична — лишние
+     12% кегля заметны куда меньше, чем срезанный край заголовка.
      0.88 ≈ 10.5 / 11.9. При 375px это 28.7px (колонка 343px, строка
-     ~337px) — влезает при любом системном шрифте и остаётся в одну строку.
+     ~337px) — влезает с запасом и остаётся в одну строку.
      Цена: заголовок на телефоне ~12% мельче прежнего (было 32.7px).
      RN: тот же множитель применяется и к EN — там строка короче, но
      единая формула важнее. Прежний множитель var(--nr-hero-scale-cap)
@@ -2653,6 +2675,98 @@ html.nr-ab-hint body {
   font-weight: 700;
 }
 
+/* ДВЕ «ГЛАВНЫЕ» СТРОКИ БИОГРАФИИ В ОКНЕ «ОБО МНЕ» — ВСЕГДА В ОДНУ СТРОКУ.
+   Это вступление к списку наставников (config.js → aboutModal.bioText2,
+   «Проходил обучение у лучших в индустрии:») и финальная фраза
+   (aboutModal.bioText3, «С радостью готов поработать с тобой!»).
+
+   Задача у обеих одна: на телефоне любой ширины стоять ОДНОЙ строкой и при
+   этом быть как можно крупнее. Переносить их нельзя — короткий «хвост» на
+   второй строке выглядел обрывком, а <br> в тексте для этого не годится:
+   ширина экрана у всех разная.
+
+   КЕГЛЬ СЧИТАЕТСЯ ОТ ШИРИНЫ АБЗАЦА (cqi), а не от ширины окна: от окна до
+   текста надо вычитать поля, а они разные (оверлей p-3 = 12px, окно p-5 = 20px,
+   от 640px уже p-4 и 25px) плюс полоса прокрутки окна. Поэтому контейнером
+   объявлены сами абзацы (.nr-about-bio2 и .nr-about-bio3): их внутренняя ширина
+   — ровно то место, куда строка должна влезть, и 100cqi равно ей.
+   white-space: nowrap держит одну строку даже без скрипта.
+
+   ОТКУДА ЧИСЛА. Ширина каждой фразы посчитана по реальным метрикам файлов
+   шрифтов (Manrope для кириллицы + Plus Jakarta Sans для латиницы и знаков
+   «:» «!») при letter-spacing -0.02em, в долях кегля:
+
+       вступление   RU 20.79 em | EN 18.74 em  → худший случай 20.79 em
+       финальная    RU 18.76 em | EN 16.43 em  → худший случай 18.76 em
+
+   Точное заполнение = 100 / ширина: 4.81cqi и 5.33cqi. Берём 4.62cqi и 5.12cqi
+   — те же ~4% запаса на округления и субпиксели. Кегль по экранам (RU):
+       320px (под текст 250px) → 11.6 / 12.8px
+       375px (303px)           → 14.0 / 15.5px
+       430px (360px)           → 16.6 / 18px (потолок)
+   Потолок 18px — кегль заголовка «Обо мне» (text-lg): крупнее этих строк быть
+   не должно. На широких экранах обе упираются в него и выглядят одинаково.
+
+   Почему у финальной число больше: она КОРОЧЕ вступления (18.76 em против
+   20.79 em), поэтому при том же кегле занимает меньше места. Каждая строка
+   растягивается под свою длину — иначе более короткая оставляла бы заметный
+   зазор в конце.
+
+   Это значения для первой отрисовки, до срабатывания скрипта. Точный кегль под
+   конкретное устройство считает script.js → fitAboutLeads(): он измеряет
+   реальную ширину каждой фразы и растягивает её почти на всю доступную
+   (страховка от системного масштаба шрифта и зума). */
+.nr-about-bio2,
+.nr-about-bio3 {
+  container-type: inline-size;
+}
+
+.nr-about-training-lead,
+.nr-about-final-lead {
+  display: block;
+  /* Никогда не переносим: при нехватке места уменьшается кегль, а не строка. */
+  white-space: nowrap;
+  letter-spacing: -0.02em;
+  color: #F3F4F6;
+  font-weight: 800;
+}
+
+.nr-about-training-lead {
+  /* Фолбэк для браузеров без контейнерных единиц — та же доля от ширины окна. */
+  font-size: min(18px, calc(4.62vw - 3.23px));
+  font-size: min(18px, 4.62cqi);
+}
+
+.nr-about-final-lead {
+  font-size: min(18px, calc(5.12vw - 3.58px));
+  font-size: min(18px, 5.12cqi);
+}
+
+/* Ссылки на обучение в биографии окна «Обо мне» (config.js → aboutModal.bioText2):
+   живут только в мобильной модалке #aboutModal — на компьютере те же адреса
+   стоят кнопками кадра 2 (.nr-about-trainer, style.css ниже). Вид — как у
+   промокода (.faq-promo-code / .nr-about-discount-code): оранжевый, пунктир
+   «нажми», при наведении и фокусе ярче, при нажатии лёгкое сжатие. inline-block
+   нужен, чтобы работал transform при :active; перенос внутри названия при этом
+   остаётся возможным — длинные имена не вылезут за край узкого экрана. */
+.nr-about-trainer-link {
+  display: inline-block;
+  color: #F59E0B;
+  font-weight: 700;
+  text-decoration: underline dotted rgba(245, 158, 11, 0.7);
+  text-underline-offset: 2px;
+  transition: color 0.25s ease, text-decoration-color 0.25s ease,
+              transform 0.2s ease;
+}
+
+.nr-about-trainer-link:hover,
+.nr-about-trainer-link:focus-visible {
+  color: #FCD34D;
+  text-decoration-color: #FCD34D;
+}
+
+.nr-about-trainer-link:active { transform: scale(0.97); }
+
 /* ── Состояние подсказки: яркими остаются кнопка и бабл ──────────────── */
 
 html.nr-ab-hint #stickyPlayerBar {
@@ -2708,7 +2822,9 @@ html.nr-ab-hint #stickyPlayerBar::after {
    формате, что и подсказка плеера, но БЕЗ затемнения: страница не гаснет и
    прокрутка не блокируется. Своей геометрии у бабла нет — берём базовый
    .nr-ab-hint-tip; здесь только разворот хвостика вверх (бабл стоит ПОД
-   логотипом) и крестик для компьютера.
+   логотипом), крестик и затухание вместе с логотипом на телефоне.
+   Крестик: 36/24px на компьютере, 40/27px на телефоне и планшете — там
+   палец, и тач-цель нужна больше.
    Позицию и место хвостика считает script.js → positionLogoHint.
    ═══════════════════════════════════════════════════════════════════════ */
 
@@ -2726,41 +2842,122 @@ html.nr-ab-hint #stickyPlayerBar::after {
   border-top-left-radius: 5px;
 }
 
-/* Крестик живёт только на устройствах с курсором (см. media ниже). */
+/* Крестик есть на всех устройствах: на телефоне бабл закрывается ТОЛЬКО им
+   или переходом в «Обо мне» — прокрутка и тапы мимо его больше не гасят. */
 .nr-logo-hint-close { display: none; }
 
+/* Бабл клики НЕ перехватывает: он висит над шапкой, и под ним остаются
+   живые кнопки сайта (логотип, бургер, переключатель языка). Нажимается
+   только крестик — у него pointer-events: auto. */
+.nr-logo-hint-tip.show { pointer-events: none; }
+
+/* Запас справа под крестик: кнопка 36px + 2px от края — та же посадка, что на
+   телефоне (см. media max-width 639px), только крестик чуть меньше. Текст при
+   этом не двигается: он отсчитывается от левого padding, а не от ширины бабла.
+
+   ОПТИЧЕСКИЙ ЦЕНТР ПО ВЕРТИКАЛИ. По геометрии текст уже стоит по центру, но
+   буквы у нас почти все строчные, а строчные ниже заглавных: их «масса» сидит
+   ниже середины строки. Замер по рендеру (Chrome, шрифт 600 15px):
+   центр плашки 26.25px, центр строчных 27.00px — текст читается как «съехавший
+   вниз». Поэтому верхний padding на 1px меньше нижнего: текст поднимается, а
+   сумма 13+15 остаётся прежней — высота плашки (52.5px) не меняется, крестик
+   по-прежнему ровно по центру (он абсолютный, top: 50%).
+   1px — середина между поправками под системные шрифты: Arial (Windows) просит
+   0.75px, Roboto (Android) — 1.16px. */
+.nr-logo-hint-tip {
+  padding-top: 13px;
+  padding-bottom: 15px;
+  padding-right: 38px;
+}
+
+/* Крестик — справа ПО ЦЕНТРУ по вертикали: в углу в него трудно попасть
+   пальцем. Кнопка 36px, сама иконка — 24px; на телефоне и планшете крупнее
+   (см. media ниже: там палец, а не курсор), чтобы крестик занимал почти всё
+   «окно», а не терялся в нём.
+   right: 2px — кнопка вплотную к краю бабла, пустоты справа от иконки нет. */
+.nr-logo-hint-tip.show .nr-logo-hint-close {
+  display: flex;
+  position: absolute;
+  top: 50%;
+  right: 2px;
+  transform: translateY(-50%);
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #9CA3AF;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: color 0.3s ease, background-color 0.3s ease;
+}
+
+/* Иконка крестика: размер задаём здесь, в разметке — только w-3.5 h-3.5. */
+.nr-logo-hint-close svg { width: 24px; height: 24px; }
+
+.nr-logo-hint-close:focus-visible,
+.nr-logo-hint-close:active {
+  color: #F59E0B;
+  background: rgba(245, 158, 11, 0.14);
+  outline: none;
+}
+
+/* Наведение — только там, где есть курсор: на тач-экране :hover залипает и
+   крестик оставался бы подсвеченным после тапа. */
 @media (hover: hover) and (pointer: fine) {
-  /* Пока бабл виден, он принимает клики — иначе не нажать крестик. На тач-экранах
-     остаётся pointer-events: none (базовый .nr-ab-hint-tip): тап проходит сквозь
-     бабл, а сам бабл гасит обработчик действия (script.js → logoHintDismissAny). */
-  .nr-logo-hint-tip.show { pointer-events: auto; }
-
-  /* Запас справа, чтобы надпись не наезжала на крестик в углу. */
-  .nr-logo-hint-tip { padding-right: 40px; }
-
-  .nr-logo-hint-tip.show .nr-logo-hint-close {
-    display: flex;
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    align-items: center;
-    justify-content: center;
-    width: 22px;
-    height: 22px;
-    padding: 0;
-    border: 0;
-    border-radius: 50%;
-    background: transparent;
-    color: #9CA3AF;
-    cursor: pointer;
-    transition: color 0.3s ease, background-color 0.3s ease;
-  }
-  .nr-logo-hint-close:hover,
-  .nr-logo-hint-close:focus-visible {
+  .nr-logo-hint-close:hover {
     color: #F59E0B;
     background: rgba(245, 158, 11, 0.14);
-    outline: none;
   }
+}
+
+/* ─── Телефон: бабл гаснет вместе с логотипом в шапке ───────────────────
+   Ту же величину, что уходит в opacity логотипа (--nr-header-fade, 1 → 0 на
+   отрезке 50…550px прокрутки), пишет animations.js → paintHeaderFade прямо в
+   inline-стиль САМОГО бабла: он лежит в body и до переменной шапки не достаёт.
+   На <html> переменную не ставим — она наследуется, и запись на корне
+   заставляла бы браузер пересчитывать стили всего документа в каждом кадре
+   прокрутки (на ПК это значение вообще никто не читает).
+   Пока страница прокручена (класс nr-logo-hint-fade), сглаживание по
+   opacity снято: иначе бабл отставал бы от пальца — ровно та же история, что
+   была у фона шапки (см. style.css → #mainHeader). Наверху страницы переход
+   остаётся, поэтому появление идёт плавно.
+   Класс nr-logo-hint-clear (бабл погас целиком) отключает клики — как у
+   невидимого логотипа, иначе прозрачное пятно ловило бы тапы. */
+@media (max-width: 639px) {
+  .nr-logo-hint-tip.show { opacity: var(--nr-header-fade, 1); }
+
+  .nr-logo-hint-tip.nr-logo-hint-fade {
+    transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s;
+  }
+
+  .nr-logo-hint-tip.nr-logo-hint-clear .nr-logo-hint-close { pointer-events: none; }
+}
+
+/* ─── Телефон И планшет: крестик телефонного размера ─────────────────────
+   Планшет — тоже палец, а не курсор: тач-цель здесь нужна такая же, как на
+   телефоне, поэтому кнопка 40px и иконка 27px (на ПК — 36px и 24px, см.
+   основной блок выше). Запас справа — кнопка + 2px от края, чтобы справа от
+   крестика не оставалось пустой полосы.
+   Диапазон — до 1023.98px: ровно там в проекте кончается «планшет» и
+   начинается компьютерная версия (см. animations.css → полоса треков,
+   style.css → hero). Блок стоит ПОСЛЕ правил затухания, но это не важно:
+   они про opacity, а здесь только геометрия крестика.
+   Затухание вместе с логотипом остаётся телефонным (max-width: 639px):
+   на планшете логотип из шапки не гаснет, гаснуть баблу не с чем. */
+@media (max-width: 1023.98px) {
+  .nr-logo-hint-tip { padding-right: 42px; }
+
+  .nr-logo-hint-tip.show .nr-logo-hint-close {
+    right: 2px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .nr-logo-hint-close svg { width: 27px; height: 27px; }
 }
 
 /* «Уменьшить движение»: бабл просто проявляется на месте */
@@ -2797,7 +2994,7 @@ html.nr-ab-hint #stickyPlayerBar::after {
   height: 15px;
   line-height: 15px;
   text-align: center;
-  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-family: 'Space Grotesk', 'Manrope', ui-monospace, monospace;
   font-size: 12px;
   font-weight: 700;
   font-style: normal;
@@ -3764,7 +3961,7 @@ span.faq-q-text.lang-vapor-in {
   align-items: center;
   justify-content: space-between;
   gap: 2px;
-  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-family: 'Space Grotesk', 'Manrope', ui-monospace, monospace;
   font-size: 9px;
   color: #6B7280;
   letter-spacing: 0.03em;
@@ -3833,7 +4030,7 @@ span.faq-q-text.lang-vapor-in {
 }
 .nr-calc-row-label { line-height: 1.35; }
 .nr-calc-row-price {
-  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-family: 'Space Grotesk', 'Manrope', ui-monospace, monospace;
   font-weight: 700;
   color: #E5E7EB;
   white-space: nowrap;
@@ -4035,16 +4232,40 @@ span.faq-q-text.lang-vapor-in {
      зазор между абзацами сделан сдвигом строк (--nr-line-y, см. ниже), а не
      отступом. Поэтому первый абзац стоит на своём месте и не «плывёт» при
      подгонке зазора.
-     left: 3% (≈50px кадра) минус 15px кадра (0.897cqw = 15 × 0.0598) плюс 10px кадра
-     (0.598cqw = 10 × 0.0598) — колонка сдвинута левее на 5px кадра.
+     left: 3% (≈50px кадра) минус 15px кадра (0.897cqw = 15 × 0.0598) — колонка
+     сдвинута левее на 15px кадра. Раньше вычиталось 5px (3% − 15 + 10): сдвиг
+     влево на 10px кадра по просьбе; слагаемое +0.598cqw убрано, а не заменено
+     числом, чтобы в комментарии осталась вся история правки.
      top: базовые 50% минус 60px кадра (3.588cqw = 60 × 0.0598) — весь блок поднят
      на 60px, оба абзаца сдвигаются вместе, зазор между ними не меняется. */
   [data-about-slide="0"] .nr-about-text--left {
     top: calc(50% - 3.588cqw);
-    left: calc(3% - 0.897cqw + 0.598cqw);
+    left: calc(3% - 0.897cqw);
     width: 40%;
     align-items: stretch;
     text-align: left;
+  }
+
+  /* Положение колонки биографии СВОЁ У КАЖДОГО ЯЗЫКА: русские строки длиннее
+     английских (самая длинная — «я битмейкер, техник по звуку и звукорежиссёр»,
+     47.6cqw при кегле 2.1cqw), поэтому при общем отступе одна из версий
+     «прилипала» к персонажу или отходила от края. Теперь RU — на 5px кадра
+     левее общего правила, EN — на 20px кадра правее:
+       RU: 3% − 15 − 5  = 3% − 20px кадра = 3% − 1.196cqw (20 × 0.0598)
+       EN: 3% − 15 + 20 = 3% + 5px кадра  = 3% + 0.299cqw (5 × 0.0598)
+     Правило выше остаётся базовым: пока атрибута data-lang нет (ранний кадр
+     загрузки, JS выключен), работает оно. data-lang ставит инлайн-скрипт в
+     <head> (index.html) и setLanguage() — тот же приём, что у сдвигов строк
+     ниже (html[data-lang="ru"] … nth-child).
+     Проверено по метрикам шрифтов: правый край самой длинной строки — 49.4%
+     кадра в RU и 46.0% в EN, то есть ни одна версия не доходит до центра
+     кадра, где стоит персонаж, и не выходит за рамку. */
+  html[data-lang="ru"] [data-about-slide="0"] .nr-about-text--left {
+    left: calc(3% - 1.196cqw);
+  }
+
+  html[data-lang="en"] [data-about-slide="0"] .nr-about-text--left {
+    left: calc(3% + 0.299cqw);
   }
 
   [data-about-slide="0"] .nr-about-bio {
@@ -4113,7 +4334,7 @@ span.faq-q-text.lang-vapor-in {
     border-radius: 999px;
     background: rgba(245, 158, 11, 0.1);
     color: #fbbf24;
-    font-family: 'Space Grotesk', ui-monospace, monospace;
+    font-family: 'Space Grotesk', 'Manrope', ui-monospace, monospace;
     font-size: 1.05cqw;
     font-weight: 700;
     letter-spacing: 0.09em;
@@ -4222,7 +4443,7 @@ span.faq-q-text.lang-vapor-in {
     gap: 0.6cqw;
     transform: translateX(-50%);
     color: rgba(251, 191, 36, 0.92);
-    font-family: 'Space Grotesk', ui-monospace, monospace;
+    font-family: 'Space Grotesk', 'Manrope', ui-monospace, monospace;
     font-size: 1.35cqw;
     font-weight: 700;
     letter-spacing: 0.24em;
@@ -4288,7 +4509,7 @@ span.faq-q-text.lang-vapor-in {
 
   .nr-about-stat-num {
     color: #fbbf24;
-    font-family: 'Space Grotesk', ui-monospace, monospace;
+    font-family: 'Space Grotesk', 'Manrope', ui-monospace, monospace;
     font-size: 2.7cqw;
     font-weight: 900;
     line-height: 1.1;
@@ -4472,7 +4693,7 @@ span.faq-q-text.lang-vapor-in {
     left: 3.5%;
     z-index: 4;
     color: rgba(156, 163, 175, 0.75);
-    font-family: 'Space Grotesk', ui-monospace, monospace;
+    font-family: 'Space Grotesk', 'Manrope', ui-monospace, monospace;
     font-size: 0.8cqw;
     letter-spacing: 0.22em;
     text-transform: uppercase;

@@ -90,7 +90,7 @@ html.nr-boot-active body {
 }
 
 .nr-boot-title {
-  font-family: 'Space Grotesk', 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: 'Space Grotesk', 'Plus Jakarta Sans', 'Manrope', system-ui, sans-serif;
   font-weight: 700;
   letter-spacing: 0.18em;
   font-size: 15px;

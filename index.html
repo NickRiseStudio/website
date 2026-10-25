@@ -43,11 +43,12 @@
   <!-- Production Tailwind CSS (Compiled via CLI) -->
   <link rel="stylesheet" href="./tailwind.css">
 
-  <!-- Custom web fonts (self-hosted): fonts.css + public/fonts/*.woff2.
-       ЕДИНСТВЕННЫЙ источник шрифтов: внешний @import на fonts.googleapis.com
-       убран (был блокирующим и бесполезным для кириллицы). Plus Jakarta Sans
-       и Space Grotesk латинские — русский текст рисует системный шрифт, как и
-       раньше. Шрифты генерируются инструментом, см. PROJECT-NOTES.md -->
+  <!-- ШРИФТЫ (self-hosted): один файл на всё, генерируется
+       !NickRiseStudio-lab/fonts-selfhost.cjs. Состав: Plus Jakarta Sans и
+       Space Grotesk (latin, latin-ext) + Manrope (cyrillic) — у первых двух
+       кириллицы нет вообще, поэтому русские буквы берёт Manrope с
+       unicode-range только на кириллицу. Внешний @import на
+       fonts.googleapis.com убран: он был блокирующим. -->
   <link rel="stylesheet" href="./fonts.css">
 
   <!-- Lenis (плавный скролл): минимальный служебный CSS библиотеки.
@@ -830,11 +831,28 @@
         <p class="text-sm sm:text-base text-gray-300 leading-relaxed font-medium" data-i18n="aboutModal.bioText1">
           Приветствую! Меня зовут Александр, я битмейкер, техник по звуку и звукорежиссёр из Москвы. В моём портфолио — работа с аналоговыми и цифровыми микшерами на концертах и студиях. Работаю с артистами, а не с потоком заявок: отвечаю в тот же день, объясняю простым языком и не пропадаю на середине проекта.
         </p>
-        <p class="text-sm sm:text-base text-gray-300 leading-relaxed font-medium" data-i18n="aboutModal.bioText2">
-          Проходил обучение у таких звукорежиссёров, как Джон Олин, Константин Матафонов, Илья Лукашев, Павел Уоллен и других.
+        <!-- nr-about-bio2 — не оформление, а контейнер: в style.css он объявлен
+             container-type: inline-size, и кегль вступления внутри считается в
+             cqi (процент ширины этого абзаца), поэтому фраза «Проходил обучение
+             у лучших в индустрии:» всегда влезает в одну строку на любой ширине
+             телефона. Подробности — style.css, блок «ДВЕ ГЛАВНЫЕ СТРОКИ…». -->
+        <p class="nr-about-bio2 text-sm sm:text-base text-gray-300 leading-relaxed font-medium" data-i18n="aboutModal.bioText2">
+          <span class="nr-about-training-lead">Проходил обучение у лучших в индустрии:</span> <a class="nr-about-trainer-link" href="https://mixwiththemasters.com" target="_blank" rel="noopener noreferrer">MIX With The MASTERS</a>, <a class="nr-about-trainer-link" href="https://www.waves.com/courses" target="_blank" rel="noopener noreferrer">Waves Audio Courses</a>, <a class="nr-about-trainer-link" href="https://genius.com/artists/Ilya-lukashev" target="_blank" rel="noopener noreferrer">Илья Лукашев</a>, <a class="nr-about-trainer-link" href="https://genius.com/artists/Konstantin-matafonov" target="_blank" rel="noopener noreferrer">Константин Матафонов</a> и других.
         </p>
-        <p class="text-sm sm:text-base text-white font-extrabold leading-relaxed" data-i18n="aboutModal.bioText3">
-          С радостью поработаю с тобой!
+        <!-- Финальная фраза — тем же видом, что заголовок «Обо мне» выше
+             (18px, font-extrabold, text-white) и тоже В ОДНУ СТРОКУ. Иконки у неё
+             нет намеренно: renderI18nText() переписывает innerHTML элемента с
+             data-i18n, и вложенный svg стирается (проверено дампом DOM).
+             Поэтому «как Обо мне» = крупный белый жирный текст.
+
+             nr-about-bio3 — контейнер для cqi (как .nr-about-bio2 выше),
+             nr-about-final-lead — сама фраза: кегль в style.css считается от
+             ширины абзаца, поэтому строка всегда одна, а точный размер под
+             конкретное устройство доводит script.js → fitAboutLeads().
+             Класс стоит на span, а не на p: data-i18n тоже на нём, и
+             renderI18nText() меняет только текст — класс остаётся. -->
+        <p class="nr-about-bio3 text-lg font-extrabold text-white">
+          <span class="nr-about-final-lead" data-i18n="aboutModal.bioText3">С радостью готов поработать с тобой!</span>
         </p>
       </div>
 
@@ -953,8 +971,7 @@
             <span class="nr-about-line">Приветствую! Меня зовут Александр,</span>
             <span class="nr-about-line">я битмейкер, техник по звуку и <span class="nr-ab-hint-accent">звукорежиссёр</span></span>
             <span class="nr-about-line">из Москвы. В моём портфолио — работа с</span>
-            <span class="nr-about-line"><span class="nr-ab-hint-accent">аналоговыми</span> и <span class="nr-ab-hint-accent">цифровыми</span> мик<span class="nr-ab-hyphen">-</span></span>
-            <span class="nr-about-line">шерами на <span class="nr-ab-hint-accent">концертах</span> и <span class="nr-ab-hint-accent">студиях</span>.</span>
+            <span class="nr-about-line"><span class="nr-ab-hint-accent">аналоговыми</span> и <span class="nr-ab-hint-accent">цифровыми</span> мик<span class="nr-ab-hyphen">-</span></span><span class="nr-about-line">шерами на <span class="nr-ab-hint-accent">концертах</span> и <span class="nr-ab-hint-accent">студиях</span>.</span>
             <span class="nr-about-line nr-about-para">Работаю <span class="nr-ab-hint-accent">с артистами</span>, а не с</span>
             <span class="nr-about-line">потоком заявок: отвечаю <span class="nr-ab-hint-accent">в тот</span></span>
             <span class="nr-about-line"><span class="nr-ab-hint-accent">же день</span>, объясняю <span class="nr-ab-hint-accent">простым</span></span>
@@ -1304,11 +1321,14 @@
   <!-- ПОДСКАЗКА ПРО ЛОГОТИП («ОБО МНЕ»): всплывает при заходе на сайт под логотипом
        слева вверху (script.js → maybeShowLogoHint). Формат — тот же бабл, что у
        подсказки плеера, но БЕЗ затемнения экрана и без блокировки прокрутки.
-       На компьютере справа сверху есть крестик: бабл уходит по нему или по клику
-       на то, что открывает «Обо мне» — логотип в шапке или фото в hero. На телефонах
-       и планшетах крестика нет — бабл плавно гаснет при любом действии (тап или
-       свайп). Позицию и место хвостика считает script.js → positionLogoHint. Стили — style.css, блок
-       «ПОДСКАЗКА ПРО ЛОГОТИП В ШАПКЕ». -->
+       Крестик есть на всех устройствах и стоит справа по центру (на телефоне он
+       крупнее — палец). Клики ловит ТОЛЬКО крестик: сам бабл прозрачен для
+       нажатий, поэтому кнопки под ним (логотип, бургер, язык) работают. Уходит
+       бабл по крестику или по клику на то, что открывает «Обо мне» — логотип в
+       шапке или фото в hero. Прокрутка и тапы мимо его не гасят; на телефоне он
+       при прокрутке гаснет вместе с логотипом (style.css, media max-width 639px).
+       Позицию и место хвостика считает script.js → positionLogoHint. Стили —
+       style.css, блок «ПОДСКАЗКА ПРО ЛОГОТИП В ШАПКЕ». -->
   <div id="logoHintTip" class="nr-ab-hint-tip nr-logo-hint-tip">
     <span data-i18n="nav.logoHint">Здесь вы можете узнать <span class="nr-ab-hint-accent">обо мне</span></span>
     <button

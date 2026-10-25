@@ -427,6 +427,7 @@
   var headerBgAlpha = -1; /* кэш последнего записанного значения */
   var headerClear = false; /* панель растворена целиком — клики сквозь неё */
   var headerNav = null;   /* меню шапки: «овал» под пунктами, см. animations.css */
+  var logoHintEl = null;  /* подсказка про логотип: на телефоне гаснет вместе с ним */
 
   function paintHeaderFade(y) {
     var t = (y - FADE_START) / (FADE_END - FADE_START);
@@ -462,6 +463,24 @@
     if (isClear !== headerClear) {
       headerClear = isClear;
       header.classList.toggle('nr-header-clear', isClear);
+    }
+
+    /* Подсказка про логотип: пока страница прокручена, у неё снято сглаживание
+       по opacity (иначе бабл отставал бы от пальца), а когда он погас целиком —
+       отключены и клики. Оба класса читает style.css → «Телефон: бабл гаснет
+       вместе с логотипом»; на планшете и ПК правила не действуют. */
+    if (!logoHintEl) logoHintEl = $('#logoHintTip');
+    if (logoHintEl) {
+      /* Ту же величину получает сам бабл: он лежит в body, а не в шапке, поэтому
+         до inline-переменной шапки не достаёт. Пишем НА НЕГО, а не на <html>:
+         кастомные свойства наследуются, и переменная на корне помечает
+         пересчитать стили всего документа — на каждом кадре прокрутки, пока
+         идёт затухание. На планшете и ПК это значение вообще никто не читает
+         (оба правила — телефонные), так что запись на корне там была чистой
+         работой впустую. */
+      logoHintEl.style.setProperty('--nr-header-fade', alpha.toFixed(4));
+      logoHintEl.classList.toggle('nr-logo-hint-fade', alpha < 0.999);
+      logoHintEl.classList.toggle('nr-logo-hint-clear', isClear);
     }
 
     /* «Овал» под пунктами меню (десктоп) проявляется ровно в той мере, в

@@ -1,8 +1,17 @@
 /* ============================================================================
    NICK RISE STUDIO — self-hosted fonts (файл СГЕНЕРИРОВАН, вручную не править)
-   Источник — fontsource (npm): официальные woff2. Кириллицы у
-   Plus Jakarta Sans нет — русский текст системным шрифтом, как было.
-   Не редактировать вручную: генератор — внешний инструмент (PROJECT-NOTES.md)
+   Генератор: !NickRiseStudio-lab/fonts-selfhost.cjs (нужен интернет)
+
+   Состав: Plus Jakarta Sans (latin, latin-ext) — 400/500/600/700/800;
+           Space Grotesk (latin, latin-ext) — 500/700;
+           Manrope (cyrillic) — 400/500/600/700/800.
+
+   ПОЧЕМУ ДВЕ ГАРНИТУРЫ. У Plus Jakarta Sans и Space Grotesk кириллицы нет
+   вообще, поэтому русские буквы берёт Manrope — он объявлен с unicode-range
+   только на кириллицу и латиницу с цифрами не перехватывает. Итог: русский
+   и английский текст выглядят одинаково на любом устройстве, а не так, как
+   решит системный шрифт (Segoe UI / Roboto / SF Pro).
+   Не редактировать вручную: пересборка — node tools\fonts-selfhost.cjs
    ============================================================================ */
 
 @font-face {
@@ -129,4 +138,49 @@
   font-display: swap;
   src: url(fonts/space-grotesk-latin-ext-700-normal.woff2) format('woff2');
   unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/manrope-cyrillic-400-normal.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(fonts/manrope-cyrillic-500-normal.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(fonts/manrope-cyrillic-600-normal.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(fonts/manrope-cyrillic-700-normal.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url(fonts/manrope-cyrillic-800-normal.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
 }

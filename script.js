@@ -407,6 +407,12 @@ function renderI18nText() {
   // Окно-калькулятор стоимости услуг: пересчёт шкалы, подписей опций и итоговой цены
   renderPriceCalcStep();
 
+  // Тексты сменились — «главные» строки окна «Обо мне» надо подогнать заново.
+  // У языков разная длина («Проходил обучение…» — 20.79 em по-русски против
+  // 18.74 em по-английски), а инлайн-кегль на них остался от прежнего языка:
+  // без пересчёта русская строка после английской не влезла бы в nowrap.
+  queueAboutLeadsFit();
+
   // Do not call animateHeroTitle on language toggle to prevent visual jitter/layout shift
 }
 
@@ -2956,16 +2962,15 @@ function maybeShowAbHint() {
    бабл, что у подсказки плеера (.nr-ab-hint-tip), но БЕЗ затемнения: страница
    не гаснет и прокрутка не блокируется.
 
-   Компьютер (курсор + наведение): у бабла есть крестик, и уходит он ТОЛЬКО по
+   Одинаково на всех устройствах: у бабла есть крестик, и уходит он ТОЛЬКО по
    крестику или по клику на то, что открывает «Обо мне» — логотип в шапке слева
-   или фото в hero. Телефон и планшет: крестика нет, бабл плавно гаснет при любом
-   действии — тап или свайп (слушаем pointerdown и touchmove).
+   или фото в hero. Прокрутка и тапы мимо подсказку не гасят; на телефоне она
+   при прокрутке гаснет вместе с логотипом (style.css, media max-width 639px).
 
    Ждём, пока уедет заставка #nr-boot (класс #nr-boot-done): пока она висит,
    страница заморожена и подсказку поверх неё показывать нельзя.
    ────────────────────────────────────────────────────────────────────── */
 
-const LOGO_HINT_DESKTOP_MQ = '(hover: hover) and (pointer: fine)';
 const LOGO_HINT_GAP_PX = 10;         // зазор от низа шапки до верхней кромки бабла
 const LOGO_HINT_TAIL_MARGIN_PX = 28; // хвостик не ближе этого к углу плашки
 const LOGO_HINT_WAIT_MS = 200;       // как часто проверяем, что заставка уехала
@@ -2974,7 +2979,7 @@ let logoHintVisible = false;
 let logoHintDone = false;
 let logoHintWaitTimer = null;
 /* Элементы, открывающие окно «Обо мне» (логотип в шапке и фото в hero) —
-   на компьютере клик по любому из них гасит подсказку. */
+   клик по любому из них гасит подсказку. */
 let logoHintAboutOpeners = [];
 
 /* Бабл ставим левым краем по логотипу и чуть ниже шапки, хвостик указывает вверх
@@ -3003,20 +3008,6 @@ function positionLogoHint() {
   return true;
 }
 
-function logoHintIsDesktop() {
-  try {
-    return window.matchMedia(LOGO_HINT_DESKTOP_MQ).matches;
-  } catch (e) {
-    return true;
-  }
-}
-
-/* Телефон и планшет: бабл уходит при любом действии на сайте — тап или свайп.
-   Срабатывает на первый же pointerdown/touchmove, анимация гаснет сама (CSS). */
-function logoHintDismissAny() {
-  hideLogoHint();
-}
-
 function showLogoHint() {
   const tip = document.getElementById('logoHintTip');
   if (!tip || logoHintVisible || logoHintDone) return;
@@ -3027,18 +3018,14 @@ function showLogoHint() {
   logoHintVisible = true;
   window.addEventListener('resize', positionLogoHint);
 
-  if (logoHintIsDesktop()) {
-    /* Компьютер: уходит только по крестику или по клику на то, что открывает
-       «Обо мне» — логотип в шапке слева и фото в hero (у обоих в разметке
-       onclick="openAboutModal()"). */
-    logoHintAboutOpeners = Array.prototype.slice.call(
-      document.querySelectorAll('[onclick="openAboutModal()"]')
-    );
-    logoHintAboutOpeners.forEach((el) => el.addEventListener('click', hideLogoHint));
-  } else {
-    window.addEventListener('pointerdown', logoHintDismissAny, { capture: true });
-    window.addEventListener('touchmove', logoHintDismissAny, { passive: true, capture: true });
-  }
+  /* Уходит только по крестику или по клику на то, что открывает «Обо мне» —
+     логотип в шапке слева и фото в hero (у обоих в разметке
+     onclick="openAboutModal()"). Одинаково на всех устройствах: прокрутка и
+     тапы мимо подсказку не гасят. */
+  logoHintAboutOpeners = Array.prototype.slice.call(
+    document.querySelectorAll('[onclick="openAboutModal()"]')
+  );
+  logoHintAboutOpeners.forEach((el) => el.addEventListener('click', hideLogoHint));
 }
 
 function hideLogoHint() {
@@ -3046,8 +3033,6 @@ function hideLogoHint() {
   logoHintVisible = false;
 
   window.removeEventListener('resize', positionLogoHint);
-  window.removeEventListener('pointerdown', logoHintDismissAny, { capture: true });
-  window.removeEventListener('touchmove', logoHintDismissAny, { capture: true });
   logoHintAboutOpeners.forEach((el) => el.removeEventListener('click', hideLogoHint));
   logoHintAboutOpeners = [];
 
@@ -6666,6 +6651,107 @@ function initAboutShowcase() {
   });
 }
 
+/* ── ПОДГОНКА «ГЛАВНЫХ» СТРОК БИОГРАФИИ ПОД ШИРИНУ ОКНА ────────────────────
+
+   Речь о двух строках окна «Обо мне» (style.css → «ДВЕ ГЛАВНЫЕ СТРОКИ…»):
+   вступлении «Проходил обучение у лучших в индустрии:» и финальной фразе
+   «С радостью готов поработать с тобой!». Обе должны стоять ОДНОЙ строкой на
+   телефоне любой ширины.
+
+   В style.css кегль задан долей ширины абзаца (4.62cqi и 5.12cqi) с запасом 4%
+   — этого хватает, чтобы строка не переносилась даже без скрипта. Здесь кегль
+   доводится до точного: он зависит от реальной ширины текста, а она меняется
+   по трём причинам:
+
+     1) шрифты могли не успеть загрузиться (fonts.css отдаёт woff2 с
+        font-display: swap — до загрузки буквы рисует фолбэк, метрики другие);
+     2) в системе пользователя может быть включён увеличенный/уменьшенный
+        размер шрифта (и мобильные браузеры иногда добавляют свой масштаб);
+     3) поля у окна разные по брейкпоинтам (p-3/p-4, p-5) и есть полоса
+        прокрутки — заранее долей от ширины окна их не учесть.
+
+   Каждая строка подгоняется ПОД СВОЮ длину: финальная фраза короче вступления
+   (18.76 em против 20.79 em), и при общем кегле она оставляла бы заметный
+   зазор в конце. Строка при этом всегда остаётся одной: при нехватке места
+   уменьшается кегль, а не происходит перенос. */
+
+// Пределы. Снизу 9px — ниже текст нечитаем. Сверху 18px — кегль заголовка
+// «Обо мне» (text-lg в index.html): крупнее этих строк быть не должно.
+var ABOUT_LEAD_FONT_MIN = 9;
+var ABOUT_LEAD_FONT_MAX = 18;
+// Доля доступной ширины, которую занимает строка: 0.985 — 1.5% запаса на
+// субпиксельные округления.
+var ABOUT_LEAD_FILL = 0.985;
+
+/* Подгоняет ОДНУ строку: измеряет её ширину на эталонном кегле и ставит такой,
+   при котором она займёт почти всю доступную ширину абзаца. */
+function fitAboutLead(lead) {
+  if (!lead || !lead.parentElement) return;
+
+  var box = lead.parentElement;
+  var cs = getComputedStyle(box);
+  var avail = box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  // Предок ещё не отрисован (окно закрыто) — мерить нечего.
+  if (!(avail > 0)) return;
+
+  // Сброс к CSS перед замером: иначе следующая подгонка считалась бы от
+  // результата предыдущей, то есть от своего же inline-размера.
+  lead.style.fontSize = '';
+
+  // Ширина всей фразы одной строкой на эталонном кегле 100px. Перенос при
+  // измерении запрещён намеренно: нужна полная ширина текста, а не последней
+  // строки. Запись и чтение идут подряд в одном блоке — до перерисовки кадра,
+  // поэтому подмены кегля на экране не видно.
+  lead.style.whiteSpace = 'nowrap';
+  lead.style.fontSize = '100px';
+  var range = document.createRange();
+  range.selectNodeContents(lead);
+  var full = range.getBoundingClientRect().width;
+  if (typeof range.detach === 'function') range.detach();
+  lead.style.whiteSpace = '';
+
+  if (!full) { lead.style.fontSize = ''; return; }
+
+  var size = (100 * avail * ABOUT_LEAD_FILL) / full;
+  size = Math.max(ABOUT_LEAD_FONT_MIN, Math.min(ABOUT_LEAD_FONT_MAX, size));
+  lead.style.fontSize = size.toFixed(2) + 'px';
+
+  // Страховка на округления: если строка всё-таки шире места — ужимаем шагами.
+  // scrollWidth больше clientWidth только когда содержимое не влезло в строку.
+  for (var i = 0; i < 4 && lead.scrollWidth > lead.clientWidth; i++) {
+    size *= 0.985;
+    lead.style.fontSize = size.toFixed(2) + 'px';
+  }
+}
+
+/* Обе строки окна «Обо мне» разом. */
+function fitAboutLeads() {
+  fitAboutLead(document.querySelector('#aboutModal .nr-about-training-lead'));
+  fitAboutLead(document.querySelector('#aboutModal .nr-about-final-lead'));
+}
+
+/* Пересчёт при смене ширины окна и повороте экрана: подгонка зависит от
+   реальной ширины абзаца. Считаем один раз за кадр через rAF, чтобы перетаскивание
+   границы окна не вызывало замер на каждый пиксель. */
+var aboutLeadFitRaf = 0;
+function queueAboutLeadsFit() {
+  if (aboutLeadFitRaf) return;
+  aboutLeadFitRaf = requestAnimationFrame(function () {
+    aboutLeadFitRaf = 0;
+    fitAboutLeads();
+  });
+}
+window.addEventListener('resize', queueAboutLeadsFit, { passive: true });
+window.addEventListener('orientationchange', queueAboutLeadsFit, { passive: true });
+
+/* Кириллица подключается с font-display: swap — пока woff2 не пришёл, буквы
+   рисует фолбэк с другими метриками, и замер, сделанный в этот момент, дал бы
+   неверный кегль. Как только шрифты загружены, пересчитываем (тот же приём уже
+   используется ниже для ScrollTrigger и высот карточек отзывов). */
+if (document.fonts && document.fonts.ready) {
+  document.fonts.ready.then(queueAboutLeadsFit);
+}
+
 function openAboutModal() {
   closeMobileMenu();
   if (isAboutShowcaseViewport()) {
@@ -6676,6 +6762,9 @@ function openAboutModal() {
   if (modal) {
     modal.classList.add('active');
     lockPageScroll();
+    // Подгоняем «Проходил обучение…» и «С радостью готов…» под фактическую
+    // ширину окна на этом устройстве (поля окна и масштаб шрифта у всех разные).
+    fitAboutLeads();
   }
 }
 
@@ -8145,9 +8234,11 @@ function copyText(text, toastMsg) {
 // тост (aboutModal.toastDiscountCopied) и одна короткая подсветка кнопки.
 function copyPromoCode(el) {
   const t = (typeof CONFIG !== 'undefined' && CONFIG && CONFIG.i18n) ? CONFIG.i18n[currentLang] : null;
-  const msg = (t && t.aboutModal && t.aboutModal.toastDiscountCopied) || 'Промокод скопирован!';
+  const about = (t && t.aboutModal) ? t.aboutModal : null;
+  const msg = (about && about.toastDiscountCopied) || 'Промокод скопирован!';
+  const prefix = (about && about.promoCodePrefix) || 'Промокод: ';
 
-  writeToClipboard(PROMO_CODE, function () {
+  writeToClipboard(prefix + PROMO_CODE, function () {
     showToast(msg);
     if (!el || !el.classList) return;
     el.classList.add('is-copied');

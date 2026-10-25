@@ -181,20 +181,39 @@ const CONFIG = {
         // править и сдвигать по отдельности (сдвиги — style.css, таблица
         // «Сдвиги строк биографии кадра 1»). Переносов «само собой» там нет:
         // строки не переносятся, длина строки задана этой разбивкой.
-        bioText1: '<span class="nr-about-line">Приветствую! Меня зовут Александр,</span> <span class="nr-about-line">я битмейкер, техник по звуку и <span class="nr-ab-hint-accent">звукорежиссёр</span></span> <span class="nr-about-line">из Москвы. В моём портфолио — работа с</span> <span class="nr-about-line"><span class="nr-ab-hint-accent">аналоговыми</span> и <span class="nr-ab-hint-accent">цифровыми</span> мик<span class="nr-ab-hyphen">-</span></span> <span class="nr-about-line">шерами на <span class="nr-ab-hint-accent">концертах</span> и <span class="nr-ab-hint-accent">студиях</span>.</span> <span class="nr-about-line nr-about-para">Работаю <span class="nr-ab-hint-accent">с артистами</span>, а не с</span> <span class="nr-about-line">потоком заявок: отвечаю <span class="nr-ab-hint-accent">в тот</span></span> <span class="nr-about-line"><span class="nr-ab-hint-accent">же день</span>, объясняю <span class="nr-ab-hint-accent">простым</span></span> <span class="nr-about-line">языком и <span class="nr-ab-hint-accent">не пропадаю</span></span> <span class="nr-about-line">на середине проекта.</span>',
-        // Мобильная модалка #aboutModal использует этот же ключ: текст один
-        // для компьютера и телефона (в модалке строки-спаны идут потоком).
-        bioText2: 'Проходил обучение у таких звукорежиссёров, как <span class="nr-ab-hint-accent">Джон Олин, Константин Матафонов, Илья Лукашев, Павел Уоллен</span> и других.',
+        // Между «мик-» и «шерами» пробела нет намеренно: на телефоне дефис скрыт
+        // (.nr-ab-hyphen), и пробел между этими двумя span-ами читался бы как
+        // «мик шерами».
+        bioText1: '<span class="nr-about-line">Приветствую! Меня зовут Александр,</span> <span class="nr-about-line">я битмейкер, техник по звуку и <span class="nr-ab-hint-accent">звукорежиссёр</span></span> <span class="nr-about-line">из Москвы. В моём портфолио — работа с</span> <span class="nr-about-line"><span class="nr-ab-hint-accent">аналоговыми</span> и <span class="nr-ab-hint-accent">цифровыми</span> мик<span class="nr-ab-hyphen">-</span></span><span class="nr-about-line">шерами на <span class="nr-ab-hint-accent">концертах</span> и <span class="nr-ab-hint-accent">студиях</span>.</span> <span class="nr-about-line nr-about-para">Работаю <span class="nr-ab-hint-accent">с артистами</span>, а не с</span> <span class="nr-about-line">потоком заявок: отвечаю <span class="nr-ab-hint-accent">в тот</span></span> <span class="nr-about-line"><span class="nr-ab-hint-accent">же день</span>, объясняю <span class="nr-ab-hint-accent">простым</span></span> <span class="nr-about-line">языком и <span class="nr-ab-hint-accent">не пропадаю</span></span> <span class="nr-about-line">на середине проекта.</span>',
+        // bioText1: мобильная модалка #aboutModal использует этот же ключ —
+        // текст один для компьютера и телефона (в модалке строки-спаны идут
+        // потоком).
+        // bioText2 (только мобильная модалка #aboutModal): та же мысль, что у
+        // заголовка кадра 2 (bioTraining ниже), но списком. Каждое название —
+        // ссылка на тот же адрес, что у кнопок кадра 2 в index.html; вид ссылки
+        // (оранжевый, пунктир, нажатие) — style.css → .nr-about-trainer-link.
+        // Вступление — отдельной строкой (.nr-about-training-lead): фраза
+        // «Проходил обучение у лучших в индустрии:» стоит в одну строку и тем
+        // же видом, что «С радостью готов поработать с тобой!». Кегль обеих
+        // считают style.css (блок «ДВЕ ГЛАВНЫЕ СТРОКИ…») и script.js →
+        // fitAboutLeads(), поэтому <br> здесь не нужен и вреден — он вернул бы
+        // перенос. Раньше стоял <br> после «Проходил обучение», и фраза рвалась
+        // на две строки.
+        bioText2: '<span class="nr-about-training-lead">Проходил обучение у лучших в индустрии:</span> <a class="nr-about-trainer-link" href="https://mixwiththemasters.com" target="_blank" rel="noopener noreferrer">MIX With The MASTERS</a>, <a class="nr-about-trainer-link" href="https://www.waves.com/courses" target="_blank" rel="noopener noreferrer">Waves Audio Courses</a>, <a class="nr-about-trainer-link" href="https://genius.com/artists/Ilya-lukashev" target="_blank" rel="noopener noreferrer">Илья Лукашев</a>, <a class="nr-about-trainer-link" href="https://genius.com/artists/Konstantin-matafonov" target="_blank" rel="noopener noreferrer">Константин Матафонов</a> и других.',
         // Кадр 2 раздела #aboutShowcase на компьютере: заголовок колонки перед
         // кнопками обучения. Полная фраза с именами (bioText2 выше) осталась
-        // мобильной модалке #aboutModal — там кнопок нет. Адреса кнопок — в
-        // index.html. <br> — перенос строки: печать по буквам (animations.js →
-        // aboutType()) понимает этот тег и рвёт на нём строку.
+        // мобильной модалке #aboutModal — там названия идут ссылками в тексте.
+        // Адреса кнопок — в index.html. <br> — перенос строки: печать по буквам
+        // (animations.js → aboutType()) понимает этот тег и рвёт на нём строку.
         bioTraining: 'Проходил обучение<br>у лучших в индустрии:',
         trainer1: 'MIX With The MASTERS',
         trainer2: 'Waves Audio Courses',
         trainer3: 'Илья Лукашев',
         trainer4: 'Константин Матафонов',
+        // Финальная фраза мобильной модалки. Класс .nr-about-final-lead стоит
+        // на span в index.html, а не здесь: значение подставляется как
+        // textContent (тегов в нём нет), и обёртку задаёт разметка. Поэтому
+        // строка тоже всегда одна — style.css → «ДВЕ ГЛАВНЫЕ СТРОКИ…».
         bioText3: 'С радостью готов поработать с тобой!',
         // Строка под «С радостью готов поработать с тобой!» на финальном кадре
         // #aboutShowcase. Промокод — кнопка (data-about-action="copy-discount"):
@@ -202,6 +221,7 @@ const CONFIG = {
         // и всплывает тост toastDiscountCopied. Подпись title — своя у языка.
         discount: 'Забери скидку в 10% <button type="button" class="nr-about-discount-code" data-about-action="copy-discount" title="Скопировать промокод">«NRSDiscount»</button>',
         toastDiscountCopied: 'Промокод NRSDiscount скопирован!',
+        promoCodePrefix: 'Промокод: ',
         stat1Num: '200+',
         stat1Text: 'Завершенных треков',
         stat2Num: '6+ лет',
@@ -381,9 +401,16 @@ const CONFIG = {
         // paragraph 1–6, second 7–11). Per-line offsets in style.css are shared
         // by both languages, the paragraph gap there is set per language.
         bioText1: '<span class="nr-about-line">Hello! I\'m Alexander — a beatmaker, audio</span> <span class="nr-about-line">technician, and <span class="nr-ab-hint-accent">sound engineer</span> based in</span> <span class="nr-about-line">Moscow. My background spans working</span> <span class="nr-about-line">with both <span class="nr-ab-hint-accent">analog</span> and <span class="nr-ab-hint-accent">digital</span></span> <span class="nr-about-line">consoles across <span class="nr-ab-hint-accent">live concerts</span></span> <span class="nr-about-line">and <span class="nr-ab-hint-accent">studio sessions</span>.</span> <span class="nr-about-line nr-about-para">I work <span class="nr-ab-hint-accent">with artists</span>, not a</span> <span class="nr-about-line">stream of orders: I reply the</span> <span class="nr-about-line"><span class="nr-ab-hint-accent">same day</span>, explain things in</span> <span class="nr-about-line"><span class="nr-ab-hint-accent">plain words</span> and <span class="nr-ab-hint-accent">never go silent</span></span> <span class="nr-about-line">mid-project.</span>',
-        // Mobile #aboutModal uses the same key: one text for desktop and phone
-        // (in the modal the line spans simply flow as a paragraph).
-        bioText2: 'I\'ve trained under renowned audio engineers including <span class="nr-ab-hint-accent">John Olin, Konstantin Matafonov, Ilya Lukashev, Pavel Wallen</span>, and more.',
+        // bioText1: mobile #aboutModal uses the same key — one text for desktop
+        // and phone (in the modal the line spans simply flow as a paragraph).
+        // bioText2 (mobile #aboutModal only): same idea as slide 2's heading
+        // (bioTraining below), as a list. Each name links to the same URL as
+        // slide 2's buttons in index.html; the look (orange, dotted underline,
+        // press) is style.css → .nr-about-trainer-link.
+        // The lead-in is its own line (.nr-about-training-lead): the phrase
+        // "I've trained with the best in the industry:" stays on one line and
+        // looks like bioText3 (white, 800). A <br> used to split it in two.
+        bioText2: '<span class="nr-about-training-lead">I\'ve trained with the best in the industry:</span> <a class="nr-about-trainer-link" href="https://mixwiththemasters.com" target="_blank" rel="noopener noreferrer">MIX With The MASTERS</a>, <a class="nr-about-trainer-link" href="https://www.waves.com/courses" target="_blank" rel="noopener noreferrer">Waves Audio Courses</a>, <a class="nr-about-trainer-link" href="https://genius.com/artists/Ilya-lukashev" target="_blank" rel="noopener noreferrer">Ilya Lukashev</a>, <a class="nr-about-trainer-link" href="https://genius.com/artists/Konstantin-matafonov" target="_blank" rel="noopener noreferrer">Konstantin Matafonov</a>, and more.',
         // Slide 2 of the desktop #aboutShowcase: heading above the training
         // buttons. The full sentence with names (bioText2 above) stays in the
         // mobile #aboutModal — it has no buttons. Button URLs live in index.html.
@@ -400,6 +427,7 @@ const CONFIG = {
         // shows the toastDiscountCopied toast.
         discount: 'Grab a 10% discount with <button type="button" class="nr-about-discount-code" data-about-action="copy-discount" title="Copy promo code">«NRSDiscount»</button>',
         toastDiscountCopied: 'Promo code NRSDiscount copied!',
+        promoCodePrefix: 'Promo code: ',
         stat1Num: '200+',
         stat1Text: 'Tracks Mixed & Mastered',
         stat2Num: '6+ Years',
