@@ -35,6 +35,66 @@ function scheduleScrollTriggerRefresh(delay) {
   }, delay || 0);
 }
 
+/* ── ВЫСОТА ОКНА НА ТЕЛЕФОНАХ: ЗАМОРОЖЕННАЯ ────────────────────────────────
+   ПОЧЕМУ. В Telegram на iOS плашка сверху прячется анимацией frame'а
+   web-view: высота окна меняется десятки раз подряд. Единицы вьюпорта там
+   считает не движок, а сам браузер (WebKit bug 279998 — svh/lvh на iOS в
+   сторонних web-view «дышат» вместе с панелями), поэтому 100svh/100lvh в
+   CSS пересчитывались на каждом шаге: главный экран менял размер фото,
+   слой фона пересобирал cover, канвас пылинок пересоздавал буфер — всё это
+   читается как «сайт дёргается». В Safari и в Chromium svh/lvh стабильны,
+   поэтому там проблемы не было.
+
+   ЧТО ДЕЛАЕМ. Высоту окна запоминаем в --nr-vh на <html> и пересчитываем
+   только когда реально меняется ШИРИНА (или поворот экрана). CSS берёт её
+   вместо svh/lvh, фолбэк в var() остаётся прежним. Значение в пикселях,
+   поэтому оно одинаково в любом браузере и больше не «дышит».
+
+   ПОЧЕМУ ШИРИНА, А НЕ ВЫСОТА. Ширина при показе/скрытии панелей не меняется,
+   а именно от неё зависят вид карточек треков, карусель услуг и кегли
+   «Обо мне»: по этому признаку isHeightOnlyResize() отличает «высотный»
+   ресайз от настоящей смены раскладки, и тяжёлые обработчики его пропускают.
+
+   ПОРЯДОК. Подписка вешается здесь, на верхнем уровне файла: script.js
+   подключён раньше обработчиков, которые регистрируются в DOMContentLoaded,
+   поэтому наш слушатель срабатывает первым и успевает обновить признак. */
+let nrViewportWidth = 0;
+let nrViewportDpr = 0;
+let nrResizeHeightOnly = false;
+
+/* Пишет замороженную высоту окна в --nr-vh (на компьютере переменной нет —
+   там в CSS работает прежний svh/lvh). */
+function applyViewportHeightVar() {
+  const root = document.documentElement;
+  if (window.innerWidth < 1024) root.style.setProperty('--nr-vh', Math.round(window.innerHeight) + 'px');
+  else root.style.removeProperty('--nr-vh');
+}
+
+function syncMobileViewportHeight() {
+  const w = window.innerWidth;
+  const dpr = window.devicePixelRatio || 1;
+  nrResizeHeightOnly = (w === nrViewportWidth && dpr === nrViewportDpr);
+  if (nrResizeHeightOnly) return;
+  nrViewportWidth = w;
+  nrViewportDpr = dpr;
+  applyViewportHeightVar();
+}
+
+/* true — окно изменило только высоту: ширина и DPR те же */
+function isHeightOnlyResize() { return nrResizeHeightOnly; }
+
+syncMobileViewportHeight();
+window.addEventListener('resize', syncMobileViewportHeight, { passive: true });
+window.addEventListener('orientationchange', () => {
+  /* Поворот меняет и ширину, и высоту, причём новые размеры окна приходят
+     с задержкой: высоту переписываем сразу и ещё раз, когда они устоялись.
+     Признак «высотного» ресайза здесь не трогаем — его выставит ближайший
+     resize по фактической ширине, иначе тяжёлые обработчики после поворота
+     пропустили бы пересчёт. */
+  applyViewportHeightVar();
+  setTimeout(applyViewportHeightVar, 300);
+}, { passive: true });
+
 document.addEventListener('DOMContentLoaded', () => {
   initI18n();
   initPlayer();
@@ -1993,6 +2053,9 @@ function initPlayer() {
   });
 
   window.addEventListener('resize', () => {
+    /* Вид карточек зависит только от ШИРИНЫ: высотный ресайз (плашка
+       Telegram, адресная строка) список не перестраивает. */
+    if (isHeightOnlyResize()) return;
     renderTrackList();
   });
 
@@ -5104,6 +5167,10 @@ function onServicesPageScroll() {
 }
 
 function onServicesResize() {
+  /* Coverflow телефонной карусели считается от ШИРИНЫ контейнера — на
+     высотный ресайз его пересчитывать не нужно (а с ним уходил и перезапуск
+     transition, из-за которого карточки «дёргались»). */
+  if (isHeightOnlyResize()) return;
   updateServicesDots(true);
   onServicesLayoutSettled();
 }
@@ -6741,7 +6808,12 @@ function queueAboutLeadsFit() {
     fitAboutLeads();
   });
 }
-window.addEventListener('resize', queueAboutLeadsFit, { passive: true });
+/* Кегль строк «Обо мне» считается от ШИРИНЫ абзаца, поэтому высотный ресайз
+   (плашка Telegram, адресная строка) замер не запускает. */
+window.addEventListener('resize', () => {
+  if (isHeightOnlyResize()) return;
+  queueAboutLeadsFit();
+}, { passive: true });
 window.addEventListener('orientationchange', queueAboutLeadsFit, { passive: true });
 
 /* Кириллица подключается с font-display: swap — пока woff2 не пришёл, буквы
@@ -9070,7 +9142,17 @@ function initMixerFaderScroll() {
     cachedMaxScroll = Math.max(1, scrollHeight - clientHeight);
   }
   measureScrollMetrics();
-  window.addEventListener('resize', measureScrollMetrics, { passive: true });
+  /* Один замер на кадр: шторм resize'ов (плашка Telegram на iOS) иначе давал
+     столько же синхронных пересчётов раскладки. */
+  let metricsRaf = 0;
+  function queueScrollMetrics() {
+    if (metricsRaf) return;
+    metricsRaf = requestAnimationFrame(() => {
+      metricsRaf = 0;
+      measureScrollMetrics();
+    });
+  }
+  window.addEventListener('resize', queueScrollMetrics, { passive: true });
   if ('ResizeObserver' in window) {
     new ResizeObserver(() => measureScrollMetrics()).observe(document.documentElement);
   }
