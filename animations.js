@@ -164,14 +164,8 @@
     state.resize = function () {
       var r = parent.getBoundingClientRect();
       var dpr = Math.min(window.devicePixelRatio || 1, maxDpr || 1);
-      var w = Math.max(1, Math.round(r.width));
-      var h = Math.max(1, Math.round(r.height));
-      /* Размер не изменился — буфер не пересоздаём. Запись в width/height
-         очищает канвас и заставляет слой перерисоваться, а на шторме
-         resize'ов (плашка Telegram на iOS) это самая дорогая операция. */
-      if (w === state.w && h === state.h && dpr === state.dpr) return;
-      state.w = w;
-      state.h = h;
+      state.w = Math.max(1, Math.round(r.width));
+      state.h = Math.max(1, Math.round(r.height));
       state.dpr = dpr;
       c.width = state.w * dpr;
       c.height = state.h * dpr;
@@ -205,36 +199,37 @@
       }
     }
 
-    /* Ленты отзывов на ПК тянут мышью (script.js → initReviewDrag): нажатие на
-       карточку — ещё не клик, поэтому круги рисуем не сразу, а на отпускании
-       кнопки и только если курсор не сдвинулся. Порог тот же, что у
-       перетаскивания (REVIEW_DRAG_THRESHOLD = 6 px в script.js). */
-    var pressX = 0;
-    var pressY = 0;
-    var pressOnReviews = false;
+    /* Нажатия мышью на десктопе вызывают клик-анимацию сразу. Исключение —
+       ленты отзывов: на ПК их тянут мышью (script.js → initReviewDrag), и
+       нажатие там ещё не значит клик. Круги ждут отпускания кнопки и
+       появляются, только если указатель не сдвинулся (порог 6 px — как
+       REVIEW_DRAG_THRESHOLD в script.js). */
+    var reviewPress = null;
 
-    window.addEventListener('pointerup', function (e) {
-      if (!pressOnReviews) return;
-      pressOnReviews = false;
-      if (Math.hypot(e.clientX - pressX, e.clientY - pressY) > 6) return;
-      spawnClickRipple(pressX, pressY);
-    }, { passive: true });
-
-    window.addEventListener('pointercancel', function () { pressOnReviews = false; }, { passive: true });
-
-    /* Нажатия мышью на десктопе вызывают клик-анимацию сразу */
     document.addEventListener('pointerdown', function (e) {
+      reviewPress = null; // прошлое нажатие больше не в счёт
       if (REDUCED || e.button !== 0) return;
       if (e.pointerType === 'touch') return; // Для тача проверяем скролл/тап отдельно
       if (e.target.closest && e.target.closest('input, textarea, .fader-rail, #nr-boot, #mobileMenuToggle, #mobileMenuDrawer, #mobileMenuOverlay')) return;
-      pressOnReviews = false;
       if (e.target.closest && e.target.closest('#reviews .nr-marquee')) {
-        pressOnReviews = true;
-        pressX = e.clientX;
-        pressY = e.clientY;
+        reviewPress = { id: e.pointerId, x: e.clientX, y: e.clientY };
         return;
       }
       spawnClickRipple(e.clientX, e.clientY);
+    }, { passive: true });
+
+    /* Отпускание кнопки над лентой отзывов: клик без движения — круги,
+       перетаскивание — тишина */
+    document.addEventListener('pointerup', function (e) {
+      if (!reviewPress || e.pointerId !== reviewPress.id) return;
+      var press = reviewPress;
+      reviewPress = null;
+      if (Math.hypot(e.clientX - press.x, e.clientY - press.y) > 6) return;
+      spawnClickRipple(press.x, press.y);
+    }, { passive: true });
+
+    document.addEventListener('pointercancel', function (e) {
+      if (reviewPress && e.pointerId === reviewPress.id) reviewPress = null;
     }, { passive: true });
 
     /* Обработка тапа на мобильных устройствах (только клик, без скролла) */
@@ -285,17 +280,32 @@
   /* Высота документа нужна для прогресса прокрутки. Читать scrollHeight в
      каждом кадре скролла — это принудительная переклейка тяжёлой раскладки, и
      именно она дёргала прокрутку НА ПК: там скролл ведёт наш модуль
-     smoothscroll-nr.js в rAF, и лишний layout в кадре бьёт по плавности.
-     На телефоне живого замера тоже больше нет: пока прячется плашка Telegram,
-     кадры прокрутки идут вперемешку с десятками resize, и каждый кадр со
-     scrollHeight заново переклеивал раскладку — отсюда рывки. Высоту держим
-     свежей СОБЫТИЯМИ (resize окна и ResizeObserver на <html>/<body> ниже), а
-     в кадре пользуемся кэшем. */
+     smoothscroll-nr.js в rAF, и лишний layout в кадре бьёт по плавности. На
+     телефоне скролл нативный (компоситорный) — замер в кадре кадру не вредит.
+     Поэтому на ПК высоту держим свежей СОБЫТИЯМИ (ResizeObserver на <html> и
+     <body> ниже и resize окна), а в кадре пользуемся кэшем; на телефоне меряем
+     живую высоту (см. liveScrollMax). */
   var scrollMax = 0;
 
   function refreshScrollMax() {
     var doc = document.documentElement;
     scrollMax = Math.max(0, doc.scrollHeight - window.innerHeight);
+  }
+
+  /* Предел прокрутки по ЖИВОЙ высоте документа — только для нативного скролла
+     (телефон): там он не мешает кадру и держит полоску точной при «дыхании»
+     адресной строки. */
+  function liveScrollMax() {
+    scrollMax = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    return scrollMax;
+  }
+
+  /* Ведёт ли прокрутку наш плавный модуль (ПК). Пока да — замер в кадре не
+     делаем (см. liveScrollMax). Вызов лёгкий: модуль отдаёт состояние без
+     аллокаций. Если модуля на странице нет (скролл нативный) — вернём false. */
+  function smoothScrollDrives() {
+    var ns = window.nrSmoothScroll;
+    return !!(ns && typeof ns.isEnabled === 'function' && ns.isEnabled());
   }
 
   function computeScrollProgress() {
@@ -1987,23 +1997,15 @@
     isScrollTicking = false;
     var currentY = window.scrollY || 0;
 
-    /* Предел прокрутки — из кэша: его обновляют resize окна и ResizeObserver
-       (см. refreshScrollMax). Принудительного layout в кадре нет ни на ПК, ни
-       на телефоне: именно он вместе с плашкой Telegram давал рывки. */
-    if (scrollMax <= 0) refreshScrollMax();
+    /* Предел прокрутки: на ПК берём из кэша (он обновляется по событиям —
+       иначе принудительный layout в кадре ломает плавность, см.
+       refreshScrollMax), а на телефоне меряем живой (там скролл нативный). */
+    if (smoothScrollDrives()) {
+      if (scrollMax <= 0) refreshScrollMax();
+    } else {
+      liveScrollMax();
+    }
     var p = computeScrollProgress();
-
-    /* Фон главного экрана отстаёт от контента (см. initHeroParallax).
-       В режиме движка (scroll-driven animation) вызов сразу выходит: сдвиг
-       привязан к прокрутке в CSS. В фолбэке позиция секции берётся из
-       rect.top — единственное чтение геометрии в кадре, зато значение не
-       зависит от подкрутки scrollY адресной строкой. Лишние записи в style
-       отсекает порог внутри setHeroParallax.
-
-       ЧИТАЕМ ДО ЗАПИСЕЙ. Раньше параллакс шёл после полоски прогресса, а та
-       пишет width и opacity: браузер пересчитывал раскладку между записью и
-       чтением rect — лишний принудительный layout в каждом кадре. */
-    safe(updateHeroParallax);
 
     /* Полоска прогресса: цель — реальный прогресс страницы, отрисовку догоняем
        В ЭТОМ ЖЕ кадре (см. advanceScrollLine). Мгновенных «телепортов» от
@@ -2016,6 +2018,14 @@
       lineTarget = p;
       advanceScrollLine();
     });
+
+    /* Фон главного экрана отстаёт от контента (см. initHeroParallax).
+       В режиме движка (scroll-driven animation) вызов сразу выходит: сдвиг
+       привязан к прокрутке в CSS. В фолбэке позиция секции берётся из
+       rect.top — единственное чтение геометрии в кадре, зато значение не
+       зависит от подкрутки scrollY адресной строкой. Лишние записи в style
+       отсекает порог внутри setHeroParallax. */
+    safe(updateHeroParallax);
 
     /* Фон шапки растворяется на первых HERO_FADE_DISTANCE пикселях —
        см. paintHeaderFade. Считается от той же текущей позиции, что и
@@ -2151,8 +2161,7 @@
     var c = dustCanvas.c;
     var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     /* Размер берём у самого слоя, а не у окна: CSS-высота канваса задана
-       замороженной --nr-vh (animations.css, раздел 19) и от плашки браузера
-       не зависит. */
+       в lvh (animations.css, раздел 19) и от плашки браузера не зависит. */
     var w = Math.max(1, Math.round(c.clientWidth || window.innerWidth));
     var h = Math.max(1, Math.round(c.clientHeight || window.innerHeight));
     if (w === dustCanvas.w && h === dustCanvas.h && dpr === dustCanvas.dpr) return;
@@ -2587,31 +2596,15 @@
     }
 
     window.addEventListener('scroll', onScroll, { passive: true });
-    /* Ресайз окна — ОДИН разбор на кадр. В Telegram на iOS плашка прячется
-       анимацией frame'а web-view: событий приходит десятки подряд, и раньше
-       каждое читало scrollHeight, offsetTop и пересоздавало буферы канвасов.
-       Теперь работа схлопывается в кадр, а «высотный» ресайз (ширина и DPR не
-       изменились) не трогает то, что от высоты не зависит: база параллакса и
-       буферы канвасов считаются от ширины. Пересчёт scrollMax нужен и здесь —
-       предел прокрутки зависит от высоты окна. */
-    var resizeRaf = 0;
     window.addEventListener('resize', function () {
-      if (resizeRaf) return;
-      resizeRaf = requestAnimationFrame(function () {
-        resizeRaf = 0;
-        safe(refreshScrollMax);
-        if (window.isHeightOnlyResize && window.isHeightOnlyResize()) {
-          onScroll();
-          return;
-        }
-        /* Сменилась ширина окна — верх секции героя мог сдвинуться (шапка,
-           padding'и, поворот телефона): пересчитываем базу параллакса
-           и сразу перерисовываем с новой прокруткой. */
-        safe(refreshHeroParallaxRange);
-        safe(function () { playerCanvas && playerCanvas.resize(); });
-        safe(sizeDust);
-        onScroll();
-      });
+      safe(refreshScrollMax);
+      /* Сменилась ширина/высота окна — верх секции героя мог сдвинуться
+         (шапка, padding'и, поворот телефона): пересчитываем базу параллакса
+         и сразу перерисовываем с новой прокруткой. */
+      safe(refreshHeroParallaxRange);
+      safe(function () { playerCanvas && playerCanvas.resize(); });
+      safe(sizeDust);
+      onScroll();
     }, { passive: true });
 
     onScroll();

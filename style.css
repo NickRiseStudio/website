@@ -441,7 +441,7 @@ html, body {
     box-sizing: border-box;
     height: auto;
     max-height: none;
-    min-height: calc(var(--nr-vh, 100svh) - 64px - env(safe-area-inset-bottom, 0px));
+    min-height: calc(100svh - 64px - env(safe-area-inset-bottom, 0px));
     overflow-y: visible;
     /* ЗАЗОР ДО #player. main.space-y-8 добавляет 32px (sm: 64px) именно
        НИЖНИМ отступом самой секции — правило Tailwind v4
@@ -648,10 +648,7 @@ html, body {
   .hero-bg-layer {
     inset: -64px 0 0 0;
     min-height: calc(100vh - 64px - env(safe-area-inset-bottom, 0px));
-    /* Замороженная высота (см. script.js → syncMobileViewportHeight): в TG на
-       iOS lvh «дышит» вместе с плашкой, и слой пересчитывал cover на каждом
-       шаге. Фолбэк var() — прежний 100lvh, если JS не отработал. */
-    min-height: calc(var(--nr-vh, 100lvh) - 64px - env(safe-area-inset-bottom, 0px));
+    min-height: calc(100lvh - 64px - env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -1226,7 +1223,7 @@ html, body {
      больше или меньше, но срезать нечего: секция растёт, лишнее уходит в
      прокрутку. */
   .hero-mask-container {
-    max-width: min(min(calc(var(--nr-hero-scale-cap) * 8.2), calc((var(--nr-vh, 100svh) - 706px) * 0.4 + var(--nr-hero-scale-cap) * 6.2)), calc(var(--nr-vh, 100svh) - var(--nr-hero-scale-cap) * 11.5 - 95px)) !important;
+    max-width: min(min(calc(var(--nr-hero-scale-cap) * 8.2), calc((100svh - 706px) * 0.4 + var(--nr-hero-scale-cap) * 6.2)), calc(100svh - var(--nr-hero-scale-cap) * 11.5 - 95px)) !important;
   }
 
   /* Секция: вместо pt-4 / pb-4 — доля масштаба, плюс «воздух» между
