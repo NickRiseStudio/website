@@ -199,11 +199,35 @@
       }
     }
 
+    /* Ленты отзывов на ПК тянут мышью (script.js → initReviewDrag): нажатие на
+       карточку — ещё не клик, поэтому круги рисуем не сразу, а на отпускании
+       кнопки и только если курсор не сдвинулся. Порог тот же, что у
+       перетаскивания (REVIEW_DRAG_THRESHOLD = 6 px в script.js). */
+    var pressX = 0;
+    var pressY = 0;
+    var pressOnReviews = false;
+
+    window.addEventListener('pointerup', function (e) {
+      if (!pressOnReviews) return;
+      pressOnReviews = false;
+      if (Math.hypot(e.clientX - pressX, e.clientY - pressY) > 6) return;
+      spawnClickRipple(pressX, pressY);
+    }, { passive: true });
+
+    window.addEventListener('pointercancel', function () { pressOnReviews = false; }, { passive: true });
+
     /* Нажатия мышью на десктопе вызывают клик-анимацию сразу */
     document.addEventListener('pointerdown', function (e) {
       if (REDUCED || e.button !== 0) return;
       if (e.pointerType === 'touch') return; // Для тача проверяем скролл/тап отдельно
       if (e.target.closest && e.target.closest('input, textarea, .fader-rail, #nr-boot, #mobileMenuToggle, #mobileMenuDrawer, #mobileMenuOverlay')) return;
+      pressOnReviews = false;
+      if (e.target.closest && e.target.closest('#reviews .nr-marquee')) {
+        pressOnReviews = true;
+        pressX = e.clientX;
+        pressY = e.clientY;
+        return;
+      }
       spawnClickRipple(e.clientX, e.clientY);
     }, { passive: true });
 
@@ -643,6 +667,13 @@
     window.CSS.supports('animation-timeline', 'scroll()'));
 
   function initHeroParallax() {
+    /* Телефоны и планшеты: параллакса нет (style.css гасит его в блоке
+       «@media (max-width: 1023px)»). Выходим до присвоения ссылок — тогда
+       refreshHeroParallaxRange и updateHeroParallax сразу выходят по своим
+       проверкам: на resize не читается цепочка offsetTop, а в кадре прокрутки
+       ничего не пишется. Причина — Telegram на iOS: там плашка меняет высоту
+       окна анимацией, и слой фона «дёргался» вместе с ней. */
+    if (window.innerWidth < 1024) return;
     parallaxSection = $('#hero');
     if (!parallaxSection) return;
     parallaxLayer = $('.hero-bg-layer', parallaxSection);
