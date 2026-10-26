@@ -2844,6 +2844,10 @@ function switchDeckSource(src) {
      точке): запускаем её, просим порцию с текущей позиции, а кроссфейд отложим
      до готовности. Звук при этом не рвётся — играет прежняя дорожка. */
   if (!isDeckReadyToSound(nextEl)) {
+    /* Вторая дорожка стояла (телефон, см. «ВТОРАЯ ДОРОЖКА ИГРАЕТ ВМЕСТЕ»):
+       ставим её в точку звучащей, пока она ещё молчит — по стоящей дорожке
+       прыжок неслышен, а без выравнивания после фейда звук прыгнул бы назад. */
+    if (nextEl.paused) alignPairTo(item, prevEl);
     const played = nextEl.play();
     if (played && played.catch) played.catch(() => {});
     streamSeekTo(activeTrackId, pairPos(prevEl));
@@ -3156,7 +3160,7 @@ function changeDeckVolume(val) {
 }
 
 /* ══ ПЕРЕКЛЮЧЕНИЕ BEFORE / AFTER ═══════════════════════════════════════════
-   Обе дорожки пары идут ВСЕГДА: слышна та, у которой уровень больше нуля,
+   Обе дорожки пары идут одновременно: слышна та, у которой уровень больше нуля,
    вторая беззвучна и стоит в той же точке трека. Переключение — это только
    уровень:
      1. клик сразу меняет источник и интерфейс;
@@ -3179,6 +3183,10 @@ function changeDeckVolume(val) {
    (перед первым звуком) и onstatechange контекста (первый клик на iOS застаёт
    его ещё спящим — раньше пара первого трека так и оставалась без графа до
    конца трека).
+   Исключение — телефон: там вторая дорожка стоит на паузе, потому что два
+   одновременно играющих потока сами по себе роняли звук (см. «ВТОРАЯ ДОРОЖКА
+   ИГРАЕТ ВМЕСТЕ»). Она запускается в момент клика, и переключение идёт тем же
+   кроссфейдом, только входящей дорожке нужно сначала начать звучать.
    Если входящая дорожка всё же не готова (нет данных, браузер её остановил),
    звук не рвётся: играет прежняя, а фейд начнётся, как только данные дойдут, —
    не позже AUDIO_SWITCH_WAIT_MS. Не дождались — переключатель возвращается
@@ -3204,7 +3212,7 @@ const AB_DEBUG = /[?&]abdbg=1/.test(location.search);
 /* Метка сборки: первое, что нужно увидеть на устройстве. Если её нет в отчёте —
    открыт старый файл (кэш браузера или ещё не задеплоенный код), и проверять
    поведение плеера бессмысленно. Меняется при каждой правке звукового тракта. */
-const NR_BUILD = 'NR-2026-10-27d';
+const NR_BUILD = 'NR-2026-10-27e';
 const abState = {};
 let abBox = null;
 let abText = null;
@@ -3360,6 +3368,7 @@ function abShowBuild() {
     ' | граф: ' + (AUDIO_GRAPH_ENABLED ? 'вкл' : 'ВЫКЛ') + forced +
     ' | порции: ' + (AUDIO_CHUNK_ENABLED ? 'вкл' : 'ВЫКЛ') +
     (AUDIO_CHUNK_ENABLED && audioChunkOff ? ' (отключились сами)' : '') +
+    ' | вторая дорожка: ' + (AUDIO_PAIR_TWIN_ENABLED ? 'играет' : 'стоит') +
     ' | выход: ' + (audioChunkSupported() ? 'MediaSource' : 'файл'));
 }
 setTimeout(abShowBuild, 0);
@@ -3477,6 +3486,33 @@ const AUDIO_ELEMENT_VOLUME_WORKS = !isIosAudioDevice();
    графу на уже звучащей паре рвёт прямой выход элемента (см. «ПЕРВЫЙ ЗВУК»),
    поэтому первый клик лучше задержать на это время, чем потерять 2 с звука. */
 const AUDIO_GRAPH_WAIT_MS = 400;
+
+/* ── ВТОРАЯ ДОРОЖКА ИГРАЕТ ВМЕСТЕ ───────────────────────────────────────────
+   Вся конструкция плеера рассчитана на то, что обе дорожки (BEFORE и AFTER)
+   идут одновременно: одна слышна, вторая беззвучна и стоит в той же точке.
+   Переключение тогда — это только кроссфейд уровней.
+
+   На телефоне этот приём оказался источником провала звука, который не зависит
+   ни от AudioContext, ни от порционного режима: провал воспроизводился во всех
+   четырёх сочетаниях этих выключателей. Общее у всех вариантов одно — ДВА
+   одновременно играющих медиапотока. На Android звуковая сессия приложения одна,
+   и когда второй поток стартует (или его отжимают и он стартует заново),
+   система пересобирает выход: индикатор звука мигает, звук пропадает примерно
+   на две секунды, а элемент при этом продолжает играть — позиция идёт, спиннера
+   нет, иконка Play не меняется. На ПК выход не пересобирается, поэтому там
+   дефекта нет.
+
+   Поэтому на телефоне играет ТОЛЬКО звучащая дорожка, а вторая стоит на паузе в
+   той же точке. Она запускается в момент переключения BEFORE / AFTER: пара
+   секунд на её старт, выравнивание и кроссфейд — этого достаточно, чтобы
+   переключение осталось плавным (switchDeckSource → waitDeckReadyThenFade).
+   После фейда прежняя дорожка снова ставится на паузу.
+
+   ?pair=1 — вернуть обеим дорожкам одновременную игру (для проверки на ПК и для
+   сравнения на устройстве). */
+const AUDIO_PAIR_TWIN_ENABLED = /[?&]pair=1/.test(location.search)
+  ? true
+  : !audioTouchOnlyDevice();
 
 let audioCtx = null;
 let audioGraphFailed = false;
@@ -3720,6 +3756,9 @@ function syncAudioPair(item) {
   const { audible, silent } = getAudiblePair(item);
   if (!isAudioAudible(audible)) return;
   if (silent.seeking || silent.ended) return;
+  /* Вторая дорожка стоит на паузе (телефон): догонять нечего, а менять скорость
+     стоящему элементу — лишняя пересборка его звукового тракта. */
+  if (silent.paused) return;
 
   // Пользователь тянет полосу прокрутки: пока браузер не закончил seek звучащей
   // дорожки, вторую не трогаем — двойной seek как раз и давал рывок в звуке.
@@ -3896,7 +3935,12 @@ function isDeckReadyToSound(el) {
 function waitDeckReadyThenFade(item, nextEl, prevEl, src) {
   cancelDeckSwitch();
   const token = deckSwitchToken;
-  const deadline = performance.now() + AUDIO_SWITCH_WAIT_MS;
+  /* На телефоне входящая дорожка до клика стояла (см. «ВТОРАЯ ДОРОЖКА ИГРАЕТ
+     ВМЕСТЕ»), поэтому ей нужно не только выровняться, но и начать звучать с
+     нуля — на это уходит больше времени, чем на готовой паре. Ждём дольше, иначе
+     переключение возвращалось бы назад просто из-за нехватки времени. */
+  const waitMs = AUDIO_PAIR_TWIN_ENABLED ? AUDIO_SWITCH_WAIT_MS : AUDIO_SWITCH_WAIT_MS * 4;
+  const deadline = performance.now() + waitMs;
 
   const step = () => {
     deckSwitchTimer = null;
@@ -3935,6 +3979,20 @@ function fadePairToSource(item, nextEl) {
       ' мс после клика: Δ ' + ((pairPos(item.audioA) - pairPos(item.audioB)) * 1000).toFixed(0) + ' мс');
   }
   applyAudioVolumes(activeTrackId, true);
+
+  /* Телефон: после фейда прежняя дорожка снова встаёт на паузу — одновременно
+     должен играть только один поток (см. «ВТОРАЯ ДОРОЖКА ИГРАЕТ ВМЕСТЕ»).
+     Ждём конец фейда, иначе срез был бы слышен; если источник успели вернуть
+     назад, ничего не делаем. */
+  if (!AUDIO_PAIR_TWIN_ENABLED) {
+    const prevEl = nextEl === item.audioA ? item.audioB : item.audioA;
+    const trackId = activeTrackId;
+    setTimeout(() => {
+      if (trackAudioMap[trackId] !== item) return;
+      if (getAudiblePair(item).audible === prevEl) return;
+      if (!prevEl.paused) prevEl.pause();
+    }, AUDIO_FADE_MS + 80);
+  }
 }
 
 /* ══ ПОДТЯЖКА ПАРЫ ВО ВРЕМЯ ВОСПРОИЗВЕДЕНИЯ ══════════════════════════════
@@ -3955,8 +4013,10 @@ function syncActivePairTick() {
   /* Вторая дорожка встала: браузер мог отжать у неё звук (телефон, смена
      звукового устройства) или она осталась на паузе. Сама она уже не поедет, и
      на клике это обернулось бы отставанием на всю длину паузы. Перед запуском
-     ставим её в точку звучащей — дорожка заглушена, прыжок неслышен. */
-  if (silent.paused && !silent.ended) {
+     ставим её в точку звучащей — дорожка заглушена, прыжок неслышен.
+     На телефоне дорожку не поднимаем вовсе: она специально стоит (см. «ВТОРАЯ
+     ДОРОЖКА ИГРАЕТ ВМЕСТЕ»), и её запуск здесь возвращал бы два потока. */
+  if (AUDIO_PAIR_TWIN_ENABLED && silent.paused && !silent.ended) {
     alignPairTo(item, audible);
     const p = silent.play();
     if (p && p.catch) p.catch(() => {});
@@ -4278,6 +4338,18 @@ function getPairBufferedAhead(item, pos) {
   return Math.min(getBufferedAhead(item.audioA, pos), getBufferedAhead(item.audioB, pos));
 }
 
+/* Запас, по которому решается «играть или ждать данные». Когда вторая дорожка
+   стоит на паузе (телефон, см. «ВТОРАЯ ДОРОЖКА ИГРАЕТ ВМЕСТЕ»), её буфер к
+   текущей позиции отношения не имеет: браузер качает стоящий элемент не так
+   охотно, и общий минимум держал бы звук на гейте без причины. Тогда считаем
+   запас только по звучащей дорожке. */
+function getGateBufferedAhead(item, pos) {
+  if (!item) return 0;
+  if (AUDIO_PAIR_TWIN_ENABLED) return getPairBufferedAhead(item, pos);
+  const { audible } = getAudiblePair(item);
+  return getBufferedAhead(audible, pos);
+}
+
 /* Начало ближайшего скачанного участка ВПЕРЁД от позиции (-1 — дальше данных нет). */
 function getBufferedNextStart(el, pos) {
   if (!el) return -1;
@@ -4377,7 +4449,7 @@ function checkPairBufferGate(item) {
   if (audible.paused || audible.seeking || audible.ended) return;
 
   const pos = audible.currentTime || 0;
-  const pairEnd = pos + getPairBufferedAhead(item, pos);
+  const pairEnd = pos + getGateBufferedAhead(item, pos);
   const dur = audible.duration || 0;
   /* Хвост файла: если до конца трека меньше, чем запас для продолжения, ждать
      нечего — иначе пара встала бы перед самым «ended» и следующий трек не
@@ -4391,7 +4463,7 @@ function checkPairBufferGate(item) {
 function gatePairByBuffer(item) {
   const { audible } = getAudiblePair(item);
   item.bufferGate = true;
-  abMark('гейт: ВКЛ (впереди ' + getPairBufferedAhead(item, audible.currentTime || 0).toFixed(1) + ' с)');
+  abMark('гейт: ВКЛ (впереди ' + getGateBufferedAhead(item, audible.currentTime || 0).toFixed(1) + ' с)');
   /* Останавливаем ОБЕ дорожки и ставим их в одну точку: пока пара стоит, тихая
      иначе уехала бы вперёд, и после снятия гейта они поехали бы с расхождением —
      то есть переключение снова пришлось бы начинать с выравнивания. */
@@ -4410,7 +4482,7 @@ function releasePairBufferGate(trackId) {
   if (!item || !item.bufferGate) return;
   const { audible } = getAudiblePair(item);
   const pos = audible.currentTime || 0;
-  if (getPairBufferedAhead(item, pos) < AUDIO_PAIR_HEAD) {
+  if (getGateBufferedAhead(item, pos) < AUDIO_PAIR_HEAD) {
     /* Данных у одной из дорожек ещё нет. Гейт мог встать сразу после перемотки:
        страховка на случай, если порция для второй дорожки не попросилась сама
        (её событие seeking не пришло) — просим её отсюда, и пауза снимется. */
@@ -4451,8 +4523,13 @@ function ensurePairPlaying(trackId) {
      рампами. Играющую пару attachAudioGraph не тронет — подключение на ходу
      рвёт звук (см. «ПЕРВЫЙ ЗВУК»). */
   if (ensurePairAudioGraph(trackId)) applyAudioVolumes(trackId, false);
+  /* На телефоне вторую дорожку не запускаем: два одновременных медиапотока —
+     это и есть причина провала звука (см. «ВТОРАЯ ДОРОЖКА ИГРАЕТ ВМЕСТЕ»).
+     Она стартует сама в момент переключения BEFORE / AFTER. */
+  const { audible } = getAudiblePair(item);
   [item.audioA, item.audioB].forEach(el => {
     if (!el.paused || el.ended) return;
+    if (!AUDIO_PAIR_TWIN_ENABLED && el !== audible) return;
     /* Запускаем в точке звучащей дорожки: сама дорожка стояла, её звука нет,
        поэтому прыжок неслышен — зато пара продолжит синхронно. */
     const other = el === item.audioA ? item.audioB : item.audioA;
@@ -4512,8 +4589,8 @@ function startPairPlayback(trackId) {
      нет, звук не начинаем: покажем ожидание и стартуем сами, когда данные дойдут
      (releasePairBufferGate). Так на холодном клике не бывает «пуск-стоп». */
   const { audible } = getAudiblePair(item);
-  item.bufferGate = getPairBufferedAhead(item, audible.currentTime || 0) <= AUDIO_PAIR_GUARD;
-  if (item.bufferGate) abMark('гейт: ВКЛ (впереди ' + getPairBufferedAhead(item, audible.currentTime || 0).toFixed(1) + ' с)');
+  item.bufferGate = getGateBufferedAhead(item, audible.currentTime || 0) <= AUDIO_PAIR_GUARD;
+  if (item.bufferGate) abMark('гейт: ВКЛ (впереди ' + getGateBufferedAhead(item, audible.currentTime || 0).toFixed(1) + ' с)');
   if (item.bufferGate) {
     /* Старт с ожиданием: обе дорожки в одну точку и обе стоят. Продолжим
        вдвоём, когда данные будут у обеих (releasePairBufferGate). */
@@ -4584,7 +4661,7 @@ function updateDeckProgressUI() {
   // Полоса загрузки: до какого момента скачаны ОБЕ дорожки пары (до этой отметки
   // трек действительно обеспечен данными), но не меньше текущей позиции — чтобы
   // полоса не откатывалась назад при перемотке.
-  const bufEnd = cur + getPairBufferedAhead(item, cur);
+  const bufEnd = cur + getGateBufferedAhead(item, cur);
   const bufPct = dur > 0 ? (Math.max(cur, bufEnd) / dur) * 100 : 0;
   const bufferBar = document.getElementById('deckBufferBar');
   if (bufferBar) bufferBar.style.width = `${bufPct}%`;
