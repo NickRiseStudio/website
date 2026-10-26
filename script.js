@@ -35,6 +35,81 @@ function scheduleScrollTriggerRefresh(delay) {
   }, delay || 0);
 }
 
+/* ── НАДЁЖНЫЙ ТАП ПО КНОПКЕ НА ТЕЛЕФОНЕ ───────────────────────────────────
+   Android-браузеры (Chrome, Яндекс) не присылают click, если страница под
+   пальцем ещё ехала по инерции: первый тап после свайпа тратится на её
+   остановку, и со стороны это выглядит как «кнопка не работает» (второй тап
+   срабатывает — инерция уже погашена). Сами касания при этом приходят всегда.
+   Поэтому тап разбираем на touchend и, если click так и не пришёл, выполняем
+   действие сами через TAP_FALLBACK_DELAY. Если click пришёл — страховка
+   снимается, то есть действие выполняется РОВНО ОДИН раз и без задержки.
+   Используется для переключателя языка, точек-индикатора и стрелок ленты —
+   всего, что листает треки. */
+const TAP_FALLBACK_DELAY = 350; // мс: сколько ждём click, прежде чем сработать самим
+const TAP_FALLBACK_GUARD = 600; // мс: окно, в котором поздний click уже не повторяет действие
+const TAP_MAX_MS = 700;         // мс: дольше — это удержание, а не тап
+
+/* opts.ignore — селектор вложенного элемента со своим действием (например,
+   кнопка play внутри карточки): такие касания сюда не относим, иначе одно
+   нажатие выполнилось бы дважды. */
+function bindTapControl(el, handler, opts) {
+  if (!el) return;
+  const ignore = (opts && opts.ignore) || '';
+  const isIgnored = (target) =>
+    !!(ignore && target && target.closest && target.closest(ignore));
+
+  let startX = 0;
+  let startY = 0;
+  let startScrollY = 0;
+  let startAt = 0;
+  let fallbackTimer = 0;
+  let fallbackFiredAt = 0; // когда действие выполнила страховка (0 — не выполняла)
+
+  el.addEventListener('touchstart', (e) => {
+    const t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    startX = t.clientX;
+    startY = t.clientY;
+    startScrollY = window.scrollY || window.pageYOffset || 0;
+    startAt = Date.now();
+  }, { passive: true });
+
+  el.addEventListener('touchend', (e) => {
+    const t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    if (isIgnored(e.target)) return;
+    // Сдвиг больше тап-допуска — это жест (свайп), а не нажатие.
+    if (Math.abs(t.clientX - startX) > 10 || Math.abs(t.clientY - startY) > 10) return;
+    // Страница за время касания уехала — значит это была прокрутка, а не тап
+    // (браузер в таком случае click и не присылает — повторять его незачем).
+    if (Math.abs((window.scrollY || window.pageYOffset || 0) - startScrollY) > 2) return;
+    if (Date.now() - startAt > TAP_MAX_MS) return;
+
+    clearTimeout(fallbackTimer);
+    fallbackTimer = setTimeout(() => {
+      fallbackTimer = 0;
+      fallbackFiredAt = Date.now();
+      handler();
+    }, TAP_FALLBACK_DELAY);
+  }, { passive: true });
+
+  el.addEventListener('click', (e) => {
+    if (isIgnored(e.target)) return;
+    if (fallbackTimer) {
+      clearTimeout(fallbackTimer);
+      fallbackTimer = 0;
+    }
+    // Действие уже выполнила страховка — этот поздний click не повторяем.
+    // Обычные клики (и быстрые повторные тапы) под этот запрет не попадают.
+    if (fallbackFiredAt && Date.now() - fallbackFiredAt < TAP_FALLBACK_GUARD) {
+      fallbackFiredAt = 0;
+      return;
+    }
+    fallbackFiredAt = 0;
+    handler();
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initI18n();
   initPlayer();
@@ -147,43 +222,6 @@ function getDeviceType() {
   if (w < 1024) return 'tablet';
   return 'desktop';
 }
-/* ── ЧЕМ ЭТО УСТРОЙСТВО ОТЛИЧАЕТСЯ ДЛЯ ЗВУКА ────────────────────────────────
-   Звуковой тракт выбирается не по ширине окна: узкое окно на ПК — это не
-   телефон, а именно от этого зависит, включать ли AudioContext и порционную
-   загрузку (см. «ЕДИНЫЙ ЗВУКОВОЙ ТРАКТ» и «ПОРЦИОННАЯ ЗАГРУЗКА ПАРЫ»). */
-
-/* iOS и iPadOS, включая iPad в режиме «как компьютер». Признаки те же, что в
-   animations.js для класса nr-ios. */
-function isIosAudioDevice() {
-  try {
-    const platform = navigator.platform || '';
-    if (/iP(hone|ad|od)/.test(platform)) return true;
-    return platform === 'MacIntel' && navigator.maxTouchPoints > 1;
-  } catch (err) { return false; }
-}
-
-/* Телефон или планшет без мыши и наведения. Признак тот же, что в
-   smoothscroll-nr.js и index.html, но с запасными проверками: от этого выбора
-   зависит, включать ли AudioContext и порции, а медиазапрос `(pointer: coarse)`
-   на части Android-браузеров (DeX, WebView, отдельные прошивки) отвечает
-   «мышь». Тогда на телефоне остались бы оба механизма, из-за которых пропадает
-   звук, и правка не изменила бы ничего. Поэтому: сначала медиазапрос, затем
-   мобильный User-Agent, затем маленький экран при наличии касаний. */
-function audioTouchOnlyDevice() {
-  try {
-    if (!hasTouchInput()) return false;
-    if (window.matchMedia &&
-        window.matchMedia('(hover: none) and (pointer: coarse)').matches) return true;
-    const ua = navigator.userAgent || '';
-    if (/Android|iPhone|iPad|iPod|Mobile/i.test(ua)) return true;
-    /* Касания есть, признаков мобильного браузера нет: телефоном считаем только
-       заведомо маленький экран (телефон в альбомной ориентации — до 820 точек по
-       меньшей стороне). Ноутбук с тачскрином сюда не попадает. */
-    return Math.min(window.innerWidth, window.innerHeight) <= 820;
-  } catch (err) { return false; }
-}
-
-
 
 function resolveDeviceText(val, device = getDeviceType()) {
   if (val === null || val === undefined) return '';
@@ -480,7 +518,10 @@ function getEnabledTracks() {
   return getEnabledTracksForLang(activeTrackLang);
 }
 
-function updateTrackLangButtonsUI() {
+// lang — какой язык подсветить. По умолчанию текущий activeTrackLang; во время
+// перехода ленты язык передаётся явно, чтобы переключатель переключился СРАЗУ,
+// вместе со стартом движения треков, а не после доводки (см. runTrackTransition).
+function updateTrackLangButtonsUI(lang = activeTrackLang) {
   const ruBtn = document.getElementById('trackLangRuBtn');
   const enBtn = document.getElementById('trackLangEnBtn');
   const baseClasses = 'track-lang-btn py-2 px-4 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap flex-shrink-0';
@@ -488,14 +529,14 @@ function updateTrackLangButtonsUI() {
   const inactiveClasses = `${baseClasses} bg-[#090C12] border border-gray-800/80 text-gray-400 hover:text-white`;
 
   if (ruBtn) {
-    ruBtn.className = activeTrackLang === 'ru' ? activeClasses : inactiveClasses;
+    ruBtn.className = lang === 'ru' ? activeClasses : inactiveClasses;
     const dot = ruBtn.querySelector('.track-lang-dot');
-    if (dot) dot.className = `track-lang-dot w-2 h-2 rounded-full flex-shrink-0 ${activeTrackLang === 'ru' ? 'bg-slate-950' : 'bg-transparent'}`;
+    if (dot) dot.className = `track-lang-dot w-2 h-2 rounded-full flex-shrink-0 ${lang === 'ru' ? 'bg-slate-950' : 'bg-transparent'}`;
   }
   if (enBtn) {
-    enBtn.className = activeTrackLang === 'en' ? activeClasses : inactiveClasses;
+    enBtn.className = lang === 'en' ? activeClasses : inactiveClasses;
     const dot = enBtn.querySelector('.track-lang-dot');
-    if (dot) dot.className = `track-lang-dot w-2 h-2 rounded-full flex-shrink-0 ${activeTrackLang === 'en' ? 'bg-slate-950' : 'bg-transparent'}`;
+    if (dot) dot.className = `track-lang-dot w-2 h-2 rounded-full flex-shrink-0 ${lang === 'en' ? 'bg-slate-950' : 'bg-transparent'}`;
   }
 }
 
@@ -549,6 +590,12 @@ function getTrackLangCycle() {
 
 function getTotalTrackPages() {
   return Math.max(1, Math.ceil(getEnabledTracks().length / getTracksPerPage()));
+}
+
+// То же, но для конкретного языка. Нужно, когда страница считается ДО смены
+// activeTrackLang — переключатель и точки листаются в начале перехода ленты.
+function getTotalTrackPagesForLang(lang) {
+  return Math.max(1, Math.ceil(getEnabledTracksForLang(lang).length / getTracksPerPage()));
 }
 
 // Треки, которые будут видны на конкретной странице конкретного языка.
@@ -641,13 +688,18 @@ function getTrackSteps() {
   return steps;
 }
 
-function getCurrentTrackStepIndex() {
-  return getTrackSteps().findIndex(s => s.lang === activeTrackLang && s.page === currentTrackPage);
+// lang / page — состояние, чью точку считать активной. По умолчанию текущее;
+// во время перехода ленты передаётся целевое (см. renderTrackDots).
+function getCurrentTrackStepIndex(lang = activeTrackLang, page = currentTrackPage) {
+  return getTrackSteps().findIndex(s => s.lang === lang && s.page === page);
 }
 
 function goToTrackStep(index) {
   const target = getTrackSteps()[index];
   if (!target) return;
+  // Хвост свайп-перехода (растворение панели) закрываем сразу — он уже
+  // ничего не значит, а шаг по точке должен срабатывать мгновенно.
+  finishTrackSwipeTail();
   if (target.lang !== activeTrackLang) {
     setTrackLanguage(target.lang, target.page);
     return;
@@ -661,12 +713,15 @@ function goToTrackStep(index) {
 const TRACK_DOT_ACTIVE_CLASS = 'w-8 h-2.5 rounded-full transition-all duration-300 bg-amber-500 shadow-sm shadow-amber-500/50 cursor-pointer';
 const TRACK_DOT_IDLE_CLASS = 'w-2.5 h-2.5 rounded-full transition-all duration-300 bg-gray-700 hover:bg-amber-500 cursor-pointer';
 
-function renderTrackDots() {
+// lang / page — какая «остановка» подсвечивается. По умолчанию текущая; во время
+// перехода ленты передаётся целевая, чтобы точки переключились сразу вместе со
+// стартом движения треков (см. runTrackTransition).
+function renderTrackDots(lang = activeTrackLang, page = currentTrackPage) {
   const wrap = document.getElementById('trackDots');
   if (!wrap) return;
 
   const steps = getTrackSteps();
-  const activeIdx = getCurrentTrackStepIndex();
+  const activeIdx = getCurrentTrackStepIndex(lang, page);
   const shouldShow = steps.length > 1;
 
   const isShown = wrap.style.display !== 'none';
@@ -688,7 +743,9 @@ function renderTrackDots() {
       const dot = document.createElement('button');
       dot.type = 'button';
       dot.setAttribute('aria-label', `${step.lang.toUpperCase()} — ${step.page + 1}`);
-      dot.onclick = () => goToTrackStep(idx);
+      // Тап ловим сами: после свайпа ленты браузер может «съесть» click
+      // (см. bindTapControl).
+      bindTapControl(dot, () => goToTrackStep(idx));
       wrap.appendChild(dot);
     });
   }
@@ -923,21 +980,6 @@ function createTrackAudioEntry(track) {
     audioB.addEventListener(evt, handleDeckDataState);
   });
 
-  /* Журнал событий дорожек (только ?abdbg=1): видно, что именно делает элемент
-     в секунды провала звука. Состояние пишется рядом с событием, потому что
-     `pause` после `play` — это и есть «звук пропал, а полоса едет». */
-  if (AB_DEBUG) {
-    ['play', 'playing', 'pause', 'waiting', 'stalled', 'seeking', 'seeked', 'emptied',
-      'loadstart', 'canplay', 'suspend', 'volumechange', 'error'
-    ].forEach(evt => {
-      const make = (el, tag) => () => abMark(tag + ' ' + evt + ' t=' +
-        (el.currentTime || 0).toFixed(2) + (el.paused ? ' пауза' : ' игра') +
-        ' rs' + el.readyState);
-      audioA.addEventListener(evt, make(audioA, 'A'));
-      audioB.addEventListener(evt, make(audioB, 'B'));
-    });
-  }
-
   return trackAudioMap[track.id];
 }
 
@@ -1078,7 +1120,6 @@ function beginPairDownload(item) {
      пары просто продолжается. */
   if (hasAnyAudioData(item)) return;
   item.warmStarted = true;
-  abMark('load() A+B (файл)');
   item.audioA.load();
   item.audioB.load();
 }
@@ -1184,13 +1225,6 @@ function warmQueueRun() {
   /* Порционный режим: мегабайты качаются только по клику — очередь здесь ничего
      не делает, поэтому в сеть заранее не уходит ничего лишнего. */
   if (audioChunkSupported()) return;
-  /* На телефоне порции выключены по умолчанию (см. AUDIO_CHUNK_ENABLED), и тогда
-     сюда дошло бы управление: очередь начала бы качать ВСЕ треки языка — это
-     47–66 МБ мобильного трафика на человека, который открыл страницу и ничего не
-     нажал. Поэтому на телефоне фон не запускается вовсе: качается только та
-     пара, которую слушают (её грузит beginPairDownload по клику), а браузер
-     дотягивает её сам по мере проигрывания. */
-  if (audioTouchOnlyDevice() && !AUDIO_CHUNK_ENABLED) return;
   if (audioWarmCurrentId) return; // одна пара за раз
   if (document.hidden) return;    // вкладка скрыта — новые загрузки не начинаем
   /* Трек слушают прямо сейчас: канал держим свободным. Если продолжить качать
@@ -1419,32 +1453,7 @@ function scheduleInitialAudioWarm() {
    всё работает как раньше: файл качает браузер. Состояние видно в консоли:
    window.nrAudioStream.summary. */
 
-/* Выключатель порционного режима. По умолчанию он ВЫКЛЮЧЕН на телефонах и
-   планшетах и включён на ПК.
-
-   Почему на телефоне выключен. Режим подменяет элементу src на MediaSource
-   (streamAttach), и звук идёт из кусков, которые качаем мы. Первая порция —
-   всего AUDIO_CHUNK_HEAD_SEC секунд, чтобы звук пошёл сразу; следующая (15 с)
-   качается уже во время игры. Не успела — буфер кончился. Выглядит это на
-   телефоне ровно как провал звука: элемент НЕ встаёт на паузу (иконка Play не
-   меняется, позиция продолжает идти), спиннера на такое в коде нет вообще
-   (события waiting/stalled не обрабатываются), а система в этот момент
-   пересоздаёт звуковую сессию — индикатор звука «мигает», и через пару секунд
-   звук возвращается сам. На ПК тот же файл уже лежит в кэше браузера, порция
-   приходит мгновенно, и провала не видно — поэтому дефект только на устройстве.
-   Без порций элемент получает обычный адрес файла, и буферизацией занимается
-   сам браузер: подмены src на ходу нет, проваливаться нечему.
-
-   Цена: на телефоне файл качается браузером (а не кусками по клику), то есть
-   трафика больше. Это осознанный размен в пользу работающего звука.
-
-   Переключатели: ?chunk=1 — включить порции, ?nochunk=1 — выключить. Оба
-   доступны кнопкой в отчёте ?abdbg=1, чтобы не набирать адрес на телефоне. */
-const AUDIO_CHUNK_ENABLED = /[?&]chunk=1/.test(location.search)
-  ? true
-  : /[?&]nochunk=1/.test(location.search)
-    ? false
-    : !audioTouchOnlyDevice();
+const AUDIO_CHUNK_ENABLED = true;    // false — прежняя загрузка файла целиком
 const AUDIO_CHUNK_SEC = 15;          // с: размер порции
 const AUDIO_CHUNK_AHEAD = 10;        // с: за сколько до конца порции просить следующую
 const AUDIO_CHUNK_HEAD_SEC = 2;      // с: первая порция (клик, перемотка)
@@ -1635,7 +1644,6 @@ function streamPrepareMeta(st) {
 function streamDisableChunkMode(reason) {
   if (audioChunkOff) return;
   audioChunkOff = true;
-  abMark('поток: ВЫКЛЮЧЕН — ' + reason);
   if (typeof console !== 'undefined' && console.warn)
     console.warn('Аудио: порции (' + AUDIO_CHUNK_SEC + ' с) выключены —', reason);
   Array.from(audioStreamMap.values()).forEach(st => streamRevertToFile(st));
@@ -1718,7 +1726,6 @@ function streamAttach(st) {
   });
   st.nextByte = st.meta.audioStart; st.nextTime = 0; st.fresh = true; st.done = false; st.retryAt = 0; st.failCount = 0; st.appended = 0;
   el.preload = 'none'; el.src = st.objectUrl;
-  abMark('поток: src = MediaSource');
 }
 
 function streamKick(st) {
@@ -1962,6 +1969,24 @@ let animateTrackTransition = null;
 let syncTrackNav = null;
 // Прогрев peek-панелей (соседние страницы) — тоже назначается в initPlayer.
 let warmTrackPeekPanels = null;
+/* Куда лента едет прямо сейчас (язык и страница цели). Пока идёт доводка,
+   activeTrackLang и currentTrackPage ещё старые, поэтому перерисовка списка
+   по ходу перехода (например, тап по карточке «приехавшей» страницы) не должна
+   откатывать точки-индикатор назад — их уже поставили по цели перехода. */
+let trackTransitionTarget = null;
+
+/* «Хвост» свайп-перехода: растворение уехавшей панели и доводка возврата.
+   Лента в этот момент уже стоит на нужной странице, ввод держит только флаг
+   swipeAnimating — то есть косметика формально блокирует нажатия. Любое
+   новое действие (касание по ленте, кнопка языка, стрелка, точка) закрывает
+   хвост сразу: см. finishTrackSwipeTail. Назначает его initPlayer. */
+let trackSwipeTail = null;
+
+function finishTrackSwipeTail() {
+  const tail = trackSwipeTail;
+  trackSwipeTail = null;
+  if (tail) tail();
+}
 
 /* ══ БЛИК ПО КАРТОЧКАМ ПОСЛЕ СВАЙПА ══════════════════════════════════════
    Тот же янтарный «пробегающий» блик, что и при наведении, но запускается
@@ -2016,7 +2041,9 @@ function initPlayer() {
   // (нет её элементов), остаётся прежняя смена с появлением карточек.
   const trackLangBtns = document.querySelectorAll('.track-lang-btn');
   trackLangBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
+    // Тап ловим сами (bindTapControl): после свайпа ленты Android-браузер
+    // может не прислать click — и переключатель выглядел бы «мёртвым».
+    bindTapControl(btn, () => {
       const targetLang = btn.getAttribute('data-track-lang');
       if (!targetLang || targetLang === activeTrackLang) return;
 
@@ -2025,9 +2052,11 @@ function initPlayer() {
         // кнопки EN | RU. Сторону перехода задаёт положение кнопок, поэтому
         // клик по правой кнопке ведёт треки влево, а по левой — вправо.
         const direction = getLangSwitchDirection(targetLang);
+        // Язык и страница передаются в переход: переключатель и точки
+        // переключаются сразу, вместе со стартом движения ленты.
         animateTrackTransition(direction, () => {
           setTrackLanguage(targetLang, direction > 0 ? 'last' : 0);
-        }, 'nav');
+        }, 'nav', targetLang, direction > 0 ? 'last' : 0);
         return;
       }
 
@@ -2099,6 +2128,12 @@ function initPlayer() {
   if (swipeViewport && swipeTrack && listContainer && peekLeftPanel && peekRightPanel) {
     const SWIPE_AXIS_THRESHOLD = 12; // px: отсекает дрожание пальца при обычном тапе
     const SWIPE_TRIGGER = 60;        // px: порог зачёта свайпа
+    /* px: с какого перевеса горизонтали отменяем прокрутку страницы. Меньше
+       SWIPE_AXIS_THRESHOLD намеренно — отменять нужно РАНЬШЕ, чем браузер
+       успеет начать свой вертикальный скролл (его порог ~8 px), но и не на
+       первом же пикселе: иначе вертикальная прокрутка страницы, начатая с
+       карточки под небольшим углом, глохла бы. */
+    const SWIPE_SCROLL_CANCEL = 6;
     const DRAG_RATIO = 0.55;         // «сопротивление»: палец идёт быстрее ленты
     const DRAG_LIMIT_RATIO = 0.35;   // максимум сдвига — доля ширины списка
     const SETTLE_FALLBACK = 420;     // мс: страховка, если transitionend не придёт
@@ -2109,6 +2144,13 @@ function initPlayer() {
     let swipeAxis = null;       // 'x' | 'y' | null (ещё не определена)
     let swipeAnimating = false; // идёт доводка — новые жесты игнорируем
     let peekReady = false;      // соседние панели отрисованы, лента включена
+    /* Нажатие (стрелка, кнопка языка), пришедшее ПОКА ЛЕНТА ЕДЕТ: не теряем
+       его, а выполняем сразу после доводки — иначе два перехода наложились бы.
+       Первый тап после свайпа сюда уже не попадает: косметический хвост
+       перехода (растворение панели) закрывается мгновенно, см.
+       finishTrackSwipeTail. Здесь остаются только нажатия во время реального
+       движения ленты. */
+    let pendingTrackStep = null;
 
     // Позиция ленты: '' — текущие карточки по центру (режим выключен),
     // 'translate3d(-100%, 0, 0)' — режим свайпа (слева следующая страница,
@@ -2152,6 +2194,16 @@ function initPlayer() {
       };
       swipeTrack.addEventListener('transitionend', onEnd);
       setTimeout(finish, SETTLE_FALLBACK);
+    };
+
+    /* Отложенное нажатие: пока лента едет, новые шаги не запускаем (иначе два
+       перехода наложатся), но и не выбрасываем — выполняем самое свежее сразу
+       после доводки. Так нажатие по стрелке или кнопке языка во время движения
+       ленты срабатывает, а не пропадает. */
+    const runPendingTrackStep = () => {
+      const pending = pendingTrackStep;
+      pendingTrackStep = null;
+      if (pending) pending();
     };
 
     /* ── Соседние страницы ленты и общий переход шага ──────────────────────
@@ -2264,6 +2316,12 @@ function initPlayer() {
     const exitSwipeMode = () => {
       setTrackX('', false);
       swipeViewport.classList.remove('nr-swipe-active');
+      // Клики по панелям включала доводка (см. runTrackTransition) — возвращаем
+      // штатное «не принимать клики» (см. animations.css → .track-peek-panel).
+      peekLeftPanel.style.pointerEvents = '';
+      peekRightPanel.style.pointerEvents = '';
+      peekLeftPanel.style.touchAction = '';
+      peekRightPanel.style.touchAction = '';
       // Панели НЕ очищаем: их карточки (и уже декодированные обложки) остаются
       // готовыми к следующему свайпу. Раньше содержимое сбрасывалось, и при
       // быстром листании панель успевала показаться раньше, чем декодируются
@@ -2272,6 +2330,8 @@ function initPlayer() {
       // остаётся верным и пересобирать его не нужно (см. fillPeekPanels).
       clearPeekFade();
       peekReady = false;
+      // Переход закончен — индикаторы снова считаются по состоянию списка.
+      trackTransitionTarget = null;
       restoreTrackTransition();
       // Положение стрелок пересчитываем по спокойной раскладке: во время
       // перехода лента сдвинута, и замер «на ходу» дал бы сбитые координаты.
@@ -2329,8 +2389,22 @@ function initPlayer() {
     // полоска у края до этого была пустой — иначе она «мигала» бы), а в уехавшую
     // панель кладётся СТАРАЯ страница и плавно растворяется там, куда ушёл жест.
     // applyStep — что применить к состоянию списка (шаг страницы или смена языка).
-    const runTrackTransition = (motion, applyStep, layout = 'swipe') => {
-      if (swipeAnimating) return false;   // уже едет — повторные нажатия игнорируем
+    // targetLang / targetPage — куда перейдёт список ('last' — последняя страница
+    // целевого языка). По ним переключатель языка и точки-индикатор переключаются
+    // СРАЗУ, в кадре старта ленты: applyStep срабатывает только по transitionend,
+    // и раньше подсветка отставала от треков.
+    const runTrackTransition = (motion, applyStep, layout = 'swipe', targetLang = null, targetPage = null) => {
+      /* Косметический хвост предыдущего перехода (растворение уехавшей
+         панели, доводка возврата) закрываем сразу: он уже ничего не значит,
+         а флаг swipeAnimating из-за него откладывал бы нажатие на полсекунды. */
+      finishTrackSwipeTail();
+      if (swipeAnimating) {
+        // Уже едет — нажатие не выбрасываем, а выполним сразу после доводки
+        // (см. runPendingTrackStep). Для стрелок цель пересчитывается в их
+        // обработчике: за время перехода состояние списка уже изменится.
+        pendingTrackStep = () => runTrackTransition(motion, applyStep, layout, targetLang, targetPage);
+        return false;
+      }
 
       // «Уменьшить движение»: переключаем состояние без анимации.
       if (reducedMotion) {
@@ -2354,6 +2428,30 @@ function initPlayer() {
       const exitPanel = entryIsLeft ? peekRightPanel : peekLeftPanel;
 
       enterSwipeMode(layout);
+      // Пока идёт доводка, видимая страница нарисована в ПАНЕЛИ: контейнер в этот
+      // момент стоит за кадром, а панель по умолчанию кликов не принимает
+      // (animations.css → .track-peek-panel). Без этого тап по карточке сразу
+      // после свайпа пропадал бы впустую. Клик по панели обрабатывает
+      // делегированный слушатель swipeTrack (см. initPlayer).
+      // touch-action: pan-y — панель принимает клики, но новый свайп по ней всё
+      // равно остаётся жестом сайта, а не горизонтальной прокруткой браузера.
+      entryPanel.style.pointerEvents = 'auto';
+      entryPanel.style.touchAction = 'pan-y';
+      // Индикаторы (переключатель языка и точки) переключаем здесь, а не в
+      // applyStep: состояние списка меняется только по окончании доводки, а
+      // подсветка должна идти вместе с треками. Строго ПОСЛЕ enterSwipeMode: он
+      // наполняет панели по ТЕКУЩЕМУ activeTrackLang (getStepTarget читает его),
+      // поэтому раньше состояние менять нельзя.
+      if (targetLang) {
+        const dotsPage = targetPage === 'last'
+          ? getTotalTrackPagesForLang(targetLang) - 1
+          : (targetPage === null ? currentTrackPage : targetPage);
+        // Запоминаем цель: пока лента едет, индикаторы рисуются по ней, а не по
+        // ещё не обновлённому состоянию списка (см. renderTrackList).
+        trackTransitionTarget = { lang: targetLang, page: dotsPage };
+        updateTrackLangButtonsUI(targetLang);
+        renderTrackDots(targetLang, dotsPage);
+      }
       // Встречная панель уходит за кадр — держим её прозрачной: её полоска у
       // противоположного края не должна «вспыхивать».
       fadePeekPanel(exitPanel, 0, false);
@@ -2384,6 +2482,7 @@ function initPlayer() {
         }
 
         const finish = () => {
+          trackSwipeTail = null;
           exitSwipeMode();
           // Новая страница встала на место — по карточкам мягко пробегает блик.
           playTrackSheen();
@@ -2391,6 +2490,8 @@ function initPlayer() {
           // Готовим панели к следующему свайпу: их карточки и обложки собираются
           // заранее, поэтому быстрое листание больше не показывает пустые картинки.
           if (typeof warmTrackPeekPanels === 'function') warmTrackPeekPanels();
+          // Нажатие, пришедшее во время доводки, выполняем сейчас — тап не теряется.
+          runPendingTrackStep();
         };
 
         if (reducedMotion) { finish(); return; }
@@ -2445,6 +2546,10 @@ function initPlayer() {
           // Страховка: если transitionend не придёт (панель уже прозрачная).
           const peekWatchdog = setTimeout(settlePeek, PEEK_DISSOLVE_MS + 160);
           exitPanel.addEventListener('transitionend', onPeekFadeEnd);
+          /* Пока идёт это растворение, лента уже стоит на новой странице, а
+             ввод формально ещё заблокирован. Новое касание завершит хвост
+             сразу (см. touchstart) — тап не упирается в ожидание. */
+          trackSwipeTail = settlePeek;
           fadePeekPanel(exitPanel, 0, true, PEEK_DISSOLVE_MS);
         });
       });
@@ -2453,9 +2558,41 @@ function initPlayer() {
     animateTrackTransition = runTrackTransition;
 
     // Свайп вправо = вперёд (панель следующей страницы лежит слева).
+    // Куда шагнёт список, считаем ДО перехода: по этой же цели переключаются
+    // переключатель языка и точки (см. runTrackTransition).
     const settleSwipe = (direction) => {
-      runTrackTransition(direction, () => stepTrackPage(direction), 'swipe');
+      const target = getStepTarget(direction);
+      runTrackTransition(direction, () => stepTrackPage(direction), 'swipe', target.lang, target.page);
     };
+
+    /* Клик/тап по карточке «приехавшей» страницы, пока лента ещё едет: видимая в
+       этот момент страница нарисована в панели, поэтому событие приходит сюда, а
+       не в карточку контейнера (она стоит за кадром). Без этого первый тап по
+       треку после свайпа пропадал бы. */
+    const peekCardFromTarget = (target) =>
+      (target && target.closest) ? target.closest('.track-peek-panel [data-track-id]') : null;
+
+    // Касание разбираем сами: свайп синтетический click не даёт, а тап — даёт,
+    // поэтому click гасим (preventDefault в touchend), чтобы трек не включился
+    // дважды.
+    swipeViewport.addEventListener('touchend', (e) => {
+      if (!swipeAnimating || swipeAxis === 'x') return;
+      const touch = e.changedTouches[0];
+      if (!touch) return;
+      // Сдвиг пальца больше тап-допуска — это не тап, а жест/прокрутка.
+      if (Math.abs(touch.clientX - swipeStartX) > 10 || Math.abs(touch.clientY - swipeStartY) > 10) return;
+      const card = peekCardFromTarget(e.target);
+      if (!card) return;
+      e.preventDefault();
+      toggleTrack(card.getAttribute('data-track-id'));
+    }, { passive: false });
+
+    // Мышь и трекпад (узкое окно компьютера): обычный клик по карточке панели.
+    swipeTrack.addEventListener('click', (e) => {
+      const card = peekCardFromTarget(e.target);
+      if (!card) return;
+      toggleTrack(card.getAttribute('data-track-id'));
+    });
 
     /* ── Стрелки листания (телефон) ─────────────────────────────────────────
        Листают список тем же переходом, что и свайп, но по-карусельному:
@@ -2466,8 +2603,21 @@ function initPlayer() {
     const navNextBtn = document.getElementById('trackNavNextBtn');
     const navWrap = document.getElementById('trackListNavWrap');
 
-    if (navPrevBtn) navPrevBtn.addEventListener('click', () => runTrackTransition(1, () => stepTrackPage(-1), 'nav'));
-    if (navNextBtn) navNextBtn.addEventListener('click', () => runTrackTransition(-1, () => stepTrackPage(1), 'nav'));
+    // Цель шага считаем в момент выполнения: если нажали во время доводки, к
+    // этому моменту состояние списка уже сменилось (см. pendingTrackStep).
+    const stepByNav = (motion, direction) => {
+      const go = () => {
+        const target = getStepTarget(direction);
+        runTrackTransition(motion, () => stepTrackPage(direction), 'nav', target.lang, target.page);
+      };
+      // Косметический хвост прошлого перехода шаг не задерживает.
+      finishTrackSwipeTail();
+      if (swipeAnimating) { pendingTrackStep = go; return; }
+      go();
+    };
+
+    if (navPrevBtn) bindTapControl(navPrevBtn, () => stepByNav(1, -1));
+    if (navNextBtn) bindTapControl(navNextBtn, () => stepByNav(-1, 1));
 
     syncTrackNav = () => {
       // Стрелки нужны там, где список идёт в одну колонку — на телефоне и на
@@ -2526,21 +2676,37 @@ function initPlayer() {
     // а соседние страницы так же плавно растворяются.
     const resetSwipe = () => {
       swipeAnimating = true;
+      let resetSettled = false;
       setPeekFade(0, 0, true, true);
       flushTrackStyles();
       setTrackX('translate3d(-100%, 0, 0)', true);
-      afterTrackTransition(() => {
+      const settleReset = () => {
+        if (resetSettled) return;
+        resetSettled = true;
+        trackSwipeTail = null;
         exitSwipeMode();
         swipeAnimating = false;
-      });
+        // Тап по стрелке/кнопке языка во время возврата ленты не теряем.
+        runPendingTrackStep();
+      };
+      // Возврат ленты — тоже «хвост»: новое касание завершит его досрочно
+      // (см. touchstart), чтобы первый тап после неудавшегося свайпа не ждал.
+      trackSwipeTail = settleReset;
+      afterTrackTransition(settleReset);
     };
 
     swipeViewport.addEventListener('touchstart', (e) => {
       const touch = e.changedTouches[0];
+      /* Лента уже доехала до новой страницы и сейчас только растворяет
+         уехавшую панель — это картинка, а не состояние. Новое касание
+         закрывает хвост сразу: иначе первые ~0,5 с после свайпа ввод
+         формально заблокирован и тап по кнопке «не срабатывает». */
+      if (swipeAnimating && trackSwipeTail) finishTrackSwipeTail();
       // Базу жеста фиксируем ДО проверки swipeAnimating: иначе жест, начавшийся,
       // пока лента ещё доезжает, унаследовал бы координаты и ось (swipeAxis='x')
       // предыдущего свайпа — тогда вертикальный скролл по карточкам таскал бы
       // ленту за собой, а отпускание возвращало её на место.
+      if (!touch) return;
       swipeStartX = touch.clientX;
       swipeStartY = touch.clientY;
       swipeAxis = null;
@@ -2550,11 +2716,17 @@ function initPlayer() {
     swipeViewport.addEventListener('touchmove', (e) => {
       if (swipeAnimating || swipeAxis === 'y') return;
       const touch = e.changedTouches[0];
+      if (!touch) return;
       const dx = touch.clientX - swipeStartX;
       const dy = touch.clientY - swipeStartY;
 
       // Ось жеста определяем один раз по первым сантиметрам движения.
       if (swipeAxis === null) {
+        // Горизонталь уже перевешивает — отменяем прокрутку страницы, не
+        // дожидаясь порога распознавания (см. SWIPE_SCROLL_CANCEL).
+        if (Math.abs(dx) > SWIPE_SCROLL_CANCEL && Math.abs(dx) > Math.abs(dy) && e.cancelable) {
+          e.preventDefault();
+        }
         if (Math.abs(dx) > SWIPE_AXIS_THRESHOLD || Math.abs(dy) > SWIPE_AXIS_THRESHOLD) {
           swipeAxis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
         }
@@ -2563,8 +2735,17 @@ function initPlayer() {
         enterSwipeMode('swipe');
       }
 
+      /* Жест признан горизонтальным — страница под пальцем стоять обязана.
+         Раньше слушатель был passive и прокрутку не отменял: вместе с лентой
+         ехала и страница, после отпускания пальца она получала инерцию, и
+         ПЕРВЫЙ тап по ЛЮБОМУ объекту сайта тратился на её остановку — click
+         не рождался вовсе. Со стороны это выглядело как «после свайпа первый
+         клик никуда не ведёт, второй работает». Вертикальный жест сюда не
+         доходит (выход по swipeAxis === 'y' выше) — прокрутка страницы поверх
+         карточек остаётся нативной. */
+      if (e.cancelable) e.preventDefault();
       moveTrackWithFinger(dx);
-    }, { passive: true });
+    }, { passive: false });
 
     swipeViewport.addEventListener('touchend', (e) => {
       if (swipeAnimating) return;
@@ -2844,10 +3025,6 @@ function switchDeckSource(src) {
      точке): запускаем её, просим порцию с текущей позиции, а кроссфейд отложим
      до готовности. Звук при этом не рвётся — играет прежняя дорожка. */
   if (!isDeckReadyToSound(nextEl)) {
-    /* Вторая дорожка стояла (телефон, см. «ВТОРАЯ ДОРОЖКА ИГРАЕТ ВМЕСТЕ»):
-       ставим её в точку звучащей, пока она ещё молчит — по стоящей дорожке
-       прыжок неслышен, а без выравнивания после фейда звук прыгнул бы назад. */
-    if (nextEl.paused) alignPairTo(item, prevEl);
     const played = nextEl.play();
     if (played && played.catch) played.catch(() => {});
     streamSeekTo(activeTrackId, pairPos(prevEl));
@@ -2896,7 +3073,7 @@ const AB_HINT_TAIL_MARGIN_PX = 28;  // хвостик не ближе этого
    страницы (флаг живёт в памяти, обновление страницы его сбрасывает). Вернуть
    false, когда проверка закончится: включится обычный режим — один раз за
    сессию (sessionStorage). */
-const AB_HINT_EVERY_LOAD = false;
+const AB_HINT_EVERY_LOAD = true;
 
 let abHintTimer = null;
 let abHintVisible = false;
@@ -3160,7 +3337,7 @@ function changeDeckVolume(val) {
 }
 
 /* ══ ПЕРЕКЛЮЧЕНИЕ BEFORE / AFTER ═══════════════════════════════════════════
-   Обе дорожки пары идут одновременно: слышна та, у которой уровень больше нуля,
+   Обе дорожки пары идут ВСЕГДА: слышна та, у которой уровень больше нуля,
    вторая беззвучна и стоит в той же точке трека. Переключение — это только
    уровень:
      1. клик сразу меняет источник и интерфейс;
@@ -3183,10 +3360,6 @@ function changeDeckVolume(val) {
    (перед первым звуком) и onstatechange контекста (первый клик на iOS застаёт
    его ещё спящим — раньше пара первого трека так и оставалась без графа до
    конца трека).
-   Исключение — телефон: там вторая дорожка стоит на паузе, потому что два
-   одновременно играющих потока сами по себе роняли звук (см. «ВТОРАЯ ДОРОЖКА
-   ИГРАЕТ ВМЕСТЕ»). Она запускается в момент клика, и переключение идёт тем же
-   кроссфейдом, только входящей дорожке нужно сначала начать звучать.
    Если входящая дорожка всё же не готова (нет данных, браузер её остановил),
    звук не рвётся: играет прежняя, а фейд начнётся, как только данные дойдут, —
    не позже AUDIO_SWITCH_WAIT_MS. Не дождались — переключатель возвращается
@@ -3209,84 +3382,21 @@ const AUDIO_SYNC_TICK_MS = 100;         // мс: подтяжка пары во 
    видно, в чём дело — в позиции дорожек или в самом звуковом тракте.
    Без ?abdbg=1 ничего не создаётся и на работу плеера не влияет. */
 const AB_DEBUG = /[?&]abdbg=1/.test(location.search);
-/* Метка сборки: первое, что нужно увидеть на устройстве. Если её нет в отчёте —
-   открыт старый файл (кэш браузера или ещё не задеплоенный код), и проверять
-   поведение плеера бессмысленно. Меняется при каждой правке звукового тракта. */
-const NR_BUILD = 'NR-2026-10-27e';
 const abState = {};
 let abBox = null;
-let abText = null;
-let abGraphBtn = null;
-let abChunkBtn = null;
-
-/* Порядок строк в плашке фиксирован: журнал и метка сборки идут первыми, потому
-   что плашка не прокручивается (overflow: hidden) и нижние строки обрезались бы
-   ровно тогда, когда нужны. */
-const AB_ORDER = ['сборка', 'журнал', 'тракт', 'в игре', 'буфер'];
-
-/* ── КНОПКИ РЕЖИМОВ В ПЛАШКЕ ────────────────────────────────────────────────
-   Набирать ?nogph=1 в адресной строке телефона — то самое трение, из-за которого
-   проверка режимов не доходила до дела. Здесь режим переключается одним тапом:
-   параметр правится в адресе и страница перезагружается. Кнопки стоят ПЕРВЫМИ,
-   потому что плашка обрезается снизу (overflow: hidden), а они должны оставаться
-   доступными при любом объёме журнала. Остальная плашка остаётся
-   pointer-events: none, чтобы не перехватывать нажатия по плееру. */
-function abModeUrl(param, on) {
-  const url = new URL(location.href);
-  const opposite = param === 'gph' ? 'nogph' : 'nochunk';
-  url.searchParams.delete(on ? opposite : param);
-  url.searchParams.set(on ? param : opposite, '1');
-  return url.toString();
-}
-
-function abReloadMode(param, on) {
-  try { location.replace(abModeUrl(param, on)); }
-  catch (err) { location.reload(); }
-}
-
-function abButton(label, onClick) {
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.textContent = label;
-  btn.style.cssText = 'pointer-events:auto;font:12px/1.2 ui-monospace,monospace;' +
-    'padding:9px 10px;min-height:38px;border:1px solid #3aa9d8;border-radius:6px;' +
-    'background:rgba(18,58,78,.95);color:#bdeaff;touch-action:manipulation';
-  btn.addEventListener('click', onClick);
-  return btn;
-}
-
-function abEnsureBox() {
-  if (abBox) return abBox;
-  if (!document.body) return null;
-  abBox = document.createElement('div');
-  abBox.id = 'abDebugBox';
-  abBox.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:2147483647;' +
-    'background:rgba(0,0,0,.86);color:#8fd8ff;font:11px/1.4 ui-monospace,monospace;' +
-    'padding:6px 8px;pointer-events:none;max-height:58vh;overflow:hidden';
-  const row = document.createElement('div');
-  row.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;pointer-events:none';
-  abGraphBtn = abButton('', () => abReloadMode('gph', !AUDIO_GRAPH_ENABLED));
-  abChunkBtn = abButton('', () => abReloadMode('chunk', !AUDIO_CHUNK_ENABLED));
-  row.appendChild(abGraphBtn);
-  row.appendChild(abChunkBtn);
-  row.appendChild(abButton('Перезагрузить', () => location.reload()));
-  abBox.appendChild(row);
-  abText = document.createElement('div');
-  abText.style.cssText = 'white-space:pre-wrap';
-  abBox.appendChild(abText);
-  document.body.appendChild(abBox);
-  return abBox;
-}
 
 function abRender() {
   if (!AB_DEBUG) return;
-  if (!abEnsureBox()) return;
-  const keys = Object.keys(abState);
-  const ordered = AB_ORDER.filter(k => keys.indexOf(k) >= 0)
-    .concat(keys.filter(k => AB_ORDER.indexOf(k) < 0));
-  abText.textContent = ordered.map(k => k + ': ' + abState[k]).join('\n');
-  abGraphBtn.textContent = 'Граф: ' + (AUDIO_GRAPH_ENABLED ? 'вкл' : 'ВЫКЛ');
-  abChunkBtn.textContent = 'Порции: ' + (AUDIO_CHUNK_ENABLED ? 'вкл' : 'ВЫКЛ');
+  if (!abBox) {
+    if (!document.body) return;
+    abBox = document.createElement('div');
+    abBox.id = 'abDebugBox';
+    abBox.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:2147483647;' +
+      'background:rgba(0,0,0,.86);color:#8fd8ff;font:11px/1.5 ui-monospace,monospace;' +
+      'padding:6px 8px;white-space:pre-wrap;pointer-events:none;max-height:46vh;overflow:hidden';
+    document.body.appendChild(abBox);
+  }
+  abBox.textContent = Object.keys(abState).map(k => k + ': ' + abState[k]).join('\n');
 }
 
 function abSet(key, value) {
@@ -3327,51 +3437,6 @@ function abRms(el) {
     return (20 * Math.log10(rms + 1e-6)).toFixed(0) + ' дБ';
   } catch (err) { return '—'; }
 }
-
-/* ── ЖУРНАЛ ПЕРВОГО КЛИКА (только ?abdbg=1) ────────────────────────────────
-   Провал звука на телефоне длится секунды, а по одному снимку «в игре» видно
-   только итог. Здесь копится короткая хронология: события дорожек, состояние
-   контекста и наши метки (подключение графа, смена src, гейт буфера, отказ
-   порций). Отсчёт — от старта пары, поэтому сразу видно, на какой миллисекунде
-   звук пропал и что произошло в этот момент. Журнал описывает ПОСЛЕДНИЙ старт:
-   новый клик начинает его заново. Строк немного, потому что плашка не
-   прокручивается — её фотографируют. */
-const AB_MARKS_MAX = 14;
-let abMarks = [];
-let abT0 = 0;
-
-function abMarkStart(label) {
-  if (!AB_DEBUG) return;
-  abT0 = performance.now();
-  abMarks = [];
-  abMark(label);
-}
-
-function abMark(text) {
-  if (!AB_DEBUG) return;
-  if (!abT0) abT0 = performance.now();
-  const ms = performance.now() - abT0;
-  abMarks.push('+' + ms.toFixed(0) + ' ' + text);
-  if (abMarks.length > AB_MARKS_MAX) abMarks.shift();
-  abSet('журнал', '\n' + abMarks.join('\n'));
-}
-
-/* Строка режимов: по ней видно, что именно включено в этом заходе, откуда взялся
-   режим (по умолчанию для этого устройства или задан в адресе) и не отключились
-   ли порции сами. */
-function abShowBuild() {
-  if (!AB_DEBUG) return;
-  const search = location.search;
-  const forced = /[?&](gph|nogph|chunk|nochunk)=1/.test(search) ? ' (из адреса)' : ' (по устройству)';
-  abSet('сборка', NR_BUILD +
-    ' | устр: ' + (audioTouchOnlyDevice() ? (isIosAudioDevice() ? 'iOS' : 'телефон') : 'ПК') +
-    ' | граф: ' + (AUDIO_GRAPH_ENABLED ? 'вкл' : 'ВЫКЛ') + forced +
-    ' | порции: ' + (AUDIO_CHUNK_ENABLED ? 'вкл' : 'ВЫКЛ') +
-    (AUDIO_CHUNK_ENABLED && audioChunkOff ? ' (отключились сами)' : '') +
-    ' | вторая дорожка: ' + (AUDIO_PAIR_TWIN_ENABLED ? 'играет' : 'стоит') +
-    ' | выход: ' + (audioChunkSupported() ? 'MediaSource' : 'файл'));
-}
-setTimeout(abShowBuild, 0);
 
 let audioFadeRAF = null;
 
@@ -3443,76 +3508,10 @@ function getAudiblePair(item) {
    звучат, у обоих один выход и одна задержка, а фейд планируется на звуковых
    часах — он не зависит от кадров и работает на iOS.
 
-   Включается не на всех устройствах. На Android граф сам стал причиной провала
-   звука, который не лечится ни таймингами, ни ожиданием контекста (см. ниже),
-   поэтому по умолчанию на телефоне он ВЫКЛЮЧЕН, а на ПК и на iOS — включён.
-
-   ПОЧЕМУ НА ANDROID БЕЗ ГРАФА. Первый выход AudioContext на Android — это новая
-   звуковая сессия для системы: индикатор звука «мигает», а сам выход поднимается
-   около двух секунд. Элемент в это время играет (currentTime идёт, полоса едет,
-   спиннера нет, иконка Play не меняется) — просто звук ещё не доходит до
-   динамика, а потом появляется сам. На ПК выход поднимается мгновенно, поэтому
-   там дефекта нет. Ждать пробуждения контекста бесполезно: state === 'running'
-   наступает раньше, чем выход реально зазвучал (AUDIO_GRAPH_WAIT_MS помогает
-   только от смены выхода на играющей дорожке, см. «ПЕРВЫЙ ЗВУК»).
-   Без графа звук идёт прямым потоком элемента — засыпать и подниматься нечему.
-
-   Что теряется без графа: кроссфейд BEFORE / AFTER считается по кадрам
-   (applyAudioVolumes, S-кривая), а не рампой на звуковых часах. На Android это
-   допустимо: громкость элемента там действует, и фейд остаётся плавным, а флаг
-   muted мы в этом режиме не трогаем (см. setAudioLevel). На iOS Safari volume не
-   действует — тишину там даёт только muted, а его переключение поднимает поток
-   заново; это и был исходный дефект «повтор слога», поэтому iOS остаётся на
-   графе.
-
-   Переключатели в адресе: ?gph=1 — включить граф принудительно, ?nogph=1 —
-   выключить. Оба доступны кнопкой в отчёте ?abdbg=1. */
-const AUDIO_GRAPH_ENABLED = audioGraphDefaultEnabled();
-
-function audioGraphDefaultEnabled() {
-  const search = location.search;
-  if (/[?&]nogph=1/.test(search)) return false;
-  if (/[?&]gph=1/.test(search)) return true;
-  return !audioTouchOnlyDevice() || isIosAudioDevice();
-}
-
-/* Громкость элемента действительно действует (всё, кроме iOS Safari). Там, где
-   она действует, тишину даёт нулевая громкость, и флаг muted трогать не нужно:
-   это отдельный флаг потока, и на телефоне его переключение поднимает поток
-   заново — с задержкой, разной у двух дорожек. */
-const AUDIO_ELEMENT_VOLUME_WORKS = !isIosAudioDevice();
-
-/* Сколько ждём пробуждения контекста перед первым стартом пары. Подключение к
-   графу на уже звучащей паре рвёт прямой выход элемента (см. «ПЕРВЫЙ ЗВУК»),
-   поэтому первый клик лучше задержать на это время, чем потерять 2 с звука. */
-const AUDIO_GRAPH_WAIT_MS = 400;
-
-/* ── ВТОРАЯ ДОРОЖКА ИГРАЕТ ВМЕСТЕ ───────────────────────────────────────────
-   Вся конструкция плеера рассчитана на то, что обе дорожки (BEFORE и AFTER)
-   идут одновременно: одна слышна, вторая беззвучна и стоит в той же точке.
-   Переключение тогда — это только кроссфейд уровней.
-
-   На телефоне этот приём оказался источником провала звука, который не зависит
-   ни от AudioContext, ни от порционного режима: провал воспроизводился во всех
-   четырёх сочетаниях этих выключателей. Общее у всех вариантов одно — ДВА
-   одновременно играющих медиапотока. На Android звуковая сессия приложения одна,
-   и когда второй поток стартует (или его отжимают и он стартует заново),
-   система пересобирает выход: индикатор звука мигает, звук пропадает примерно
-   на две секунды, а элемент при этом продолжает играть — позиция идёт, спиннера
-   нет, иконка Play не меняется. На ПК выход не пересобирается, поэтому там
-   дефекта нет.
-
-   Поэтому на телефоне играет ТОЛЬКО звучащая дорожка, а вторая стоит на паузе в
-   той же точке. Она запускается в момент переключения BEFORE / AFTER: пара
-   секунд на её старт, выравнивание и кроссфейд — этого достаточно, чтобы
-   переключение осталось плавным (switchDeckSource → waitDeckReadyThenFade).
-   После фейда прежняя дорожка снова ставится на паузу.
-
-   ?pair=1 — вернуть обеим дорожкам одновременную игру (для проверки на ПК и для
-   сравнения на устройстве). */
-const AUDIO_PAIR_TWIN_ENABLED = /[?&]pair=1/.test(location.search)
-  ? true
-  : !audioTouchOnlyDevice();
+   Включается на всех устройствах: переключение BEFORE / AFTER делается рампами
+   на звуковых часах, а они работают только в графе. Полный выключатель —
+   AUDIO_GRAPH_ENABLED. */
+const AUDIO_GRAPH_ENABLED = true;
 
 let audioCtx = null;
 let audioGraphFailed = false;
@@ -3530,12 +3529,6 @@ function audioGraphActive(el) {
   return !el || audioGainMap.has(el);
 }
 
-/* Контекст работает прямо сейчас. Пока он спит, пару к графу не подключить:
-   attachAudioGraph ждёт именно 'running'. */
-function audioGraphRunning() {
-  return !!audioCtx && !audioGraphFailed && audioCtx.state === 'running';
-}
-
 function ensureAudioGraph() {
   if (audioCtx || audioGraphFailed) return audioCtx;
   try {
@@ -3547,11 +3540,13 @@ function ensureAudioGraph() {
        что выход элемента идёт через граф. */
     audioCtx.onstatechange = () => {
       if (!audioCtx) return;
-      abMark('ctx → ' + audioCtx.state);
-      /* Контекст проснулся — подключаем активную пару, если она ещё на
-         volume/muted и СТОИТ. Играющую пару не трогаем: перенос на ходу рвёт
-         прямой выход элемента (см. «ПЕРВЫЙ ЗВУК»), поэтому первый старт сам
-         дожидается рабочего контекста (playPairAudio → startPairAfterGraphWakes). */
+      /* Контекст проснулся — сразу подключаем к нему активную пару, если она ещё
+         на volume/muted. Это и есть лечение «первого трека»: первый контекст на
+         iOS (и на части Android-браузеров) создаётся СПЯЩИМ, resume() отвечает
+         асинхронно, поэтому в момент первого playPairAudio дорожки подключить не
+         удавалось — и весь первый трек переключался скачком заглушки, то есть с
+         тем самым «повтором». Следующий трек уже заставал контекст рабочим и
+         звучал нормально. */
       if (audioCtx.state === 'running') attachActivePairGraph();
       if (!activeTrackId) return;
       const item = trackAudioMap[activeTrackId];
@@ -3588,18 +3583,12 @@ function attachAudioGraph(el) {
   if (known) return known;
   const ctx = ensureAudioGraph();
   if (!ctx) return null;
-  /* Элемент уже звучит — в граф его не переносим. createMediaElementSource
-     отбирает у элемента прямой выход: система замолкает, а звук возвращается
-     только через контекст. На Android этот переход занимает ~2 с, и всё, что
-     успело отыграть, пропадает (трек прыгает вперёд, часы при этом идут).
-     Поэтому подключаем только стоящую дорожку — до старта пары. */
-  if (!el.paused) { abMark('граф: отказ — дорожка играет'); return null; }
   /* Подключение необратимо: после createMediaElementSource звук элемента идёт
      ТОЛЬКО через граф, и «отключить обратно» нельзя. Поэтому подключаем лишь
      когда контекст уже работает — иначе пара осталась бы молчащей. Не готов —
      дорожка живёт на volume/muted, а подключение попробуем в следующий раз
      (контекст будит primeAudioGraph по первому касанию страницы). */
-  if (ctx.state !== 'running') { abMark('граф: ждём контекст (' + ctx.state + ')'); resumeAudioGraph(); return null; }
+  if (ctx.state !== 'running') { resumeAudioGraph(); return null; }
 
   let gain;
   try {
@@ -3622,7 +3611,6 @@ function attachAudioGraph(el) {
 
   audioGainMap.set(el, gain);
   audioLevelMap.set(el, el.muted ? 0 : (el.volume || 0));
-  abMark('граф: +дорожка (ctx ' + ctx.state + ')');
   /* Дальше уровень задаёт только граф: элемент для системы всегда звучит в
      полную силу, поэтому его тракт не «засыпает» и задержка у обеих дорожек
      одинаковая. */
@@ -3660,10 +3648,6 @@ function attachActivePairGraph() {
   if (!activeTrackId) return;
   const item = trackAudioMap[activeTrackId];
   if (!item) return;
-  /* Пара уже звучит — в граф её не переносим: смена выхода на ходу рвёт звук
-     (см. «ПЕРВЫЙ ЗВУК»). Подключимся на ближайшей паузе или при следующем
-     старте пары (playPairAudio подключает до первого сэмпла). */
-  if (!item.audioA.paused || !item.audioB.paused) return;
   if (!ensurePairAudioGraph(activeTrackId)) return;
   /* Уровни те же, что были у элементов: подключение не слышно. */
   applyAudioVolumes(activeTrackId, false);
@@ -3675,13 +3659,7 @@ function setAudioLevel(el, level) {
   const gain = audioGainMap.get(el);
   if (!gain || !audioCtx) {
     el.volume = v;
-    /* muted — только там, где громкость элемента не действует (iOS Safari):
-       нулевой громкости там мало. На Android и ПК флаг не трогаем — его
-       переключение на телефоне поднимает поток заново, и у «тихой» дорожки
-       задержка получается другой, чем у звучащей (см. «ЕДИНЫЙ ЗВУКОВОЙ ТРАКТ»).
-       Но снять его один раз нужно: BEFORE глушится флагом при создании пары. */
-    if (!AUDIO_ELEMENT_VOLUME_WORKS) el.muted = v <= 0.005;
-    else if (el.muted) el.muted = false;
+    el.muted = v <= 0.005;
     return;
   }
   audioLevelMap.set(el, v);
@@ -3697,8 +3675,7 @@ function rampAudioLevel(el, level, seconds) {
   const gain = audioGainMap.get(el);
   if (!gain || !audioCtx) {
     el.volume = v;
-    if (!AUDIO_ELEMENT_VOLUME_WORKS) el.muted = v <= 0.005;
-    else if (el.muted) el.muted = false;
+    el.muted = v <= 0.005;
     return;
   }
   const from = gain.gain.value;
@@ -3734,9 +3711,7 @@ document.addEventListener('visibilitychange', () => {
    слышно как щелчок, поэтому важно успеть заранее). */
 function primeAudioGraph() {
   if (!audioGraphWanted()) return;
-  const had = !!audioCtx;
   ensureAudioGraph();
-  if (!had && audioCtx) abMark('контекст создан (' + audioCtx.state + ')');
   resumeAudioGraph();
 }
 document.addEventListener('pointerdown', primeAudioGraph, { capture: true, passive: true });
@@ -3756,9 +3731,6 @@ function syncAudioPair(item) {
   const { audible, silent } = getAudiblePair(item);
   if (!isAudioAudible(audible)) return;
   if (silent.seeking || silent.ended) return;
-  /* Вторая дорожка стоит на паузе (телефон): догонять нечего, а менять скорость
-     стоящему элементу — лишняя пересборка его звукового тракта. */
-  if (silent.paused) return;
 
   // Пользователь тянет полосу прокрутки: пока браузер не закончил seek звучащей
   // дорожки, вторую не трогаем — двойной seek как раз и давал рывок в звуке.
@@ -3935,12 +3907,7 @@ function isDeckReadyToSound(el) {
 function waitDeckReadyThenFade(item, nextEl, prevEl, src) {
   cancelDeckSwitch();
   const token = deckSwitchToken;
-  /* На телефоне входящая дорожка до клика стояла (см. «ВТОРАЯ ДОРОЖКА ИГРАЕТ
-     ВМЕСТЕ»), поэтому ей нужно не только выровняться, но и начать звучать с
-     нуля — на это уходит больше времени, чем на готовой паре. Ждём дольше, иначе
-     переключение возвращалось бы назад просто из-за нехватки времени. */
-  const waitMs = AUDIO_PAIR_TWIN_ENABLED ? AUDIO_SWITCH_WAIT_MS : AUDIO_SWITCH_WAIT_MS * 4;
-  const deadline = performance.now() + waitMs;
+  const deadline = performance.now() + AUDIO_SWITCH_WAIT_MS;
 
   const step = () => {
     deckSwitchTimer = null;
@@ -3979,20 +3946,6 @@ function fadePairToSource(item, nextEl) {
       ' мс после клика: Δ ' + ((pairPos(item.audioA) - pairPos(item.audioB)) * 1000).toFixed(0) + ' мс');
   }
   applyAudioVolumes(activeTrackId, true);
-
-  /* Телефон: после фейда прежняя дорожка снова встаёт на паузу — одновременно
-     должен играть только один поток (см. «ВТОРАЯ ДОРОЖКА ИГРАЕТ ВМЕСТЕ»).
-     Ждём конец фейда, иначе срез был бы слышен; если источник успели вернуть
-     назад, ничего не делаем. */
-  if (!AUDIO_PAIR_TWIN_ENABLED) {
-    const prevEl = nextEl === item.audioA ? item.audioB : item.audioA;
-    const trackId = activeTrackId;
-    setTimeout(() => {
-      if (trackAudioMap[trackId] !== item) return;
-      if (getAudiblePair(item).audible === prevEl) return;
-      if (!prevEl.paused) prevEl.pause();
-    }, AUDIO_FADE_MS + 80);
-  }
 }
 
 /* ══ ПОДТЯЖКА ПАРЫ ВО ВРЕМЯ ВОСПРОИЗВЕДЕНИЯ ══════════════════════════════
@@ -4013,10 +3966,8 @@ function syncActivePairTick() {
   /* Вторая дорожка встала: браузер мог отжать у неё звук (телефон, смена
      звукового устройства) или она осталась на паузе. Сама она уже не поедет, и
      на клике это обернулось бы отставанием на всю длину паузы. Перед запуском
-     ставим её в точку звучащей — дорожка заглушена, прыжок неслышен.
-     На телефоне дорожку не поднимаем вовсе: она специально стоит (см. «ВТОРАЯ
-     ДОРОЖКА ИГРАЕТ ВМЕСТЕ»), и её запуск здесь возвращал бы два потока. */
-  if (AUDIO_PAIR_TWIN_ENABLED && silent.paused && !silent.ended) {
+     ставим её в точку звучащей — дорожка заглушена, прыжок неслышен. */
+  if (silent.paused && !silent.ended) {
     alignPairTo(item, audible);
     const p = silent.play();
     if (p && p.catch) p.catch(() => {});
@@ -4338,18 +4289,6 @@ function getPairBufferedAhead(item, pos) {
   return Math.min(getBufferedAhead(item.audioA, pos), getBufferedAhead(item.audioB, pos));
 }
 
-/* Запас, по которому решается «играть или ждать данные». Когда вторая дорожка
-   стоит на паузе (телефон, см. «ВТОРАЯ ДОРОЖКА ИГРАЕТ ВМЕСТЕ»), её буфер к
-   текущей позиции отношения не имеет: браузер качает стоящий элемент не так
-   охотно, и общий минимум держал бы звук на гейте без причины. Тогда считаем
-   запас только по звучащей дорожке. */
-function getGateBufferedAhead(item, pos) {
-  if (!item) return 0;
-  if (AUDIO_PAIR_TWIN_ENABLED) return getPairBufferedAhead(item, pos);
-  const { audible } = getAudiblePair(item);
-  return getBufferedAhead(audible, pos);
-}
-
 /* Начало ближайшего скачанного участка ВПЕРЁД от позиции (-1 — дальше данных нет). */
 function getBufferedNextStart(el, pos) {
   if (!el) return -1;
@@ -4449,7 +4388,7 @@ function checkPairBufferGate(item) {
   if (audible.paused || audible.seeking || audible.ended) return;
 
   const pos = audible.currentTime || 0;
-  const pairEnd = pos + getGateBufferedAhead(item, pos);
+  const pairEnd = pos + getPairBufferedAhead(item, pos);
   const dur = audible.duration || 0;
   /* Хвост файла: если до конца трека меньше, чем запас для продолжения, ждать
      нечего — иначе пара встала бы перед самым «ended» и следующий трек не
@@ -4463,7 +4402,6 @@ function checkPairBufferGate(item) {
 function gatePairByBuffer(item) {
   const { audible } = getAudiblePair(item);
   item.bufferGate = true;
-  abMark('гейт: ВКЛ (впереди ' + getGateBufferedAhead(item, audible.currentTime || 0).toFixed(1) + ' с)');
   /* Останавливаем ОБЕ дорожки и ставим их в одну точку: пока пара стоит, тихая
      иначе уехала бы вперёд, и после снятия гейта они поехали бы с расхождением —
      то есть переключение снова пришлось бы начинать с выравнивания. */
@@ -4482,7 +4420,7 @@ function releasePairBufferGate(trackId) {
   if (!item || !item.bufferGate) return;
   const { audible } = getAudiblePair(item);
   const pos = audible.currentTime || 0;
-  if (getGateBufferedAhead(item, pos) < AUDIO_PAIR_HEAD) {
+  if (getPairBufferedAhead(item, pos) < AUDIO_PAIR_HEAD) {
     /* Данных у одной из дорожек ещё нет. Гейт мог встать сразу после перемотки:
        страховка на случай, если порция для второй дорожки не попросилась сама
        (её событие seeking не пришло) — просим её отсюда, и пауза снимется. */
@@ -4505,7 +4443,6 @@ function releasePairBufferGate(trackId) {
   }
 
   item.bufferGate = false;
-  abMark('гейт: снят — продолжаем');
   /* Обе дорожки снова в одной точке — и только теперь продолжаем: до этого
      момента переключение было бы невозможно без потери плавности. */
   alignPairTo(item, audible);
@@ -4520,16 +4457,10 @@ function ensurePairPlaying(trackId) {
   if (!item || !item.wantPlay) return;
   /* Пара вот-вот зазвучит, а контекст к этому моменту уже разбужен кликом:
      подключаем граф здесь, до первого звука, чтобы переключение сразу шло
-     рампами. Играющую пару attachAudioGraph не тронет — подключение на ходу
-     рвёт звук (см. «ПЕРВЫЙ ЗВУК»). */
+     рампами. Если контекст всё ещё спит, подключение сделает onstatechange. */
   if (ensurePairAudioGraph(trackId)) applyAudioVolumes(trackId, false);
-  /* На телефоне вторую дорожку не запускаем: два одновременных медиапотока —
-     это и есть причина провала звука (см. «ВТОРАЯ ДОРОЖКА ИГРАЕТ ВМЕСТЕ»).
-     Она стартует сама в момент переключения BEFORE / AFTER. */
-  const { audible } = getAudiblePair(item);
   [item.audioA, item.audioB].forEach(el => {
     if (!el.paused || el.ended) return;
-    if (!AUDIO_PAIR_TWIN_ENABLED && el !== audible) return;
     /* Запускаем в точке звучащей дорожки: сама дорожка стояла, её звука нет,
        поэтому прыжок неслышен — зато пара продолжит синхронно. */
     const other = el === item.audioA ? item.audioB : item.audioA;
@@ -4555,42 +4486,23 @@ function playPairAudio(trackId) {
   const item = trackAudioMap[trackId];
   if (!item) return;
   item.wantPlay = true;
-  abMarkStart('▶ старт ' + trackId + ' (источник ' + item.source + ')');
   /* Звуковой тракт (см. «ЕДИНЫЙ ЗВУКОВОЙ ТРАКТ»): подключаем пару к графу
      именно здесь — этот вызов всегда идёт из действия пользователя, а браузер
      только в нём и разрешает создать/разбудить AudioContext. Уровень каждой
      дорожки берётся из её текущего состояния, так что момент подключения
      неслышен. Если граф недоступен, пара продолжает жить на volume/muted. */
   if (audioGraphWanted()) {
-    ensureAudioGraph();
-    /* ПЕРВЫЙ ЗВУК: первый клик на телефоне застаёт контекст спящим — resume()
-       отвечает асинхронно, а attachAudioGraph подключает только рабочий
-       контекст. Стартовать пару сейчас нельзя: подключать её пришлось бы уже
-       звучащей, а это ~2 с тишины с потерей звука. Поэтому сначала ждём
-       пробуждения, потом подключаем и стартуем. */
-    if (audioCtx && !audioGraphFailed && !audioGraphRunning()) {
-      startPairAfterGraphWakes(trackId);
-      return;
-    }
     ensurePairAudioGraph(trackId);
+    resumeAudioGraph();          // будим ПОСЛЕ создания: контекст мог только появиться
     applyAudioVolumes(trackId, false);
   }
-  startPairPlayback(trackId);
-}
-
-/* Сам запуск пары: поток данных, гейт буфера, старт. Отдельно от playPairAudio,
-   потому что первый клик может сначала ждать пробуждения контекста. */
-function startPairPlayback(trackId) {
-  const item = trackAudioMap[trackId];
-  if (!item || !item.wantPlay) return;
   /* Поток данных пары: в порционном режиме клик сразу просит первые секунды. */
   if (audioChunkSupported()) streamActivateItem(item, true);
   /* Стоит ли на текущей позиции общий буфер пары (данные ОБЕИХ дорожек)? Если
      нет, звук не начинаем: покажем ожидание и стартуем сами, когда данные дойдут
      (releasePairBufferGate). Так на холодном клике не бывает «пуск-стоп». */
   const { audible } = getAudiblePair(item);
-  item.bufferGate = getGateBufferedAhead(item, audible.currentTime || 0) <= AUDIO_PAIR_GUARD;
-  if (item.bufferGate) abMark('гейт: ВКЛ (впереди ' + getGateBufferedAhead(item, audible.currentTime || 0).toFixed(1) + ' с)');
+  item.bufferGate = getPairBufferedAhead(item, audible.currentTime || 0) <= AUDIO_PAIR_GUARD;
   if (item.bufferGate) {
     /* Старт с ожиданием: обе дорожки в одну точку и обе стоят. Продолжим
        вдвоём, когда данные будут у обеих (releasePairBufferGate). */
@@ -4600,33 +4512,6 @@ function startPairPlayback(trackId) {
   } else {
     ensurePairPlaying(trackId);
   }
-  updateDeckBufferingUI();
-}
-
-/* ПЕРВЫЙ ЗВУК: ждём пробуждения контекста, затем подключаем пару к графу и
-   только после этого запускаем звук — так смена выхода происходит до первого
-   сэмпла. Ожидание ограничено AUDIO_GRAPH_WAIT_MS: не проснулся (или контекста
-   нет) — пара стартует без графа, и играющую её уже никто не тронет
-   (attachAudioGraph отказывает звучащей дорожке). */
-function startPairAfterGraphWakes(trackId) {
-  const item = trackAudioMap[trackId];
-  if (!item) return;
-  let started = false;
-  const start = () => {
-    if (started) return;
-    started = true;
-    /* За время ожидания трек могли сменить или поставить на паузу. */
-    if (!item.wantPlay || activeTrackId !== trackId) return;
-    if (audioGraphRunning()) {
-      ensurePairAudioGraph(trackId);
-      applyAudioVolumes(trackId, false);
-    }
-    startPairPlayback(trackId);
-  };
-  const p = audioCtx ? audioCtx.resume() : null;
-  abMark('ждём пробуждения контекста (' + (audioCtx ? audioCtx.state : 'нет') + ')');
-  if (p && p.then) p.then(start).catch(() => start());
-  setTimeout(start, AUDIO_GRAPH_WAIT_MS);
   updateDeckBufferingUI();
 }
 
@@ -4661,7 +4546,7 @@ function updateDeckProgressUI() {
   // Полоса загрузки: до какого момента скачаны ОБЕ дорожки пары (до этой отметки
   // трек действительно обеспечен данными), но не меньше текущей позиции — чтобы
   // полоса не откатывалась назад при перемотке.
-  const bufEnd = cur + getGateBufferedAhead(item, cur);
+  const bufEnd = cur + getPairBufferedAhead(item, cur);
   const bufPct = dur > 0 ? (Math.max(cur, bufEnd) / dur) * 100 : 0;
   const bufferBar = document.getElementById('deckBufferBar');
   if (bufferBar) bufferBar.style.width = `${bufPct}%`;
@@ -4731,7 +4616,10 @@ function createTrackCard(track, { isVerticalView, currentDevice, withId = true, 
   const itemCard = document.createElement('div');
   if (withId) {
     itemCard.id = `track-item-${track.id}`;
-    itemCard.onclick = () => toggleTrack(track.id);
+    // Тап разбираем сами (bindTapControl): после свайпа ленты Android-браузер
+    // может не прислать click, и первый тап по карточке пропадал бы. Кнопку
+    // play внутри пропускаем — у неё своё действие (см. opts.ignore).
+    bindTapControl(itemCard, () => toggleTrack(track.id), { ignore: '.track-play-btn' });
   }
   itemCard.setAttribute('data-track-id', track.id);
   // Подпись вида: структура карточки у видов разная, и renderTrackList по этой
@@ -4807,7 +4695,7 @@ function createTrackCard(track, { isVerticalView, currentDevice, withId = true, 
     const playBtn = document.createElement('button');
     playBtn.type = 'button';
     playBtn.setAttribute('aria-label', isPlaying ? 'Pause' : 'Play');
-    if (withId) playBtn.onclick = (ev) => { ev.stopPropagation(); toggleTrack(track.id); };
+    if (withId) bindTapControl(playBtn, () => toggleTrack(track.id));
     // Кнопка-контейнер крупнее (64px) — сам треугольник внутри теперь 48px,
     // плюс плотная тень: на светлых обложках его стало хорошо видно.
     playBtn.className = `track-play-btn absolute inset-0 z-10 m-auto w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-110 cursor-pointer ${
@@ -4828,7 +4716,7 @@ function createTrackCard(track, { isVerticalView, currentDevice, withId = true, 
     const playBtn = document.createElement('button');
     playBtn.type = 'button';
     playBtn.setAttribute('aria-label', isPlaying ? 'Pause' : 'Play');
-    if (withId) playBtn.onclick = (ev) => { ev.stopPropagation(); toggleTrack(track.id); };
+    if (withId) bindTapControl(playBtn, () => toggleTrack(track.id));
     playBtn.className = `track-play-btn p-2.5 sm:p-3 rounded-xl transition-all cursor-pointer ${
       isSelected
         ? 'bg-amber-500 text-slate-950 font-black shadow-md'
@@ -5064,10 +4952,12 @@ function renderTrackList(animate = false) {
     for (let i = 0; i < maxPages; i++) {
       const dot = document.createElement('button');
       dot.className = `h-1.5 rounded-full transition-all duration-300 cursor-pointer ${i === currentTrackPage ? 'bg-amber-500 w-5 shadow-sm shadow-amber-500/50' : 'bg-gray-700 hover:bg-gray-500 w-1.5'}`;
-      dot.onclick = () => {
+      // Тап разбираем сами — как у точек-индикатора и кнопок языка
+      // (см. bindTapControl): после свайпа браузер может не прислать click.
+      bindTapControl(dot, () => {
         currentTrackPage = i;
         renderTrackList(true);
-      };
+      });
       dotsContainer.appendChild(dot);
     }
   }
@@ -5076,8 +4966,10 @@ function renderTrackList(animate = false) {
     initPlayerTrackCardsTimeline(false);
   }
 
-  // Точки-индикатор листания и стрелки на телефоне
-  renderTrackDots();
+  // Точки-индикатор листания и стрелки на телефоне. Пока лента едет, активная
+  // точка — цель перехода, а не ещё старое состояние списка (см. runTrackTransition).
+  if (trackTransitionTarget) renderTrackDots(trackTransitionTarget.lang, trackTransitionTarget.page);
+  else renderTrackDots();
   if (typeof syncTrackNav === 'function') syncTrackNav();
 }
 
@@ -6391,6 +6283,10 @@ function resumeReviewsMarquee(card) {
    остаётся нативной (touch-action: pan-y в style.css). */
 const REVIEW_SWIPE_AXIS_THRESHOLD = 12; // px: отсекает дрожание пальца при тапе
 const REVIEW_SWIPE_GAIN = 1.4; // усиление свайпа: палец 100 px → лента 140 px (1 — как было)
+/* px: с какого перевеса горизонтали отменяем прокрутку страницы — раньше
+   браузерного порога скролла (~8 px), иначе страница «уедет» вместе с лентой
+   и её инерция съест первый тап после свайпа (см. touchmove ниже). */
+const REVIEW_SWIPE_SCROLL_CANCEL = 6;
 
 // Есть сенсорный ввод (телефон, планшет, тач-экран ноутбука)? Свайп колонок
 // включаем только для него: там, где есть мышь, колонку ведёт сама лента.
@@ -6507,6 +6403,13 @@ function initReviewSwipe() {
       // продолжает ехать, как и раньше, а сдвиг считается от того положения,
       // в котором ленту застал горизонтальный жест.
       if (axis === null) {
+        // Горизонталь уже перевешивает — сразу отменяем прокрутку страницы:
+        // иначе вместе с лентой ехала бы и страница, а после отпускания пальца
+        // её инерция съедала первый тап по любому объекту сайта.
+        if (Math.abs(dx) > REVIEW_SWIPE_SCROLL_CANCEL &&
+            Math.abs(dx) > Math.abs(dy) && event.cancelable) {
+          event.preventDefault();
+        }
         if (Math.abs(dx) < REVIEW_SWIPE_AXIS_THRESHOLD &&
             Math.abs(dy) < REVIEW_SWIPE_AXIS_THRESHOLD) return;
         axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
@@ -6516,9 +6419,11 @@ function initReviewSwipe() {
         dragShift = base.offset;
       }
 
+      // Жест признан горизонтальным — страница под ним стоять обязана.
+      if (event.cancelable) event.preventDefault();
       lastDx = dx * REVIEW_SWIPE_GAIN;
       setReviewColumnShift(marquee, track, wrapReviewColumnShift(dragShift + lastDx, span), span, duration, base);
-    }, { passive: true });
+    }, { passive: false });
 
     // Палец ушёл: лента продолжает ход с того места, где её оставили,
     // и клик после жеста гасим.
