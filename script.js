@@ -147,6 +147,32 @@ function getDeviceType() {
   if (w < 1024) return 'tablet';
   return 'desktop';
 }
+/* ── ЧЕМ ЭТО УСТРОЙСТВО ОТЛИЧАЕТСЯ ДЛЯ ЗВУКА ────────────────────────────────
+   Звуковой тракт выбирается не по ширине окна: узкое окно на ПК — это не
+   телефон, а именно от этого зависит, включать ли AudioContext и порционную
+   загрузку (см. «ЕДИНЫЙ ЗВУКОВОЙ ТРАКТ» и «ПОРЦИОННАЯ ЗАГРУЗКА ПАРЫ»). */
+
+/* iOS и iPadOS, включая iPad в режиме «как компьютер». Признаки те же, что в
+   animations.js для класса nr-ios. */
+function isIosAudioDevice() {
+  try {
+    const platform = navigator.platform || '';
+    if (/iP(hone|ad|od)/.test(platform)) return true;
+    return platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+  } catch (err) { return false; }
+}
+
+/* Телефон или планшет без мыши и наведения. Признак тот же, что в
+   smoothscroll-nr.js и index.html. */
+function audioTouchOnlyDevice() {
+  try {
+    const coarse = window.matchMedia &&
+      window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+    return !!coarse && hasTouchInput();
+  } catch (err) { return false; }
+}
+
+
 
 function resolveDeviceText(val, device = getDeviceType()) {
   if (val === null || val === undefined) return '';
@@ -886,6 +912,21 @@ function createTrackAudioEntry(track) {
     audioB.addEventListener(evt, handleDeckDataState);
   });
 
+  /* Журнал событий дорожек (только ?abdbg=1): видно, что именно делает элемент
+     в секунды провала звука. Состояние пишется рядом с событием, потому что
+     `pause` после `play` — это и есть «звук пропал, а полоса едет». */
+  if (AB_DEBUG) {
+    ['play', 'playing', 'pause', 'waiting', 'stalled', 'seeking', 'seeked', 'emptied',
+      'loadstart', 'canplay', 'suspend', 'volumechange', 'error'
+    ].forEach(evt => {
+      const make = (el, tag) => () => abMark(tag + ' ' + evt + ' t=' +
+        (el.currentTime || 0).toFixed(2) + (el.paused ? ' пауза' : ' игра') +
+        ' rs' + el.readyState);
+      audioA.addEventListener(evt, make(audioA, 'A'));
+      audioB.addEventListener(evt, make(audioB, 'B'));
+    });
+  }
+
   return trackAudioMap[track.id];
 }
 
@@ -1026,6 +1067,7 @@ function beginPairDownload(item) {
      пары просто продолжается. */
   if (hasAnyAudioData(item)) return;
   item.warmStarted = true;
+  abMark('load() A+B (файл)');
   item.audioA.load();
   item.audioB.load();
 }
@@ -1131,6 +1173,13 @@ function warmQueueRun() {
   /* Порционный режим: мегабайты качаются только по клику — очередь здесь ничего
      не делает, поэтому в сеть заранее не уходит ничего лишнего. */
   if (audioChunkSupported()) return;
+  /* На телефоне порции выключены по умолчанию (см. AUDIO_CHUNK_ENABLED), и тогда
+     сюда дошло бы управление: очередь начала бы качать ВСЕ треки языка — это
+     47–66 МБ мобильного трафика на человека, который открыл страницу и ничего не
+     нажал. Поэтому на телефоне фон не запускается вовсе: качается только та
+     пара, которую слушают (её грузит beginPairDownload по клику), а браузер
+     дотягивает её сам по мере проигрывания. */
+  if (audioTouchOnlyDevice() && !AUDIO_CHUNK_ENABLED) return;
   if (audioWarmCurrentId) return; // одна пара за раз
   if (document.hidden) return;    // вкладка скрыта — новые загрузки не начинаем
   /* Трек слушают прямо сейчас: канал держим свободным. Если продолжить качать
@@ -1359,7 +1408,32 @@ function scheduleInitialAudioWarm() {
    всё работает как раньше: файл качает браузер. Состояние видно в консоли:
    window.nrAudioStream.summary. */
 
-const AUDIO_CHUNK_ENABLED = true;    // false — прежняя загрузка файла целиком
+/* Выключатель порционного режима. По умолчанию он ВЫКЛЮЧЕН на телефонах и
+   планшетах и включён на ПК.
+
+   Почему на телефоне выключен. Режим подменяет элементу src на MediaSource
+   (streamAttach), и звук идёт из кусков, которые качаем мы. Первая порция —
+   всего AUDIO_CHUNK_HEAD_SEC секунд, чтобы звук пошёл сразу; следующая (15 с)
+   качается уже во время игры. Не успела — буфер кончился. Выглядит это на
+   телефоне ровно как провал звука: элемент НЕ встаёт на паузу (иконка Play не
+   меняется, позиция продолжает идти), спиннера на такое в коде нет вообще
+   (события waiting/stalled не обрабатываются), а система в этот момент
+   пересоздаёт звуковую сессию — индикатор звука «мигает», и через пару секунд
+   звук возвращается сам. На ПК тот же файл уже лежит в кэше браузера, порция
+   приходит мгновенно, и провала не видно — поэтому дефект только на устройстве.
+   Без порций элемент получает обычный адрес файла, и буферизацией занимается
+   сам браузер: подмены src на ходу нет, проваливаться нечему.
+
+   Цена: на телефоне файл качается браузером (а не кусками по клику), то есть
+   трафика больше. Это осознанный размен в пользу работающего звука.
+
+   Переключатели: ?chunk=1 — включить порции, ?nochunk=1 — выключить. Оба
+   доступны кнопкой в отчёте ?abdbg=1, чтобы не набирать адрес на телефоне. */
+const AUDIO_CHUNK_ENABLED = /[?&]chunk=1/.test(location.search)
+  ? true
+  : /[?&]nochunk=1/.test(location.search)
+    ? false
+    : !audioTouchOnlyDevice();
 const AUDIO_CHUNK_SEC = 15;          // с: размер порции
 const AUDIO_CHUNK_AHEAD = 10;        // с: за сколько до конца порции просить следующую
 const AUDIO_CHUNK_HEAD_SEC = 2;      // с: первая порция (клик, перемотка)
@@ -1550,6 +1624,7 @@ function streamPrepareMeta(st) {
 function streamDisableChunkMode(reason) {
   if (audioChunkOff) return;
   audioChunkOff = true;
+  abMark('поток: ВЫКЛЮЧЕН — ' + reason);
   if (typeof console !== 'undefined' && console.warn)
     console.warn('Аудио: порции (' + AUDIO_CHUNK_SEC + ' с) выключены —', reason);
   Array.from(audioStreamMap.values()).forEach(st => streamRevertToFile(st));
@@ -1632,6 +1707,7 @@ function streamAttach(st) {
   });
   st.nextByte = st.meta.audioStart; st.nextTime = 0; st.fresh = true; st.done = false; st.retryAt = 0; st.failCount = 0; st.appended = 0;
   el.preload = 'none'; el.src = st.objectUrl;
+  abMark('поток: src = MediaSource');
 }
 
 function streamKick(st) {
@@ -2805,7 +2881,7 @@ const AB_HINT_TAIL_MARGIN_PX = 28;  // хвостик не ближе этого
    страницы (флаг живёт в памяти, обновление страницы его сбрасывает). Вернуть
    false, когда проверка закончится: включится обычный режим — один раз за
    сессию (sessionStorage). */
-const AB_HINT_EVERY_LOAD = true;
+const AB_HINT_EVERY_LOAD = false;
 
 let abHintTimer = null;
 let abHintVisible = false;
@@ -3114,21 +3190,84 @@ const AUDIO_SYNC_TICK_MS = 100;         // мс: подтяжка пары во 
    видно, в чём дело — в позиции дорожек или в самом звуковом тракте.
    Без ?abdbg=1 ничего не создаётся и на работу плеера не влияет. */
 const AB_DEBUG = /[?&]abdbg=1/.test(location.search);
+/* Метка сборки: первое, что нужно увидеть на устройстве. Если её нет в отчёте —
+   открыт старый файл (кэш браузера или ещё не задеплоенный код), и проверять
+   поведение плеера бессмысленно. Меняется при каждой правке звукового тракта. */
+const NR_BUILD = 'NR-2026-10-27c';
 const abState = {};
 let abBox = null;
+let abText = null;
+let abGraphBtn = null;
+let abChunkBtn = null;
+
+/* Порядок строк в плашке фиксирован: журнал и метка сборки идут первыми, потому
+   что плашка не прокручивается (overflow: hidden) и нижние строки обрезались бы
+   ровно тогда, когда нужны. */
+const AB_ORDER = ['сборка', 'журнал', 'тракт', 'в игре', 'буфер'];
+
+/* ── КНОПКИ РЕЖИМОВ В ПЛАШКЕ ────────────────────────────────────────────────
+   Набирать ?nogph=1 в адресной строке телефона — то самое трение, из-за которого
+   проверка режимов не доходила до дела. Здесь режим переключается одним тапом:
+   параметр правится в адресе и страница перезагружается. Кнопки стоят ПЕРВЫМИ,
+   потому что плашка обрезается снизу (overflow: hidden), а они должны оставаться
+   доступными при любом объёме журнала. Остальная плашка остаётся
+   pointer-events: none, чтобы не перехватывать нажатия по плееру. */
+function abModeUrl(param, on) {
+  const url = new URL(location.href);
+  const opposite = param === 'gph' ? 'nogph' : 'nochunk';
+  url.searchParams.delete(on ? opposite : param);
+  url.searchParams.set(on ? param : opposite, '1');
+  return url.toString();
+}
+
+function abReloadMode(param, on) {
+  try { location.replace(abModeUrl(param, on)); }
+  catch (err) { location.reload(); }
+}
+
+function abButton(label, onClick) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.textContent = label;
+  btn.style.cssText = 'pointer-events:auto;font:12px/1.2 ui-monospace,monospace;' +
+    'padding:9px 10px;min-height:38px;border:1px solid #3aa9d8;border-radius:6px;' +
+    'background:rgba(18,58,78,.95);color:#bdeaff;touch-action:manipulation';
+  btn.addEventListener('click', onClick);
+  return btn;
+}
+
+function abEnsureBox() {
+  if (abBox) return abBox;
+  if (!document.body) return null;
+  abBox = document.createElement('div');
+  abBox.id = 'abDebugBox';
+  abBox.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:2147483647;' +
+    'background:rgba(0,0,0,.86);color:#8fd8ff;font:11px/1.4 ui-monospace,monospace;' +
+    'padding:6px 8px;pointer-events:none;max-height:58vh;overflow:hidden';
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;pointer-events:none';
+  abGraphBtn = abButton('', () => abReloadMode('gph', !AUDIO_GRAPH_ENABLED));
+  abChunkBtn = abButton('', () => abReloadMode('chunk', !AUDIO_CHUNK_ENABLED));
+  row.appendChild(abGraphBtn);
+  row.appendChild(abChunkBtn);
+  row.appendChild(abButton('Перезагрузить', () => location.reload()));
+  abBox.appendChild(row);
+  abText = document.createElement('div');
+  abText.style.cssText = 'white-space:pre-wrap';
+  abBox.appendChild(abText);
+  document.body.appendChild(abBox);
+  return abBox;
+}
 
 function abRender() {
   if (!AB_DEBUG) return;
-  if (!abBox) {
-    if (!document.body) return;
-    abBox = document.createElement('div');
-    abBox.id = 'abDebugBox';
-    abBox.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:2147483647;' +
-      'background:rgba(0,0,0,.86);color:#8fd8ff;font:11px/1.5 ui-monospace,monospace;' +
-      'padding:6px 8px;white-space:pre-wrap;pointer-events:none;max-height:46vh;overflow:hidden';
-    document.body.appendChild(abBox);
-  }
-  abBox.textContent = Object.keys(abState).map(k => k + ': ' + abState[k]).join('\n');
+  if (!abEnsureBox()) return;
+  const keys = Object.keys(abState);
+  const ordered = AB_ORDER.filter(k => keys.indexOf(k) >= 0)
+    .concat(keys.filter(k => AB_ORDER.indexOf(k) < 0));
+  abText.textContent = ordered.map(k => k + ': ' + abState[k]).join('\n');
+  abGraphBtn.textContent = 'Граф: ' + (AUDIO_GRAPH_ENABLED ? 'вкл' : 'ВЫКЛ');
+  abChunkBtn.textContent = 'Порции: ' + (AUDIO_CHUNK_ENABLED ? 'вкл' : 'ВЫКЛ');
 }
 
 function abSet(key, value) {
@@ -3169,6 +3308,50 @@ function abRms(el) {
     return (20 * Math.log10(rms + 1e-6)).toFixed(0) + ' дБ';
   } catch (err) { return '—'; }
 }
+
+/* ── ЖУРНАЛ ПЕРВОГО КЛИКА (только ?abdbg=1) ────────────────────────────────
+   Провал звука на телефоне длится секунды, а по одному снимку «в игре» видно
+   только итог. Здесь копится короткая хронология: события дорожек, состояние
+   контекста и наши метки (подключение графа, смена src, гейт буфера, отказ
+   порций). Отсчёт — от старта пары, поэтому сразу видно, на какой миллисекунде
+   звук пропал и что произошло в этот момент. Журнал описывает ПОСЛЕДНИЙ старт:
+   новый клик начинает его заново. Строк немного, потому что плашка не
+   прокручивается — её фотографируют. */
+const AB_MARKS_MAX = 14;
+let abMarks = [];
+let abT0 = 0;
+
+function abMarkStart(label) {
+  if (!AB_DEBUG) return;
+  abT0 = performance.now();
+  abMarks = [];
+  abMark(label);
+}
+
+function abMark(text) {
+  if (!AB_DEBUG) return;
+  if (!abT0) abT0 = performance.now();
+  const ms = performance.now() - abT0;
+  abMarks.push('+' + ms.toFixed(0) + ' ' + text);
+  if (abMarks.length > AB_MARKS_MAX) abMarks.shift();
+  abSet('журнал', '\n' + abMarks.join('\n'));
+}
+
+/* Строка режимов: по ней видно, что именно включено в этом заходе, откуда взялся
+   режим (по умолчанию для этого устройства или задан в адресе) и не отключились
+   ли порции сами. */
+function abShowBuild() {
+  if (!AB_DEBUG) return;
+  const search = location.search;
+  const forced = /[?&](gph|nogph|chunk|nochunk)=1/.test(search) ? ' (из адреса)' : ' (по устройству)';
+  abSet('сборка', NR_BUILD +
+    ' | устр: ' + (audioTouchOnlyDevice() ? (isIosAudioDevice() ? 'iOS' : 'телефон') : 'ПК') +
+    ' | граф: ' + (AUDIO_GRAPH_ENABLED ? 'вкл' : 'ВЫКЛ') + forced +
+    ' | порции: ' + (AUDIO_CHUNK_ENABLED ? 'вкл' : 'ВЫКЛ') +
+    (AUDIO_CHUNK_ENABLED && audioChunkOff ? ' (отключились сами)' : '') +
+    ' | выход: ' + (audioChunkSupported() ? 'MediaSource' : 'файл'));
+}
+setTimeout(abShowBuild, 0);
 
 let audioFadeRAF = null;
 
@@ -3240,10 +3423,49 @@ function getAudiblePair(item) {
    звучат, у обоих один выход и одна задержка, а фейд планируется на звуковых
    часах — он не зависит от кадров и работает на iOS.
 
-   Включается на всех устройствах: переключение BEFORE / AFTER делается рампами
-   на звуковых часах, а они работают только в графе. Полный выключатель —
-   AUDIO_GRAPH_ENABLED. */
-const AUDIO_GRAPH_ENABLED = true;
+   Включается не на всех устройствах. На Android граф сам стал причиной провала
+   звука, который не лечится ни таймингами, ни ожиданием контекста (см. ниже),
+   поэтому по умолчанию на телефоне он ВЫКЛЮЧЕН, а на ПК и на iOS — включён.
+
+   ПОЧЕМУ НА ANDROID БЕЗ ГРАФА. Первый выход AudioContext на Android — это новая
+   звуковая сессия для системы: индикатор звука «мигает», а сам выход поднимается
+   около двух секунд. Элемент в это время играет (currentTime идёт, полоса едет,
+   спиннера нет, иконка Play не меняется) — просто звук ещё не доходит до
+   динамика, а потом появляется сам. На ПК выход поднимается мгновенно, поэтому
+   там дефекта нет. Ждать пробуждения контекста бесполезно: state === 'running'
+   наступает раньше, чем выход реально зазвучал (AUDIO_GRAPH_WAIT_MS помогает
+   только от смены выхода на играющей дорожке, см. «ПЕРВЫЙ ЗВУК»).
+   Без графа звук идёт прямым потоком элемента — засыпать и подниматься нечему.
+
+   Что теряется без графа: кроссфейд BEFORE / AFTER считается по кадрам
+   (applyAudioVolumes, S-кривая), а не рампой на звуковых часах. На Android это
+   допустимо: громкость элемента там действует, и фейд остаётся плавным, а флаг
+   muted мы в этом режиме не трогаем (см. setAudioLevel). На iOS Safari volume не
+   действует — тишину там даёт только muted, а его переключение поднимает поток
+   заново; это и был исходный дефект «повтор слога», поэтому iOS остаётся на
+   графе.
+
+   Переключатели в адресе: ?gph=1 — включить граф принудительно, ?nogph=1 —
+   выключить. Оба доступны кнопкой в отчёте ?abdbg=1. */
+const AUDIO_GRAPH_ENABLED = audioGraphDefaultEnabled();
+
+function audioGraphDefaultEnabled() {
+  const search = location.search;
+  if (/[?&]nogph=1/.test(search)) return false;
+  if (/[?&]gph=1/.test(search)) return true;
+  return !audioTouchOnlyDevice() || isIosAudioDevice();
+}
+
+/* Громкость элемента действительно действует (всё, кроме iOS Safari). Там, где
+   она действует, тишину даёт нулевая громкость, и флаг muted трогать не нужно:
+   это отдельный флаг потока, и на телефоне его переключение поднимает поток
+   заново — с задержкой, разной у двух дорожек. */
+const AUDIO_ELEMENT_VOLUME_WORKS = !isIosAudioDevice();
+
+/* Сколько ждём пробуждения контекста перед первым стартом пары. Подключение к
+   графу на уже звучащей паре рвёт прямой выход элемента (см. «ПЕРВЫЙ ЗВУК»),
+   поэтому первый клик лучше задержать на это время, чем потерять 2 с звука. */
+const AUDIO_GRAPH_WAIT_MS = 400;
 
 let audioCtx = null;
 let audioGraphFailed = false;
@@ -3261,6 +3483,12 @@ function audioGraphActive(el) {
   return !el || audioGainMap.has(el);
 }
 
+/* Контекст работает прямо сейчас. Пока он спит, пару к графу не подключить:
+   attachAudioGraph ждёт именно 'running'. */
+function audioGraphRunning() {
+  return !!audioCtx && !audioGraphFailed && audioCtx.state === 'running';
+}
+
 function ensureAudioGraph() {
   if (audioCtx || audioGraphFailed) return audioCtx;
   try {
@@ -3272,13 +3500,11 @@ function ensureAudioGraph() {
        что выход элемента идёт через граф. */
     audioCtx.onstatechange = () => {
       if (!audioCtx) return;
-      /* Контекст проснулся — сразу подключаем к нему активную пару, если она ещё
-         на volume/muted. Это и есть лечение «первого трека»: первый контекст на
-         iOS (и на части Android-браузеров) создаётся СПЯЩИМ, resume() отвечает
-         асинхронно, поэтому в момент первого playPairAudio дорожки подключить не
-         удавалось — и весь первый трек переключался скачком заглушки, то есть с
-         тем самым «повтором». Следующий трек уже заставал контекст рабочим и
-         звучал нормально. */
+      abMark('ctx → ' + audioCtx.state);
+      /* Контекст проснулся — подключаем активную пару, если она ещё на
+         volume/muted и СТОИТ. Играющую пару не трогаем: перенос на ходу рвёт
+         прямой выход элемента (см. «ПЕРВЫЙ ЗВУК»), поэтому первый старт сам
+         дожидается рабочего контекста (playPairAudio → startPairAfterGraphWakes). */
       if (audioCtx.state === 'running') attachActivePairGraph();
       if (!activeTrackId) return;
       const item = trackAudioMap[activeTrackId];
@@ -3315,12 +3541,18 @@ function attachAudioGraph(el) {
   if (known) return known;
   const ctx = ensureAudioGraph();
   if (!ctx) return null;
+  /* Элемент уже звучит — в граф его не переносим. createMediaElementSource
+     отбирает у элемента прямой выход: система замолкает, а звук возвращается
+     только через контекст. На Android этот переход занимает ~2 с, и всё, что
+     успело отыграть, пропадает (трек прыгает вперёд, часы при этом идут).
+     Поэтому подключаем только стоящую дорожку — до старта пары. */
+  if (!el.paused) { abMark('граф: отказ — дорожка играет'); return null; }
   /* Подключение необратимо: после createMediaElementSource звук элемента идёт
      ТОЛЬКО через граф, и «отключить обратно» нельзя. Поэтому подключаем лишь
      когда контекст уже работает — иначе пара осталась бы молчащей. Не готов —
      дорожка живёт на volume/muted, а подключение попробуем в следующий раз
      (контекст будит primeAudioGraph по первому касанию страницы). */
-  if (ctx.state !== 'running') { resumeAudioGraph(); return null; }
+  if (ctx.state !== 'running') { abMark('граф: ждём контекст (' + ctx.state + ')'); resumeAudioGraph(); return null; }
 
   let gain;
   try {
@@ -3343,6 +3575,7 @@ function attachAudioGraph(el) {
 
   audioGainMap.set(el, gain);
   audioLevelMap.set(el, el.muted ? 0 : (el.volume || 0));
+  abMark('граф: +дорожка (ctx ' + ctx.state + ')');
   /* Дальше уровень задаёт только граф: элемент для системы всегда звучит в
      полную силу, поэтому его тракт не «засыпает» и задержка у обеих дорожек
      одинаковая. */
@@ -3380,6 +3613,10 @@ function attachActivePairGraph() {
   if (!activeTrackId) return;
   const item = trackAudioMap[activeTrackId];
   if (!item) return;
+  /* Пара уже звучит — в граф её не переносим: смена выхода на ходу рвёт звук
+     (см. «ПЕРВЫЙ ЗВУК»). Подключимся на ближайшей паузе или при следующем
+     старте пары (playPairAudio подключает до первого сэмпла). */
+  if (!item.audioA.paused || !item.audioB.paused) return;
   if (!ensurePairAudioGraph(activeTrackId)) return;
   /* Уровни те же, что были у элементов: подключение не слышно. */
   applyAudioVolumes(activeTrackId, false);
@@ -3391,7 +3628,13 @@ function setAudioLevel(el, level) {
   const gain = audioGainMap.get(el);
   if (!gain || !audioCtx) {
     el.volume = v;
-    el.muted = v <= 0.005;
+    /* muted — только там, где громкость элемента не действует (iOS Safari):
+       нулевой громкости там мало. На Android и ПК флаг не трогаем — его
+       переключение на телефоне поднимает поток заново, и у «тихой» дорожки
+       задержка получается другой, чем у звучащей (см. «ЕДИНЫЙ ЗВУКОВОЙ ТРАКТ»).
+       Но снять его один раз нужно: BEFORE глушится флагом при создании пары. */
+    if (!AUDIO_ELEMENT_VOLUME_WORKS) el.muted = v <= 0.005;
+    else if (el.muted) el.muted = false;
     return;
   }
   audioLevelMap.set(el, v);
@@ -3407,7 +3650,8 @@ function rampAudioLevel(el, level, seconds) {
   const gain = audioGainMap.get(el);
   if (!gain || !audioCtx) {
     el.volume = v;
-    el.muted = v <= 0.005;
+    if (!AUDIO_ELEMENT_VOLUME_WORKS) el.muted = v <= 0.005;
+    else if (el.muted) el.muted = false;
     return;
   }
   const from = gain.gain.value;
@@ -3443,7 +3687,9 @@ document.addEventListener('visibilitychange', () => {
    слышно как щелчок, поэтому важно успеть заранее). */
 function primeAudioGraph() {
   if (!audioGraphWanted()) return;
+  const had = !!audioCtx;
   ensureAudioGraph();
+  if (!had && audioCtx) abMark('контекст создан (' + audioCtx.state + ')');
   resumeAudioGraph();
 }
 document.addEventListener('pointerdown', primeAudioGraph, { capture: true, passive: true });
@@ -4134,6 +4380,7 @@ function checkPairBufferGate(item) {
 function gatePairByBuffer(item) {
   const { audible } = getAudiblePair(item);
   item.bufferGate = true;
+  abMark('гейт: ВКЛ (впереди ' + getPairBufferedAhead(item, audible.currentTime || 0).toFixed(1) + ' с)');
   /* Останавливаем ОБЕ дорожки и ставим их в одну точку: пока пара стоит, тихая
      иначе уехала бы вперёд, и после снятия гейта они поехали бы с расхождением —
      то есть переключение снова пришлось бы начинать с выравнивания. */
@@ -4175,6 +4422,7 @@ function releasePairBufferGate(trackId) {
   }
 
   item.bufferGate = false;
+  abMark('гейт: снят — продолжаем');
   /* Обе дорожки снова в одной точке — и только теперь продолжаем: до этого
      момента переключение было бы невозможно без потери плавности. */
   alignPairTo(item, audible);
@@ -4189,7 +4437,8 @@ function ensurePairPlaying(trackId) {
   if (!item || !item.wantPlay) return;
   /* Пара вот-вот зазвучит, а контекст к этому моменту уже разбужен кликом:
      подключаем граф здесь, до первого звука, чтобы переключение сразу шло
-     рампами. Если контекст всё ещё спит, подключение сделает onstatechange. */
+     рампами. Играющую пару attachAudioGraph не тронет — подключение на ходу
+     рвёт звук (см. «ПЕРВЫЙ ЗВУК»). */
   if (ensurePairAudioGraph(trackId)) applyAudioVolumes(trackId, false);
   [item.audioA, item.audioB].forEach(el => {
     if (!el.paused || el.ended) return;
@@ -4218,16 +4467,34 @@ function playPairAudio(trackId) {
   const item = trackAudioMap[trackId];
   if (!item) return;
   item.wantPlay = true;
+  abMarkStart('▶ старт ' + trackId + ' (источник ' + item.source + ')');
   /* Звуковой тракт (см. «ЕДИНЫЙ ЗВУКОВОЙ ТРАКТ»): подключаем пару к графу
      именно здесь — этот вызов всегда идёт из действия пользователя, а браузер
      только в нём и разрешает создать/разбудить AudioContext. Уровень каждой
      дорожки берётся из её текущего состояния, так что момент подключения
      неслышен. Если граф недоступен, пара продолжает жить на volume/muted. */
   if (audioGraphWanted()) {
+    ensureAudioGraph();
+    /* ПЕРВЫЙ ЗВУК: первый клик на телефоне застаёт контекст спящим — resume()
+       отвечает асинхронно, а attachAudioGraph подключает только рабочий
+       контекст. Стартовать пару сейчас нельзя: подключать её пришлось бы уже
+       звучащей, а это ~2 с тишины с потерей звука. Поэтому сначала ждём
+       пробуждения, потом подключаем и стартуем. */
+    if (audioCtx && !audioGraphFailed && !audioGraphRunning()) {
+      startPairAfterGraphWakes(trackId);
+      return;
+    }
     ensurePairAudioGraph(trackId);
-    resumeAudioGraph();          // будим ПОСЛЕ создания: контекст мог только появиться
     applyAudioVolumes(trackId, false);
   }
+  startPairPlayback(trackId);
+}
+
+/* Сам запуск пары: поток данных, гейт буфера, старт. Отдельно от playPairAudio,
+   потому что первый клик может сначала ждать пробуждения контекста. */
+function startPairPlayback(trackId) {
+  const item = trackAudioMap[trackId];
+  if (!item || !item.wantPlay) return;
   /* Поток данных пары: в порционном режиме клик сразу просит первые секунды. */
   if (audioChunkSupported()) streamActivateItem(item, true);
   /* Стоит ли на текущей позиции общий буфер пары (данные ОБЕИХ дорожек)? Если
@@ -4235,6 +4502,7 @@ function playPairAudio(trackId) {
      (releasePairBufferGate). Так на холодном клике не бывает «пуск-стоп». */
   const { audible } = getAudiblePair(item);
   item.bufferGate = getPairBufferedAhead(item, audible.currentTime || 0) <= AUDIO_PAIR_GUARD;
+  if (item.bufferGate) abMark('гейт: ВКЛ (впереди ' + getPairBufferedAhead(item, audible.currentTime || 0).toFixed(1) + ' с)');
   if (item.bufferGate) {
     /* Старт с ожиданием: обе дорожки в одну точку и обе стоят. Продолжим
        вдвоём, когда данные будут у обеих (releasePairBufferGate). */
@@ -4244,6 +4512,33 @@ function playPairAudio(trackId) {
   } else {
     ensurePairPlaying(trackId);
   }
+  updateDeckBufferingUI();
+}
+
+/* ПЕРВЫЙ ЗВУК: ждём пробуждения контекста, затем подключаем пару к графу и
+   только после этого запускаем звук — так смена выхода происходит до первого
+   сэмпла. Ожидание ограничено AUDIO_GRAPH_WAIT_MS: не проснулся (или контекста
+   нет) — пара стартует без графа, и играющую её уже никто не тронет
+   (attachAudioGraph отказывает звучащей дорожке). */
+function startPairAfterGraphWakes(trackId) {
+  const item = trackAudioMap[trackId];
+  if (!item) return;
+  let started = false;
+  const start = () => {
+    if (started) return;
+    started = true;
+    /* За время ожидания трек могли сменить или поставить на паузу. */
+    if (!item.wantPlay || activeTrackId !== trackId) return;
+    if (audioGraphRunning()) {
+      ensurePairAudioGraph(trackId);
+      applyAudioVolumes(trackId, false);
+    }
+    startPairPlayback(trackId);
+  };
+  const p = audioCtx ? audioCtx.resume() : null;
+  abMark('ждём пробуждения контекста (' + (audioCtx ? audioCtx.state : 'нет') + ')');
+  if (p && p.then) p.then(start).catch(() => start());
+  setTimeout(start, AUDIO_GRAPH_WAIT_MS);
   updateDeckBufferingUI();
 }
 
@@ -5272,6 +5567,15 @@ function updateServicesDots(withTransition = false) {
   const transitionChanged = transitionValue !== servicesCoverflowTransition;
   servicesCoverflowTransition = transitionValue;
 
+  // ГОРИЗОНТАЛЬНОГО СДВИГА КАРТОЧЕК НЕТ НИ НА ОДНОМ УСТРОЙСТВЕ (правка 26.10).
+  // Раньше соседние карточки подтягивались к центру на ±28px (shiftX). На
+  // Android (Blink) это работало, а на iPhone (WebKit) ломало снап: WebKit
+  // считает снап-точку по ТРАНСФОРМИРОВАННОМУ боксу карточки, поэтому её центр
+  // уезжал вместе со сдвигом, и после свайпа карточка вставала не по центру
+  // экрана (зеркально в сторону, откуда свайпали). Сдвиг убран везде — так
+  // поведение и вид одинаковые на iOS и Android. Масштаб (0.90) и наклон
+  // rotateY оставлены: центр карточки они не двигают, coverflow сохраняется.
+
   for (let idx = 0; idx < cards.length; idx++) {
     const card = cards[idx];
     const cardWidth = metrics[idx].w;
@@ -5285,7 +5589,7 @@ function updateServicesDots(withTransition = false) {
     // When behind: scaled down (0.90), partially transparent (0.50), slightly rotated on Y axis, shifted inwards
     const scale = 1 - 0.10 * clampedAbs;
     const opacity = 1 - 0.50 * clampedAbs;
-    const shiftX = -28 * progress; // moves card slightly towards center underneath
+    const shiftX = 0; // горизонтального сдвига нет — см. пояснение выше
     const rotateY = -10 * progress; // 3D tilt
     const zIndex = Math.max(1, Math.round(30 - clampedAbs * 20));
 
