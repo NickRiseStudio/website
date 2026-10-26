@@ -757,21 +757,66 @@
      REDUCED («уменьшить движение»): смены нет вовсе — остаётся кадр 1. */
   var HERO_SLIDE_MS = 6000;   /* сколько кадр держится на экране */
 
+  /* Промис «кадры 2..5 скачаны И раскодированы». Один на страницу, его просят
+     двое: слайдшоу (когда начинать смену) и заставка (initBoot → bootGate).
+
+     Зачем заставке. Раскодированный полноэкранный WebP — это ~6 МБ пиксельных
+     данных на кадр; если браузер раскодирует его в момент первой отрисовки
+     кадра, эта отрисовка приходится ровно на первый свайп и читается как
+     «дёрганье». Локально файлы приходят по Wi-Fi за десятки мс и раскодировать
+     успевает всё, а с GitHub Pages — на секунду-две позже, уже при живой
+     прокрутке. Поэтому decode() делаем заранее и заставку держим до него. */
+  var heroFramesPromise = null;
+
+  function loadHeroSlide(slide) {
+    var src = slide.getAttribute('data-bg');
+    if (!src) return Promise.resolve();
+    return new Promise(function (resolve) {
+      var probe = new Image();
+      probe.onload = function () {
+        var decoded = typeof probe.decode === 'function' ? probe.decode() : Promise.resolve();
+        /* decode() может отклониться (кадр не декодируется) — тогда всё равно
+           ставим фон: хуже, чем было, не будет, а заставку не держим. */
+        decoded.catch(function () {}).then(function () {
+          slide.style.backgroundImage = 'url("' + src + '")';
+          slide.setAttribute('data-bg-ready', '1');
+          resolve();
+        });
+      };
+      /* Файл не загрузился — кадр в смене не участвует, ждать нечего. */
+      probe.onerror = function () { resolve(); };
+      probe.src = src;
+    });
+  }
+
+  function preloadHeroFrames() {
+    if (heroFramesPromise) return heroFramesPromise;
+    var layer = $('#hero .hero-bg-layer');
+    var slides = layer ? $$('.hero-bg-slide', layer) : [];
+    var jobs = [];
+    if (slides.length >= 2 && !REDUCED) {
+      for (var i = 1; i < slides.length; i++) jobs.push(loadHeroSlide(slides[i]));
+    }
+    heroFramesPromise = Promise.all(jobs);
+    return heroFramesPromise;
+  }
+
   function initHeroSlideshow() {
     var layer = $('#hero .hero-bg-layer');
     if (!layer) return;
     var slides = $$('.hero-bg-slide', layer);
     if (slides.length < 2 || REDUCED) return;
 
-    var usable = [true];   /* кадр 1 (из разметки) рабочий всегда */
-    var waiting = 0;
-
-    function start() {
+    /* Смену начинаем только по готовым кадрам: иначе первые переключения
+       пришлись бы на ещё не загруженные, а раскодирование — на живой скролл. */
+    preloadHeroFrames().then(function () {
       var frames = [];
       for (var k = 0; k < slides.length; k++) {
-        if (usable[k]) frames.push(slides[k]);
+        /* Кадр 1 (из разметки) рабочий всегда. */
+        if (k === 0 || slides[k].getAttribute('data-bg-ready') === '1') frames.push(slides[k]);
       }
       if (frames.length < 2) return;
+
       var index = 0;
       setInterval(function () {
         /* «Уменьшить движение» включили уже после старта — смена замирает
@@ -781,30 +826,7 @@
         index = (index + 1) % frames.length;
         frames[index].classList.add('is-active');
       }, HERO_SLIDE_MS);
-    }
-
-    /* Ждём последний кадр: пока очередь не опустела, смену не начинаем —
-       иначе первые переключения пришлись бы на ещё не загруженные кадры. */
-    function done() {
-      if (--waiting > 0) return;
-      start();
-    }
-
-    for (var i = 1; i < slides.length; i++) {
-      (function (slide, slot) {
-        var src = slide.getAttribute('data-bg');
-        if (!src) return;
-        waiting++;
-        var probe = new Image();
-        probe.onload = function () {
-          slide.style.backgroundImage = 'url("' + src + '")';
-          usable[slot] = true;
-          done();
-        };
-        probe.onerror = done;
-        probe.src = src;
-      })(slides[i], i);
-    }
+    });
   }
 
   function initHero() {
@@ -2400,7 +2422,7 @@
 
   /* Очередь выполняется порциями по ~6 мс: между порциями браузер успевает
      отрисовать кадр и обработать ввод. */
-  function runTaskQueue(tasks) {
+  function runTaskQueue(tasks, onDone) {
     var i = 0;
     function step() {
       var started = performance.now();
@@ -2413,15 +2435,38 @@
         } else {
           setTimeout(function () { requestAnimationFrame(step); }, 0);
         }
+        return;
       }
+      if (onDone) onDone();
     }
     step();
+  }
+
+  /* Промис «вторая очередь выполнена». Его ждёт заставка (initBoot → bootGate)
+     вместе с load и шрифтами: декор (canvas-ы плеера и тоста, метки карточек,
+     кривые под заголовками) делает принудительные переклейки раскладки, и
+     попадать этим в первый свайп нельзя. */
+  var laterDonePromise = null;
+  var laterDoneResolve = null;
+  var laterQueueFinished = false;
+
+  function laterTasksDone() {
+    if (!laterDonePromise) {
+      laterDonePromise = new Promise(function (resolve) { laterDoneResolve = resolve; });
+      /* Очередь могла закончиться РАНЬШЕ, чем заставка спросила промис
+         (load приходит раньше MIN_HOLD) — тогда разрешаем сразу. */
+      if (laterQueueFinished) laterDoneResolve();
+    }
+    return laterDonePromise;
   }
 
   function runLaterTasks() {
     if (laterStarted) return;
     laterStarted = true;
-    runTaskQueue(LATER_TASKS);
+    runTaskQueue(LATER_TASKS, function () {
+      laterQueueFinished = true;
+      if (laterDoneResolve) laterDoneResolve();
+    });
   }
 
   function scheduleLaterTasks() {
@@ -2455,12 +2500,12 @@
 /* ═══ ЗАСТАВКА «ВКЛЮЧЕНИЯ УСИЛИТЕЛЯ» (BOOT SCREEN) ═══════════════
      #nr-boot видна при каждом заходе/обновлении страницы. Ряд ламп
      накаливания «прогревается» по одной слева направо (CSS, ~1.5 с) —
-     это видимый индикатор загрузки вместо прежней полосы. Как только
-     страница готова (window.load или страховка) и MIN_HOLD истёк —
-     заставка уходит фейдом. Пока окно видно, страница заморожена
-     (lockPage): скролл выключен, фокус не покидает оверлей, клики
-     съедает #nr-boot. Лок снимается (unlockPage) только в момент
-     #nr-boot-done — display:none. */
+     это видимый индикатор загрузки вместо прежней полосы. Заставка уходит
+     фейдом, когда истёк MIN_HOLD И закрыт bootGate (load + шрифты + вторая
+     очередь декора + кадры фона героя), но не позже MAX_HOLD. Пока окно
+     видно, страница заморожена (lockPage): скролл выключен, фокус не
+     покидает оверлей, клики съедает #nr-boot. Лок снимается (unlockPage)
+     только в момент #nr-boot-done — display:none. */
   function initBoot() {
     var boot = $('#nr-boot');
     if (!boot) return;
@@ -2472,8 +2517,28 @@
     var MIN_HOLD = REDUCED ? 400 : 1500;
     var FADE_MS = 470;    /* чуть больше CSS-перехода opacity 0.42s */
 
-    function blockScroll(e) { e.preventDefault(); }
+    /* Жёсткий потолок ожидания. ОБЯЗАТЕЛЬНО меньше inline-страховки в
+       index.html (4000 мс): та снимает только класс, слушатели лока остаются,
+       и заставка «уезжает» в обход своего же выхода. */
+    var MAX_HOLD = 3000;
+
+    /* Пауза после закрытия гейта: document.fonts.ready в script.js запускает
+       полный ScrollTrigger.refresh() с задержкой 120 мс. Даём ему отработать
+       под заставкой, а не в кадре прокрутки. */
+    var SETTLE_MS = 120;
+
+    /* Гасим ввод, только пока заставка реально держит экран. Класс
+       nr-boot-active снимается либо нашим unlockPage, либо inline-страховкой
+       в index.html (4 с) — во втором случае оверлей уже невидим, и запирать
+       прокрутку было бы ошибкой. */
+    function blocked() {
+      return document.documentElement.classList.contains('nr-boot-active');
+    }
+    function blockScroll(e) {
+      if (blocked()) e.preventDefault();
+    }
     function blockKeys(e) {
+      if (!blocked()) return;
       var k = e.key || '';
       if (k === 'Tab') {
         e.preventDefault();
@@ -2559,13 +2624,87 @@
       }, FADE_MS);
     }
 
+    var gateStarted = false;
+
+    /* ═══ ЧТО ДЕРЖИТ ЗАСТАВКУ ═══════════════════════════════════════════
+       Раньше заставка уходила по window.load (или через 2 с) — и вся дорогая
+       работа, которая начинается ПОСЛЕ load, ложилась на первый свайп:
+       ScrollTrigger.refresh() по готовности шрифтов, пересчёт высот карточек
+       отзывов и услуг, canvas-ы декора, скачивание и раскодирование четырёх
+       полноэкранных кадров hero-bg-2..5.
+
+       Локально (Wi-Fi, 5–20 мс на файл) всё это успевало под оверлеем, и
+       дёрганья не было; на GitHub Pages сеть медленнее ровно настолько,
+       чтобы работа вылезла за пределы заставки — и рывок возвращался.
+       Поэтому теперь заставка ждёт закрытия гейта, а не только load.
+
+       Гейт ничего не двигает и не анимирует: программный проезд страницей
+       сюда вернуть нельзя — он проигрывает одноразовые ScrollTrigger-появления
+       разделов под оверлеем (см. комментарий выше про прогрев). */
+    function bootGate() {
+      var jobs = [];
+
+      /* 1. window.load — разметка, стили, скрипты, первый кадр фона героя. */
+      jobs.push(new Promise(function (resolve) {
+        if (document.readyState === 'complete') resolve();
+        else window.addEventListener('load', function () { resolve(); }, { once: true });
+      }));
+
+      /* 2. Шрифты: до их прихода метрики другие, и как раз по fonts.ready
+         script.js пересчитывает ScrollTrigger и высоты карточек. */
+      jobs.push(new Promise(function (resolve) {
+        var f = document.fonts;
+        if (f && f.ready && typeof f.ready.then === 'function') {
+          f.ready.then(function () { resolve(); }, function () { resolve(); });
+        } else {
+          resolve();
+        }
+      }));
+
+      /* 3. Вторая очередь декора, а сразу за ней — кадры фона героя: их
+         скачивание стартует в initHeroSlideshow (последняя задача очереди),
+         то есть после load — как и задумано ради LCP главного фото.
+         На заведомо медленном канале (2G / режим экономии) кадры всё равно
+         не успеют к потолку — ждать их бессмысленно, заставку не тянем. */
+      var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      var slowNet = !!(conn && (conn.saveData || /(^|-)2g$/.test(conn.effectiveType || '')));
+      jobs.push(laterTasksDone().then(function () {
+        return slowNet ? null : preloadHeroFrames();
+      }));
+
+      return Promise.all(jobs);
+    }
+
     function ready() {
       var elapsed = Date.now() - Number(boot.dataset.bootStart || 0);
       if (elapsed < MIN_HOLD) {
         setTimeout(ready, MIN_HOLD - elapsed + 30);
         return;
       }
-      hideBoot();
+      if (gateStarted) return;
+      gateStarted = true;
+
+      /* «Уменьшить движение»: кадр статичен, ввода не запирает — ждать нечего. */
+      if (REDUCED) { hideBoot(); return; }
+
+      var left = MAX_HOLD - elapsed;
+      if (left <= 0) { hideBoot(); return; }   /* потолок уже истёк */
+
+      var closed = false;
+      var capTimer = setTimeout(function () { closed = true; hideBoot(); }, left);
+
+      bootGate().then(function () {
+        if (closed) return;
+        /* Кадр + SETTLE_MS: успевает отработать refresh по шрифтам. */
+        requestAnimationFrame(function () {
+          setTimeout(function () {
+            if (closed) return;
+            closed = true;
+            clearTimeout(capTimer);
+            hideBoot();
+          }, SETTLE_MS);
+        });
+      });
     }
 
     boot.dataset.bootStart = String(Date.now());
@@ -2579,7 +2718,8 @@
       ready();
     } else {
       window.addEventListener('load', ready, { once: true });
-      setTimeout(ready, 2000); /* страховка: не ждём вечно */
+      /* Потолок: даже если load так и не придёт, заставка не «зависает». */
+      setTimeout(ready, MAX_HOLD);
     }
   }
 
