@@ -163,12 +163,23 @@ function isIosAudioDevice() {
 }
 
 /* Телефон или планшет без мыши и наведения. Признак тот же, что в
-   smoothscroll-nr.js и index.html. */
+   smoothscroll-nr.js и index.html, но с запасными проверками: от этого выбора
+   зависит, включать ли AudioContext и порции, а медиазапрос `(pointer: coarse)`
+   на части Android-браузеров (DeX, WebView, отдельные прошивки) отвечает
+   «мышь». Тогда на телефоне остались бы оба механизма, из-за которых пропадает
+   звук, и правка не изменила бы ничего. Поэтому: сначала медиазапрос, затем
+   мобильный User-Agent, затем маленький экран при наличии касаний. */
 function audioTouchOnlyDevice() {
   try {
-    const coarse = window.matchMedia &&
-      window.matchMedia('(hover: none) and (pointer: coarse)').matches;
-    return !!coarse && hasTouchInput();
+    if (!hasTouchInput()) return false;
+    if (window.matchMedia &&
+        window.matchMedia('(hover: none) and (pointer: coarse)').matches) return true;
+    const ua = navigator.userAgent || '';
+    if (/Android|iPhone|iPad|iPod|Mobile/i.test(ua)) return true;
+    /* Касания есть, признаков мобильного браузера нет: телефоном считаем только
+       заведомо маленький экран (телефон в альбомной ориентации — до 820 точек по
+       меньшей стороне). Ноутбук с тачскрином сюда не попадает. */
+    return Math.min(window.innerWidth, window.innerHeight) <= 820;
   } catch (err) { return false; }
 }
 
@@ -3193,7 +3204,7 @@ const AB_DEBUG = /[?&]abdbg=1/.test(location.search);
 /* Метка сборки: первое, что нужно увидеть на устройстве. Если её нет в отчёте —
    открыт старый файл (кэш браузера или ещё не задеплоенный код), и проверять
    поведение плеера бессмысленно. Меняется при каждой правке звукового тракта. */
-const NR_BUILD = 'NR-2026-10-27c';
+const NR_BUILD = 'NR-2026-10-27d';
 const abState = {};
 let abBox = null;
 let abText = null;
