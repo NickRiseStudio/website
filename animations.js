@@ -2485,6 +2485,21 @@
         e.preventDefault();
       }
     }
+    /* ═══ ПОЧЕМУ НЕТ ПРОГРЕВА ПРОКРУТКОЙ ═══════════════════════
+       Раньше здесь был программный проезд 0 → 0.6 → 0.95 экрана и назад, чтобы
+       браузер успел разложить и раскрасить страницу под заставкой. От него пришлось
+       отказаться: всплытие разделов ниже первого экрана — это GSAP ScrollTrigger
+       из script.js (initGsapAnimations): у триггеров toggleActions: 'play none none none'
+       и once: true, то есть срабатывают они ОДИН раз. Любая программная
+       прокрутка проигрывала их под непрозрачным оверлеем, и на настоящем
+       скролле разделы уже стояли готовыми — всплытия не было.
+
+       Причина самого «дёрганья» на первом свайпе лежит не в прокрутке, а в
+       раскладке: html.nr-boot-active больше не зажимает документ (убраны
+       overflow: hidden и height: 100%), поэтому страница имеет полную высоту
+       с первого кадра и в момент снятия заставки никуда не прыгает.
+       Программная прокрутка для этого не нужна. */
+
     function lockPage() {
       if (boot.dataset.locked) return;
       boot.dataset.locked = '1';
@@ -2500,8 +2515,8 @@
       window.removeEventListener('wheel', blockScroll, { capture: true });
       window.removeEventListener('touchmove', blockScroll, { capture: true });
       window.removeEventListener('keydown', blockKeys, { capture: true });
-      /* Плавный скролл: либа могла «проснуться», пока страница была заморожена
-         (overflow:hidden) и не успела толком стартовать. Пересоздаём её заново
+      /* Плавный скролл: либа могла «проснуться», пока ввод был заблокирован
+         заставкой, и не успела толком стартовать. Пересоздаём её заново
          в момент, когда страница стала интерактивной, чтобы она сразу работала —
          даже если юзер крутит колесо тут же после загрузки. */
       if (typeof window.nrApplySmoothScroll === 'function') {
@@ -2514,9 +2529,30 @@
       if (typeof window.updateActiveNavSection === 'function') safe(window.updateActiveNavSection);
     }
 
+    /* Вход первого экрана. Запускается в hideBoot — ВМЕСТЕ с затуханием
+       заставки, а не после него: получается кросс-фейд, и к моменту
+       #nr-boot-done (снятие лока) экран уже стоит на месте. Если запускать в
+       unlockPage, глаз успел бы разглядеть готовый первый экран, а потом он
+       «мигнул» бы и появился заново.
+
+       Пословный вкат заголовка (.nr-w) тоже здесь: раньше он вызывался при
+       инициализации, то есть проигрывался под непрозрачным оверлеем, и
+       пользователь видел уже собранный текст. */
+    function revealHero() {
+      safe(animateHeroTitle);
+      /* Класс для CSS-входа (animations.css, «ВСПЛЫТИЕ ПЕРВОГО ЭКРАНА ПОСЛЕ
+         ЗАСТАВКИ»). Держим чуть дольше самой анимации (0.55 с + задержка
+         0.24 с), затем снимаем, чтобы композитор не держал лишние слои. */
+      document.documentElement.classList.add('nr-boot-in');
+      setTimeout(function () {
+        document.documentElement.classList.remove('nr-boot-in');
+      }, 1100);
+    }
+
     function hideBoot() {
       if (boot.classList.contains('nr-boot-hide')) return;
       boot.classList.add('nr-boot-hide'); /* фейд; клики и дальше съедает оверлей */
+      revealHero();                       /* вход первого экрана — синхронно с фейдом */
       setTimeout(function () {
         boot.classList.add('nr-boot-done'); /* display:none — последний кадр окна */
         unlockPage();                       /* только теперь страница интерактивна */
@@ -2529,7 +2565,6 @@
         setTimeout(ready, MIN_HOLD - elapsed + 30);
         return;
       }
-      /* Прогрев уже показал полный ход — просто прячем заставку. */
       hideBoot();
     }
 
@@ -2557,7 +2592,12 @@
     safe(initHeroParallax);
     safe(initReveal);
     safe(initViewportGate);
-    safe(animateHeroTitle);
+    /* Вкат заголовка героя запускает hideBoot() → revealHero() — ровно в
+       момент, когда заставка начинает уходить (иначе анимация проигрывалась
+       под непрозрачным оверлеем и её никто не видел). Здесь вызов нужен
+       только там, где заставки нет вовсе: «уменьшить движение» и
+       отсутствующий элемент #nr-boot. */
+    if (REDUCED || !$('#nr-boot')) safe(animateHeroTitle);
     safe(initAboutSlideOne);
     safe(initAboutSlideTwo);
     safe(initAboutSlideThree);

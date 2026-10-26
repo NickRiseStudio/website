@@ -42,11 +42,25 @@
 
 /* Пока заставка видна (класс вешает animations.js на <html>) — страница
    заморожена: без скролла и без «ухода» фокуса на контент. Снимается
-   ровно в момент #nr-boot-done (display:none). */
+   ровно в момент #nr-boot-done (display:none).
+
+   ПРАВКА (дёрганье на первом свайпе). Раньше здесь стояли ещё
+   overflow: hidden и height: 100% — документ был ЗАЖАТ до высоты экрана,
+   и полная раскладка всей страницы (4000+ px) происходила не при загрузке,
+   а в тот кадр, когда класс снимался. Получалось, что первая настоящая
+   раскладка и первая покраска страницы приходятся ровно на начало первого
+   свайпа: палец уже ведёт страницу, а движок в этот момент впервые
+   раскладывает и красит документ — это и читалось как «мало кадров».
+   Заметно только после полного перезапуска браузера: при F5 процесс
+   рендерера тот же и кэш растра жив, а свежий процесс платит за всё заново.
+
+   Заморозку ввода это не ослабляет: колесо, свайп и клавиши гасят
+   слушатели blockScroll/blockKeys в animations.js (capture + preventDefault),
+   а непрозрачный оверлей #nr-boot съедает клики. overflow оставлен только
+   по горизонтали (в style.css), overscroll-behavior снимает «оттягивание»
+   страницы за оверлеем. */
 html.nr-boot-active,
 html.nr-boot-active body {
-  overflow: hidden;
-  height: 100%;
   overscroll-behavior: none;
 }
 
@@ -899,6 +913,41 @@ body.nr-scrolled #mainHeader {
 
 @keyframes nrWordIn {
   to { opacity: 1; transform: none; filter: blur(0); }
+}
+
+/* ─── ВСПЛЫТИЕ ПЕРВОГО ЭКРАНА ПОСЛЕ ЗАСТАВКИ ───────────────────────────
+   Класс html.nr-boot-in вешает animations.js → unlockPage() ровно в момент,
+   когда заставка уже скрыта (display: none), и снимает его таймером через
+   1.1 с. Смысл: до этой правки всё, что можно было показать «появлением»,
+   проигрывалось под непрозрачным оверлеем и никто этого не видел.
+
+   ПОЧЕМУ translate, А НЕ transform. transform у .hero-mask-container занят
+   наклоном за курсором (initHero → nr-tilt-live), у .hero-bg-slide —
+   параллаксом/фокусом кадра. Отдельное свойство translate их не перебивает
+   и не сбрасывает: вход отрабатывает один раз и уходит.
+
+   Показываем только то, что стоит на первом экране, и в том порядке, в
+   как читается: фото → подзаголовок жанров → абзац → кнопки. Заголовок
+   сюда не входит — у него своя пословная анимация (.nr-w), и она теперь
+   тоже стартует в момент снятия заставки (animations.js → unlockPage). */
+@media (prefers-reduced-motion: no-preference) {
+  html.nr-boot-in #hero .hero-mask-container,
+  html.nr-boot-in #hero .hero-genres-line,
+  html.nr-boot-in #hero p[data-i18n="hero.usp"],
+  html.nr-boot-in #hero a[href="#player"],
+  html.nr-boot-in #hero a[href="#reviews"] {
+    animation: nrHeroIn 0.55s var(--nr-ease) both;
+  }
+
+  html.nr-boot-in #hero .hero-genres-line { animation-delay: 0.08s; }
+  html.nr-boot-in #hero p[data-i18n="hero.usp"] { animation-delay: 0.14s; }
+  html.nr-boot-in #hero a[href="#player"] { animation-delay: 0.2s; }
+  html.nr-boot-in #hero a[href="#reviews"] { animation-delay: 0.24s; }
+}
+
+@keyframes nrHeroIn {
+  from { opacity: 0; translate: 0 18px; }
+  to   { opacity: 1; translate: 0 0; }
 }
 
 /* Фото — рамка захвата сигнала + сканирующая полоса */
