@@ -922,17 +922,20 @@ body.nr-scrolled #mainHeader {
   50%      { opacity: 1; }
 }
 
-/* Заголовок — пословный «вкат» плёнки */
+/* Заголовок — пословный «вкат» плёнки.
+   БЕЗ filter: blur() (правка 26.10). Размытие в CSS-анимации — это перерисовка
+   текста на КАЖДОМ кадре, и Safari на iOS делает её в софте: вкат заголовка
+   главного экрана был самой дорогой анимацией старта. Остались opacity и
+   transform — они идут на композиторе. На вид «вкат» тот же. */
 .nr-w {
   display: inline-block;
   opacity: 0;
   transform: translateY(0.42em) rotateX(-38deg);
-  filter: blur(7px);
   animation: nrWordIn 0.95s var(--nr-ease) forwards;
 }
 
 @keyframes nrWordIn {
-  to { opacity: 1; transform: none; filter: blur(0); }
+  to { opacity: 1; transform: none; }
 }
 
 /* Фото — рамка захвата сигнала + сканирующая полоса */

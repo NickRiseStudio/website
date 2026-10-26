@@ -343,8 +343,14 @@
         <div class="hero-bg-slide" data-bg="./image/hero-bg-5.webp" style="--nr-hero-focus-x:50%"></div>
       </div>
 
-      <!-- Ambient Studio Lighting Effect -->
-      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] sm:w-[700px] h-[500px] sm:h-[700px] bg-amber-500/10 blur-[130px] rounded-full pointer-events-none -z-10"></div>
+      <!-- Ambient Studio Lighting Effect.
+           Свечение — РАДИАЛЬНЫЙ ГРАДИЕНТ, а не blur(130px) (правка 26.10).
+           Safari на iOS считает большие радиусы размытия в софте (у Blink это
+           быстрый путь на GPU), и на DPR 3 буфер под пятно 500–700px выходит
+           ~2100x2100 px — дорого ровно на старте. Градиент даёт то же мягкое
+           пятно и не стоит почти ничего. Класс absolute оставлен: на него
+           завязано «дыхание» подсветки в animations.css. -->
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] sm:w-[700px] h-[500px] sm:h-[700px] rounded-full pointer-events-none -z-10" style="background:radial-gradient(circle, rgba(245,158,11,0.16) 0%, rgba(245,158,11,0.07) 45%, rgba(245,158,11,0) 72%)"></div>
 
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-12 items-center">

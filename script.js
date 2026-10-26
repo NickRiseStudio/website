@@ -7674,15 +7674,24 @@ function closeMobileMenu() {
 /* Блокировка прокрутки страницы при открытом бургер-меню (телефоны/планшеты).
    Класс nr-menu-open (html/body) запрещает скролл через overflow: hidden, но iOS
    может «протащить» страницу жестом — поэтому touch-жесты вне меню отменяются.
-   Внутри #mobileMenuDrawer прокрутка работает (длинные меню). */
+   Внутри #mobileMenuDrawer прокрутка работает (длинные меню).
+
+   СЛУШАТЕЛЬ ЖИВЁТ НА ОВЕРЛЕЕ, А НЕ НА document (правка 26.10). Safari на iOS
+   снимает быструю композитную прокрутку со ВСЕЙ страницы, если в цепочке события
+   есть хоть один не-passive touchmove: перед каждым сдвигом пальца движок обязан
+   дождаться JS. У оверлея в закрытом меню pointer-events: none (animations.css),
+   поэтому в пути события его нет и прокрутка остаётся быстрой. Открыли меню —
+   оверлей перекрывает экран (z-30, pointer-events: auto) и жесты вне шторки
+   отменяет, как раньше. В шторке событие до оверлея не доходит вовсе: это
+   отдельный элемент, а не его потомок. */
 function initMobileMenuScrollLock() {
-  document.addEventListener('touchmove', (e) => {
-    if (!document.body.classList.contains('nr-menu-open')) return;
-    if (!e.touches || !e.touches[0]) return;
-    const drawer = document.getElementById('mobileMenuDrawer');
-    if (drawer && drawer.contains(e.target)) return; // скролл самого меню — не блокируем
-    e.preventDefault();
-  }, { passive: false });
+  const overlayEl = document.getElementById('mobileMenuOverlay');
+  if (overlayEl) {
+    overlayEl.addEventListener('touchmove', (e) => {
+      if (!e.touches || !e.touches[0]) return;
+      e.preventDefault();
+    }, { passive: false });
+  }
 
   // Если при открытом меню размер окна дорастил до десктопа (≥1024px) — закрываем,
   // иначе блокировка скролла останется при невидимом меню

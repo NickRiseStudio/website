@@ -3894,7 +3894,11 @@ span.faq-q-text.lang-vapor-in {
      18px). Сверху 12px оставлены — карточки не липнут к заголовку раздела. */
   padding: 0.75rem 0 0;
   animation: nrMarqueeLeft 110s linear infinite;
-  will-change: transform;
+  /* will-change: transform здесь БЫЛ и убран (правка 26.10). Трек шириной в
+     десятки тысяч пикселей (26 карточек в двух половинах) промоутился в один
+     слой, и Safari на iOS растеризовал его ЦЕЛИКОМ — не тайлами по вьюпорту,
+     как Blink. На старте это секунды работы и память. Анимация transform и без
+     подсказки идёт на композиторе. */
 }
 
 .nr-marquee.is-reverse .nr-marquee-track { animation-name: nrMarqueeRight; }
