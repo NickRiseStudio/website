@@ -164,11 +164,20 @@
     state.resize = function () {
       var r = parent.getBoundingClientRect();
       var dpr = Math.min(window.devicePixelRatio || 1, maxDpr || 1);
-      state.w = Math.max(1, Math.round(r.width));
-      state.h = Math.max(1, Math.round(r.height));
+      var w = Math.max(1, Math.round(r.width));
+      var h = Math.max(1, Math.round(r.height));
+      /* Размер не изменился — буфер НЕ пересоздаём. Прежняя версия писала
+         c.width/c.height на каждый resize безусловно, а запись в эти поля
+         очищает канвас и заставляет браузер заново выделить память под всё
+         полотно. На телефоне resize приходит и от плашки адресной строки
+         (при первом свайпе), то есть самая дорогая операция приходилась
+         ровно на кадр первого жеста. Теперь при совпадении размеров выходим. */
+      if (w === state.w && h === state.h && dpr === state.dpr) return;
+      state.w = w;
+      state.h = h;
       state.dpr = dpr;
-      c.width = state.w * dpr;
-      c.height = state.h * dpr;
+      c.width = w * dpr;
+      c.height = h * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
 
@@ -757,66 +766,21 @@
      REDUCED («уменьшить движение»): смены нет вовсе — остаётся кадр 1. */
   var HERO_SLIDE_MS = 6000;   /* сколько кадр держится на экране */
 
-  /* Промис «кадры 2..5 скачаны И раскодированы». Один на страницу, его просят
-     двое: слайдшоу (когда начинать смену) и заставка (initBoot → bootGate).
-
-     Зачем заставке. Раскодированный полноэкранный WebP — это ~6 МБ пиксельных
-     данных на кадр; если браузер раскодирует его в момент первой отрисовки
-     кадра, эта отрисовка приходится ровно на первый свайп и читается как
-     «дёрганье». Локально файлы приходят по Wi-Fi за десятки мс и раскодировать
-     успевает всё, а с GitHub Pages — на секунду-две позже, уже при живой
-     прокрутке. Поэтому decode() делаем заранее и заставку держим до него. */
-  var heroFramesPromise = null;
-
-  function loadHeroSlide(slide) {
-    var src = slide.getAttribute('data-bg');
-    if (!src) return Promise.resolve();
-    return new Promise(function (resolve) {
-      var probe = new Image();
-      probe.onload = function () {
-        var decoded = typeof probe.decode === 'function' ? probe.decode() : Promise.resolve();
-        /* decode() может отклониться (кадр не декодируется) — тогда всё равно
-           ставим фон: хуже, чем было, не будет, а заставку не держим. */
-        decoded.catch(function () {}).then(function () {
-          slide.style.backgroundImage = 'url("' + src + '")';
-          slide.setAttribute('data-bg-ready', '1');
-          resolve();
-        });
-      };
-      /* Файл не загрузился — кадр в смене не участвует, ждать нечего. */
-      probe.onerror = function () { resolve(); };
-      probe.src = src;
-    });
-  }
-
-  function preloadHeroFrames() {
-    if (heroFramesPromise) return heroFramesPromise;
-    var layer = $('#hero .hero-bg-layer');
-    var slides = layer ? $$('.hero-bg-slide', layer) : [];
-    var jobs = [];
-    if (slides.length >= 2 && !REDUCED) {
-      for (var i = 1; i < slides.length; i++) jobs.push(loadHeroSlide(slides[i]));
-    }
-    heroFramesPromise = Promise.all(jobs);
-    return heroFramesPromise;
-  }
-
   function initHeroSlideshow() {
     var layer = $('#hero .hero-bg-layer');
     if (!layer) return;
     var slides = $$('.hero-bg-slide', layer);
     if (slides.length < 2 || REDUCED) return;
 
-    /* Смену начинаем только по готовым кадрам: иначе первые переключения
-       пришлись бы на ещё не загруженные, а раскодирование — на живой скролл. */
-    preloadHeroFrames().then(function () {
+    var usable = [true];   /* кадр 1 (из разметки) рабочий всегда */
+    var waiting = 0;
+
+    function start() {
       var frames = [];
       for (var k = 0; k < slides.length; k++) {
-        /* Кадр 1 (из разметки) рабочий всегда. */
-        if (k === 0 || slides[k].getAttribute('data-bg-ready') === '1') frames.push(slides[k]);
+        if (usable[k]) frames.push(slides[k]);
       }
       if (frames.length < 2) return;
-
       var index = 0;
       setInterval(function () {
         /* «Уменьшить движение» включили уже после старта — смена замирает
@@ -826,7 +790,30 @@
         index = (index + 1) % frames.length;
         frames[index].classList.add('is-active');
       }, HERO_SLIDE_MS);
-    });
+    }
+
+    /* Ждём последний кадр: пока очередь не опустела, смену не начинаем —
+       иначе первые переключения пришлись бы на ещё не загруженные кадры. */
+    function done() {
+      if (--waiting > 0) return;
+      start();
+    }
+
+    for (var i = 1; i < slides.length; i++) {
+      (function (slide, slot) {
+        var src = slide.getAttribute('data-bg');
+        if (!src) return;
+        waiting++;
+        var probe = new Image();
+        probe.onload = function () {
+          slide.style.backgroundImage = 'url("' + src + '")';
+          usable[slot] = true;
+          done();
+        };
+        probe.onerror = done;
+        probe.src = src;
+      })(slides[i], i);
+    }
   }
 
   function initHero() {
@@ -2019,6 +2006,10 @@
     isScrollTicking = false;
     var currentY = window.scrollY || 0;
 
+    /* Пылинки на время прокрутки замирают (см. dustRestUntil): отрисовка
+       фонового канваса не должна конкурировать с жестом за главный поток. */
+    dustRestUntil = performance.now() + 200;
+
     /* Предел прокрутки: на ПК берём из кэша (он обновляется по событиям —
        иначе принудительный layout в кадре ломает плавность, см.
        refreshScrollMax), а на телефоне меряем живой (там скролл нативный). */
@@ -2106,7 +2097,17 @@
         }
       });
     }, { rootMargin: '140px 0px' });
-    $$('#hero, #player, #faq, #contacts, #reviews, footer').forEach(function (n) { io.observe(n); });
+    /* Секцию плеера на телефоне из-под гейта выводим: она лежит сразу под
+       первым экраном, и класс .nr-off снимался ровно в тот кадр, когда
+       пользователь делал первый свайп. Пауза анимаций снималась у целой секции
+       разом — браузер в этом кадре создавал слои и начинал отрисовку. Теперь на
+       телефоне её анимации идут с загрузки, а экономия остаётся на компьютере,
+       где кадр прокрутки ведёт Lenis и лишняя работа заметнее. */
+    var skipPlayer = window.innerWidth < 1024;
+    $$('#hero, #player, #faq, #contacts, #reviews, footer').forEach(function (n) {
+      if (skipPlayer && n.id === 'player') return;
+      io.observe(n);
+    });
   }
 
   /* ═══ 16. СИНХРОНИЗАЦИЯ СОСТОЯНИЙ ══════════════════════════════════ */
@@ -2139,6 +2140,12 @@
   var dustParticles = [];    /* массив частиц */
   var dustPrev = 0;          /* время прошлой отрисовки, мс */
   var lastDust = 0;          /* отметка интервала отрисовки в цикле, мс */
+  /* Пока страница прокручивается, пылинки не перерисовываем.
+     На iPhone прокрутку ведёт главный поток, и отрисовка фонового канваса в
+     это время конкурирует с самим жестом: страница не успевает за пальцем.
+     Слой висит на месте, поэтому пауза на время жеста не видна, а через 200 мс
+     после остановки частицы снова дышат. */
+  var dustRestUntil = 0;
   var DUST_TAU = Math.PI * 2;
 
   function makeDustSprite() {
@@ -2318,7 +2325,7 @@
       }
       /* сквозной фон: пылинки — заметно реже, чем эквалайзер */
       var dustInterval = LITE ? 90 : 50;
-      if (now - lastDust > dustInterval) {
+      if (now - lastDust > dustInterval && now > dustRestUntil) {
         lastDust = now;
         safe(function () { drawDust(now); });
       }
@@ -2422,7 +2429,7 @@
 
   /* Очередь выполняется порциями по ~6 мс: между порциями браузер успевает
      отрисовать кадр и обработать ввод. */
-  function runTaskQueue(tasks, onDone) {
+  function runTaskQueue(tasks) {
     var i = 0;
     function step() {
       var started = performance.now();
@@ -2435,38 +2442,15 @@
         } else {
           setTimeout(function () { requestAnimationFrame(step); }, 0);
         }
-        return;
       }
-      if (onDone) onDone();
     }
     step();
-  }
-
-  /* Промис «вторая очередь выполнена». Его ждёт заставка (initBoot → bootGate)
-     вместе с load и шрифтами: декор (canvas-ы плеера и тоста, метки карточек,
-     кривые под заголовками) делает принудительные переклейки раскладки, и
-     попадать этим в первый свайп нельзя. */
-  var laterDonePromise = null;
-  var laterDoneResolve = null;
-  var laterQueueFinished = false;
-
-  function laterTasksDone() {
-    if (!laterDonePromise) {
-      laterDonePromise = new Promise(function (resolve) { laterDoneResolve = resolve; });
-      /* Очередь могла закончиться РАНЬШЕ, чем заставка спросила промис
-         (load приходит раньше MIN_HOLD) — тогда разрешаем сразу. */
-      if (laterQueueFinished) laterDoneResolve();
-    }
-    return laterDonePromise;
   }
 
   function runLaterTasks() {
     if (laterStarted) return;
     laterStarted = true;
-    runTaskQueue(LATER_TASKS, function () {
-      laterQueueFinished = true;
-      if (laterDoneResolve) laterDoneResolve();
-    });
+    runTaskQueue(LATER_TASKS);
   }
 
   function scheduleLaterTasks() {
@@ -2497,15 +2481,71 @@
     setTimeout(runLaterTasks, 4000);
   }
 
+/* ═══ ПРОГРЕВ ПЕРВОГО КАДРА ПРОКРУТКИ ═══════════════════════════════
+     Первый свайп после холодного старта браузера — единственный кадр, где ещё
+     ничего не прогрето: шапка впервые переходит в состояние «страница
+     прокручена» (обводка логотипа, drop-shadow плитки, рост панели бургера), а
+     секции впервые выходят из-под гейта .nr-off и запускают свои анимации.
+     Браузер создаёт слои и растрирует всё это ровно в кадр жеста: прокрутка
+     копит дельту, пока главный поток занят, и затем отдаёт её скачком.
+     Пока заставка #nr-boot ещё непрозрачно закрывает экран, эти состояния
+     включаются на два кадра и возвращаются назад — слои, обводки и первые
+     кадры анимаций уже готовы, а пользователь ничего не видит.
+     После обычного F5 прогревать нечего (всё в кэше), поэтому рывка там нет. */
+  var firstScrollWarmed = false;
+
+  function warmFirstScrollPaint(done) {
+    var finish = function () { if (typeof done === 'function') done(); };
+
+    if (firstScrollWarmed) { finish(); return; }
+    if (REDUCED) { finish(); return; }
+    var boot = $('#nr-boot');
+    /* Имеет смысл только под непрозрачной заставкой. */
+    if (!boot || boot.classList.contains('nr-boot-hide')) { finish(); return; }
+
+    firstScrollWarmed = true;
+
+    var gated = $$('#hero, #player, #faq, #contacts, #reviews, footer');
+    var paused = [];
+    for (var i = 0; i < gated.length; i++) {
+      if (gated[i].classList.contains('nr-off')) paused.push(gated[i]);
+    }
+    var hadScrolled = document.body.classList.contains('nr-scrolled');
+
+    /* Переходы шапки на время прогрева выключаем (см. animations.css →
+       html.nr-warm): иначе возврат из «прокрученного» состояния анимировался
+       бы уже поверх гаснущей заставки — панель бургера уменьшалась бы на
+       глазах. Класс живёт всего несколько кадров под непрозрачным оверлеем. */
+    var root = document.documentElement;
+    root.classList.add('nr-warm');
+
+    document.body.classList.add('nr-scrolled');
+    for (var j = 0; j < paused.length; j++) paused[j].classList.remove('nr-off');
+
+    requestAnimationFrame(function () {
+      /* Кадр с «прокрученной» шапкой и ожившими секциями отрисован. Второй rAF
+         нужен, чтобы возврат прошёл отдельным кадром: иначе браузер схлопнул бы
+         обе смены состояния в одну и ничего не растрировал. */
+      requestAnimationFrame(function () {
+        if (!hadScrolled) document.body.classList.remove('nr-scrolled');
+        for (var k = 0; k < paused.length; k++) paused[k].classList.add('nr-off');
+        /* Снимаем в следующем кадре: смена состояний выше уже отрисована,
+           и переходы можно возвращать. */
+        requestAnimationFrame(function () { root.classList.remove('nr-warm'); });
+        finish();
+      });
+    });
+  }
+
 /* ═══ ЗАСТАВКА «ВКЛЮЧЕНИЯ УСИЛИТЕЛЯ» (BOOT SCREEN) ═══════════════
      #nr-boot видна при каждом заходе/обновлении страницы. Ряд ламп
      накаливания «прогревается» по одной слева направо (CSS, ~1.5 с) —
-     это видимый индикатор загрузки вместо прежней полосы. Заставка уходит
-     фейдом, когда истёк MIN_HOLD И закрыт bootGate (load + шрифты + вторая
-     очередь декора + кадры фона героя), но не позже MAX_HOLD. Пока окно
-     видно, страница заморожена (lockPage): скролл выключен, фокус не
-     покидает оверлей, клики съедает #nr-boot. Лок снимается (unlockPage)
-     только в момент #nr-boot-done — display:none. */
+     это видимый индикатор загрузки вместо прежней полосы. Как только
+     страница готова (window.load или страховка) и MIN_HOLD истёк —
+     заставка уходит фейдом. Пока окно видно, страница заморожена
+     (lockPage): скролл выключен, фокус не покидает оверлей, клики
+     съедает #nr-boot. Лок снимается (unlockPage) только в момент
+     #nr-boot-done — display:none. */
   function initBoot() {
     var boot = $('#nr-boot');
     if (!boot) return;
@@ -2517,28 +2557,8 @@
     var MIN_HOLD = REDUCED ? 400 : 1500;
     var FADE_MS = 470;    /* чуть больше CSS-перехода opacity 0.42s */
 
-    /* Жёсткий потолок ожидания. ОБЯЗАТЕЛЬНО меньше inline-страховки в
-       index.html (4000 мс): та снимает только класс, слушатели лока остаются,
-       и заставка «уезжает» в обход своего же выхода. */
-    var MAX_HOLD = 3000;
-
-    /* Пауза после закрытия гейта: document.fonts.ready в script.js запускает
-       полный ScrollTrigger.refresh() с задержкой 120 мс. Даём ему отработать
-       под заставкой, а не в кадре прокрутки. */
-    var SETTLE_MS = 120;
-
-    /* Гасим ввод, только пока заставка реально держит экран. Класс
-       nr-boot-active снимается либо нашим unlockPage, либо inline-страховкой
-       в index.html (4 с) — во втором случае оверлей уже невидим, и запирать
-       прокрутку было бы ошибкой. */
-    function blocked() {
-      return document.documentElement.classList.contains('nr-boot-active');
-    }
-    function blockScroll(e) {
-      if (blocked()) e.preventDefault();
-    }
+    function blockScroll(e) { e.preventDefault(); }
     function blockKeys(e) {
-      if (!blocked()) return;
       var k = e.key || '';
       if (k === 'Tab') {
         e.preventDefault();
@@ -2550,21 +2570,6 @@
         e.preventDefault();
       }
     }
-    /* ═══ ПОЧЕМУ НЕТ ПРОГРЕВА ПРОКРУТКОЙ ═══════════════════════
-       Раньше здесь был программный проезд 0 → 0.6 → 0.95 экрана и назад, чтобы
-       браузер успел разложить и раскрасить страницу под заставкой. От него пришлось
-       отказаться: всплытие разделов ниже первого экрана — это GSAP ScrollTrigger
-       из script.js (initGsapAnimations): у триггеров toggleActions: 'play none none none'
-       и once: true, то есть срабатывают они ОДИН раз. Любая программная
-       прокрутка проигрывала их под непрозрачным оверлеем, и на настоящем
-       скролле разделы уже стояли готовыми — всплытия не было.
-
-       Причина самого «дёрганья» на первом свайпе лежит не в прокрутке, а в
-       раскладке: html.nr-boot-active больше не зажимает документ (убраны
-       overflow: hidden и height: 100%), поэтому страница имеет полную высоту
-       с первого кадра и в момент снятия заставки никуда не прыгает.
-       Программная прокрутка для этого не нужна. */
-
     function lockPage() {
       if (boot.dataset.locked) return;
       boot.dataset.locked = '1';
@@ -2580,8 +2585,8 @@
       window.removeEventListener('wheel', blockScroll, { capture: true });
       window.removeEventListener('touchmove', blockScroll, { capture: true });
       window.removeEventListener('keydown', blockKeys, { capture: true });
-      /* Плавный скролл: либа могла «проснуться», пока ввод был заблокирован
-         заставкой, и не успела толком стартовать. Пересоздаём её заново
+      /* Плавный скролл: либа могла «проснуться», пока страница была заморожена
+         (overflow:hidden) и не успела толком стартовать. Пересоздаём её заново
          в момент, когда страница стала интерактивной, чтобы она сразу работала —
          даже если юзер крутит колесо тут же после загрузки. */
       if (typeof window.nrApplySmoothScroll === 'function') {
@@ -2594,85 +2599,13 @@
       if (typeof window.updateActiveNavSection === 'function') safe(window.updateActiveNavSection);
     }
 
-    /* Вход первого экрана. Запускается в hideBoot — ВМЕСТЕ с затуханием
-       заставки, а не после него: получается кросс-фейд, и к моменту
-       #nr-boot-done (снятие лока) экран уже стоит на месте. Если запускать в
-       unlockPage, глаз успел бы разглядеть готовый первый экран, а потом он
-       «мигнул» бы и появился заново.
-
-       Пословный вкат заголовка (.nr-w) тоже здесь: раньше он вызывался при
-       инициализации, то есть проигрывался под непрозрачным оверлеем, и
-       пользователь видел уже собранный текст. */
-    function revealHero() {
-      safe(animateHeroTitle);
-      /* Класс для CSS-входа (animations.css, «ВСПЛЫТИЕ ПЕРВОГО ЭКРАНА ПОСЛЕ
-         ЗАСТАВКИ»). Держим чуть дольше самой анимации (0.55 с + задержка
-         0.24 с), затем снимаем, чтобы композитор не держал лишние слои. */
-      document.documentElement.classList.add('nr-boot-in');
-      setTimeout(function () {
-        document.documentElement.classList.remove('nr-boot-in');
-      }, 1100);
-    }
-
     function hideBoot() {
       if (boot.classList.contains('nr-boot-hide')) return;
       boot.classList.add('nr-boot-hide'); /* фейд; клики и дальше съедает оверлей */
-      revealHero();                       /* вход первого экрана — синхронно с фейдом */
       setTimeout(function () {
         boot.classList.add('nr-boot-done'); /* display:none — последний кадр окна */
         unlockPage();                       /* только теперь страница интерактивна */
       }, FADE_MS);
-    }
-
-    var gateStarted = false;
-
-    /* ═══ ЧТО ДЕРЖИТ ЗАСТАВКУ ═══════════════════════════════════════════
-       Раньше заставка уходила по window.load (или через 2 с) — и вся дорогая
-       работа, которая начинается ПОСЛЕ load, ложилась на первый свайп:
-       ScrollTrigger.refresh() по готовности шрифтов, пересчёт высот карточек
-       отзывов и услуг, canvas-ы декора, скачивание и раскодирование четырёх
-       полноэкранных кадров hero-bg-2..5.
-
-       Локально (Wi-Fi, 5–20 мс на файл) всё это успевало под оверлеем, и
-       дёрганья не было; на GitHub Pages сеть медленнее ровно настолько,
-       чтобы работа вылезла за пределы заставки — и рывок возвращался.
-       Поэтому теперь заставка ждёт закрытия гейта, а не только load.
-
-       Гейт ничего не двигает и не анимирует: программный проезд страницей
-       сюда вернуть нельзя — он проигрывает одноразовые ScrollTrigger-появления
-       разделов под оверлеем (см. комментарий выше про прогрев). */
-    function bootGate() {
-      var jobs = [];
-
-      /* 1. window.load — разметка, стили, скрипты, первый кадр фона героя. */
-      jobs.push(new Promise(function (resolve) {
-        if (document.readyState === 'complete') resolve();
-        else window.addEventListener('load', function () { resolve(); }, { once: true });
-      }));
-
-      /* 2. Шрифты: до их прихода метрики другие, и как раз по fonts.ready
-         script.js пересчитывает ScrollTrigger и высоты карточек. */
-      jobs.push(new Promise(function (resolve) {
-        var f = document.fonts;
-        if (f && f.ready && typeof f.ready.then === 'function') {
-          f.ready.then(function () { resolve(); }, function () { resolve(); });
-        } else {
-          resolve();
-        }
-      }));
-
-      /* 3. Вторая очередь декора, а сразу за ней — кадры фона героя: их
-         скачивание стартует в initHeroSlideshow (последняя задача очереди),
-         то есть после load — как и задумано ради LCP главного фото.
-         На заведомо медленном канале (2G / режим экономии) кадры всё равно
-         не успеют к потолку — ждать их бессмысленно, заставку не тянем. */
-      var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-      var slowNet = !!(conn && (conn.saveData || /(^|-)2g$/.test(conn.effectiveType || '')));
-      jobs.push(laterTasksDone().then(function () {
-        return slowNet ? null : preloadHeroFrames();
-      }));
-
-      return Promise.all(jobs);
     }
 
     function ready() {
@@ -2681,30 +2614,9 @@
         setTimeout(ready, MIN_HOLD - elapsed + 30);
         return;
       }
-      if (gateStarted) return;
-      gateStarted = true;
-
-      /* «Уменьшить движение»: кадр статичен, ввода не запирает — ждать нечего. */
-      if (REDUCED) { hideBoot(); return; }
-
-      var left = MAX_HOLD - elapsed;
-      if (left <= 0) { hideBoot(); return; }   /* потолок уже истёк */
-
-      var closed = false;
-      var capTimer = setTimeout(function () { closed = true; hideBoot(); }, left);
-
-      bootGate().then(function () {
-        if (closed) return;
-        /* Кадр + SETTLE_MS: успевает отработать refresh по шрифтам. */
-        requestAnimationFrame(function () {
-          setTimeout(function () {
-            if (closed) return;
-            closed = true;
-            clearTimeout(capTimer);
-            hideBoot();
-          }, SETTLE_MS);
-        });
-      });
+      /* Сначала прогреваем первый кадр прокрутки (заставка в этот момент ещё
+         полностью непрозрачна), и только потом начинаем её гасить. */
+      warmFirstScrollPaint(hideBoot);
     }
 
     boot.dataset.bootStart = String(Date.now());
@@ -2718,8 +2630,7 @@
       ready();
     } else {
       window.addEventListener('load', ready, { once: true });
-      /* Потолок: даже если load так и не придёт, заставка не «зависает». */
-      setTimeout(ready, MAX_HOLD);
+      setTimeout(ready, 2000); /* страховка: не ждём вечно */
     }
   }
 
@@ -2732,12 +2643,7 @@
     safe(initHeroParallax);
     safe(initReveal);
     safe(initViewportGate);
-    /* Вкат заголовка героя запускает hideBoot() → revealHero() — ровно в
-       момент, когда заставка начинает уходить (иначе анимация проигрывалась
-       под непрозрачным оверлеем и её никто не видел). Здесь вызов нужен
-       только там, где заставки нет вовсе: «уменьшить движение» и
-       отсутствующий элемент #nr-boot. */
-    if (REDUCED || !$('#nr-boot')) safe(animateHeroTitle);
+    safe(animateHeroTitle);
     safe(initAboutSlideOne);
     safe(initAboutSlideTwo);
     safe(initAboutSlideThree);
@@ -2776,7 +2682,24 @@
     }
 
     window.addEventListener('scroll', onScroll, { passive: true });
+    /* Плашка адресной строки на телефоне присылает resize при каждом первом
+       свайпе (высота окна меняется на 60–120px, ширина — нет). Раскладка от
+       этого не едет: главный экран в svh, фон и канвасы в lvh. А вот пересчёт
+       предела прокрутки — это принудительный layout, и он приходился ровно на
+       кадр первого жеста после холодного старта. Такие события отбрасываем:
+       настоящий поворот экрана меняет ширину, а изменение высоты больше
+       четверти экрана — это уже не плашка. */
+    var lastWinW = window.innerWidth;
+    var lastWinH = window.innerHeight;
     window.addEventListener('resize', function () {
+      var w = window.innerWidth;
+      var h = window.innerHeight;
+      var dh = Math.abs(h - lastWinH);
+      var barOnly = w === lastWinW && lastWinW < 1024 && dh > 0 && dh < h * 0.25;
+      lastWinW = w;
+      lastWinH = h;
+      if (barOnly) return;
+
       safe(refreshScrollMax);
       /* Сменилась ширина/высота окна — верх секции героя мог сдвинуться
          (шапка, padding'и, поворот телефона): пересчитываем базу параллакса
