@@ -55,6 +55,11 @@
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   if (isIOS) document.documentElement.classList.add('nr-ios');
 
+  /* Телефон и планшет (<1024px): появления блоков при прокрутке выключены.
+     Тот же медиазапрос, что в script.js (NR_NO_SCROLL_REVEAL) и в
+     animations.css (секция 16). ПК-версия не затрагивается. */
+  var NO_REVEAL = window.matchMedia('(max-width: 1023.98px)').matches;
+
   /* Заставка «включения пульта» (#nr-boot) видна при каждом заходе/обновлении.
      Скрывает её initBoot() — см. ниже в этом файле (перед init). */
 
@@ -1154,7 +1159,7 @@
 
   function observeReveal(node) {
     if (!node) return;
-    if (REDUCED || !('IntersectionObserver' in window)) { node.classList.add('nr-in'); return; }
+    if (REDUCED || NO_REVEAL || !('IntersectionObserver' in window)) { node.classList.add('nr-in'); return; }
     if (revealNodes.indexOf(node) === -1) {
       revealNodes.push(node);
     }
@@ -2668,6 +2673,7 @@
     function hideBoot() {
       if (boot.classList.contains('nr-boot-hide')) return;
       boot.classList.add('nr-boot-hide'); /* фейд; клики и дальше съедает оверлей */
+      playHeroIntro();                    /* герой всплывает сквозь гаснущий оверлей */
       setTimeout(function () {
         boot.classList.add('nr-boot-done'); /* display:none — последний кадр окна */
         unlockPage();                       /* только теперь страница интерактивна */
@@ -2700,6 +2706,27 @@
     }
   }
 
+  /* Вход главного экрана ждёт заставку. Начальное состояние героя (y/opacity)
+     ставит script.js → initGsapAnimations сразу, под непрозрачным оверлеем, а
+     сама анимация — пауза-таймлайн, который запускает playHeroIntro().
+     Класс nr-title-hold держит на паузе пословный вкат заголовка: без него
+     слова доигрывали бы за заставкой (animations.css, рядом с .nr-w). */
+  function holdHeroIntro() {
+    var hero = $('#hero');
+    /* Класс ставим только если заставка есть: снимает его hideBoot, и без
+       оверлея он остался бы на #hero навсегда (слова заголовка — на паузе). */
+    if (hero && $('#nr-boot')) hero.classList.add('nr-title-hold');
+  }
+
+  /* Заставка начала гаснуть → главный экран всплывает. Заодно снимаем паузу с
+     пословного вката заголовка: разбивка на слова сделана ещё под оверлеем
+     (animateHeroTitle), поэтому перестройки строк в кадре показа нет. */
+  function playHeroIntro() {
+    var hero = $('#hero');
+    if (hero) hero.classList.remove('nr-title-hold');
+    if (typeof window.nrPlayHeroIntro === 'function') safe(window.nrPlayHeroIntro);
+  }
+
   function init() {
     /* Высоту окна замораживаем ДО заставки: пока она непрозрачно закрывает
        экран, пересчёт не виден. */
@@ -2712,6 +2739,7 @@
     safe(initHeroParallax);
     safe(initReveal);
     safe(initViewportGate);
+    safe(holdHeroIntro);     /* вход героя ждёт заставку; заголовок режем здесь же */
     safe(animateHeroTitle);
     safe(initAboutSlideOne);
     safe(initAboutSlideTwo);

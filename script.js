@@ -49,6 +49,12 @@ const TAP_FALLBACK_DELAY = 350; // мс: сколько ждём click, преж
 const TAP_FALLBACK_GUARD = 600; // мс: окно, в котором поздний click уже не повторяет действие
 const TAP_MAX_MS = 700;         // мс: дольше — это удержание, а не тап
 
+/* Телефон и планшет (<1024px): появления блоков при прокрутке выключены —
+   всё содержимое разделов выведено сразу, без всплытий. Медиазапрос тот же,
+   что в animations.css (секция 16), поэтому JS и CSS не разойдутся.
+   ПК-версия (от 1024px) не затрагивается. */
+const NR_NO_SCROLL_REVEAL = window.matchMedia('(max-width: 1023.98px)').matches;
+
 /* opts.ignore — селектор вложенного элемента со своим действием (например,
    кнопка play внутри карточки): такие касания сюда не относим, иначе одно
    нажатие выполнилось бы дважды. */
@@ -8591,6 +8597,9 @@ function animateScrollBlock(selectorOrEls, options = {}) {
   const els = typeof selectorOrEls === 'string' ? document.querySelectorAll(selectorOrEls) : selectorOrEls;
   if (!els || els.length === 0) return;
 
+  // Телефон и планшет: блоки не прячем и не анимируем — они уже на месте.
+  if (NR_NO_SCROLL_REVEAL) return;
+
   const yVal = options.y !== undefined ? options.y : 22;
   const duration = options.duration || 0.48;
   const rawStart = options.start || 'top 86%';
@@ -8599,6 +8608,10 @@ function animateScrollBlock(selectorOrEls, options = {}) {
   const stagger = options.stagger || 0;
   const delay = options.delay || 0;
   const trigger = options.trigger || null;
+  /* Необязательное: снять инлайновые свойства после появления. Нужно там, где
+     GSAP-твин идёт по ОБЁРТКЕ кнопки (transform родителя создал бы отдельный
+     композитный слой — текст кнопки «сереет» на Windows). */
+  const clearProps = options.clearProps || undefined;
 
   els.forEach((el, idx) => {
     // Kill existing triggers for this element
@@ -8628,6 +8641,7 @@ function animateScrollBlock(selectorOrEls, options = {}) {
         delay: itemDelay,
         ease: ease,
         overwrite: 'auto',
+        clearProps: clearProps,
         scrollTrigger: {
           trigger: trigEl,
           start: dynamicStart,
@@ -8647,6 +8661,9 @@ let playerRevealed = false;
 
 function initPlayerGsapAnimation() {
   if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') return;
+
+  // Телефон и планшет: секция не прячется и не всплывает — всё видно сразу.
+  if (NR_NO_SCROLL_REVEAL) { playerRevealed = true; return; }
 
   const section = document.getElementById('player');
   if (!section) return;
@@ -8771,6 +8788,24 @@ function initPlayerGsapAnimation() {
     );
     playerTimelines.push(paginationTl);
   }
+
+  /* Кнопка «Связаться» стоит ВНЕ #playerContentContainer, поэтому ни в одну
+     выборку выше не попадала и появлялась без анимации. Анимируем ОБЁРТКУ:
+     у самой кнопки занят transform (пульс .nr-calc-cta и hover-подъём), а
+     инлайновый transform родителя к тому же промоутил бы надпись в отдельный
+     слой. Массив — потому что animateScrollBlock работает через forEach. */
+  const contactCta = document.getElementById('playerContactCta');
+  if (contactCta) {
+    /* Если кнопка уже на экране (переинициализация при смене языка), заново её
+       не прячем — иначе она мигнёт. Тот же порог, что у самого триггера. */
+    const ctaRect = contactCta.getBoundingClientRect();
+    const ctaInView = ctaRect.top < (window.innerHeight || 800) * 0.84;
+    if (!ctaInView) {
+      animateScrollBlock([contactCta], {
+        y: 16, duration: 0.5, start: 84, clearProps: 'transform,opacity'
+      });
+    }
+  }
 }
 
 function initPlayerTrackCardsTimeline(initialPreHide = true, alreadyAnimated = false) {
@@ -8785,6 +8820,9 @@ function initPlayerTrackCardsTimeline(initialPreHide = true, alreadyAnimated = f
   // Секция уже всплыла — карточки остаются на месте (перерисовка списка,
   // смена языка, resize не запускают появление заново).
   if (playerRevealed) return;
+
+  // Телефон и планшет: карточки треков не прячем и не анимируем.
+  if (NR_NO_SCROLL_REVEAL) { playerRevealed = true; return; }
 
   if (playerTracksTimeline) {
     try { playerTracksTimeline.kill(); } catch (e) {}
@@ -8841,6 +8879,10 @@ let servicesRevealed = false;
 
 function initServicesGsapAnimation() {
   if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') return;
+
+  /* Телефон и планшет: карточки услуг и их содержимое не прячем — всё выведено
+     сразу, цены остаются настоящими (счётчик ниже их обнулял бы). */
+  if (NR_NO_SCROLL_REVEAL) { servicesRevealed = true; return; }
 
   const section = document.getElementById('services');
   if (!section) return;
@@ -9047,14 +9089,43 @@ function initServicesGsapAnimation() {
     // их пропускает, иначе на одном элементе было бы два твина).
     const featureItems = card.querySelectorAll('.service-feature-item');
     const checkIcons = card.querySelectorAll('.service-check-icon');
+
+    // Пунктов в разметке ВОСЕМЬ: по четыре на лицевой и на обратной стороне.
+    // Шаг каскада считаем по лицевым — иначе разделитель и цена ждали бы
+    // невидимые строки оборота и всплывали бы на полсекунды позже нужного.
+    const frontFace = card.querySelector('.service-card-face--front');
+    const frontFeatures = frontFace ? frontFace.querySelectorAll('.service-feature-item') : [];
+    const frontListSpan = 0.42 + ((frontFeatures.length || 4) - 1) * 0.12;
+
+    // Последовательность появления содержимого карточки:
+    // верх → список построчно → разделитель → цена → кнопка «Заказать».
+    const topStart = innerStart;
+    const listStart = topStart + 0.22;
+    const dividerStart = listStart + frontListSpan;
+    const priceStart = dividerStart + 0.1;
+    const orderStart = priceStart + 0.12;
+
+    const cardTop = card.querySelector('.service-card-top');
+    /* Разделитель есть на ОБЕИХ сторонах карточки: берём все, иначе тот, что на
+       обороте, остался бы прозрачным (общий фейд его пропускает). */
+    const dividers = card.querySelectorAll('.service-card-divider');
+    const priceGroup = card.querySelector('.service-card-price-group');
+    const orderBtn = card.querySelector('.service-card-order-btn');
+
+    // Всё остальное (в основном оборот карточки) — мягкий фейд, как раньше:
+    // его видно только после переворота, поэтому порядок здесь не важен.
     const otherInnerEls = [];
     innerEls.forEach(el => {
-      if (el.classList.contains('service-feature-item') || el.classList.contains('service-check-icon')) return;
+      if (el.classList.contains('service-feature-item') ||
+          el.classList.contains('service-check-icon') ||
+          el.classList.contains('service-card-divider') ||
+          el.classList.contains('service-card-price-group') ||
+          el.classList.contains('service-card-order-btn') ||
+          el === cardTop) return;
       otherInnerEls.push(el);
     });
 
     if (otherInnerEls.length) {
-      // Остальное содержимое догоняет оболочку с лёгкой задержкой и мягким каскадом.
       cardTl.fromTo(
         otherInnerEls,
         { opacity: 0 },
@@ -9063,12 +9134,23 @@ function initServicesGsapAnimation() {
       );
     }
 
+    // 1) Заголовок и описание — подъём на 16px.
+    if (cardTop) {
+      cardTl.fromTo(
+        cardTop,
+        { opacity: 0, y: 16 },
+        { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out', overwrite: 'auto' },
+        topStart
+      );
+    }
+
+    // 2) Список услуг — построчно.
     if (featureItems.length) {
       cardTl.fromTo(
         featureItems,
         { opacity: 0, y: 12 },
         { opacity: 1, y: 0, duration: 0.42, stagger: 0.12, ease: 'power2.out', overwrite: 'auto' },
-        innerStart + 0.04
+        listStart
       );
 
       if (checkIcons.length) {
@@ -9077,9 +9159,38 @@ function initServicesGsapAnimation() {
           checkIcons,
           { opacity: 0, scale: 0.4 },
           { opacity: 1, scale: 1, duration: 0.36, stagger: 0.12, ease: 'back.out(2.5)', overwrite: 'auto' },
-          innerStart + 0.1
+          listStart + 0.06
         );
       }
+    }
+
+    // 3) Разделитель «прочерчивается» слева направо, затем цена.
+    if (dividers.length) {
+      cardTl.fromTo(
+        dividers,
+        { opacity: 0, scaleX: 0, transformOrigin: 'left center' },
+        { opacity: 1, scaleX: 1, duration: 0.45, ease: 'power2.out', overwrite: 'auto' },
+        dividerStart
+      );
+    }
+
+    if (priceGroup) {
+      cardTl.fromTo(
+        priceGroup,
+        { opacity: 0, y: 12 },
+        { opacity: 1, y: 0, duration: 0.42, ease: 'power2.out', overwrite: 'auto' },
+        priceStart
+      );
+    }
+
+    // 4) Кнопка «Заказать».
+    if (orderBtn) {
+      cardTl.fromTo(
+        orderBtn,
+        { opacity: 0, y: 12 },
+        { opacity: 1, y: 0, duration: 0.42, ease: 'power2.out', overwrite: 'auto' },
+        orderStart
+      );
     }
 
     if (isAlreadyInView(card)) cardTl.progress(1);
@@ -9138,6 +9249,18 @@ function initServicesGsapAnimation() {
       onEnter: startPriceCountUp
     });
   }
+
+  /* Кнопка «Рассчитать стоимость услуг» стоит ВНЕ #servicesContainer — её не
+     брала ни одна выборка выше, поэтому она появлялась без анимации. Как и в
+     «Примерах», анимируем ОБЁРТКУ (у самой кнопки занят transform), а после
+     появления снимаем инлайновые свойства. Порог тот же, что у заголовка
+     секции, — кнопка «догоняет» раздел. */
+  const calcCta = document.getElementById('servicesCalcCta');
+  if (calcCta && !isAlreadyInView(calcCta)) {
+    animateScrollBlock([calcCta], {
+      y: 16, duration: 0.5, start: 88, clearProps: 'transform,opacity'
+    });
+  }
 }
 
 // Вопросы FAQ уже всплыли: при перерисовке (смена языка) повторно не прячем.
@@ -9145,6 +9268,9 @@ let faqRevealed = false;
 
 function initFaqGsapAnimation() {
   if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') return;
+
+  // Телефон и планшет: вопросы не прячем — раздел выведен сразу.
+  if (NR_NO_SCROLL_REVEAL) { faqRevealed = true; return; }
 
   const faqItems = document.querySelectorAll('#faqContainer > *');
   if (!faqItems.length) return;
@@ -9189,6 +9315,9 @@ function initFaqGsapAnimation() {
 
 function initContactsGsapAnimation() {
   if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') return;
+
+  // Телефон и планшет: плитки контактов не прячем — раздел выведен сразу.
+  if (NR_NO_SCROLL_REVEAL) return;
 
   const contactButtons = document.querySelectorAll('#contactsGrid > *');
   if (!contactButtons.length) return;
@@ -9249,29 +9378,56 @@ function initGsapAnimations() {
     ScrollTrigger.config({ ignoreMobileResize: true });
   }
 
-  // Hero Section: smooth entrance on load, stable at top
-  gsap.fromTo(
+  /* Hero Section: всплывание запускается НЕ здесь, а в момент, когда начинает
+     гаснуть заставка #nr-boot (animations.js → hideBoot → playHeroIntro).
+     Раньше анимация стартовала сразу на DOMContentLoaded и целиком доигрывала
+     под непрозрачным оверлеем: к его исчезновению герой уже стоял на месте.
+     Начальное состояние ставим сразу — оно живёт под заставкой, поэтому
+     вспышки открытого героя нет. */
+  gsap.set('#hero .space-y-6 > *', { y: 24, opacity: 0 });
+  gsap.set('#hero .hero-mask-container', { y: 20, opacity: 0 });
+
+  const heroIntro = gsap.timeline({ paused: true });
+  heroIntro.to(
     '#hero .space-y-6 > *',
-    { y: 24, opacity: 0 },
     {
       y: 0,
       opacity: 1,
       duration: 0.85,
       stagger: 0.08,
       ease: 'power2.out'
-    }
+    },
+    0
   );
-
-  gsap.fromTo(
+  heroIntro.to(
     '#hero .hero-mask-container',
-    { y: 20, opacity: 0 },
     {
       y: 0,
       opacity: 1,
       duration: 0.85,
       ease: 'power2.out'
-    }
+    },
+    0
   );
+
+  // Заставка зовёт это, когда начала гаснуть. Второй раз не играем.
+  let heroIntroPlayed = false;
+  window.nrPlayHeroIntro = () => {
+    if (heroIntroPlayed) return;
+    heroIntroPlayed = true;
+    heroIntro.play();
+  };
+  // Страховка: заставка так и не запустила вход (animations.js не выполнился и
+  // сработала inline-страховка в разметке) — иначе герой остался бы невидимым.
+  // Пока заставка ещё держит экран, вход запустит она сама: играть анимацию под
+  // непрозрачным оверлеем незачем.
+  setTimeout(() => {
+    const boot = document.getElementById('nr-boot');
+    if (boot && !boot.classList.contains('nr-boot-hide') &&
+        !boot.classList.contains('nr-boot-done') && boot.style.display !== 'none') return;
+    document.getElementById('hero')?.classList.remove('nr-title-hold');
+    window.nrPlayHeroIntro();
+  }, 5000);
 
   // 1. Player Section: Unified scroll-driven sequence (Header -> Genre Filters -> Track Cards -> Pagination Controls)
   initPlayerGsapAnimation();

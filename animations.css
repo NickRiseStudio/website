@@ -938,6 +938,11 @@ body.nr-scrolled #mainHeader {
   to { opacity: 1; transform: none; }
 }
 
+/* Вход героя ждёт, пока уедет заставка: слова заголовка стоят на паузе, пока на
+   #hero висит nr-title-hold (ставит animations.js → holdHeroIntro, снимает
+   hideBoot). Без этого пословный вкат доигрывал под непрозрачным оверлеем. */
+#hero.nr-title-hold .nr-w { animation-play-state: paused; }
+
 /* Фото — рамка захвата сигнала + сканирующая полоса */
 .hero-mask-container {
   transition: transform 0.5s var(--nr-ease);
@@ -2288,6 +2293,33 @@ body.nr-playing #side-mixer-strip > div:first-child {
 .nr-reveal[data-nr-d="2"] { transition-delay: 0.16s; }
 .nr-reveal[data-nr-d="3"] { transition-delay: 0.24s; }
 .nr-reveal[data-nr-d="4"] { transition-delay: 0.32s; }
+
+/* ═══ 16.1. ТЕЛЕФОН И ПЛАНШЕТ: ВСПЛЫТИЙ ПРИ ПРОКРУТКЕ НЕТ ═════════════
+   Тот же медиазапрос, что в script.js (NR_NO_SCROLL_REVEAL) и в
+   animations.js (NO_REVEAL). Элементы, которые GSAP и наблюдатель
+   появления держат скрытыми до прокрутки, здесь выведены сразу.
+   ПК-версия (от 1024px) не затрагивается.
+═══════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 1023.98px) {
+  .nr-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  /* Линия-эквалайзер под заголовками: нарисована целиком, без прочерчивания. */
+  .nr-eqline path {
+    stroke-dashoffset: 0 !important;
+    animation: none !important;
+  }
+
+  .nr-eqline circle {
+    opacity: 1 !important;
+    r: 3.4;
+    animation: none !important;
+  }
+}
 
 /* ═══ 16.5. ЭКОНОМИЯ РЕСУРСОВ ═════════════════════════════════════════
    Секции за пределами экрана не анимируются вовсе.

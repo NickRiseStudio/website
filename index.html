@@ -546,7 +546,7 @@
              Набор утилит рядом — как у кнопки калькулятора: тот же вариант
              уже проверен в проде (в т.ч. перекрытие active:scale-95 на :active
              и transition из класса поверх transition-all). Отличие одно — ширина: здесь w-auto (по содержимому), чтобы на телефоне кнопка не растягивалась на весь экран. -->
-        <div class="flex justify-center mt-8 sm:mt-10">
+        <div id="playerContactCta" class="flex justify-center mt-8 sm:mt-10">
           <button
             type="button"
             onclick="openContactModal()"
@@ -583,7 +583,7 @@
 
         <!-- Кнопка-калькулятор: ведёт в окно «Рассчитать стоимость услуг» (#priceCalcModal).
              Класс .nr-calc-cta включает постоянную привлекающую анимацию (animations.css). -->
-        <div class="flex justify-center mt-5 sm:mt-7">
+        <div id="servicesCalcCta" class="flex justify-center mt-5 sm:mt-7">
           <button
             onclick="openPriceCalcModal()"
             class="nr-calc-cta w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 sm:px-9 py-3.5 sm:py-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl transition-all duration-200 shadow-lg shadow-amber-500/30 active:scale-95 text-sm sm:text-base cursor-pointer"
