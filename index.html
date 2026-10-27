@@ -570,15 +570,32 @@
           </h2>
         </div>
 
-        <div id="servicesContainer" class="services-carousel-container flex sm:grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8 items-stretch overflow-x-auto sm:overflow-visible snap-x snap-mandatory py-8 sm:py-2 -mx-4 sm:mx-0 no-scrollbar">
-          <!-- Dynamically populated by script.js -->
-        </div>
+        <!-- Обёртка-«сцена» для стрелок карусели (телефон). У самого контейнера
+             overflow-x: auto, и стрелки, вынесенные за его край, срезались бы.
+             Обёртка раскладку не меняет: контейнер остаётся её единственным
+             ребёнком и по-прежнему растянут на всю ширину (-mx-4). -->
+        <div class="relative">
+          <div id="servicesContainer" class="services-carousel-container flex sm:grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8 items-stretch overflow-x-auto sm:overflow-visible snap-x snap-mandatory py-8 sm:py-2 -mx-4 sm:mx-0 no-scrollbar">
+            <!-- Dynamically populated by script.js -->
+          </div>
 
-        <!-- Mobile Carousel Dots for Services (<640px only) -->
-        <div id="servicesDotsContainer" class="flex sm:hidden items-center justify-center gap-2 mt-0">
-          <button onclick="scrollToServiceCard(0)" class="w-2.5 h-2.5 rounded-full transition-all bg-gray-700 hover:bg-amber-500 cursor-pointer" aria-label="Card 1"></button>
-          <button onclick="scrollToServiceCard(1)" class="w-8 h-2.5 rounded-full transition-all bg-amber-500 shadow-sm shadow-amber-500/50 cursor-pointer" aria-label="Card 2"></button>
-          <button onclick="scrollToServiceCard(2)" class="w-2.5 h-2.5 rounded-full transition-all bg-gray-700 hover:bg-amber-500 cursor-pointer" aria-label="Card 3"></button>
+          <!-- Стрелки листания карусели услуг (телефон, <640px). Вид и анимация —
+               те же, что у стрелок раздела с примерами (#trackNavPrevBtn /
+               #trackNavNextBtn): янтарная дуга-«галочка» без фона, со свечением и
+               «отскоком мячика». Показываются только там, где услуги — карусель:
+               на планшете и ПК это сетка (см. animations.css → .nr-services-nav).
+               На крайних карточках стрелка плавно гаснет (класс .is-hidden,
+               script.js → syncServicesNav) и нажатие по ней ничего не делает. -->
+          <button type="button" id="servicesNavPrevBtn" class="nr-services-nav nr-services-nav-prev" aria-label="Назад" data-i18n-aria-label="a11y.prev">
+            <svg class="nr-services-nav-glyph" viewBox="0 0 28 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M22 38C16 31 8 25 6 20C8 15 16 9 22 2" stroke="currentColor" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <button type="button" id="servicesNavNextBtn" class="nr-services-nav nr-services-nav-next" aria-label="Вперед" data-i18n-aria-label="a11y.next">
+            <svg class="nr-services-nav-glyph" viewBox="0 0 28 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M6 38C12 31 20 25 22 20C20 15 12 9 6 2" stroke="currentColor" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
         </div>
 
         <!-- Кнопка-калькулятор: ведёт в окно «Рассчитать стоимость услуг» (#priceCalcModal).

@@ -4991,6 +4991,63 @@ function toggleServiceCardFlip(card) {
 
 function initServices() {
   renderServices();
+  initServicesNav();
+}
+
+/* ── Стрелки карусели услуг (телефон) ─────────────────────────────────────
+   Листают карусель на одну карточку — тем же плавным переходом, что и тап по
+   соседней карточке или свайп (scrollToServiceCard). Листание линейное: у
+   крайних карточек соответствующая стрелка погашена (syncServicesNav), и
+   нажатие по ней ничего не делает — это защита от случайных кликов.
+
+   Активный индекс ведёт servicesActiveIndex — его обновляет сама карусель
+   (scrollToServiceCard и updateServicesDots по событию scroll), поэтому частые
+   тапы листают дальше, а не топчутся на месте.
+
+   Тап разбирает bindTapControl — тот же помощник, что у стрелок треков: он
+   срабатывает и тогда, когда браузер «съел» первый тап на остановку инерции. */
+function initServicesNav() {
+  const prevBtn = document.getElementById('servicesNavPrevBtn');
+  const nextBtn = document.getElementById('servicesNavNextBtn');
+
+  const step = (direction) => {
+    const container = document.getElementById('servicesContainer');
+    if (!container) return;
+    const total = container.children.length;
+    if (!total) return;
+
+    const next = servicesActiveIndex + direction;
+    // Крайняя карточка: дальше листать некуда. Стрелка там уже погашена, но
+    // проверка нужна и сама по себе — нажатие не должно двигать карусель.
+    if (next < 0 || next >= total) return;
+
+    scrollToServiceCard(next);
+  };
+
+  bindTapControl(prevBtn, () => step(-1));
+  bindTapControl(nextBtn, () => step(1));
+
+  syncServicesNav();
+}
+
+/* Гасит стрелку, за которой карточек больше нет. Класс .is-hidden плавно
+   уводит её в opacity: 0 (animations.css), поэтому при листании к крайней
+   карточке стрелка исчезает ровно за время прокрутки — к остановке её уже нет.
+
+   Состояние считается по servicesActiveIndex: scrollToServiceCard выставляет
+   его сразу, до начала плавной прокрутки, — значит гашение начинается в момент
+   нажатия. При свайпе индекс обновляет updateServicesDots по факту. */
+function syncServicesNav() {
+  const prevBtn = document.getElementById('servicesNavPrevBtn');
+  const nextBtn = document.getElementById('servicesNavNextBtn');
+  if (!prevBtn || !nextBtn) return;
+
+  const container = document.getElementById('servicesContainer');
+  const total = container ? container.children.length : 0;
+  if (!total) return;
+
+  prevBtn.classList.toggle('is-hidden', servicesActiveIndex <= 0);
+  nextBtn.classList.toggle('is-hidden', servicesActiveIndex >= total - 1);
 }
 
 function renderServices() {
@@ -5438,6 +5495,10 @@ function scrollToServiceCard(index, behavior = 'smooth') {
   // повторный тап по новой центральной карточке снова листал бы карусель
   // вместо открытия калькулятора.
   servicesActiveIndex = index;
+  // Стрелки гасим сразу по цели, а не по факту прокрутки: так стрелка крайней
+  // стороны начинает плавно исчезать в момент нажатия и успевает погаснуть к
+  // остановке карусели.
+  syncServicesNav();
 
   if (behavior === 'instant') {
     servicesProgrammaticScroll = false;
@@ -5597,17 +5658,9 @@ function updateServicesDots(withTransition = false) {
     if (cache.z !== nextZ) { cache.z = nextZ; card.style.zIndex = nextZ; }
   }
 
-  const dotsContainer = document.getElementById('servicesDotsContainer');
-  if (dotsContainer) {
-    const dots = dotsContainer.querySelectorAll('button');
-    dots.forEach((dot, idx) => {
-      if (idx === activeIndex) {
-        dot.className = 'w-8 h-2.5 rounded-full transition-all duration-300 bg-amber-500 shadow-sm shadow-amber-500/50 cursor-pointer';
-      } else {
-        dot.className = 'w-2.5 h-2.5 rounded-full transition-all duration-300 bg-gray-700 hover:bg-amber-500 cursor-pointer';
-      }
-    });
-  }
+  // Стрелки карусели: состояние по фактической центральной карточке — так они
+  // гаснут и при свайпе пальцем, и после ресайза.
+  syncServicesNav();
 }
 
 // --- FAQ SECTION ---

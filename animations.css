@@ -1536,13 +1536,124 @@ body.nr-playing .nr-rings i:nth-child(3) { animation-delay: 1.6s; }
   }
 }
 
-/* Точки-индикатор листания треков (внешний вид — как у карусели услуг). */
+/* ═══ 07.6. СТРЕЛКИ КАРУСЕЛИ УСЛУГ (телефон) ═════════════════════════════
+   Тот же вид и то же поведение, что у стрелок раздела с примерами
+   (.nr-track-nav, выше): янтарная дуга-«галочка» без фона, свечение, «отскок
+   мячика» (keyframes nrTrackNavBounceLeft/Right переиспользуются — они общие).
+   Отличие только в том, ГДЕ стрелки стоят: карусель услуг занимает всю ширину
+   экрана, поэтому стрелки лежат поверх неё у самых краёв — 6px от края окна,
+   как ARROW_EDGE_MIN в script.js → syncTrackNav. Показываются только там, где
+   услуги действительно карусель (телефон, <640px): на планшете и ПК это сетка,
+   листать нечего. */
+
+.nr-services-nav { display: none; }
+
+@media (max-width: 639.98px) {
+  .nr-services-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    /* Середина карточки. У #servicesContainer на телефоне padding-top 25px и
+       padding-bottom 16px (style.css), поэтому центр содержимого выше центра
+       обёртки на (25 − 16) / 2 = 4.5px. */
+    top: calc(50% + 4.5px);
+    transform: translateY(-50%);
+    /* Карточки coverflow ставят inline z-index до 30 — стрелки должны быть выше. */
+    z-index: 40;
+    /* Боковой отступ секции на телефоне (px-4 = 16px). Контейнер карусели
+       растянут на всю ширину (-mx-4), то есть выходит за обёртку ровно на этот
+       отступ, поэтому от края обёртки отсчитываем назад — так 6px получаются от
+       края окна, а не от края секции. */
+    --nr-services-nav-gutter: 16px;
+    /* Размер — это зона нажатия (сама дуга внутри меньше). */
+    width: 30px;
+    height: 54px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: #F59E0B;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    --nr-nav-cycle: 2.8s;   /* период «отскока»: удар + затухание + пауза */
+    /* opacity — гашение стрелки на краю карусели (см. .is-hidden ниже). Время
+       совпадает с длительностью плавного листания: стрелка успевает погаснуть
+       ровно к остановке карточки. */
+    transition: transform 0.5s var(--nr-ease), color 0.35s ease, opacity 0.35s ease;
+  }
+
+  .nr-services-nav-prev { left: calc(6px - var(--nr-services-nav-gutter)); }
+  .nr-services-nav-next { right: calc(6px - var(--nr-services-nav-gutter)); }
+
+  /* Дуга-«галочка»: тот же штрих и свечение, что у стрелки «наверх» и у стрелок
+     треков. Анимация — на самой дуге, а не на кнопке: у кнопки свой transform
+     для вертикального центрирования. */
+  .nr-services-nav-glyph {
+    width: 24px;
+    height: 40px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.7));
+    will-change: transform;
+    transition: filter 0.4s var(--nr-ease);
+  }
+
+  .nr-services-nav-prev .nr-services-nav-glyph { animation: nrTrackNavBounceLeft var(--nr-nav-cycle) infinite; }
+  .nr-services-nav-next .nr-services-nav-glyph { animation: nrTrackNavBounceRight var(--nr-nav-cycle) infinite; }
+
+  .nr-services-nav:active {
+    transform: translateY(-50%) scale(0.94);
+    transition-duration: 0.2s;
+  }
+}
+
+/* Стрелка на краю карусели плавно гаснет: листать в эту сторону больше нечего
+   (класс вешает script.js → syncServicesNav). Зона нажатия при этом остаётся —
+   pointer-events НЕ отключаем: иначе тап по невидимой стрелке «проваливался» бы
+   на карточку под ней и переворачивал её. Так нажатие просто ничего не делает. */
+.nr-services-nav.is-hidden {
+  opacity: 0;
+}
+
+/* Наведение — только там, где есть курсор: на телефонах и планшетах :hover
+   «залипал» бы на стрелке после касания. */
+@media (hover: hover) and (pointer: fine) {
+  .nr-services-nav:hover {
+    color: #FDE68A;
+    transform: translateY(-50%) scale(1.06);
+  }
+
+  .nr-services-nav:hover .nr-services-nav-glyph {
+    filter: drop-shadow(0 0 16px rgba(245, 158, 11, 0.95));
+  }
+}
+
+/* Уважение к системной настройке «уменьшить движение»: стрелки просто заметны */
+@media (prefers-reduced-motion: reduce) {
+  .nr-services-nav,
+  .nr-services-nav-glyph {
+    animation: none !important;
+  }
+  .nr-services-nav:active {
+    transform: translateY(-50%) !important;
+  }
+}
+
+/* Точки-индикатор листания треков (внешний вид — как у карусели услуг).
+   На телефоне их нет: листать ленту там можно стрелками по бокам и свайпом,
+   а точки под карточками только дублировали навигацию. Планшет и компьютер
+   не затронуты. JS прячет блок инлайновым display: none, когда страница одна,
+   поэтому здесь display: none стоит с !important — иначе инлайновый '' вернул
+   бы точки на телефоне. */
 .nr-track-dots {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   margin-top: 1rem;
+}
+
+@media (max-width: 639.98px) {
+  .nr-track-dots { display: none !important; }
 }
 
 /* ═══ 07.5. ЭКВАЛАЙЗЕР СЕКЦИИ «СЛУШАЙ РАЗНИЦУ» (A/B) ═══════════════════ */
