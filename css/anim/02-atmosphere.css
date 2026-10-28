@@ -1,0 +1,45 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   NICK RISE STUDIO — ANIMATION / ГЛОБАЛЬНАЯ АТМОСФЕРА И РИПЛЫ (#nr-fx)
+   Источник: animations.css, строки 354–391 (нарезка 1:1, поведение не менялось)
+   Слой: css/anim/* — после ВСЕХ css/style/*.
+         Порядок подключения = порядок номеров файлов.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ═══ 02. ГЛОБАЛЬНАЯ АТМОСФЕРА ═════════════════════════════════════════ */
+#nr-glass,
+#nr-glass::after {
+  display: none !important;
+}
+
+@keyframes nrScanSweep {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(150vh); }
+}
+
+/* Круги-«волны» от клика */
+#nr-fx {
+  position: fixed;
+  inset: 0;
+  z-index: 9990;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.nr-ripple {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  border: 1px solid rgba(245, 158, 11, 0.85);
+  animation: nrRipple 0.9s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+
+.nr-ripple.nr-ripple-2 { animation-delay: 0.11s; border-color: rgba(245, 158, 11, 0.45); }
+.nr-ripple.nr-ripple-3 { animation-delay: 0.22s; border-color: rgba(245, 158, 11, 0.22); }
+
+@keyframes nrRipple {
+  0%   { transform: scale(0.4); opacity: 0.9; }
+  100% { transform: scale(9); opacity: 0; }
+}
+

@@ -9,7 +9,10 @@
   <link rel="icon" type="image/webp" sizes="3000x3000" href="./image/Logo.webp">
   <link rel="stylesheet" href="./tailwind.css">
   <link rel="stylesheet" href="./fonts.css">
-  <link rel="stylesheet" href="./style.css">
+  <!-- Базовый слой сайта (бывший style.css, файл 01). Странице 404 нужны только
+       html/body, потолок белого и скрытие скроллбара — анимационный слой и
+       остальные секции ей не нужны. -->
+  <link rel="stylesheet" href="./css/style/01-base.css">
   <style>
     /* Минимум собственного CSS: страница не зависит от анимационного слоя */
     body { font-family: 'Plus Jakarta Sans', 'Manrope', system-ui, -apple-system, sans-serif; }

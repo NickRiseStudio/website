@@ -1,0 +1,106 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   NICK RISE STUDIO — STYLE / FAQ: РАСПЫЛЕНИЕ ЯЗЫКА, ТЕКСТ ВОПРОСА, ПРОМОКОД
+   Источник: style.css, строки 3595–3689 (нарезка 1:1, поведение не менялось)
+   Слой: css/style/* — после tailwind.css и vendor/lenis.css,
+         перед css/anim/*. Порядок подключения = порядок номеров файлов.
+   Внутри три темы (границы проверены, глубина скобок 0):
+     3595–3621 — анимация смены языка (span.lang-vapor-out/in);
+     3622–3662 — текст вопроса/ответа FAQ во время смены языка;
+     3663–3689 — промокод (.faq-promo-code, копирование в буфер).
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════════════════
+   LANGUAGE SWITCH VAPORIZATION & EMERGENCE ANIMATION (РАСПЫЛЕНИЕ И ПОЯВЛЕНИЕ)
+   Continuous, jitter-free GPU composite curves with warm studio mist
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.lang-vapor-out {
+  animation: nrLangVaporOut 0.32s cubic-bezier(0.36, 0, 0.66, -0.04) forwards !important;
+  will-change: opacity, filter, transform;
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
+  pointer-events: none;
+}
+
+.lang-vapor-in {
+  animation: nrLangVaporIn 0.46s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  will-change: opacity, filter, transform;
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Ensure inline elements gain composited translation without layout shifting */
+span.lang-vapor-out,
+span.lang-vapor-in {
+  display: inline-block;
+  vertical-align: baseline;
+}
+
+/* FAQ question text must retain its flex layout, full width, and rock-solid GPU alignment */
+.faq-q-text,
+span.faq-q-text {
+  display: block !important;
+  width: 100% !important;
+  line-height: 1.45 !important;
+  transform: translate3d(0, 0, 0) !important;
+  backface-visibility: hidden !important;
+  -webkit-backface-visibility: hidden !important;
+  -webkit-font-smoothing: antialiased !important;
+  contain: layout style;
+}
+
+span.faq-q-text.lang-vapor-out,
+span.faq-q-text.lang-vapor-in {
+  display: block !important;
+  width: 100% !important;
+  line-height: 1.45 !important;
+  transform-origin: left center;
+}
+
+/* FAQ Card transition smoothing without height fighting */
+.faq-card {
+  transition: border-color 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease !important;
+  will-change: border-color, background-color;
+}
+
+/* Stabilize FAQ answer paragraph during and after language switches */
+#faqContainer .faq-content-wrapper p {
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+#faqContainer > div.nr-faq-open .faq-content-wrapper p:not(.lang-vapor-out):not(.lang-vapor-in) {
+  animation: none !important;
+  transform: translate3d(0, 0, 0) !important;
+  filter: blur(0px) !important;
+  opacity: 1 !important;
+}
+
+/* Промокод в промо-блоке ответа FAQ (config.js → FAQ_PROMO_RU / FAQ_PROMO_EN).
+   Это <button>: по клику код копируется в буфер и всплывает тост (script.js →
+   initFaq(), data-copy-promo). Цвет — прежний акцент промо (text-amber-400),
+   пунктирное подчёркивание — намёк «нажми», .is-copied — короткая вспышка
+   после копирования. Размер наследуется от строки промо. */
+.faq-promo-code {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #FBBF24;
+  font: inherit;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+  text-decoration: underline dotted rgba(251, 191, 36, 0.7);
+  text-underline-offset: 3px;
+  transition: color 0.25s ease, text-decoration-color 0.25s ease;
+}
+
+.faq-promo-code:hover,
+.faq-promo-code:focus-visible,
+.faq-promo-code.is-copied {
+  color: #FCD34D;
+  text-decoration-color: #FCD34D;
+}
+

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <!-- <title> и meta description — русские как fallback для no-JS; по языку их
-       подставляет script.js → updateDocumentMeta() (тексты — config.js → i18n.*.meta).
+       подставляет js/i18n.js → updateDocumentMeta() (тексты — config.js → i18n.*.meta).
        og:*/twitter:* — статичные и двуязычные: скрейперы не выполняют JS. -->
   <title>Nick Rise Studio — Профессиональное сведение & мастеринг</title>
   <meta name="description" content="Премиальное сведение и мастеринг треков от Ника Райза (Nick Rise). Аналоговый звук SSL, Neve, Tube-Tech под стандарты Spotify, Apple Music и Радио.">
@@ -56,11 +56,48 @@
        чтобы правила самого сайта шли после и в спорных местах побеждали. -->
   <link rel="stylesheet" href="./vendor/lenis.css">
 
-  <!-- Custom Styles -->
-  <link rel="stylesheet" href="./style.css">
+  <!-- Custom Styles: бывший style.css, 20 файлов по секциям страницы.
+       Порядок подключения = порядок номеров в именах = прежний порядок блоков,
+       поэтому каскад и приоритеты стилей не изменились (нарезка 1:1).
+       Что в каком файле — в шапке самого файла и в PROJECT-NOTES.md §3. -->
+  <link rel="stylesheet" href="./css/style/01-base.css">
+  <link rel="stylesheet" href="./css/style/02-hero-bg.css">
+  <link rel="stylesheet" href="./css/style/03-hero-layout.css">
+  <link rel="stylesheet" href="./css/style/04-sections.css">
+  <link rel="stylesheet" href="./css/style/05-hero-photo.css">
+  <link rel="stylesheet" href="./css/style/06-services.css">
+  <link rel="stylesheet" href="./css/style/07-tracks.css">
+  <link rel="stylesheet" href="./css/style/08-mixer.css">
+  <link rel="stylesheet" href="./css/style/09-modals.css">
+  <link rel="stylesheet" href="./css/style/10-player-bar.css">
+  <link rel="stylesheet" href="./css/style/11-utilities.css">
+  <link rel="stylesheet" href="./css/style/12-hero-title.css">
+  <link rel="stylesheet" href="./css/style/13-switchers.css">
+  <link rel="stylesheet" href="./css/style/14-hints.css">
+  <link rel="stylesheet" href="./css/style/15-faq-text.css">
+  <link rel="stylesheet" href="./css/style/16-track-lang.css">
+  <link rel="stylesheet" href="./css/style/17-contacts.css">
+  <link rel="stylesheet" href="./css/style/18-reviews.css">
+  <link rel="stylesheet" href="./css/style/19-calculator.css">
+  <link rel="stylesheet" href="./css/style/20-about.css">
 
-  <!-- Animation Layer (добавляет только анимации) -->
-  <link rel="stylesheet" href="./animations.css">
+  <!-- Animation Layer (добавляет только анимации): бывший animations.css,
+       15 файлов. Номера — те же, что в баннерах-комментариях внутри файлов. -->
+  <link rel="stylesheet" href="./css/anim/01-boot.css">
+  <link rel="stylesheet" href="./css/anim/02-atmosphere.css">
+  <link rel="stylesheet" href="./css/anim/03-header.css">
+  <link rel="stylesheet" href="./css/anim/04-hero.css">
+  <link rel="stylesheet" href="./css/anim/05-section-titles.css">
+  <link rel="stylesheet" href="./css/anim/06-tracks.css">
+  <link rel="stylesheet" href="./css/anim/07-player.css">
+  <link rel="stylesheet" href="./css/anim/08-services.css">
+  <link rel="stylesheet" href="./css/anim/09-faq.css">
+  <link rel="stylesheet" href="./css/anim/10-contacts.css">
+  <link rel="stylesheet" href="./css/anim/11-toast-modals-menu.css">
+  <link rel="stylesheet" href="./css/anim/12-reveal.css">
+  <link rel="stylesheet" href="./css/anim/13-cta.css">
+  <link rel="stylesheet" href="./css/anim/14-particles.css">
+  <link rel="stylesheet" href="./css/anim/15-about.css">
 
   <!-- Главное фото hero (элемент LCP): грузим заранее, не дожидаясь разбора разметки.
        Один оригинал — без srcset. media: на телефоне и планшете фото героя не
@@ -70,8 +107,8 @@
         media="(min-width: 1024px)"
         href="./image/Main%20hero.webp">
   <!-- Мгновенный LITE режим + ранний выбор языка (атрибут lang у <html> нужен
-       поисковикам и скринридерам до загрузки script.js; сами тексты по-прежнему
-       расставляет script.js). Заставка #nr-boot живёт в начале body и видна при
+       поисковикам и скринридерам до загрузки js/i18n.js; сами тексты по-прежнему
+       расставляет js/i18n.js). Заставка #nr-boot живёт в начале body и видна при
        каждом заходе/обновлении — её скрывает animations.js после готовности. -->
   <script>
     /* После перезагрузки всегда открываем главный экран. Браузер сам
@@ -456,7 +493,7 @@
           </div>
 
           <!-- TRACK LIST: свайп-лента. Вертикальная прокрутка страницы не
-               перехватывается — см. script.js. Свайп вправо = вперёд, поэтому
+               перехватывается — см. js/player-ui.js. Свайп вправо = вперёд, поэтому
                СЛЕВА лежит следующая страница (она и выезжает из-под пальца),
                СПРАВА — предыдущая. Соседние страницы видны только внутри
                #trackListSwipeClip: он обрезает ленту ровно по области карточек,
@@ -476,7 +513,7 @@
                        планшете ограничивает боковая зона вьюпорта
                        (см. animations.css → --nr-track-nav-zone). -->
                   <div id="trackListContainer" class="grid grid-cols-2 gap-2.5 sm:grid-cols-1 sm:gap-3">
-                    <!-- Dynamically populated by script.js -->
+                    <!-- Dynamically populated by js/player-ui.js -->
                   </div>
 
                   <div id="trackListPanelRight" class="track-peek-panel" aria-hidden="true"></div>
@@ -491,7 +528,7 @@
                  содержимое, и стрелки, вынесенные за его края, иначе срезались бы.
                  Включаются классом .nr-track-nav-mode на вьюпорте (animations.css).
                  На компьютере (≥1024px) список идёт в четыре колонки — стрелки там
-                 не показываются (см. script.js → syncTrackNav). -->
+                 не показываются (см. js/player-ui.js → syncTrackNav). -->
             <button type="button" id="trackNavPrevBtn" class="nr-track-nav nr-track-nav-prev" aria-label="Назад" data-i18n-aria-label="a11y.prev">
               <svg class="nr-track-nav-glyph" viewBox="0 0 28 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M22 38C16 31 8 25 6 20C8 15 16 9 22 2" stroke="currentColor" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -506,7 +543,7 @@
 
           <!-- Точки-индикатор листания: сколько «остановок» можно пролистать
                (языки × страницы внутри языка). Число точек и активную считает
-               script.js → renderTrackDots(). -->
+               js/player-ui.js → renderTrackDots(). -->
           <div id="trackDots" class="nr-track-dots"></div>
 
           <!-- CAROUSEL / LIST PAGINATION (скрывается автоматически, если страница одна) -->
@@ -521,7 +558,7 @@
                 1 - 6 из 30
               </span>
               <div id="carouselDots" class="flex items-center gap-1.5">
-                <!-- Dots populated by script.js -->
+                <!-- Dots populated by js/player-ui.js -->
               </div>
             </div>
 
@@ -576,7 +613,7 @@
              ребёнком и по-прежнему растянут на всю ширину (-mx-4). -->
         <div class="relative">
           <div id="servicesContainer" class="services-carousel-container flex sm:grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8 items-stretch overflow-x-auto sm:overflow-visible snap-x snap-mandatory py-8 sm:py-2 -mx-4 sm:mx-0 no-scrollbar">
-            <!-- Dynamically populated by script.js -->
+            <!-- Dynamically populated by js/player-ui.js -->
           </div>
 
           <!-- Стрелки листания карусели услуг (телефон, <640px). Вид и анимация —
@@ -585,7 +622,7 @@
                «отскоком мячика». Показываются только там, где услуги — карусель:
                на планшете и ПК это сетка (см. animations.css → .nr-services-nav).
                На крайних карточках стрелка плавно гаснет (класс .is-hidden,
-               script.js → syncServicesNav) и нажатие по ней ничего не делает. -->
+               js/services.js → syncServicesNav) и нажатие по ней ничего не делает. -->
           <button type="button" id="servicesNavPrevBtn" class="nr-services-nav nr-services-nav-prev" aria-label="Назад" data-i18n-aria-label="a11y.prev">
             <svg class="nr-services-nav-glyph" viewBox="0 0 28 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <path d="M22 38C16 31 8 25 6 20C8 15 16 9 22 2" stroke="currentColor" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -629,7 +666,7 @@
       </div>
 
       <!-- Две бегущие ленты отзывов: верхняя едет влево, нижняя — вправо.
-           Карточки и их дубли (для безразрывности ленты) строит script.js → renderReviews() -->
+           Карточки и их дубли (для безразрывности ленты) строит js/reviews.js → renderReviews() -->
       <div class="nr-marquee" id="reviewsMarqueeTop">
         <div class="nr-marquee-track" id="reviewsRowTop"></div>
       </div>
@@ -712,7 +749,7 @@
         </div>
 
         <div id="faqContainer" class="space-y-4">
-          <!-- Dynamically populated by script.js -->
+          <!-- Dynamically populated by js/player-ui.js -->
         </div>
 
       </div>
@@ -871,7 +908,7 @@
              nr-about-bio3 — контейнер для cqi (как .nr-about-bio2 выше),
              nr-about-final-lead — сама фраза: кегль в style.css считается от
              ширины абзаца, поэтому строка всегда одна, а точный размер под
-             конкретное устройство доводит script.js → fitAboutLeads().
+             конкретное устройство доводит js/about.js → fitAboutLeads().
              Класс стоит на span, а не на p: data-i18n тоже на нём, и
              renderI18nText() меняет только текст — класс остаётся. -->
         <p class="nr-about-bio3 text-lg font-extrabold text-white">
@@ -952,12 +989,12 @@
        кадр 2 — справа, кадр 3 — слева, вопросы выше кнопок. Подсказка
        «Листайте» — крупно по центру внизу, видна на первых двух кадрах; на первом
        светится вспышками до первого листания.
-       Открытие и листание — script.js → initAboutShowcase(),
+       Открытие и листание — js/about.js → initAboutShowcase(),
        вид — style.css → «РАЗДЕЛ „ОБО МНЕ“ — ТОЛЬКО КОМПЬЮТЕР». -->
   <div id="aboutShowcase" class="nr-about-overlay" role="dialog" aria-modal="true" aria-labelledby="nrAboutShowcaseTitle" aria-hidden="true">
     <div class="nr-about-frame">
 
-      <!-- КАДР 1 — персонаж в центре-справа. Класс is-active ставит script.js
+      <!-- КАДР 1 — персонаж в центре-справа. Класс is-active ставит js/about.js
            при открытии: тогда же запускается анимация текста. Имя стоит справа
            на уровне головы (размер прежний), биография — слева и крупнее, её
            строки выровнены по левому краю. -->
@@ -1058,13 +1095,13 @@
           <p class="nr-about-lead" data-i18n="aboutModal.bioText3">С радостью готов поработать с тобой!</p>
 
           <!-- Строка со скидкой. Промокод — кнопка, а не span: по клику он
-               копируется в буфер, а внизу всплывает тост (script.js →
+               копируется в буфер, а внизу всплывает тост (js/about.js →
                initAboutShowcase(), действие copy-discount). Оформление —
                style.css → «Строка со скидкой». -->
           <p class="nr-about-discount" data-i18n="aboutModal.discount">Забери скидку в 10% <button type="button" class="nr-about-discount-code" data-about-action="copy-discount" title="Скопировать промокод">«NRSDiscount»</button></p>
 
           <!-- Сначала вопросы, ниже — кнопки действий. Обработчик клика живёт
-               в script.js → initAboutShowcase() (data-about-action), а не в
+               в js/about.js → initAboutShowcase() (data-about-action), а не в
                onclick: так клик по кнопке не уходит в оверлей и раздел не
                закрывается «сам по себе». -->
           <div class="nr-about-links">
@@ -1202,7 +1239,7 @@
         <h3 class="nr-calc-question">
           <span data-i18n="services.priceCalc.qMastering">Вам нужен мастеринг?</span>
           <!-- Кружок «i» с подсказкой: наведение/фокус — показ, тап — переключение
-               (script.js → showCalcHint / hideCalcHint). Текст — config.js →
+               (js/calculator.js → showCalcHint / hideCalcHint). Текст — config.js →
                hintMastering, вид бабла — как у подсказки BEFORE / AFTER. -->
           <button
             type="button"
@@ -1325,10 +1362,10 @@
   </div>
 
   <!-- ПОДСКАЗКА ПРО КНОПКУ BEFORE / AFTER: показывается один раз за сессию, при
-       первом включении трека (script.js → maybeShowAbHint). Оверлей гасит и
+       первом включении трека (js/player-ui.js → maybeShowAbHint). Оверлей гасит и
        размывает страницу, ловит клик «по фону» и держит прокрутку; сам бабл
        живёт вне пульта, чтобы затемнение его не гасило, и ставится по кнопке
-       (script.js → positionAbHint). Стили — style.css, блок «ПОДСКАЗКА ПРО
+       (js/player-ui.js → positionAbHint). Стили — style.css, блок «ПОДСКАЗКА ПРО
        ПЕРЕКЛЮЧАТЕЛЬ BEFORE / AFTER». -->
   <div
     id="abHintOverlay"
@@ -1342,7 +1379,7 @@
   </div>
 
   <!-- ПОДСКАЗКА ПРО ЛОГОТИП («ОБО МНЕ»): всплывает при заходе на сайт под логотипом
-       слева вверху (script.js → maybeShowLogoHint). Формат — тот же бабл, что у
+       слева вверху (js/logo-hint.js → maybeShowLogoHint). Формат — тот же бабл, что у
        подсказки плеера, но БЕЗ затемнения экрана и без блокировки прокрутки.
        Крестик есть на всех устройствах и стоит справа по центру (на телефоне он
        крупнее — палец). Клики ловит ТОЛЬКО крестик: сам бабл прозрачен для
@@ -1350,7 +1387,7 @@
        бабл по крестику или по клику на то, что открывает «Обо мне» — логотип в
        шапке или фото в hero. Прокрутка и тапы мимо его не гасят; на телефоне он
        при прокрутке гаснет вместе с логотипом (style.css, media max-width 639px).
-       Позицию и место хвостика считает script.js → positionLogoHint. Стили —
+       Позицию и место хвостика считает js/logo-hint.js → positionLogoHint. Стили —
        style.css, блок «ПОДСКАЗКА ПРО ЛОГОТИП В ШАПКЕ». -->
   <div id="logoHintTip" class="nr-ab-hint-tip nr-logo-hint-tip">
     <span data-i18n="nav.logoHint">Здесь вы можете узнать <span class="nr-ab-hint-accent">обо мне</span></span>
@@ -1370,7 +1407,7 @@
 
   <!-- ПОДСКАЗКА ПРО ВОПРОСЫ КАЛЬКУЛЯТОРА (кружок «i»): один общий бабл, который
        переиспользует вид подсказки BEFORE / AFTER (style.css → .nr-ab-hint-tip).
-       Текст и позиция задаются из script.js → showCalcHint / positionCalcHint. -->
+       Текст и позиция задаются из js/calculator.js → showCalcHint / positionCalcHint. -->
   <div id="calcHintTip" class="nr-ab-hint-tip nr-calc-hint-tip" aria-hidden="true">
     <span id="calcHintTipText" data-i18n="services.priceCalc.hintMastering">Мастеринг — это финальная обработка готового микса.</span>
   </div>
@@ -1708,9 +1745,34 @@
       window.addEventListener('orientationchange', onViewportChange, { passive: true });
     })();
   </script>
-  <script src="./script.js" defer></script>
+  <!-- Логика сайта: бывший script.js, разделённый по смыслу на 15 файлов.
+       Порядок ВАЖЕН и не произвольный:
+         • state.js первым — он владеет общим состоянием (currentLang,
+           activeTrackLang, activeTrackId, currentTrackPage, trackAudioMap);
+         • player-audio.js → player-ui.js — плеер A/B: сначала звук (движок,
+           поток MP3, кроссфейд), затем интерфейс (лента, пульт, подсказка);
+         • каждый следующий файл читает чужие let/const, поэтому идёт ПОСЛЕ
+           владельца: i18n → (все читают currentLang), about → toast (PROMO_CODE);
+         • animations.js строго последним — он снимает window[name] в момент
+           загрузки (хуки на showToast, renderServices, openFaqItem и др.).
+       Что в каком файле — в шапке файла и в PROJECT-NOTES.md §3. -->
+  <script src="./js/state.js" defer></script>
+  <script src="./js/player-audio.js" defer></script>
+  <script src="./js/player-ui.js" defer></script>
+  <script src="./js/i18n.js" defer></script>
+  <script src="./js/modals.js" defer></script>
+  <script src="./js/scroll.js" defer></script>
+  <script src="./js/about.js" defer></script>
+  <script src="./js/toast.js" defer></script>
+  <script src="./js/services.js" defer></script>
+  <script src="./js/faq.js" defer></script>
+  <script src="./js/reviews.js" defer></script>
+  <script src="./js/calculator.js" defer></script>
+  <script src="./js/mobile-menu.js" defer></script>
+  <script src="./js/logo-hint.js" defer></script>
+  <script src="./js/gsap-reveal.js" defer></script>
   <!-- animations.js — визуальные эффекты: канвасы, эквалайзер, ScrollTrigger,
-       boot-заставка (initBoot). Подключается последней, после script.js.
+       boot-заставка (initBoot). Подключается последней, после js/player-ui.js.
        -->
   <script src="./animations.js" defer></script>
 </body>

@@ -1,0 +1,45 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   NICK RISE STUDIO — ANIMATION / ЗАГОЛОВКИ СЕКЦИЙ: КРИВАЯ ЭКВАЛАЙЗЕРА
+   Источник: animations.css, строки 1106–1143 (нарезка 1:1, поведение не менялось)
+   Слой: css/anim/* — после ВСЕХ css/style/*.
+         Порядок подключения = порядок номеров файлов.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ═══ 05. ЗАГОЛОВКИ СЕКЦИЙ — рисующаяся кривая эквалайзера ════════════ */
+
+#player, #services, #faq, #contacts, #reviews { position: relative; }
+
+.nr-eqline {
+  display: block;
+  width: min(230px, 60%);
+  height: 22px;
+  margin: 10px auto 0;
+  overflow: visible;
+}
+
+.nr-eqline path {
+  fill: none;
+  stroke: url(#nr-eqgrad);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 320;
+  stroke-dashoffset: 320;
+}
+
+.nr-eqline.nr-in path { animation: nrDraw 1.5s var(--nr-ease) forwards; }
+
+.nr-eqline circle { fill: var(--nr-amber-lt); opacity: 0; }
+.nr-eqline.nr-in circle { animation: nrDot 1.9s ease forwards 0.7s; }
+
+@keyframes nrDraw { to { stroke-dashoffset: 0; } }
+@keyframes nrDot {
+  0%   { opacity: 0; r: 0; }
+  60%  { opacity: 1; r: 3.4; }
+  100% { opacity: 0.85; r: 2.6; }
+}
+
+/* ═══ 06. ФИЛЬТРЫ ЖАНРОВ — УДАЛЕНЫ ════════════════════════════════════
+   Сортировка треков по жанрам убрана из секции «Примеры A/B»:
+   все треки текущего языка показываются одной сеткой (2 колонки).
+   Бейдж жанра на самой карточке трека (.track-genre-badge) остался. */
+

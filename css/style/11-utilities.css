@@ -1,0 +1,138 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   NICK RISE STUDIO — STYLE / УТИЛИТЫ, GPU-СЛОИ, ПРОЗРАЧНАЯ ШАПКА, contain
+   Источник: style.css, строки 2579–2709 (нарезка 1:1, поведение не менялось)
+   Слой: css/style/* — после tailwind.css и vendor/lenis.css,
+         перед css/anim/*. Порядок подключения = порядок номеров файлов.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Utility Class: Hide Scrollbars */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Hardware accelerated composition layers for smooth 60fps rendering */
+#mainHeader,
+.hero-mask-img,
+#playerContentContainer,
+#servicesContainer,
+#faqContainer > *,
+#contactsGrid > * {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* ═══ ВРЕМЕННО (проверка дёрганья в РАЗДЕЛЕ УСЛУГ) ════════════════════════
+   Секция услуг — единственная, где крупные элементы удерживаются в постоянных
+   GPU-слоях: контейнер карусели промоутится (одна большая текстура на всю
+   секцию), а внутри карточек вечно висит will-change (внутренний 3D-слой
+   переворота + аура популярной карточки). Промоушен огромной секции — это
+   память под текстуру и перерастеризация тайлов на кадрах прокрутки.
+
+   ВИЗУАЛ НЕ МЕНЯЕТСЯ: transform:none / backface:visible — это тождество
+   (translateZ(0) и hidden-backface ничего не рисуют), will-change вообще не
+   влияет на картинку. Если дёрганье в услугах уйдёт — оставляем; если нет —
+   причина в тяжёлой отрисовке самих карточек (drop-shadow галочек, bg-clip-text
+   цены, 3D) и решаем отдельно. Удаляется ВЕСЬ блок целиком. */
+#servicesContainer {
+  transform: none !important;
+  backface-visibility: visible !important;
+  -webkit-backface-visibility: visible !important;
+}
+.service-card-inner { will-change: auto !important; }
+.popular-rack-card::before { will-change: auto !important; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ШАПКА: ФОН ВСЕГДА ПРОЗРАЧНЫЙ — ЗДЕСЬ, А НЕ КЛАССОМ В РАЗМЕТКЕ
+   ═══════════════════════════════════════════════════════════════════════
+   ВАЖНО. Класс вида bg-[#0C0E12]/50 в index.html не работает: Tailwind v4
+   собирает только те утилиты, которые были в разметке на момент сборки, а
+   tailwind.css пересобирать по правилам проекта нельзя (см. блок «ОТСТУПЫ
+   СЕКЦИЙ» выше). В собранном tailwind.css есть РОВНО один вариант —
+   .bg-\[\#0C0E12\]\/90 — и никаких /50, /70 и прочих: правки в разметке
+   молча игнорировались, панель оставалась на прежних 90%.
+
+   Поэтому фон шапки задаём здесь, селектором по id: специфичность (1,0,0)
+   перебивает .bg-\[\#0C0E12\]\/90 (0,1,0) без !important.
+
+   ФОН ПРОЗРАЧНЫЙ ВСЕГДА (правка 23.10). Раньше панель была плотной вверху
+   страницы и «растворялась» на отрезке 50…550px прокрутки. Теперь тёмной
+   плашки нет ни в одном положении: под шапкой видны те же кадры главного
+   экрана, что и в самом герое (фон .hero-bg-layer заходит под панель — см.
+   блоки inset ниже), и панель читается как часть фото, а не как полоса
+   поверх него. Прозрачность больше НЕ пишется в inline-стиль: в
+   animations.js paintHeaderFade запись background-color убрана, там остались
+   только величина --nr-header-fade (логотип на телефоне) и класс
+   nr-header-clear (клики сквозь растворённую панель).
+
+   Плотный фон остался только у открытого бургер-меню —
+   #mainHeader.mobile-menu-active в animations.css: под шторкой меню должна
+   быть ровная подложка, а не фото. */
+#mainHeader {
+  background-color: transparent;
+  /* ЗАДЕРЖКА РАСТВОРЕНИЯ УБРАНА (правка 27.09). В разметке шапки стоят
+     утилиты transition-colors duration-300, а transition-colors включает в
+     transition-property свойство background-color с длительностью 0.3s (см.
+     tailwind.css). Из-за этого получалось ДВОЙНОЕ сглаживание: JS
+     (paintHeaderFade) каждый кадр писал точную прозрачность под текущую
+     прокрутку, а CSS затем 300ms «догонял» это значение. Фон отставал от
+     прокрутки примерно на треть секунды и в конце пути ещё «дотекал» —
+     это читалось как задержка/инерция.
+
+     Здесь мы гасим переход именно для background-color: none перебивает
+     .transition-colors (0,1,0) селектором по id (1,0,0) без !important.
+     Анимации цвета (color / border-color / box-shadow) у дочерних элементов
+     не затрагиваются — у них свои transition, и это правило на них не влияет.
+     Прозрачность теперь идёт ровно за прокруткой, 1:1, без запаздывания. */
+  transition: none;
+  /* Нижняя граница шапки убрана (правка 27.09). В разметке стоит
+     border-b border-gray-800/60 — тонкая серая линия по низу панели. Когда
+     фон начал растворяться, эта линия осталась единственной видимой полосой
+     под шапкой и выглядела как артефакт в 1px. Панель теперь отрывается от
+     контента только прозрачным фоном; на самой кромке окна при прокрутке
+     видна янтарная полоска прогресса (#nr-scrollline).
+     Перебивает утилиту border-b (0,1,0) селектором по id (1,0,0). */
+  border-bottom-color: transparent;
+}
+
+/* Размытия фона у панелей больше нет (backdrop-filter убран из проекта —
+   см. правки у .mixer-track-fixed, .sticky-player-bar, .modal-overlay,
+   .nr-ab-overlay). Прежнее правило html.nr-lite #mainHeader{backdrop-filter:none}
+   было нужно только для удалённого размытия шапки. */
+
+/* Правила html.nr-lite/.nr-scrolling, которые гасили backdrop-filter на время
+   прокрутки и повышали плотность подложки, удалены вместе с самим размытием:
+   размытия в проекте больше нет, а фон панелей теперь НЕ меняется при скролле
+   (раньше он «прыгал» 0.96 ↔ 0.98 — отсюда и ощущение то прозрачной, то
+   непрозрачной панели). Класс nr-scrolling убран и из animations.js. */
+
+/* Fast touch response: eliminates mobile tap delay */
+a, button, [role="button"], input, select, textarea, .cursor-pointer {
+  touch-action: manipulation;
+}
+
+/* Card rendering isolation for smooth 60-120fps scrolling */
+.faq-accordion-item,
+.service-card,
+.step-card {
+  contain: layout paint;
+}
+
+/* Hero Title & Genres Single-Line Enforcements */
+#hero h1,
+.hero-title-responsive {
+  letter-spacing: -0.025em;
+  word-break: keep-all;
+}
+
+.hero-genres-line {
+  white-space: nowrap !important;
+  display: inline-block;
+  max-width: 100%;
+}
+

@@ -1,0 +1,112 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   NICK RISE STUDIO — ANIMATION / ПОЯВЛЕНИЕ БЛОКОВ ПРИ ПРОКРУТКЕ, REDUCED MOTION
+   Источник: animations.css, строки 2393–2497 (нарезка 1:1, поведение не менялось)
+   Слой: css/anim/* — после ВСЕХ css/style/*.
+         Порядок подключения = порядок номеров файлов.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ═══ 16. ПОЯВЛЕНИЕ БЛОКОВ ПРИ СКРОЛЛЕ ════════════════════════════════ */
+
+.nr-reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.8s var(--nr-ease), transform 0.8s var(--nr-ease);
+}
+
+.nr-reveal.nr-in { opacity: 1; transform: none; }
+
+.nr-reveal[data-nr-d="1"] { transition-delay: 0.08s; }
+.nr-reveal[data-nr-d="2"] { transition-delay: 0.16s; }
+.nr-reveal[data-nr-d="3"] { transition-delay: 0.24s; }
+.nr-reveal[data-nr-d="4"] { transition-delay: 0.32s; }
+
+/* ═══ 16.1. ТЕЛЕФОН И ПЛАНШЕТ: ВСПЛЫТИЙ ПРИ ПРОКРУТКЕ НЕТ ═════════════
+   Тот же медиазапрос, что в script.js (NR_NO_SCROLL_REVEAL) и в
+   animations.js (NO_REVEAL). Элементы, которые GSAP и наблюдатель
+   появления держат скрытыми до прокрутки, здесь выведены сразу.
+   ПК-версия (от 1024px) не затрагивается.
+═══════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 1023.98px) {
+  .nr-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  /* Линия-эквалайзер под заголовками: нарисована целиком, без прочерчивания. */
+  .nr-eqline path {
+    stroke-dashoffset: 0 !important;
+    animation: none !important;
+  }
+
+  .nr-eqline circle {
+    opacity: 1 !important;
+    r: 3.4;
+    animation: none !important;
+  }
+}
+
+/* ═══ 16.5. ЭКОНОМИЯ РЕСУРСОВ ═════════════════════════════════════════
+   Секции за пределами экрана не анимируются вовсе.
+   Одноразовые анимации появления при этом не замирают.
+═════════════════════════════════════════════════════════════════════ */
+
+.nr-off,
+.nr-off *,
+.nr-off *::before,
+.nr-off *::after { animation-play-state: paused !important; }
+
+.nr-off .nr-w,
+.nr-off .nr-eqline path,
+.nr-off .nr-eqline circle,
+.nr-off #servicesContainer li { animation-play-state: running !important; }
+
+/* ═══ 17. REDUCED MOTION — уважение к системным настройкам ════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  #nr-glass::after,
+  .nr-scan,
+  .nr-rings,
+  .nr-eqbars i,
+  .nr-ledstrip i,
+  .popular-badge::after,
+  #contacts .rack-card::before,
+  .deck-play-btn::before,
+  .deck-play-btn::after {
+    animation: none !important;
+    display: none;
+  }
+
+  *, *::before, *::after {
+    animation-duration: 0.001s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.12s !important;
+  }
+
+  /* Кольцо загрузки остаётся видимым, но не крутится: состояние понятно и так. */
+  .sticky-player-bar.nr-buffering .deck-play-btn::after {
+    display: block;
+    animation: none !important;
+  }
+
+  .nr-w, .nr-reveal, #servicesContainer li {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}
+
+/* Мобильная оптимизация: убираем самые тяжёлые эффекты */
+@media (max-width: 640px) {
+  #nr-glass { display: none; }
+  .nr-scan { display: none; }
+}
+
+footer,
+footer p {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
+}
+

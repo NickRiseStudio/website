@@ -1,0 +1,742 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   NICK RISE STUDIO — STYLE / РАЗДЕЛ «ОБО МНЕ» НА ПК (#aboutShowcase)
+   Источник: style.css, строки 4554–5288 (нарезка 1:1, поведение не менялось)
+   Слой: css/style/* — после tailwind.css и vendor/lenis.css,
+         перед css/anim/*. Порядок подключения = порядок номеров файлов.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════════════════
+   РАЗДЕЛ «ОБО МНЕ» — ТОЛЬКО КОМПЬЮТЕР (#aboutShowcase)
+
+   С 1024px модалку #aboutModal заменяет полноэкранный раздел из трёх кадров
+   about-1..3.webp (1672x941), которые листаются по одному за жест (логика —
+   script.js → initAboutShowcase()). Рамка держит пропорцию фото
+   (1672 / 941 ≈ 1.7768): на мониторе 16:9 раздел занимает экран целиком, на
+   более широком остаётся 16:9 по центру, а поля по бокам затемнены (сайт за
+   ними виден) и закрывают раздел по клику.
+   Пропорция фото не искажается никогда — раздел «строго по фото».
+   Ниже 1024px разметка не рендерится вовсе (display: none), там работает
+   прежняя модалка.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.nr-about-overlay { display: none; }
+
+/* Дефис переноса внутри слова в биографии кадра 1 («мик-» / «шерами»): нужен
+   только в полноэкранном разделе на компьютере, где строки разбиты вручную.
+   В мобильной модалке #aboutModal текст идёт потоком и дефис посреди слова был
+   бы ошибкой — там он скрыт. Включается в @media ниже. */
+.nr-ab-hyphen { display: none; }
+
+@media (min-width: 1024px) {
+  .nr-about-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Это всё-таки всплывающее окно: сайт за ним виден, как у остальных
+       модалок (.modal-overlay), а не залит чёрным. Прозрачные полосы по краям
+       (на мониторе шире 16:9 рамка уже экрана) — зона закрытия: cursor
+       подсказывает, что клик работает, а сам обработчик в script.js →
+       initAboutShowcase() закрывает раздел по клику мимо рамки. */
+    background: rgba(8, 10, 15, 0.82);
+    cursor: pointer;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    overscroll-behavior: contain;
+    touch-action: none;
+    transition: opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+                visibility 0.5s step-end;
+  }
+
+  .nr-about-overlay.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+                visibility 0s linear;
+  }
+
+  /* Рамка = пропорция фото: ширина не больше экрана и не больше «высота x
+     1.7768», поэтому высота всегда влезает в экран целиком. container-type
+     делает рамку контейнером: все размеры текста внутри заданы в cqw (процент
+     ширины рамки), поэтому на широком мониторе, где рамка уже экрана, текст
+     остаётся пропорциональным кадру, а не растягивается по vw. */
+  .nr-about-frame {
+    position: relative;
+    /* 100% (а не 100vw): vw считает ширину вместе со скрытым скроллбаром, из-за
+       чего на некоторых сборках рамка на пиксель шире видимой области и её
+       край обрезается — у кромки появлялась светлая полоса. */
+    width: min(100%, calc(100vh * 1672 / 941));
+    aspect-ratio: 1672 / 941;
+    container-type: inline-size;
+    overflow: hidden;
+    /* clip режет содержимое по кромке точнее hidden: при hidden фото с
+       собственным transform давало 1px светлую полоску слева на время
+       анимации открытия (виден край кадра за рамкой). */
+    overflow: clip;
+    background: #05070A;
+    cursor: default;
+    /* Раньше рамка «наезжала» через scale(1.015) — именно этот масштаб и
+       оставлял субпиксельный шов у левой кромки. Теперь проявление только по
+       прозрачности: без масштабирования шва нет. */
+    opacity: 0;
+    transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    /* Тень повторяет цвет затемнения оверлея: страхует кромку кадра от
+       субпиксельного шва, когда рамка идёт отдельным композитным слоем. */
+    box-shadow: 0 0 0 2px rgba(8, 10, 15, 0.82);
+  }
+
+  .nr-about-overlay.active .nr-about-frame { opacity: 1; }
+
+  /* Кадры лежат друг на друге, виден активный. visibility гасит фокус на
+     кнопках невидимых кадров (tab не проваливается в соседние кадры). */
+  .nr-about-slide {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+                visibility 0.7s step-end;
+  }
+
+  .nr-about-slide.is-active {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+                visibility 0s linear;
+  }
+
+  /* Пропорции рамки и фото совпадают, поэтому object-fit ничего не режет.
+     brightness(0.9) — все три кадра затемнены на 10%: фильтр лежит на самом
+     фото, поэтому текст и градиенты-скримы не затрагиваются. */
+  .nr-about-photo {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: brightness(0.9);
+    transform: scale(1.05);
+    transition: transform 1.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .nr-about-slide.is-active .nr-about-photo { transform: scale(1); }
+
+  /* Затемнение под текстом — с той стороны кадра, где стоит текст. Градиент
+     гаснет раньше середины кадра, чтобы не гасить самого персонажа. */
+  .nr-about-scrim { position: absolute; inset: 0; pointer-events: none; }
+
+  .nr-about-scrim--left {
+    background: linear-gradient(90deg,
+      rgba(5, 7, 10, 0.92) 0%,
+      rgba(5, 7, 10, 0.78) 22%,
+      rgba(5, 7, 10, 0.3) 34%,
+      rgba(5, 7, 10, 0) 44%);
+  }
+
+  .nr-about-scrim--right {
+    background: linear-gradient(270deg,
+      rgba(5, 7, 10, 0.92) 0%,
+      rgba(5, 7, 10, 0.78) 22%,
+      rgba(5, 7, 10, 0.3) 34%,
+      rgba(5, 7, 10, 0) 44%);
+  }
+
+
+  /* Текст кадра — в свободных от персонажа зонах: кадр 1 — имя справа у
+     головы, биография слева; кадр 2 — справа, кадр 3 — слева. Все размеры ниже
+     в cqw (1cqw = 1% ширины рамки), поэтому текст крупный и пропорциональный
+     кадру на любом мониторе, включая случаи, когда рамка уже экрана. */
+  .nr-about-text {
+    position: absolute;
+    top: 50%;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.1cqw;
+    text-align: left;
+    transform: translateY(-50%);
+  }
+
+  .nr-about-text--left { left: 3.5%; width: 26%; }
+
+  .nr-about-text--right { right: 4%; width: 26%; }
+
+  /* Ширина колонок по кадрам: где персонаж стоит, там колонка уже. */
+  [data-about-slide="2"] .nr-about-text--left { width: 36%; }
+
+  /* Кадр 1: имя — справа, на уровне головы. Колонка прижата к верху (не к
+     середине кадра), размеры текста прежние. Колонка выровнена по центру:
+     плашка «6+ лет в индустрии» стоит по центру имени. */
+  [data-about-slide="0"] .nr-about-text--right {
+    top: 12%;
+    width: 27%;
+    align-items: center;
+    text-align: center;
+    transform: none;
+  }
+
+  /* Кадр 1: биография — слева и крупнее, по левому краю. Текст набран
+     строками-элементами span.nr-about-line (разбивка — config.js → bioText1):
+     каждая строка правится и сдвигается отдельно. Строки не переносятся
+     (white-space: nowrap), поэтому их длину задаёт разбивка текста, а
+     положение — таблица сдвигов ниже.
+     Вертикаль — базовое правило .nr-about-text: top: 50% + translateY(-50%),
+     то есть блок центрируется по кадру. Высота блока при этом НЕ меняется:
+     зазор между абзацами сделан сдвигом строк (--nr-line-y, см. ниже), а не
+     отступом. Поэтому первый абзац стоит на своём месте и не «плывёт» при
+     подгонке зазора.
+     left: 3% (≈50px кадра) минус 15px кадра (0.897cqw = 15 × 0.0598) — колонка
+     сдвинута левее на 15px кадра. Раньше вычиталось 5px (3% − 15 + 10): сдвиг
+     влево на 10px кадра по просьбе; слагаемое +0.598cqw убрано, а не заменено
+     числом, чтобы в комментарии осталась вся история правки.
+     top: базовые 50% минус 60px кадра (3.588cqw = 60 × 0.0598) — весь блок поднят
+     на 60px, оба абзаца сдвигаются вместе, зазор между ними не меняется. */
+  [data-about-slide="0"] .nr-about-text--left {
+    top: calc(50% - 3.588cqw);
+    left: calc(3% - 0.897cqw);
+    width: 40%;
+    align-items: stretch;
+    text-align: left;
+  }
+
+  /* Положение колонки биографии СВОЁ У КАЖДОГО ЯЗЫКА: русские строки длиннее
+     английских (самая длинная — «я битмейкер, техник по звуку и звукорежиссёр»,
+     47.6cqw при кегле 2.1cqw), поэтому при общем отступе одна из версий
+     «прилипала» к персонажу или отходила от края. Теперь RU — на 5px кадра
+     левее общего правила, EN — на 20px кадра правее:
+       RU: 3% − 15 − 5  = 3% − 20px кадра = 3% − 1.196cqw (20 × 0.0598)
+       EN: 3% − 15 + 20 = 3% + 5px кадра  = 3% + 0.299cqw (5 × 0.0598)
+     Правило выше остаётся базовым: пока атрибута data-lang нет (ранний кадр
+     загрузки, JS выключен), работает оно. data-lang ставит инлайн-скрипт в
+     <head> (index.html) и setLanguage() — тот же приём, что у сдвигов строк
+     ниже (html[data-lang="ru"] … nth-child).
+     Проверено по метрикам шрифтов: правый край самой длинной строки — 49.4%
+     кадра в RU и 46.0% в EN, то есть ни одна версия не доходит до центра
+     кадра, где стоит персонаж, и не выходит за рамку. */
+  html[data-lang="ru"] [data-about-slide="0"] .nr-about-text--left {
+    left: calc(3% - 1.196cqw);
+  }
+
+  html[data-lang="en"] [data-about-slide="0"] .nr-about-text--left {
+    left: calc(3% + 0.299cqw);
+  }
+
+  [data-about-slide="0"] .nr-about-bio {
+    width: 100%;
+    font-size: 2.1cqw;
+    line-height: 1.3;
+    /* 1 единица сдвига = 1px при родной ширине кадра 1672px (1672px = 100cqw),
+       поэтому сдвиги ниже заданы в «пикселях кадра» и масштабируются вместе с
+       ним: на экране 1080p это ≈ реальные пиксели. */
+    --nr-line-unit: 0.0598cqw;
+  }
+
+  .nr-about-bio > .nr-about-line {
+    display: block;
+    white-space: nowrap;
+    transform: translate(calc(var(--nr-line-x, 0) * var(--nr-line-unit, 0px)),
+                         calc(var(--nr-line-y, 0) * var(--nr-line-unit, 0px)));
+  }
+
+  /* Дефис ручного переноса («мик-» / «шерами»): виден только здесь, вне
+     мобильной модалки (см. комментарий у .nr-ab-hyphen выше). */
+  .nr-ab-hyphen { display: inline; }
+
+  /* Сдвиги строк биографии кадра 1: X — влево(−)/вправо(+), Y — вверх(−)/вниз(+),
+     числа в пикселях кадра 1672px. Текст выровнен по левому краю, сдвиги обнулены:
+     все строки начинаются с одного края. Правится только пара чисел у нужной строки. */
+  [data-about-slide="0"] .nr-about-bio > .nr-about-line:nth-child(1)  { --nr-line-x: 0; --nr-line-y: 0; }
+  [data-about-slide="0"] .nr-about-bio > .nr-about-line:nth-child(2)  { --nr-line-x: 0; --nr-line-y: 0; }
+  [data-about-slide="0"] .nr-about-bio > .nr-about-line:nth-child(3)  { --nr-line-x: 0; --nr-line-y: 0; }
+  [data-about-slide="0"] .nr-about-bio > .nr-about-line:nth-child(4)  { --nr-line-x: 0; --nr-line-y: 0; }
+  [data-about-slide="0"] .nr-about-bio > .nr-about-line:nth-child(5)  { --nr-line-x: 0; --nr-line-y: 0; }
+  [data-about-slide="0"] .nr-about-bio > .nr-about-line:nth-child(6)  { --nr-line-x: 0; --nr-line-y: 0; }
+  [data-about-slide="0"] .nr-about-bio > .nr-about-line:nth-child(7)  { --nr-line-x: 0; --nr-line-y: 0; }
+  [data-about-slide="0"] .nr-about-bio > .nr-about-line:nth-child(8)  { --nr-line-x: 0; --nr-line-y: 0; }
+  [data-about-slide="0"] .nr-about-bio > .nr-about-line:nth-child(9)  { --nr-line-x: 0; --nr-line-y: 0; }
+  [data-about-slide="0"] .nr-about-bio > .nr-about-line:nth-child(10) { --nr-line-x: 0; --nr-line-y: 0; }
+
+  /* Зазор между абзацами кадра 1 — 95px при ширине кадра 1672px (95 единиц
+     --nr-line-unit). Сделан СДВИГОМ СТРОК второго абзаца, а не отступом
+     margin-bottom: отступ увеличивал высоту колонки, а колонка центрируется по
+     вертикали, поэтому вместе с ним «плавал» и первый абзац. Со сдвигом строк
+     высота блока остаётся прежней — первый абзац стоит на месте, опускается
+     только второй.
+     Разбивка строк у языков своя: RU — 10 строк (первый абзац 1–5, второй 6–10),
+     EN — 11 строк (первый абзац 1–6, второй 7–11).
+     Эти же границы знает печать биографии (animations.js → about1Paragraphs):
+     первая строка нового абзаца помечена классом nr-about-para — при правке
+     разбивки пометку в config.js (RU и EN) и в index.html не забыть. */
+  html[data-lang="ru"] [data-about-slide="0"] .nr-about-bio > .nr-about-line:nth-child(n+6):nth-child(-n+10),
+  html[data-lang="en"] [data-about-slide="0"] .nr-about-bio > .nr-about-line:nth-child(n+7) {
+    --nr-line-y: 95;
+  }
+
+  /* Первый абзац поднят на 10px относительно второго (знак минус — вверх):
+     сдвиг строк 1–5 в RU и 1–6 в EN. Правится одним числом. */
+  html[data-lang="ru"] [data-about-slide="0"] .nr-about-bio > .nr-about-line:nth-child(-n+5),
+  html[data-lang="en"] [data-about-slide="0"] .nr-about-bio > .nr-about-line:nth-child(-n+6) {
+    --nr-line-y: -10;
+  }
+
+  .nr-about-kicker {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5cqw 1.15cqw;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    border-radius: 999px;
+    background: rgba(245, 158, 11, 0.1);
+    color: #fbbf24;
+    font-family: 'Space Grotesk', 'Manrope', ui-monospace, monospace;
+    font-size: 1.05cqw;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .nr-about-title {
+    margin: 0;
+    color: #F3F4F6; /* потолок яркости, см. .text-white */
+    font-size: 4.05cqw;
+    font-weight: 900;
+    line-height: 0.98;
+    letter-spacing: -0.025em;
+  }
+
+  .nr-about-subtitle {
+    margin: 0;
+    /* Тот же оранжевый, что у акцентов биографии слева (.nr-ab-hint-accent). */
+    color: #F59E0B;
+    font-size: 1.6cqw;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  /* Строки подзаголовка кадра 1 — отдельные элементы (каждая появляется своим
+     шагом таймлайна) внутри одного <p>: block даёт такой же стек, как <br>,
+     без зазора колонки (.nr-about-text — flex с gap 1.1cqw). */
+  .nr-about-subtitle-line { display: block; }
+
+  .nr-about-subhead {
+    margin: 0;
+    color: #F3F4F6; /* потолок яркости, см. .text-white */
+    font-size: 3.1cqw;
+    font-weight: 900;
+    line-height: 1.02;
+    letter-spacing: -0.015em;
+  }
+
+  .nr-about-body {
+    margin: 0;
+    color: #D1D5DB;
+    font-size: 1.45cqw;
+    font-weight: 500;
+    line-height: 1.55;
+  }
+
+  .nr-about-lead {
+    margin: 0;
+    color: #F3F4F6; /* потолок яркости, см. .text-white */
+    font-size: 2.9cqw;
+    font-weight: 900;
+    line-height: 1.12;
+    letter-spacing: -0.02em;
+  }
+
+  /* Строка со скидкой — сразу под «С радостью готов поработать с тобой!» на
+     финальном кадре. Вся строка оранжевая (тот же #F59E0B, что у акцентов
+     биографии .nr-ab-hint-accent), сам промокод — ярче и с пунктиром.
+     Промокод — <button>: по клику копируется (script.js →
+     initAboutShowcase(), copy-discount), на время копирования получает
+     .is-copied — короткая вспышка ярче. */
+  .nr-about-discount {
+    margin: 0;
+    color: #F59E0B;
+    font-size: 1.6cqw;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  .nr-about-discount-code {
+    display: inline-block;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #FBBF24;
+    font: inherit;
+    font-weight: 800;
+    white-space: nowrap;
+    cursor: pointer;
+    text-decoration: underline dotted rgba(251, 191, 36, 0.7);
+    text-underline-offset: 0.3cqw;
+    transition: color 0.25s ease, text-decoration-color 0.25s ease,
+                transform 0.2s ease;
+  }
+
+  .nr-about-discount-code:hover,
+  .nr-about-discount-code:focus-visible,
+  .nr-about-discount-code.is-copied {
+    color: #FCD34D;
+    text-decoration-color: #FCD34D;
+  }
+
+  .nr-about-discount-code:active { transform: scale(0.97); }
+
+  /* Подсказка «Листайте» — крупно, по центру внизу кадра. Лежит вне слайдов,
+     поэтому не спорит с колонками текста. Видна на первых двух кадрах, на
+     финальном гаснет: там внизу кнопки (см. data-about-active ниже). */
+  .nr-about-hint {
+    position: absolute;
+    left: 50%;
+    bottom: 3.2%;
+    z-index: 4;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6cqw;
+    transform: translateX(-50%);
+    color: rgba(251, 191, 36, 0.92);
+    font-family: 'Space Grotesk', 'Manrope', ui-monospace, monospace;
+    font-size: 1.35cqw;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    pointer-events: none;
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.9);
+    transition: opacity 0.4s ease;
+  }
+
+  /* data-about-active ставит script.js → aboutGoToSlide().
+     На финальном кадре подсказка гаснет. Свечения там уже нет — его снимает
+     первое же листание, — но пауза стоит на всякий случай: анимировать filter у
+     невидимого элемента незачем. Пауза, а не снятие анимации: если свечение
+     когда-нибудь вернётся, при возврате на первый кадр оно продолжится с той же
+     фазы, без лишней вспышки. */
+  .nr-about-overlay[data-about-active="2"] .nr-about-hint {
+    opacity: 0;
+    animation-play-state: paused;
+  }
+
+  /* Раздел закрыт, а свечение ещё не снято (зритель не листал) — пульсацию
+     ставим на паузу: подсказки не видно, а filter у невидимого элемента всё
+     равно работал бы. При открытии ритм продолжится с той же фазы. */
+  .nr-about-overlay:not(.active) .nr-about-hint {
+    animation-play-state: paused;
+  }
+
+  /* На первом кадре подсказка ждёт конца таймлайна: пока идёт плашка → имя →
+     подзаголовок → биография, её нет вовсе, и появляется она последней —
+     всплывает и светится, пока зритель не листнёт первый раз (animations.css,
+     секция 20). Класс nr-hint-wait ставит JS при загрузке страницы, снимает на
+     последнем шаге таймлайна (animations.js → aboutHintWait / aboutHintShow).
+     Правило привязано к активному кадру 1: если зритель листнул раньше, чем
+     таймлайн доиграл, на кадре 2 подсказка видна сразу — как и раньше, только
+     уже без свечения: листание его снимает. */
+  .nr-about-overlay[data-about-active="0"] .nr-about-hint.nr-hint-wait {
+    opacity: 0;
+    transition: none;
+  }
+
+  .nr-about-hint-arrow { width: 1.7cqw; height: 1.7cqw; }
+
+  /* Статистика кадра 2 — размеры крупнее базовых: колонка кадра 2 расширена
+     (см. выше), текст в ней больше. Верхней рамки и padding-top здесь нет:
+     линию рисует отдельный .nr-about-rule (её можно прочертить). */
+  .nr-about-stats {
+    display: flex;
+    gap: 1.8cqw;
+    margin-top: 0.8cqw;
+  }
+
+  /* Разделяющая линия перед цифрами кадра 2. Отдельный элемент, а не рамка:
+     линия «прочерчивается» слева направо (animations.css, секция 20).
+     Зазоры подобраны так, чтобы ритм колонки остался прежним:
+     1.1cqw (gap колонки) + 0.5 + линия + 1.1 + 0.8 (margin-top .nr-about-stats). */
+  .nr-about-rule {
+    width: 100%;
+    height: 1px;
+    margin-top: 0.5cqw;
+    background: rgba(245, 158, 11, 0.22);
+    transform-origin: left center;
+  }
+
+  .nr-about-stat-num {
+    color: #fbbf24;
+    font-family: 'Space Grotesk', 'Manrope', ui-monospace, monospace;
+    font-size: 2.7cqw;
+    font-weight: 900;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
+  .nr-about-stat-text {
+    max-width: 9cqw;
+    margin-top: 0.35cqw;
+    color: #9CA3AF;
+    font-size: 1.15cqw;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  /* Кадр 2: колонка текста — справа от лица, по центру кадра по вертикали.
+     Персонаж занимает левую часть: по замеру исходника (about-2.webp, 1672x941)
+     голова доходит до x ≈ 51% на высоте 0–55%, плечо уходит вправо до x ≈ 70%
+     только у самого низа. Поэтому колонка шире базовых 26% (31%: от x ≈ 65% до
+     96%), а по вертикали центрируется базовым правилом .nr-about-text
+     (top: 50% + translateY(-50%)) — низ колонки на ≈ 72% высоты, где силуэт
+     ещё левее её края. Текст в этой колонке крупнее базового (см. размеры
+     ниже: заголовок, кнопки, статистика). */
+  [data-about-slide="1"] .nr-about-text--right {
+    width: 31%;
+  }
+
+  /* Кадр 2: заголовок колонки «Проходил обучение / у лучших в индустрии:» —
+     две строки через <br> (config.js → aboutModal.bioTraining). Крупный и
+     жирный вид даёт .nr-about-subhead (font-weight 900), здесь —
+     центрирование по ширине колонки, размер и интерлиньяж.
+     2.4cqw — с запасом: по замеру в браузере (кадр 1400px, колонка 443px) самая
+     длинная строка «у лучших в индустрии:» занимает 416px при 2.4cqw и 433px
+     при 2.5cqw, то есть на 2.5 остаётся всего 10px и любой сбой подбора шрифта
+     ломал бы строку на третью. 1.08 вместо базового 1.02 — две строки не
+     слипаются. Правится двумя числами. */
+  [data-about-slide="1"] .nr-about-subhead {
+    width: 100%;
+    font-size: 2.4cqw;
+    line-height: 1.08;
+    text-align: center;
+  }
+
+  /* Обучение на кадре 2: четыре кнопки-ссылки под строкой «Проходил
+     обучение у». Сетка 2×2, чтобы колонка оставалась компактной, ряды
+     равной высоты (grid-auto-rows: 1fr) — подписи вроде «MIX With The
+     MASTERS» переносятся на две строки. Оформление — как у .nr-about-link
+     (тёмная плашка с рамкой, янтарь по наведению), размеры в cqw от ширины
+     рамки, как весь текст кадра. Адреса стоят в index.html. */
+  .nr-about-trainers {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: 1fr;
+    gap: 1cqw;
+    width: 100%;
+  }
+
+  .nr-about-trainer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1cqw 1.2cqw;
+    border: 1px solid rgba(55, 65, 81, 0.7);
+    border-radius: 0.9cqw;
+    background: rgba(9, 12, 18, 0.55);
+    color: #E5E7EB;
+    font-size: 1.3cqw;
+    font-weight: 700;
+    line-height: 1.25;
+    text-align: center;
+    text-decoration: none;
+    transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease,
+                transform 0.2s ease;
+  }
+
+  .nr-about-trainer:hover {
+    border-color: rgba(245, 158, 11, 0.45);
+    background: rgba(18, 22, 34, 0.75);
+    color: #fbbf24;
+  }
+
+  .nr-about-trainer:active { transform: scale(0.97); }
+
+
+  /* Кнопки финального кадра: занимают всю ширину колонки и делят строку, пока
+     помещаются (иначе переносятся — тогда каждая на всю ширину, как вопросы). */
+  .nr-about-actions {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    gap: 1cqw;
+    margin-top: 0.6cqw;
+  }
+
+  .nr-about-btn {
+    display: inline-flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8cqw;
+    padding: 1.05cqw 1.4cqw;
+    border: 1px solid #374151;
+    border-radius: 1cqw;
+    background: #14171F;
+    color: #F3F4F6; /* потолок яркости, см. .text-white */
+    font-size: 1.2cqw;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background 0.35s ease, border-color 0.35s ease, transform 0.2s ease;
+  }
+
+  .nr-about-btn svg { width: 1.35cqw; height: 1.35cqw; flex-shrink: 0; }
+
+  .nr-about-btn:hover {
+    background: #1C212E;
+    border-color: rgba(245, 158, 11, 0.45);
+  }
+
+  .nr-about-btn:active { transform: scale(0.97); }
+
+  .nr-about-btn--primary {
+    border-color: transparent;
+    background: #f59e0b;
+    color: #0C0E12;
+    box-shadow: 0 10px 30px rgba(245, 158, 11, 0.25);
+  }
+
+  .nr-about-btn--primary:hover {
+    background: #fbbf24;
+    border-color: transparent;
+  }
+
+  /* Ссылки в FAQ под кнопками */
+  .nr-about-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7cqw;
+    width: 100%;
+    margin-top: 0.5cqw;
+  }
+
+  .nr-about-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1cqw;
+    width: 100%;
+    padding: 0.85cqw 1.25cqw;
+    border: 1px solid rgba(55, 65, 81, 0.7);
+    border-radius: 0.8cqw;
+    background: rgba(9, 12, 18, 0.55);
+    color: #E5E7EB;
+    font-size: 1.05cqw;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+  }
+
+  .nr-about-link svg {
+    width: 1.2cqw;
+    height: 1.2cqw;
+    flex-shrink: 0;
+    color: #6B7280;
+    transition: color 0.3s ease, transform 0.3s ease;
+  }
+
+  .nr-about-link:hover {
+    border-color: rgba(245, 158, 11, 0.45);
+    background: rgba(18, 22, 34, 0.75);
+    color: #fbbf24;
+  }
+
+  .nr-about-link:hover svg { color: #fbbf24; transform: translateX(3px); }
+
+  /* Служебная строка сверху, крестик и точки справа */
+  .nr-about-tag {
+    position: absolute;
+    top: 3%;
+    left: 3.5%;
+    z-index: 4;
+    color: rgba(156, 163, 175, 0.75);
+    font-family: 'Space Grotesk', 'Manrope', ui-monospace, monospace;
+    font-size: 0.8cqw;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    pointer-events: none;
+  }
+
+  .nr-about-close {
+    position: absolute;
+    /* Отступы от верха и правого края рамки — 30px кадра (1.794cqw = 30 × 0.0598),
+       масштабируются вместе с кадром. */
+    top: 1.794cqw;
+    right: 1.794cqw;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.2cqw;
+    height: 3.2cqw;
+    padding: 0;
+    border: 1px solid rgba(55, 65, 81, 0.8);
+    border-radius: 0.9cqw;
+    background: rgba(9, 12, 18, 0.7);
+    color: #9CA3AF;
+    cursor: pointer;
+    transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+  }
+
+  .nr-about-close svg { width: 1.35cqw; height: 1.35cqw; }
+
+  .nr-about-close:hover {
+    border-color: rgba(245, 158, 11, 0.5);
+    background: rgba(20, 23, 31, 0.9);
+    color: #F3F4F6; /* потолок яркости, см. .text-white */
+  }
+
+  .nr-about-dots {
+    position: absolute;
+    top: 50%;
+    right: 1.6%;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.1cqw;
+    transform: translateY(-50%);
+  }
+
+  .nr-about-dot {
+    width: 0.9cqw;
+    height: 0.9cqw;
+    padding: 0;
+    border: 1px solid rgba(245, 158, 11, 0.5);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+    cursor: pointer;
+    transition: background 0.35s ease, border-color 0.35s ease,
+                transform 0.35s ease, box-shadow 0.35s ease;
+  }
+
+  .nr-about-dot:hover { background: rgba(245, 158, 11, 0.55); }
+
+  .nr-about-dot.is-active {
+    border-color: #fbbf24;
+    background: #f59e0b;
+    box-shadow: 0 0 14px rgba(245, 158, 11, 0.7);
+    transform: scale(1.3);
+  }
+
+  .nr-about-close:focus-visible,
+  .nr-about-dot:focus-visible,
+  .nr-about-btn:focus-visible,
+  .nr-about-link:focus-visible,
+  .nr-about-trainer:focus-visible {
+    outline: 2px solid #fbbf24;
+    outline-offset: 3px;
+  }
+}
+
+/* «Уменьшить движение»: без кроссфейда-наплыва, кадры просто сменяются */
+@media (min-width: 1024px) and (prefers-reduced-motion: reduce) {
+  .nr-about-overlay,
+  .nr-about-frame,
+  .nr-about-slide,
+  .nr-about-photo {
+    transition: none;
+  }
+}
+

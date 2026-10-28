@@ -1,0 +1,209 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   NICK RISE STUDIO — ANIMATION / ТОСТ, МОДАЛКИ, БОКОВОЙ МИКШЕР, МОБИЛЬНОЕ МЕНЮ
+   Источник: animations.css, строки 2191–2392 (нарезка 1:1, поведение не менялось)
+   Слой: css/anim/* — после ВСЕХ css/style/*.
+         Порядок подключения = порядок номеров файлов.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ═══ 12. ТОСТ — счётчик времени жизни ════════════════════════════════ */
+
+#toast { position: relative; overflow: hidden; }
+
+.nr-toast-meter {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 100%;
+  background: linear-gradient(90deg, var(--nr-amber-lt), var(--nr-amber-dk));
+  transform-origin: left;
+}
+
+#toast.show .nr-toast-meter { animation: nrToastMeter 3s linear forwards; }
+
+@keyframes nrToastMeter {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
+/* ═══ 13. МОДАЛЬНЫЕ ОКНА — плавное кинематографичное открытие/закрытие ═════ */
+
+.modal-content { position: relative; }
+
+.modal-overlay.active .modal-content::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(118deg, transparent 38%, rgba(245, 158, 11, 0.18) 50%, transparent 62%);
+  background-size: 260% 100%;
+  background-position: 175% 0;
+  opacity: 1;
+  animation: nrModalSheen 2.2s var(--nr-ease) 0.25s forwards;
+}
+
+@keyframes nrModalSheen {
+  0%   { background-position: 175% 0; opacity: 1; }
+  70%  { opacity: 1; }
+  100% { background-position: -70% 0; opacity: 0.75; }
+}
+
+.modal-overlay.active .rack-bolt { animation: nrBoltSpin 1.2s var(--nr-snap); }
+
+@keyframes nrBoltSpin {
+  from { transform: rotate(-180deg); }
+  to   { transform: rotate(0); }
+}
+
+#aboutModal .modal-content img { transition: transform 6s ease-out; }
+.modal-overlay.active #aboutModal img,
+#aboutModal.active .modal-content > div img { transform: scale(1.06); }
+
+#aboutModal .grid > div { position: relative; }
+
+/* Кнопки внутри About-модалки */
+#aboutModal button[onclick^="goToFaqItem"] { position: relative; overflow: hidden; }
+
+#aboutModal button[onclick^="goToFaqItem"]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 42%, rgba(245, 158, 11, 0.12) 50%, transparent 58%);
+  background-size: 260% 100%;
+  background-position: 175% 0;
+  transition: background-position 0.85s var(--nr-ease);
+}
+
+#aboutModal button[onclick^="goToFaqItem"]:hover::after { background-position: -60% 0; }
+
+/* ═══ 14. БОКОВОЙ МИКШЕР ══════════════════════════════════════════════ */
+
+#side-mixer-strip { transition: box-shadow 0.5s ease, transform 0.5s var(--nr-ease); }
+
+body.nr-playing #side-mixer-strip {
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7), inset 0 1px 1px rgba(255, 255, 255, 0.12), 0 0 26px rgba(245, 158, 11, 0.18);
+}
+
+/* Позиция ползунка — общий transform, собранный из CSS-переменной --fader-y
+   (её пишет script.js → updateFaderUI). Здесь задаём ТОЛЬКО длительность/кривую
+   догона для случая «колесо», сам transform берём из style.css (.fader-knob).
+   Раньше здесь стоял transition по `top`, который конфликтовал с базовым
+   правилом и подвешивал «пружину» 0.15s на каждое движение — источник
+   дёрганья ползунка. Теперь анимируется transform (композит), а scale
+   активного состояния добавляется в самом transform-выражении, поэтому
+   inline-переменная из JS его не перебивает. */
+.fader-knob { transition: transform 0.15s cubic-bezier(0.1, 0.85, 0.25, 1), box-shadow 0.35s ease; }
+
+body.nr-faderactive .fader-knob {
+  transform: translate3d(-50%, var(--fader-y, 0px), 0) scale(1.14);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 0 18px rgba(245, 158, 11, 0.55);
+}
+
+#side-mixer-strip > div:first-child { transition: color 0.4s ease, text-shadow 0.4s ease; }
+
+body.nr-playing #side-mixer-strip > div:first-child {
+  color: var(--nr-amber);
+  text-shadow: 0 0 10px rgba(245, 158, 11, 0.8);
+  animation: nrBlink 1.6s steps(1, end) infinite;
+}
+
+@keyframes nrBlink {
+  0%, 60% { opacity: 1; }
+  61%, 100% { opacity: 0.35; }
+}
+
+#side-db-label { transition: color 0.3s ease, text-shadow 0.3s ease; }
+
+/* ═══ 15. МОБИЛЬНОЕ МЕНЮ — выезд сверху вниз (1.2s) и каскадное появление пунктов ════════ */
+
+#mobileMenuDrawer {
+  position: fixed;
+  top: 4rem;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  transform: translate3d(0, -100%, 0);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1),
+              /* Гаснет ВМЕСТЕ с выездом, а не в последние 0.4s (было
+                 opacity 0.4s ease 0.8s): меню, шапка и затемнение уходят
+                 синхронно, и к концу хода шторки всё уже в состоянии
+                 «закрыто». Раньше панель оставалась плотной почти весь
+                 путь и «залипала» на экране. */
+              opacity 1.2s ease,
+              visibility 1.2s step-end;
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+@media (min-width: 640px) {
+  #mobileMenuDrawer {
+    top: 5rem;
+  }
+}
+
+#mobileMenuDrawer.is-open {
+  transform: translate3d(0, 0, 0);
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.15s ease,
+              visibility 0s linear;
+}
+
+#mobileMenuOverlay {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1),
+              visibility 1.2s step-end;
+  will-change: opacity;
+}
+
+#mobileMenuOverlay.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1),
+              visibility 0s linear;
+}
+
+#mainHeader.mobile-menu-active {
+  background-color: #0C0E12 !important;
+}
+
+/* Поочередное каскадное появление пунктов меню при открытии */
+.mobile-drawer-item {
+  opacity: 0;
+  transform: translate3d(0, -22px, 0);
+  transition: opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+#mobileMenuDrawer.is-open .mobile-drawer-item {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+/* Каскадная задержка (stagger) для каждого отдельного элемента при выезде */
+#mobileMenuDrawer.is-open .mobile-drawer-item:nth-child(1) { transition-delay: 0.18s; }
+#mobileMenuDrawer.is-open .mobile-drawer-item:nth-child(2) { transition-delay: 0.30s; }
+#mobileMenuDrawer.is-open .mobile-drawer-item:nth-child(3) { transition-delay: 0.42s; }
+#mobileMenuDrawer.is-open .mobile-drawer-item:nth-child(4) { transition-delay: 0.54s; }
+#mobileMenuDrawer.is-open .mobile-drawer-item:nth-child(5) { transition-delay: 0.66s; }
+#mobileMenuDrawer.is-open .mobile-drawer-item:nth-child(6) { transition-delay: 0.78s; }
+
+/* При закрытии элементы мягко уходят вверх синхронно без задержки */
+#mobileMenuDrawer:not(.is-open) .mobile-drawer-item {
+  opacity: 0;
+  transform: translate3d(0, -12px, 0);
+  transition: opacity 0.35s ease, transform 0.45s ease;
+  transition-delay: 0s !important;
+}
+

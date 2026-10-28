@@ -1,0 +1,214 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   NICK RISE STUDIO — ANIMATION / ГЛАВНЫЙ ЭКРАН: СВЕЧЕНИЕ, КОЛЬЦА, БЕЙДЖ «ОБО МНЕ»
+   Источник: animations.css, строки 899–1105 (нарезка 1:1, поведение не менялось)
+   Слой: css/anim/* — после ВСЕХ css/style/*.
+         Порядок подключения = порядок номеров файлов.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ═══ 04. HERO ════════════════════════════════════════════════════════ */
+
+/* Параллакс фонового фото главного экрана. Основной путь — скролл-таймлайн
+   (style.css, блок «ПАРАЛЛАКС НА ДВИЖКЕ»): сдвиг двигает движок, JS в кадре
+   не участвует. Здесь — страховка для двух случаев:
+   1) браузер без animation-timeline: величину сдвига пишет animations.js →
+      updateHeroParallax в --nr-hero-parallax-y (см. .hero-bg-layer в style.css);
+   2) системная настройка «уменьшить движение»: скрипт в этом режиме сдвиг не
+      начисляет, но если настройку включат ПОСЛЕ загрузки, переменная останется
+      висеть — обнуляем её. Саму анимацию в этом режиме выключает style.css
+      (иначе она перекрывала бы transform). */
+@media (prefers-reduced-motion: reduce) {
+  .hero-bg-layer { --nr-hero-parallax-y: 0px !important; }
+}
+
+/* Пульсирующее «дыхание» тёплой подсветки студии */
+#hero > div.absolute:first-of-type {
+  animation: nrGlowBreath 9s ease-in-out infinite;
+  will-change: opacity;
+}
+
+@keyframes nrGlowBreath {
+  0%, 100% { opacity: 0.65; }
+  50%      { opacity: 1; }
+}
+
+/* Заголовок — пословный «вкат» плёнки.
+   БЕЗ filter: blur() (правка 26.10). Размытие в CSS-анимации — это перерисовка
+   текста на КАЖДОМ кадре, и Safari на iOS делает её в софте: вкат заголовка
+   главного экрана был самой дорогой анимацией старта. Остались opacity и
+   transform — они идут на композиторе. На вид «вкат» тот же. */
+.nr-w {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.42em) rotateX(-38deg);
+  animation: nrWordIn 0.95s var(--nr-ease) forwards;
+}
+
+@keyframes nrWordIn {
+  to { opacity: 1; transform: none; }
+}
+
+/* Вход героя ждёт, пока уедет заставка: слова заголовка стоят на паузе, пока на
+   #hero висит nr-title-hold (ставит animations.js → holdHeroIntro, снимает
+   hideBoot). Без этого пословный вкат доигрывал под непрозрачным оверлеем. */
+#hero.nr-title-hold .nr-w { animation-play-state: paused; }
+
+/* Фото — рамка захвата сигнала + сканирующая полоса */
+.hero-mask-container {
+  transition: transform 0.5s var(--nr-ease);
+  isolation: isolate;
+}
+
+/* Наклон фото за мышью (animations.js → initHero). Класс nr-tilt-live висит на
+   контейнере, пока указатель внутри.
+
+   Зачем он нужен. У .hero-mask-img (style.css) стоит общий переход
+   transform 0.65 с — он нужен для плавного возврата в покой и подсветки. Но во
+   время наведения transform картинки переписывается на КАЖДОМ pointermove, и
+   тот же переход стартовал заново с нуля: пока мышь ехала, фото топталось в
+   начале кривой, а наклон проявлялся только после остановки указателя (переход
+   успевал доиграть). Пока указатель внутри, шаг короткий (0.08 с) — движение
+   плавное, но идёт за курсором без задержки. Подсветку box-shadow не трогаем:
+   у неё своя кривая 0.65 с. Снятие класса на pointerleave возвращает 0.65 с,
+   поэтому возврат в покой такой же плавный, как был.
+
+   0.08s можно поставить в 0s — тогда фото пойдёт строго 1:1 с курсором, но
+   станет заметна мелкая дрожь на быстрых движениях. */
+.hero-mask-container.nr-tilt-live .hero-mask-img {
+  transition: transform 0.08s linear, box-shadow 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#hero h1 { perspective: 800px; }
+
+.hero-mask-container::before,
+.hero-mask-container::after {
+  content: '';
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  border: 2px solid var(--nr-amber);
+  opacity: 0;
+  transition: opacity 0.45s ease, transform 0.55s var(--nr-ease);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.hero-mask-container::before {
+  top: 12px;
+  left: 12px;
+  border-right: 0;
+  border-bottom: 0;
+  border-radius: 8px 0 0 0;
+  transform: translate(10px, 10px);
+}
+
+.hero-mask-container::after {
+  right: 12px;
+  bottom: 12px;
+  border-left: 0;
+  border-top: 0;
+  border-radius: 0 0 8px 0;
+  transform: translate(-10px, -10px);
+}
+
+.hero-mask-container:hover::before,
+.hero-mask-container:hover::after {
+  opacity: 0.95;
+  transform: translate(0, 0);
+}
+
+.nr-scan-viewport {
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.nr-scan {
+  display: none !important;
+}
+
+@keyframes nrScanImg {
+  0%       { transform: translateY(0); opacity: 0; }
+  8%       { opacity: 1; }
+  55%      { opacity: 1; }
+  70%, 100% { transform: translateY(620%); opacity: 0; }
+}
+
+/* Расходящиеся звуковые кольца за фото */
+.nr-rings {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.nr-rings i {
+  position: absolute;
+  inset: 0;
+  border-radius: 22px;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  opacity: 0;
+  animation: nrRing 5.4s ease-out infinite;
+}
+
+.nr-rings i:nth-child(2) { animation-delay: 1.8s; }
+.nr-rings i:nth-child(3) { animation-delay: 3.6s; }
+
+body.nr-playing .nr-rings i { animation-duration: 2.4s; }
+body.nr-playing .nr-rings i:nth-child(2) { animation-delay: 0.8s; }
+body.nr-playing .nr-rings i:nth-child(3) { animation-delay: 1.6s; }
+
+@keyframes nrRing {
+  0%   { transform: scale(0.97); opacity: 0; }
+  22%  { opacity: 0.42; }
+  100% { transform: scale(1.13); opacity: 0; }
+}
+
+/* Бейдж «Обо мне» слегка левитирует */
+.hero-mask-container > div.absolute { animation: nrFloat 3.6s ease-in-out infinite; }
+
+@keyframes nrFloat {
+  0%, 100% { transform: translate(-50%, 0); }
+  50%      { transform: translate(-50%, -5px); }
+}
+
+/* Главная кнопка — «REC»: блик + кольцо готовности */
+#hero a[href="#player"] {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+#hero a[href="#player"]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.55) 50%, transparent 62%);
+  background-size: 260% 100%;
+  background-position: 180% 0;
+  transition: background-position 0.85s var(--nr-ease);
+}
+
+#hero a[href="#player"]:hover::before { background-position: -60% 0; }
+
+#hero a[href="#player"]::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  z-index: -2;
+  border-radius: 15px;
+  border: 1.5px solid rgba(245, 158, 11, 0.6);
+  animation: nrRecRing 2.6s ease-out infinite;
+}
+
+@keyframes nrRecRing {
+  0%   { transform: scale(0.98); opacity: 0.75; }
+  70%, 100% { transform: scale(1.09); opacity: 0; }
+}
+
+#hero a[href="#contacts"] { position: relative; transition: box-shadow 0.4s ease, border-color 0.4s ease; }
+#hero a[href="#contacts"]:hover { box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.55), 0 0 26px rgba(245, 158, 11, 0.12); }
+

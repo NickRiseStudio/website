@@ -1,0 +1,542 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   NICK RISE STUDIO — STYLE / ПОДСКАЗКИ: A/B, ЛОГОТИП, КАЛЬКУЛЯТОР
+   Источник: style.css, строки 3060–3594 (нарезка 1:1, поведение не менялось)
+   Слой: css/style/* — после tailwind.css и vendor/lenis.css,
+         перед css/anim/*. Порядок подключения = порядок номеров файлов.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ПОДСКАЗКА ПРО ПЕРЕКЛЮЧАТЕЛЬ BEFORE / AFTER
+   Первое включение трека: страница и пульт плавно уходят в затемнение с
+   размытием, над кнопкой BEFORE / AFTER появляется подсказка с хвостиком,
+   прокрутка на это время заблокирована. Убирается так же плавно — по клику
+   на фон, на затемнение пульта или на саму кнопку (script.js → hideAbHint).
+
+   Почему так, а не «просто накрыть всё оверлеем»: пульт — собственный контекст
+   наложения (transform + z-index 90 выше), и поднять кнопку изнутри него над
+   полноэкранным оверлеем нельзя. Поэтому в состоянии html.nr-ab-hint пульт
+   целиком поднимается над оверлеем (z-index 200), его ряды перестают быть
+   отдельными контекстами (перебиваем .sticky-player-bar > div из
+   animations.css), начинку пульта гасит внутренний слой #stickyPlayerBar::after,
+   а сама кнопка идёт поверх этого слоя (z-index 30 против 20). Бабл живёт на
+   уровне body и выше всех (z-index 300): в пульте он уехал бы вниз вместе с ним.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Затемнение и размытие страницы ──────────────────────────────────── */
+
+.nr-ab-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background-color: rgba(4, 6, 10, 0.72);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  /* Пока подсказка на экране, протяжка пальцем по фону не прокручивает
+     страницу. Колесо, клавиши и собственный плавный скролл гасит script.js
+     (abHintBlockScroll / abHintBlockKeys), overflow: hidden — страховка. */
+  touch-action: none;
+  overscroll-behavior: contain;
+  transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+              visibility 0.45s step-end;
+}
+
+.nr-ab-overlay.show {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+              visibility 0s;
+}
+
+/* Прокрутка заблокирована, пока подсказка висит: у самого документа её больше
+   нет, поэтому и своя плавная прокрутка сдвинуть страницу не может. Позиция
+   чтения при снятии блока сохраняется — overflow вернётся на место.
+   overscroll-behavior — как у блокировки под мобильным меню (nr-menu-open):
+   на телефоне жест не «протаскивает» страницу и не дёргает pull-to-refresh. */
+html.nr-ab-hint,
+html.nr-ab-hint body {
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+/* ── Бабл с подсказкой ───────────────────────────────────────────────── */
+
+.nr-ab-hint-tip {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 300;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 14px 18px;
+  /* Плавные грани: общее скругление плашки и мягкая тень без резких кромок */
+  border-radius: 20px;
+  background: linear-gradient(160deg, rgba(18, 22, 34, 0.98), rgba(9, 12, 18, 0.98));
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.75), 0 0 26px rgba(245, 158, 11, 0.2);
+  color: #F3F4F6;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: center;
+  /* Позицию и место хвостика считает script.js → positionAbHint */
+  --nr-ab-tail-x: 50%;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translate3d(0, 10px, 0);
+  transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+              visibility 0.45s step-end;
+}
+
+.nr-ab-hint-tip.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translate3d(0, 0, 0);
+  transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+              visibility 0s;
+}
+
+/* Хвостик к кнопке: тот же поворот квадрата с двумя рёбрами, что у плашек сайта */
+.nr-ab-hint-tip::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: var(--nr-ab-tail-x);
+  width: 16px;
+  height: 16px;
+  transform: translateX(-50%) rotate(45deg);
+  background-color: rgba(10, 13, 20, 0.98);
+  border-right: 1px solid rgba(245, 158, 11, 0.45);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.45);
+  border-bottom-right-radius: 5px;
+}
+
+/* Оранжевые акценты в текстах: «до»/«после» подсказки плеера (config.js →
+   player.abHint), «обо мне» в подсказке логотипа (nav.logoHint) и ключевые
+   слова в биографии окна «Обо мне» (aboutModal.bioText*). Вес 700, а не 800:
+   800 в абзаце с обычным текстом выглядел слишком «кричащим». */
+.nr-ab-hint-accent {
+  color: #F59E0B;
+  font-weight: 700;
+}
+
+/* ДВЕ «ГЛАВНЫЕ» СТРОКИ БИОГРАФИИ В ОКНЕ «ОБО МНЕ» — ВСЕГДА В ОДНУ СТРОКУ.
+   Это вступление к списку наставников (config.js → aboutModal.bioText2,
+   «Проходил обучение у лучших в индустрии:») и финальная фраза
+   (aboutModal.bioText3, «С радостью готов поработать с тобой!»).
+
+   Задача у обеих одна: на телефоне любой ширины стоять ОДНОЙ строкой и при
+   этом быть как можно крупнее. Переносить их нельзя — короткий «хвост» на
+   второй строке выглядел обрывком, а <br> в тексте для этого не годится:
+   ширина экрана у всех разная.
+
+   КЕГЛЬ СЧИТАЕТСЯ ОТ ШИРИНЫ АБЗАЦА (cqi), а не от ширины окна: от окна до
+   текста надо вычитать поля, а они разные (оверлей p-3 = 12px, окно p-5 = 20px,
+   от 640px уже p-4 и 25px) плюс полоса прокрутки окна. Поэтому контейнером
+   объявлены сами абзацы (.nr-about-bio2 и .nr-about-bio3): их внутренняя ширина
+   — ровно то место, куда строка должна влезть, и 100cqi равно ей.
+   white-space: nowrap держит одну строку даже без скрипта.
+
+   ОТКУДА ЧИСЛА. Ширина каждой фразы посчитана по реальным метрикам файлов
+   шрифтов (Manrope для кириллицы + Plus Jakarta Sans для латиницы и знаков
+   «:» «!») при letter-spacing -0.02em, в долях кегля:
+
+       вступление   RU 20.79 em | EN 18.74 em  → худший случай 20.79 em
+       финальная    RU 18.76 em | EN 16.43 em  → худший случай 18.76 em
+
+   Точное заполнение = 100 / ширина: 4.81cqi и 5.33cqi. Берём 4.62cqi и 5.12cqi
+   — те же ~4% запаса на округления и субпиксели. Кегль по экранам (RU):
+       320px (под текст 250px) → 11.6 / 12.8px
+       375px (303px)           → 14.0 / 15.5px
+       430px (360px)           → 16.6 / 18px (потолок)
+   Потолок 18px — кегль заголовка «Обо мне» (text-lg): крупнее этих строк быть
+   не должно. На широких экранах обе упираются в него и выглядят одинаково.
+
+   Почему у финальной число больше: она КОРОЧЕ вступления (18.76 em против
+   20.79 em), поэтому при том же кегле занимает меньше места. Каждая строка
+   растягивается под свою длину — иначе более короткая оставляла бы заметный
+   зазор в конце.
+
+   Это значения для первой отрисовки, до срабатывания скрипта. Точный кегль под
+   конкретное устройство считает script.js → fitAboutLeads(): он измеряет
+   реальную ширину каждой фразы и растягивает её почти на всю доступную
+   (страховка от системного масштаба шрифта и зума). */
+.nr-about-bio2,
+.nr-about-bio3 {
+  container-type: inline-size;
+}
+
+.nr-about-training-lead,
+.nr-about-final-lead {
+  display: block;
+  /* Никогда не переносим: при нехватке места уменьшается кегль, а не строка. */
+  white-space: nowrap;
+  letter-spacing: -0.02em;
+  color: #F3F4F6;
+  font-weight: 800;
+}
+
+.nr-about-training-lead {
+  /* Фолбэк для браузеров без контейнерных единиц — та же доля от ширины окна. */
+  font-size: min(18px, calc(4.62vw - 3.23px));
+  font-size: min(18px, 4.62cqi);
+}
+
+.nr-about-final-lead {
+  font-size: min(18px, calc(5.12vw - 3.58px));
+  font-size: min(18px, 5.12cqi);
+}
+
+/* Ссылки на обучение в биографии окна «Обо мне» (config.js → aboutModal.bioText2):
+   живут только в мобильной модалке #aboutModal — на компьютере те же адреса
+   стоят кнопками кадра 2 (.nr-about-trainer, style.css ниже). Вид — как у
+   промокода (.faq-promo-code / .nr-about-discount-code): оранжевый, пунктир
+   «нажми», при наведении и фокусе ярче, при нажатии лёгкое сжатие. inline-block
+   нужен, чтобы работал transform при :active; перенос внутри названия при этом
+   остаётся возможным — длинные имена не вылезут за край узкого экрана. */
+.nr-about-trainer-link {
+  display: inline-block;
+  color: #F59E0B;
+  font-weight: 700;
+  text-decoration: underline dotted rgba(245, 158, 11, 0.7);
+  text-underline-offset: 2px;
+  transition: color 0.25s ease, text-decoration-color 0.25s ease,
+              transform 0.2s ease;
+}
+
+.nr-about-trainer-link:hover,
+.nr-about-trainer-link:focus-visible {
+  color: #FCD34D;
+  text-decoration-color: #FCD34D;
+}
+
+.nr-about-trainer-link:active { transform: scale(0.97); }
+
+/* ── Состояние подсказки: яркими остаются кнопка и бабл ──────────────── */
+
+html.nr-ab-hint #stickyPlayerBar {
+  z-index: 200;
+}
+
+html.nr-ab-hint .sticky-player-bar > div {
+  z-index: auto;
+}
+
+html.nr-ab-hint #stickyPlayerBar .deck-source-switch {
+  z-index: 30;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.55), 0 0 26px rgba(245, 158, 11, 0.45);
+}
+
+/* Внутренний слой затемнения пульта. Лежит в пульте всегда, но в обычном
+   состоянии прозрачен и пропускает нажатия — поэтому уход подсказки получается
+   плавным: гасится только прозрачность (см. слой выше). */
+#stickyPlayerBar::after {
+  content: '';
+  position: absolute;
+  /* Не inset: 0. Слой должен начинаться ВЫШЕ верхней кромки пульта: рамка
+     (border-top), янтарная линия ::before (top: -1px) и свечение полосы
+     прогресса (#deckProgressBar, box-shadow 0 0 12px) торчат за padding-box.
+     Пульт поднят над оверлеем (z-index 200 против 150), поэтому всё, что
+     вылезает за его верх, оверлей не гасит — и над полосой перемотки
+     оставалась светлая полоска. Запас 16px накрывает и её. */
+  inset: -16px 0 0 0;
+  z-index: 20;
+  background-color: rgba(5, 7, 12, 0.8);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html.nr-ab-hint #stickyPlayerBar::after {
+  opacity: 1;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+/* «Уменьшить движение»: подсказка просто проявляется, без подъезда снизу */
+@media (prefers-reduced-motion: reduce) {
+  .nr-ab-hint-tip,
+  .nr-ab-hint-tip.show {
+    transform: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ПОДСКАЗКА ПРО ЛОГОТИП В ШАПКЕ («ОБО МНЕ»)
+   При заходе на сайт под логотипом слева вверху всплывает бабл в том же
+   формате, что и подсказка плеера, но БЕЗ затемнения: страница не гаснет и
+   прокрутка не блокируется. Своей геометрии у бабла нет — берём базовый
+   .nr-ab-hint-tip; здесь только разворот хвостика вверх (бабл стоит ПОД
+   логотипом), крестик и затухание вместе с логотипом на телефоне.
+   Крестик: 36/24px на компьютере, 40/27px на телефоне и планшете — там
+   палец, и тач-цель нужна больше.
+   Позицию и место хвостика считает script.js → positionLogoHint.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Хвостик смотрит ВВЕРХ (на логотип) — зеркало хвостика подсказки плеера
+   (.nr-ab-hint-tip::after): те же квадрат с двумя рёбрами и скруглённый угол. */
+.nr-logo-hint-tip::after {
+  top: -8px;
+  bottom: auto;
+  background-color: rgba(10, 13, 20, 0.98);
+  border-right: none;
+  border-bottom: none;
+  border-left: 1px solid rgba(245, 158, 11, 0.45);
+  border-top: 1px solid rgba(245, 158, 11, 0.45);
+  border-bottom-right-radius: 0;
+  border-top-left-radius: 5px;
+}
+
+/* Крестик есть на всех устройствах: на телефоне бабл закрывается ТОЛЬКО им
+   или переходом в «Обо мне» — прокрутка и тапы мимо его больше не гасят. */
+.nr-logo-hint-close { display: none; }
+
+/* Бабл клики НЕ перехватывает: он висит над шапкой, и под ним остаются
+   живые кнопки сайта (логотип, бургер, переключатель языка). Нажимается
+   только крестик — у него pointer-events: auto. */
+.nr-logo-hint-tip.show { pointer-events: none; }
+
+/* Запас справа под крестик: кнопка 36px + 2px от края — та же посадка, что на
+   телефоне (см. media max-width 639px), только крестик чуть меньше. Текст при
+   этом не двигается: он отсчитывается от левого padding, а не от ширины бабла.
+
+   ОПТИЧЕСКИЙ ЦЕНТР ПО ВЕРТИКАЛИ. По геометрии текст уже стоит по центру, но
+   буквы у нас почти все строчные, а строчные ниже заглавных: их «масса» сидит
+   ниже середины строки. Замер по рендеру (Chrome, шрифт 600 15px):
+   центр плашки 26.25px, центр строчных 27.00px — текст читается как «съехавший
+   вниз». Поэтому верхний padding на 1px меньше нижнего: текст поднимается, а
+   сумма 13+15 остаётся прежней — высота плашки (52.5px) не меняется, крестик
+   по-прежнему ровно по центру (он абсолютный, top: 50%).
+   1px — середина между поправками под системные шрифты: Arial (Windows) просит
+   0.75px, Roboto (Android) — 1.16px. */
+.nr-logo-hint-tip {
+  padding-top: 13px;
+  padding-bottom: 15px;
+  padding-right: 38px;
+}
+
+/* Крестик — справа ПО ЦЕНТРУ по вертикали: в углу в него трудно попасть
+   пальцем. Кнопка 36px, сама иконка — 24px; на телефоне и планшете крупнее
+   (см. media ниже: там палец, а не курсор), чтобы крестик занимал почти всё
+   «окно», а не терялся в нём.
+   right: 2px — кнопка вплотную к краю бабла, пустоты справа от иконки нет. */
+.nr-logo-hint-tip.show .nr-logo-hint-close {
+  display: flex;
+  position: absolute;
+  top: 50%;
+  right: 2px;
+  transform: translateY(-50%);
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #9CA3AF;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: color 0.3s ease, background-color 0.3s ease;
+}
+
+/* Иконка крестика: размер задаём здесь, в разметке — только w-3.5 h-3.5. */
+.nr-logo-hint-close svg { width: 24px; height: 24px; }
+
+.nr-logo-hint-close:focus-visible,
+.nr-logo-hint-close:active {
+  color: #F59E0B;
+  background: rgba(245, 158, 11, 0.14);
+  outline: none;
+}
+
+/* Наведение — только там, где есть курсор: на тач-экране :hover залипает и
+   крестик оставался бы подсвеченным после тапа. */
+@media (hover: hover) and (pointer: fine) {
+  .nr-logo-hint-close:hover {
+    color: #F59E0B;
+    background: rgba(245, 158, 11, 0.14);
+  }
+}
+
+/* ─── Телефон: бабл гаснет вместе с логотипом в шапке ───────────────────
+   Ту же величину, что уходит в opacity логотипа (--nr-header-fade, 1 → 0 на
+   отрезке 50…550px прокрутки), пишет animations.js → paintHeaderFade прямо в
+   inline-стиль САМОГО бабла: он лежит в body и до переменной шапки не достаёт.
+   На <html> переменную не ставим — она наследуется, и запись на корне
+   заставляла бы браузер пересчитывать стили всего документа в каждом кадре
+   прокрутки (на ПК это значение вообще никто не читает).
+   Пока страница прокручена (класс nr-logo-hint-fade), сглаживание по
+   opacity снято: иначе бабл отставал бы от пальца — ровно та же история, что
+   была у фона шапки (см. style.css → #mainHeader). Наверху страницы переход
+   остаётся, поэтому появление идёт плавно.
+   Класс nr-logo-hint-clear (бабл погас целиком) отключает клики — как у
+   невидимого логотипа, иначе прозрачное пятно ловило бы тапы. */
+@media (max-width: 639px) {
+  .nr-logo-hint-tip.show { opacity: var(--nr-header-fade, 1); }
+
+  .nr-logo-hint-tip.nr-logo-hint-fade {
+    transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s;
+  }
+
+  .nr-logo-hint-tip.nr-logo-hint-clear .nr-logo-hint-close { pointer-events: none; }
+}
+
+/* ─── Телефон И планшет: крестик телефонного размера ─────────────────────
+   Планшет — тоже палец, а не курсор: тач-цель здесь нужна такая же, как на
+   телефоне, поэтому кнопка 40px и иконка 27px (на ПК — 36px и 24px, см.
+   основной блок выше). Запас справа — кнопка + 2px от края, чтобы справа от
+   крестика не оставалось пустой полосы.
+   Диапазон — до 1023.98px: ровно там в проекте кончается «планшет» и
+   начинается компьютерная версия (см. animations.css → полоса треков,
+   style.css → hero). Блок стоит ПОСЛЕ правил затухания, но это не важно:
+   они про opacity, а здесь только геометрия крестика.
+   Затухание вместе с логотипом остаётся телефонным (max-width: 639px):
+   на планшете логотип из шапки не гаснет, гаснуть баблу не с чем. */
+@media (max-width: 1023.98px) {
+  .nr-logo-hint-tip { padding-right: 42px; }
+
+  .nr-logo-hint-tip.show .nr-logo-hint-close {
+    right: 2px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .nr-logo-hint-close svg { width: 27px; height: 27px; }
+}
+
+/* «Уменьшить движение»: бабл просто проявляется на месте */
+@media (prefers-reduced-motion: reduce) {
+  .nr-logo-hint-tip,
+  .nr-logo-hint-tip.show {
+    transform: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ПОДСКАЗКИ К ВОПРОСАМ КАЛЬКУЛЯТОРА (кружок «i»)
+   Кружок стоит рядом с вопросом Да/Нет; наведение, фокус или тап показывают
+   бабл (script.js → showCalcHint). Вид бабла переиспользован у подсказки
+   BEFORE / AFTER (.nr-ab-hint-tip) — поэтому здесь только кружок и поправки
+   к позиции/хвостику для случаев «над кружком» и «под кружком».
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.nr-calc-hint-dot {
+  display: inline-block;
+  margin-left: 7px;
+  vertical-align: 2px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(245, 158, 11, 0.85);
+  background: rgba(245, 158, 11, 0.12);
+  color: #F59E0B;
+  /* Классическое центрирование текста в кружке: бокс — по содержимому
+     (content-box), line-height равен высоте содержимого, text-align центрирует по
+     горизонтали сама текстовая раскладка. Так буква встаёт ровно по центру кружка
+     независимо от кегля и метрик шрифта. Внешний диаметр = содержимое + 2 рамки. */
+  box-sizing: content-box;
+  width: 15px;
+  height: 15px;
+  line-height: 15px;
+  text-align: center;
+  font-family: 'Space Grotesk', 'Manrope', ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  font-style: normal;
+  cursor: help;
+  flex-shrink: 0;
+  /* Гасим системную подсветку тапа: иначе на телефоне поверх кружка на миг
+     всплывает серый квадрат, который «залипает» до следующего касания. */
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.35s ease, color 0.35s ease,
+              border-color 0.35s ease, box-shadow 0.35s ease,
+              transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@media (min-width: 640px) {
+  .nr-calc-hint-dot {
+    width: 17px;
+    height: 17px;
+    line-height: 17px;
+    font-size: 13px;
+  }
+}
+.nr-calc-hint-dot:hover,
+.nr-calc-hint-dot:focus-visible {
+  background: #F59E0B;
+  border-color: #F59E0B;
+  color: #0C0E12;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.6);
+  outline: none;
+}
+/* Нажатие: только для мыши. На сенсорных экранах состояние :active может «залипнуть»
+   после тапа до следующего касания — из-за этого кружок остаётся сжатым. Поэтому
+   анимацию нажатия включаем лишь там, где есть настоящий hover/курсор. */
+@media (hover: hover) and (pointer: fine) {
+  .nr-calc-hint-dot:active { transform: scale(0.92); }
+}
+
+/* Бабл подсказки: позицию (left/top) и место хвостика задаёт positionCalcHint —
+   поэтому держим X-центрирование прямо в трансформации (в дополнение к общему
+   подъезду снизу у .nr-ab-hint-tip), а не инлайном, чтобы анимация играла. */
+.nr-calc-hint-tip {
+  text-align: left;
+  font-weight: 600;
+  transform: translateX(-50%) translate3d(0, 10px, 0);
+  /* Хвостик смотрит вниз — на кружок под баблом (по умолчанию). */
+}
+.nr-calc-hint-tip.show {
+  transform: translateX(-50%) translate3d(0, 0, 0);
+}
+/* Телефон: бабл занимает почти всю ширину экрана — текст ложится ровно, без
+   рваных переносов по одному слову. Ширину держим чуть меньше окна, чтобы по
+   краям оставался воздух; позиционирование (positionCalcHint) уже учитывает
+   clamp по краям, поэтому широкий бабл не вылезает за экран. */
+@media (max-width: 640px) {
+  .nr-calc-hint-tip {
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+    padding: 13px 16px;
+    font-size: 0.9375rem;
+  }
+}
+/* Если бабл показан ПОД кружком (мало места сверху) — разворачиваем хвостик вверх. */
+.nr-calc-hint-tip.nr-calc-hint-tip--below::after {
+  top: -8px;
+  bottom: auto;
+  background-color: rgba(10, 13, 20, 0.98);
+  border-right: none;
+  border-bottom: none;
+  border-left: 1px solid rgba(245, 158, 11, 0.45);
+  border-top: 1px solid rgba(245, 158, 11, 0.45);
+  border-bottom-right-radius: 0;
+  border-top-left-radius: 5px;
+}
+
+/* «Уменьшить движение»: бабл просто проявляется на месте */
+@media (prefers-reduced-motion: reduce) {
+  .nr-calc-hint-tip,
+  .nr-calc-hint-tip.show {
+    transform: translateX(-50%);
+  }
+}
+
+/* ── Финал калькулятора: заголовок «Ориентировочная стоимость» и подпись ────── */
+/* На телефонах заголовок должен всегда укладываться в одну строку. Текст длинный,
+   поэтому: запрещаем перенос и слегка прижимаем кегль к ширине экрана (vw), чтобы
+   строка гарантированно влезала и на 320px. Со sm-брейкпакта возвращаем обычный
+   размер из класса text-2xl. */
+@media (max-width: 639px) {
+  .nr-calc-result-title {
+    white-space: nowrap;
+    font-size: clamp(0.95rem, 5.1vw, 1.25rem);
+  }
+}
+/* На телефонах убираем пояснение «Это предварительный расчёт…» — оставляем только
+   заголовок и итог. На планшетах/десктопе подпись остаётся. */
+@media (max-width: 639px) {
+  .nr-calc-result-sub { display: none; }
+}
+

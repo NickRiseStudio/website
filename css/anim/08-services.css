@@ -1,0 +1,192 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   NICK RISE STUDIO — ANIMATION / УСЛУГИ: СТОЙКА РЭКА, БОЛТЫ, HOVER
+   Источник: animations.css, строки 1815–1999 (нарезка 1:1, поведение не менялось)
+   Слой: css/anim/* — после ВСЕХ css/style/*.
+         Порядок подключения = порядок номеров файлов.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ═══ 09. УСЛУГИ — стойка рэка ════════════════════════════════════════ */
+
+#servicesContainer > * {
+  position: relative;
+  transform-style: flat !important;
+}
+
+@media (min-width: 640px) {
+  #servicesContainer > * {
+    transform-style: flat !important;
+  }
+}
+
+#servicesContainer > *::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.07) 50%, transparent 60%);
+  background-size: 250% 100%;
+  background-position: 170% 0;
+  transition: background-position 1s var(--nr-ease);
+}
+
+@media (max-width: 639px) {
+  #servicesContainer > *::after { display: none; }
+  .nr-ledstrip { display: none !important; }
+}
+
+/* Наведение — только там, где есть настоящий курсор: на телефонах и планшетах
+   :hover «залипает» после касания, поэтому карточки услуг оставались
+   подсвеченными (блик, винты, LED-лента, блик по цене) и при свайпе, и при
+   тапе. Тот же приём, что у карточек треков (выше) и отзывов (ниже). */
+@media (hover: hover) and (pointer: fine) {
+  #servicesContainer > *:hover::after { background-position: -60% 0; }
+}
+
+/* Винты рэка поворачиваются при наведении */
+.rack-bolt { transition: transform 0.6s var(--nr-snap), box-shadow 0.4s ease; }
+
+@media (hover: hover) and (pointer: fine) {
+  #servicesContainer > *:hover .rack-bolt,
+  .rack-card:hover .rack-bolt {
+    transform: rotate(92deg);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 8px rgba(245, 158, 11, 0.5);
+  }
+}
+
+/* Лента индикаторов по верхней кромке карточки */
+.nr-ledstrip {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 3px;
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+.nr-ledstrip i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #222836;
+}
+
+.nr-ledstrip i:nth-child(1) { animation-delay: 0s; }
+.nr-ledstrip i:nth-child(2) { animation-delay: 0.14s; }
+.nr-ledstrip i:nth-child(3) { animation-delay: 0.28s; }
+.nr-ledstrip i:nth-child(4) { animation-delay: 0.42s; }
+.nr-ledstrip i:nth-child(5) { animation-delay: 0.56s; }
+.nr-ledstrip i:nth-child(6) { animation-delay: 0.7s; }
+.nr-ledstrip i:nth-child(7) { animation-delay: 0.84s; }
+.nr-ledstrip i:nth-child(8) { animation-delay: 0.98s; }
+
+.popular-rack-card .nr-ledstrip { top: 22px; }
+
+@media (hover: hover) and (pointer: fine) {
+  #servicesContainer > *:hover .nr-ledstrip { opacity: 1; }
+  #servicesContainer > *:hover .nr-ledstrip i { animation: nrLedChase 1.3s ease-in-out infinite; }
+}
+
+@keyframes nrLedChase {
+  0%, 100% { background: #222836; box-shadow: none; }
+  50%      { background: var(--nr-green); box-shadow: 0 0 7px var(--nr-green); }
+}
+
+.popular-rack-card .nr-ledstrip i { animation-name: nrLedChaseAmber; }
+
+@keyframes nrLedChaseAmber {
+  0%, 100% { background: #2A2412; box-shadow: none; }
+  50%      { background: var(--nr-amber); box-shadow: 0 0 8px var(--nr-amber); }
+}
+
+/* Популярная карточка — аура */
+.popular-rack-card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow: 0 0 24px rgba(245, 158, 11, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  animation: nrPopularAura 4.2s ease-in-out infinite;
+  will-change: opacity;
+}
+
+@keyframes nrPopularAura {
+  0%, 100% { opacity: 0; }
+  50%      { opacity: 1; }
+}
+
+.popular-badge {
+  position: relative;
+  overflow: hidden;
+  display: inline-block;
+}
+
+.popular-badge::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.7) 50%, transparent 60%);
+  background-size: 250% 100%;
+  animation: nrBadgeShine 3.4s ease-in-out infinite;
+}
+
+@keyframes nrBadgeShine {
+  0%, 55% { background-position: 180% 0; }
+  85%, 100% { background-position: -70% 0; }
+}
+
+/* Галочки списка — яркий изумрудный студийный акцент */
+#servicesContainer li svg,
+#servicesContainer .service-check-icon {
+  color: #34D399 !important;
+  stroke: #34D399 !important;
+  filter: drop-shadow(0 0 5px rgba(52, 211, 153, 0.45));
+  overflow: visible;
+  flex-shrink: 0;
+}
+
+#servicesContainer li svg polyline,
+#servicesContainer .service-check-icon polyline {
+  stroke: #34D399 !important;
+  stroke-dasharray: 26;
+  stroke-dashoffset: 0 !important;
+  transition: stroke-dashoffset 0.4s ease;
+}
+
+#servicesContainer li.nr-in svg polyline {
+  stroke-dashoffset: 0 !important;
+}
+
+/* Цена — блик по градиенту */
+#servicesContainer .bg-clip-text { background-size: 220% 100%; }
+
+@media (hover: hover) and (pointer: fine) {
+  #servicesContainer > *:hover .bg-clip-text { animation: nrPriceShine 2.6s ease-in-out infinite; }
+}
+
+@keyframes nrPriceShine {
+  0%, 100% { background-position: 0% 0; }
+  50%      { background-position: 100% 0; }
+}
+
+/* Кнопка «Заказать» */
+#servicesContainer button { position: relative; overflow: hidden; }
+
+#servicesContainer button::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.5) 50%, transparent 60%);
+  background-size: 260% 100%;
+  background-position: 180% 0;
+  transition: background-position 0.8s var(--nr-ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  #servicesContainer button:hover::after { background-position: -60% 0; }
+}
+

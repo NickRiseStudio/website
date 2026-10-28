@@ -4,7 +4,7 @@
    Движок — Lenis (darkroom.engineering), локальный vendor/lenis.min.js —
    сборка «1.3.25-framer» (та же, что ставит Framer/Rep Republic; глобал
    window.Lenis). Модуль сохраняет тот публичный API, которым пользуются
-   index.html, animations.js, script.js и lab-инструменты:
+   index.html, animations.js, js/*.js и lab-инструменты:
 
      SmoothScroll.enable(opts) / destroy() / cancel() / resync() /
      isEnabled() / scrollTo(y, opts);  SmoothScroll(opts);
@@ -18,7 +18,7 @@
      • cancel()  — гасит незавершённую инерцию, движок остаётся
                    (фейдер микшера, якорная навигация).
      • resync()  — пересчёт размеров после resize/zoom.
-     • scrollTo(y, opts) — программный плавный скролл (якоря в script.js).
+     • scrollTo(y, opts) — программный плавный скролл (якоря в js/scroll.js).
 
    Настройки задаются в index.html (smoothConfig). Ощущение-ориентир —
    шаблон Rep Republic: у Framer под капотом та же Lenis.

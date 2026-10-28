@@ -27,7 +27,7 @@ const CONFIG = {
       nav: {
         logoTitle: 'Nick Rise Studio',
         // Подсказка про логотип в шапке: всплывает при заходе на сайт под
-        // логотипом (script.js → maybeShowLogoHint). Оранжевый акцент — тем же
+        // логотипом (js/logo-hint.js → maybeShowLogoHint). Оранжевый акцент — тем же
         // классом nr-ab-hint-accent, что у подсказки плеера и калькулятора.
         logoHint: 'Здесь вы можете узнать <span class="nr-ab-hint-accent">обо мне</span>',
         abPlayer: 'Примеры A/B',
@@ -43,7 +43,7 @@ const CONFIG = {
            самая дорогая высота. Без принудительного переноса «Сведение /
            Мастеринг» (в <span class="whitespace-nowrap">) встаёт в одну строку,
            и весь диапазон размеров шрифта работает на читаемость, а не тратится
-           на вторую строку. Механизм — штатный resolveDeviceText (script.js):
+           на вторую строку. Механизм — штатный resolveDeviceText (js/i18n.js):
            объект с ключами desktop/tablet/mobile. */
         title: {
           desktop: 'Профессиональное<br><span class="whitespace-nowrap">Сведение / Мастеринг</span>',
@@ -58,7 +58,7 @@ const CONFIG = {
         /* Текст USP. На компьютере и планшете — полный (два предложения).
            На телефоне кадр маленький, поэтому оставлено только первое
            предложение: главный экран становится выше, а смысл не теряется.
-           Механизм — тот же resolveDeviceText (script.js), что у title/subtitle. */
+           Механизм — тот же resolveDeviceText (js/i18n.js), что у title/subtitle. */
         usp: {
           desktop: 'Превращаю демо-записи и сырые мультитреки в мощный, объемный и конкурентоспособный звук мирового уровня. От первых тактов до финального мастера — каждый элемент на своем месте, каждая частота под контролем.',
           tablet: 'Превращаю демо-записи и сырые мультитреки в мощный, объемный и конкурентоспособный звук мирового уровня. От первых тактов до финального мастера — каждый элемент на своем месте, каждая частота под контролем.',
@@ -78,7 +78,7 @@ const CONFIG = {
         nextBtn: 'Вперед',
         audioError: 'Не удалось загрузить файл трека. Проверьте соединение и нажмите на трек ещё раз.',
         // Подсказка над кнопкой BEFORE / AFTER — появляется при первом
-        // включении трека (script.js → maybeShowAbHint). «до» и «после»
+        // включении трека (js/player-ui.js → maybeShowAbHint). «до» и «после»
         // выделены оранжевым, а <br> делит подсказку на две строки: inline-HTML
         // внутри строки допустим, renderI18nText вставит его как HTML
         // (классы и вид — в style.css).
@@ -108,7 +108,7 @@ const CONFIG = {
           individualNote: 'Обговаривается индивидуально',
           qMastering: 'Вам нужен мастеринг?',
           // Подсказка к вопросу о мастеринге: появляется по наведению/тапу на
-          // кружок «i» рядом с вопросом (script.js → showCalcHint). Вид — тот же,
+          // кружок «i» рядом с вопросом (js/calculator.js → showCalcHint). Вид — тот же,
           // что у подсказки про BEFORE / AFTER (бабл с хвостиком), оранжевые
           // акценты — тем же классом nr-ab-hint-accent. Текст идёт сплошным
           // потоком (переносы расставляет браузер под ширину бабла), <br> — только
@@ -195,7 +195,7 @@ const CONFIG = {
         // Вступление — отдельной строкой (.nr-about-training-lead): фраза
         // «Проходил обучение у лучших в индустрии:» стоит в одну строку и тем
         // же видом, что «С радостью готов поработать с тобой!». Кегль обеих
-        // считают style.css (блок «ДВЕ ГЛАВНЫЕ СТРОКИ…») и script.js →
+        // считают style.css (блок «ДВЕ ГЛАВНЫЕ СТРОКИ…») и js/about.js →
         // fitAboutLeads(), поэтому <br> здесь не нужен и вреден — он вернул бы
         // перенос. Раньше стоял <br> после «Проходил обучение», и фраза рвалась
         // на две строки.
@@ -217,7 +217,7 @@ const CONFIG = {
         bioText3: 'С радостью готов поработать с тобой!',
         // Строка под «С радостью готов поработать с тобой!» на финальном кадре
         // #aboutShowcase. Промокод — кнопка (data-about-action="copy-discount"):
-        // по клику копируется value в буфер (script.js → initAboutShowcase)
+        // по клику копируется value в буфер (js/about.js → initAboutShowcase)
         // и всплывает тост toastDiscountCopied. Подпись title — своя у языка.
         discount: 'Забери скидку в 10% <button type="button" class="nr-about-discount-code" data-about-action="copy-discount" title="Скопировать промокод">«NRSDiscount»</button>',
         toastDiscountCopied: 'Промокод NRSDiscount скопирован!',
@@ -241,7 +241,7 @@ const CONFIG = {
       },
 
       // Метаданные страницы: title и meta description подставляются по языку
-      // в script.js → updateDocumentMeta(). og:*/twitter:* — статичные, двуязычные.
+      // в js/i18n.js → updateDocumentMeta(). og:*/twitter:* — статичные, двуязычные.
       meta: {
         title: 'Nick Rise Studio — Профессиональное сведение & мастеринг',
         description: 'Премиальное сведение и мастеринг треков от Ника Райза (Nick Rise). Аналоговый звук SSL, Neve, Tube-Tech под стандарты Spotify, Apple Music и Радио.'
@@ -305,7 +305,7 @@ const CONFIG = {
         nextBtn: 'Next',
         audioError: 'Could not load the track file. Check your connection and tap the track again.',
         // Hint above the BEFORE / AFTER switch — shown on the first track start
-        // (script.js → maybeShowAbHint). "before" and "after" are highlighted in
+        // (js/player-ui.js → maybeShowAbHint). "before" and "after" are highlighted in
         // orange and the <br> splits the hint into two lines: inline HTML inside
         // a string is allowed, renderI18nText inserts it as HTML (the look lives
         // in style.css).
@@ -335,7 +335,7 @@ const CONFIG = {
           individualNote: 'Quoted individually',
           qMastering: 'Do you need mastering?',
           // Hint for the mastering question: shown on hover/tap of the "i" circle
-          // next to the question (script.js → showCalcHint). The look matches the
+          // next to the question (js/calculator.js → showCalcHint). The look matches the
           // BEFORE / AFTER hint bubble; orange accents use nr-ab-hint-accent.
           // The text flows naturally (the browser wraps it to the bubble width).
           hintMastering: 'Mastering is the final treatment of a finished mix: frequency balance, <span class="nr-ab-hint-accent">streaming loudness</span>, density and a polished sound. It comes <span class="nr-ab-hint-accent">after mixing</span>.',
@@ -447,7 +447,7 @@ const CONFIG = {
       },
 
       // Page metadata: title and meta description are set per language
-      // by script.js → updateDocumentMeta(). og:*/twitter:* are static and bilingual.
+      // by js/i18n.js → updateDocumentMeta(). og:*/twitter:* are static and bilingual.
       meta: {
         title: 'Nick Rise Studio — Professional Mixing & Mastering',
         description: 'Premium mixing and mastering by Nick Rise. Analog SSL, Neve and Tube-Tech sound, mastered to Spotify, Apple Music and radio standards.'
@@ -706,7 +706,7 @@ const CONFIG = {
        textRu / textEn — текст отзыва. Английский — перевод, поэтому в
                   EN-версии под текстом стоит пометка reviews.translated.
      Порядок в массиве = раскладка по лентам: чётные отзывы (индексы 0, 2, 4…)
-     уходят в верхнюю бегущую ленту, нечётные — в нижнюю (script.js → renderReviews()).
+     уходят в верхнюю бегущую ленту, нечётные — в нижнюю (js/reviews.js → renderReviews()).
      Длинные отзывы стоят так, чтобы попадать в верхнюю ленту: у них в ленте есть
      подпись «Читать далее…», и увидеть их нужно первыми. */
   reviewsData: [

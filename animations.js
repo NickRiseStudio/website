@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════════
    NICK RISE STUDIO — ANIMATION LAYER  (animations.js)
-   Подключается ПОСЛЕ script.js.
+   Подключается ПОСЛЕ js/player-ui.js.
 
    Файл НИЧЕГО не меняет в логике сайта: он только «оборачивает»
    существующие функции, чтобы добавить визуальные эффекты после их
@@ -56,7 +56,7 @@
   if (isIOS) document.documentElement.classList.add('nr-ios');
 
   /* Телефон и планшет (<1024px): появления блоков при прокрутке выключены.
-     Тот же медиазапрос, что в script.js (NR_NO_SCROLL_REVEAL) и в
+     Тот же медиазапрос, что в js/state.js (NR_NO_SCROLL_REVEAL) и в
      animations.css (секция 16). ПК-версия не затрагивается. */
   var NO_REVEAL = window.matchMedia('(max-width: 1023.98px)').matches;
 
@@ -220,10 +220,10 @@
     }
 
     /* Нажатия мышью на десктопе вызывают клик-анимацию сразу. Исключение —
-       ленты отзывов: на ПК их тянут мышью (script.js → initReviewDrag), и
+       ленты отзывов: на ПК их тянут мышью (js/reviews.js → initReviewDrag), и
        нажатие там ещё не значит клик. Круги ждут отпускания кнопки и
        появляются, только если указатель не сдвинулся (порог 6 px — как
-       REVIEW_DRAG_THRESHOLD в script.js). */
+       REVIEW_DRAG_THRESHOLD в js/reviews.js). */
     var reviewPress = null;
 
     document.addEventListener('pointerdown', function (e) {
@@ -2161,7 +2161,7 @@
       ents.forEach(function (en) {
         en.target.classList.toggle('nr-off', !en.isIntersecting);
         // Секция отзывов ушла с экрана: раскрытые отзывы сворачиваем, ленты
-        // снимаем с паузы — возвращаешься, а всё снова едет (script.js →
+        // снимаем с паузы — возвращаешься, а всё снова едет (js/reviews.js →
         // collapseAllReviews). Порог тот же, что у .nr-off: карточки вне экрана.
         if (en.target.id === 'reviews' && !en.isIntersecting) {
           if (typeof collapseAllReviews === 'function') collapseAllReviews();
@@ -2707,7 +2707,7 @@
   }
 
   /* Вход главного экрана ждёт заставку. Начальное состояние героя (y/opacity)
-     ставит script.js → initGsapAnimations сразу, под непрозрачным оверлеем, а
+     ставит js/gsap-reveal.js → initGsapAnimations сразу, под непрозрачным оверлеем, а
      сама анимация — пауза-таймлайн, который запускает playHeroIntro().
      Класс nr-title-hold держит на паузе пословный вкат заголовка: без него
      слова доигрывали бы за заставкой (animations.css, рядом с .nr-w). */

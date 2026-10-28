@@ -1,0 +1,123 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   NICK RISE STUDIO — STYLE / ПЕРЕКЛЮЧАТЕЛЬ ЯЗЫКА ЛЕНТЫ A/B
+   Источник: style.css, строки 3690–3805 (нарезка 1:1, поведение не менялось)
+   Слой: css/style/* — после tailwind.css и vendor/lenis.css,
+         перед css/anim/*. Порядок подключения = порядок номеров файлов.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════════════════
+   TRACK AUDIO LANGUAGE SWITCHER (SECTION A/B PLAYER) - HORIZONTAL LAYOUT
+   ═══════════════════════════════════════════════════════════════════════ */
+#trackLangSwitcher {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  padding: 4px !important;
+  background-color: #090C12 !important;
+  border: 1px solid rgba(55, 65, 81, 0.8) !important;
+  border-radius: 16px !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6) !important;
+  width: fit-content !important;
+  max-width: 100% !important;
+  margin: 0 auto !important;
+}
+
+.track-lang-btn {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  padding: 8px 16px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  border-radius: 12px !important;
+  cursor: pointer !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  min-width: 135px !important;
+}
+
+@media (max-width: 380px) {
+  #trackLangSwitcher {
+    gap: 4px !important;
+    padding: 3px !important;
+  }
+  .track-lang-btn {
+    min-width: 120px !important;
+    padding: 7px 10px !important;
+    font-size: 11px !important;
+  }
+}
+
+/* ── ЗАЗОР МЕЖДУ ПЕРЕКЛЮЧАТЕЛЕМ ЯЗЫКА И ЛЕНТОЙ ТРЕКОВ (телефон) ──────────
+   Отступ даёт не сам переключатель, а его родитель #playerContentContainer:
+   класс space-y-6 в Tailwind v4 разворачивается в
+   :where(.space-y-6 > :not(:last-child)) { margin-block-end: 24px }, то есть
+   между плашкой «На английском / На русском» и карточками треков было 24px.
+   На телефоне это много — здесь 15px. Правило заключено в max-width: 639px,
+   поэтому планшет и компьютер (там 24px смотрится нормально) не затронуты.
+   justify-center в селекторе нужен, чтобы не задеть #trackPagination: у неё
+   тоже есть flex items-center, но её выравнивание — justify-between, и она
+   последний ребёнок (значит, space-y-6 ей отступ вообще не даёт). */
+@media (max-width: 639px) {
+  #playerContentContainer > div.flex.items-center.justify-center {
+    margin-bottom: 15px;   /* было 24 (space-y-6) */
+  }
+}
+
+@keyframes nrLangVaporOut {
+  0% {
+    opacity: 1;
+    filter: blur(0px);
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    opacity: 0;
+    filter: blur(6px);
+    transform: translate3d(0, -2px, 0);
+  }
+}
+
+@keyframes nrLangVaporIn {
+  0% {
+    opacity: 0;
+    filter: blur(6px);
+    transform: translate3d(0, 2px, 0);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0px);
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lang-vapor-out {
+    animation: nrLangFadeOut 0.25s ease forwards !important;
+    filter: none !important;
+  }
+  .lang-vapor-in {
+    animation: nrLangFadeIn 0.3s ease forwards !important;
+    filter: none !important;
+  }
+  @keyframes nrLangFadeOut {
+    to { opacity: 0; }
+  }
+  @keyframes nrLangFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+}
+
+
+
+
+
+
+

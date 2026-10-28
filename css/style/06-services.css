@@ -1,0 +1,437 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   NICK RISE STUDIO — STYLE / УСЛУГИ: RACK-КАРТОЧКИ, КАРУСЕЛЬ, ВЫСОТА КАРТОЧЕК
+   Источник: style.css, строки 1375–1804 (нарезка 1:1, поведение не менялось)
+   Слой: css/style/* — после tailwind.css и vendor/lenis.css,
+         перед css/anim/*. Порядок подключения = порядок номеров файлов.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Premium Rack Unit Cards */
+#servicesContainer {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: auto;
+}
+
+@media (max-width: 639px) {
+  #servicesContainer {
+    perspective: 1000px;
+    perspective-origin: center center;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: calc(50vw - 145px);
+    padding-left: calc(50vw - 145px) !important;
+    padding-right: calc(50vw - 145px) !important;
+    touch-action: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+  .service-mobile-card {
+    width: 290px !important;
+    min-width: 290px !important;
+    max-width: 290px !important;
+    scroll-snap-align: center;
+    scroll-snap-stop: always;
+    margin-right: -36px;
+    transform-origin: center center;
+    will-change: transform, opacity, z-index;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    touch-action: auto;
+  }
+  .service-mobile-card:last-child {
+    margin-right: 0 !important;
+  }
+
+  /* Телефон: на обратной стороне карточки услуги скрываем блок «Что входит»
+     (заголовок + список галочек). Тот же список уже целиком показан на
+     лицевой стороне, а на обороте он дублировался и делал обратную сторону
+     выше лицевой. Высота карточки — большая из сторон (.service-card-inner,
+     грани лежат в одной grid-ячейке), поэтому из-за этого дубликата карточка
+     росла, а на лицевой появлялась пустота между списком и блоком цены.
+     Только ≤639px (карусель телефона) — планшет и ПК не затронуты. */
+  .service-card-face--back .service-card-includes-title,
+  .service-card-face--back .service-card-back-features {
+    display: none;
+  }
+}
+
+.rack-card {
+  background: linear-gradient(165deg, #131722 0%, #0B0E15 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  border-radius: 18px;
+  position: relative;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+@media (min-width: 640px) {
+  .rack-card {
+    transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+  }
+}
+
+/* Наведение — только там, где есть настоящий курсор: на телефонах и планшетах
+   :hover «залипает» после касания, и карточка (услуги, FAQ, отзывы, корпус
+   контактов) остаётся подсвеченной как под мышью — рамка и свечение видны и
+   после свайпа, и после тапа. Тот же приём, что у карточек треков и отзывов
+   (animations.css). */
+@media (hover: hover) and (pointer: fine) {
+  .rack-card:hover {
+    border-color: rgba(245, 158, 11, 0.35);
+    box-shadow: 0 28px 55px rgba(0, 0, 0, 0.8), 0 0 28px rgba(245, 158, 11, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+}
+
+.rack-bolt {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #71717A, #18181B);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.9), 0 1px 1px rgba(255, 255, 255, 0.12);
+  border: 1px solid #090A0F;
+}
+
+.popular-rack-card {
+  /* ТЕСТ: непрозрачный фон на ВСЕХ размерах (в т.ч. на телефоне) — как у двух
+     соседних карточек услуг (linear-gradient из .rack-card). Прежняя янтарная
+     заливка начиналась с rgba(245, 158, 11, 0.14) и просвечивала фоном
+     страницы, из-за чего средняя карточка выглядела прозрачной. Вернуть как
+     было — восстановить эту строку:
+     radial-gradient(circle at 50% 0%, rgba(245, 158, 11, 0.14) 0%, rgba(28, 24, 17, 0.95) 45%, #0D1017 100%) */
+  background: linear-gradient(165deg, #131722 0%, #0B0E15 100%);
+  border: 2px solid #F59E0B !important;
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.22), 0 10px 24px rgba(0, 0, 0, 0.65), inset 0 0 16px rgba(245, 158, 11, 0.08);
+  border-radius: 18px;
+  position: relative;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  isolation: isolate;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+@media (min-width: 640px) {
+  .popular-rack-card {
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .popular-rack-card:hover {
+    box-shadow: 0 0 35px rgba(245, 158, 11, 0.45), 0 18px 36px rgba(0, 0, 0, 0.8), inset 0 0 28px rgba(245, 158, 11, 0.16);
+  }
+}
+
+/* ─── Тень у карточек УСЛУГ, FAQ, КОНТАКТОВ и ПРИМЕРОВ A/B (правка 10.10) ──
+   Заказчику понравилась тень карточек отзывов — короткая и почти незаметная
+   (см. style.css → #reviews .review-card). Здесь ровно те же значения, и
+   правка действует на ВСЕХ устройствах (не только на компьютере).
+
+   Почему новые правила, а не правка .rack-card: этот же класс носят модалки
+   («Связаться», «Обо мне», калькулятор), а их трогать не просили. Селекторы
+   по id (1,0,0) перебивают .rack-card (0,1,0) без !important.
+
+   ПОЧЕМУ ЗДЕСЬ ЖЕ ПЕРЕОПРЕДЕЛЕНО И НАВЕДЕНИЕ: у правил с id специфичность
+   выше, чем у .rack-card:hover (0,1,1), поэтому без своих hover-правил
+   подъём карточки под курсором пропал бы совсем. Ниже он сохранён и тоже
+   повторяет наведение отзывов. Подъём (translateY) не трогаем.
+   Карточки треков (animations.css) держат те же значения — менять их нужно
+   вместе, иначе разделы разойдутся по виду. */
+#servicesContainer > *,
+#faqContainer > *,
+#contacts .rack-card {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* «Популярный» тариф: тёмная часть тени — как у отзывов, а янтарная аура и
+   внутренняя подсветка остаются увеличенными: по ним карточка и опознаётся
+   как «популярная». */
+#servicesContainer > .popular-rack-card {
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.22), 0 6px 16px rgba(0, 0, 0, 0.35), inset 0 0 16px rgba(245, 158, 11, 0.08);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  #servicesContainer > *:hover,
+  #faqContainer > *:hover,
+  #contacts .rack-card:hover {
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.4), 0 0 20px rgba(245, 158, 11, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  #servicesContainer > .popular-rack-card:hover {
+    box-shadow: 0 0 28px rgba(245, 158, 11, 0.35), 0 10px 22px rgba(0, 0, 0, 0.4), inset 0 0 22px rgba(245, 158, 11, 0.14);
+  }
+}
+
+.popular-rack-card * {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.popular-badge {
+  background: linear-gradient(90deg, #F59E0B 0%, #D97706 100%);
+  color: #0B0D12;
+  font-weight: 900;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  padding: 4px 16px;
+  border-radius: 20px;
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.45);
+  margin: 0 auto;
+}
+
+.service-card-popular {
+  position: absolute;
+  top: -14px;
+  left: 0;
+  right: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* ── Переворот карточки услуги (клик по карточке) ──────────────────────────
+   Сама оболочка карточки (#servicesContainer > *) остаётся неподвижной: её
+   transform'ом управляют coverflow карусели на телефоне и GSAP при появлении
+   на планшете/ПК. Крутится внутренний слой .service-card-inner.
+
+   Грани лежат в одной grid-ячейке (grid-area: 1 / 1) — так высота карточки
+   равна большей из сторон (front/back), и при перевороте ничего не «сжимается».
+   Обе грани получают .service-card-face; задняя — backface-visibility: hidden,
+   чтобы не просвечивала сквозь переднюю. */
+#servicesContainer > * {
+  perspective: 1200px;
+}
+
+.service-card-inner {
+  position: relative;
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+  transform-style: preserve-3d;
+  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+.service-card-face {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.service-card-face--back {
+  transform: rotateY(180deg);
+}
+
+#servicesContainer > *.is-flipped .service-card-inner {
+  transform: rotateY(180deg);
+}
+
+/* Уважение к системной настройке «уменьшить движение»: без 3D-анимации */
+@media (prefers-reduced-motion: reduce) {
+  .service-card-inner { transition: none; }
+}
+
+/* Кнопка «Назад» на обратной стороне карточки услуги */
+.service-card-back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   КАРТОЧКИ УСЛУГ НА ПК — КРУПНЫЙ ТЕКСТ + КОМПОНОВКА КАК НА ТЕЛЕФОНЕ
+   ═══════════════════════════════════════════════════════════════════════
+   ИСТОРИЯ ПРАВКИ (важно, чтобы не ходить по кругу).
+   • Была попытка сделать ПК-карточку буквально телефонной: ширина 290px и
+     кегли телефона (заголовок 20px, текст 14px, цена 24px). На компьютере это
+     выглядело мелко — рядом с остальными разделами (там кегли специально
+     увеличены) карточки читались как «уменьшенная копия».
+   • Теперь так: РАЗМЕР прежний, крупный (ширина на всю колонку сетки, кегли
+     как в прошлой правке), а от телефона взята только КОМПОНОВКА — состав
+     блоков оборота и аккуратные отступы. Текст и размеры НЕ уменьшены.
+
+   ЧТО ОСТАВЛЕНО КРУПНЫМ (min-width: 1024px, было и остаётся):
+     заголовок          clamp(24px, 2.05vw, 26px)
+     описание           16px
+     пункты списка      16px
+     «от» / «from»      13px
+     цена               clamp(30px, 2.5vw, 32px)
+     кнопка «Заказать»  clamp(16px, 1.35vw, 17px)
+   Ширина карточки — как у сетки: 384px при 1280px+, ~299px при 1024px
+   (поля p-5 = 20px, поэтому текст внутри 344px / 259px).
+
+   ЧТО ВЗЯТО ОТ ТЕЛЕФОНА (структура, а не размер):
+   1. ОБОРОТ БЕЗ ДУБЛИКАТА. На телефоне блок «Что входит» (заголовок + список
+      галочек) на обороте скрыт: тот же список уже целиком стоит на лицевой
+      стороне. На ПК он дублировался и раздувал оборот. Теперь скрыт и здесь —
+      оборот стал короче, а информации не убавилось. Это же убирает прежнюю
+      причину, по которой высоту карточки задавал оборот: теперь её задаёт
+      лицевая сторона, то есть карточка стала НИЖЕ, а не выше.
+   2. ОТСТУПЫ ЛИЦЕВОЙ СТОРОНЫ — плотнее, как на телефоне, но в масштабе
+      крупного кегля:
+        зазор между пунктами списка   12 → 10px
+        отступ списка снизу           20 → 16px
+        разделитель: сверху           20 → 12px
+        разделитель: снизу            20 → 16px
+      Итого −18px по высоте лицевой стороны. Кегли при этом не тронуты, так
+      что «мелко» не становится — просто уходит лишний воздух.
+   3. ЗАГОЛОВОК ОБОРОТА — 18px (как на телефоне относительно остального):
+      было 18px и остаётся, правило ниже фиксирует значение явно, чтобы
+      дальнейшие правки не «съехали».
+
+   ЧЕГО ЗДЕСЬ НЕТ. Подгонки отступов под длину русских текстов (блок
+   html[data-lang="ru"] … margin-*) — она больше не нужна: оборот больше не
+   дублирует список, поэтому высоту задаёт лицо, а лишняя строка русского
+   текста уже не растягивает карточку на 26px.
+
+   ПОЧЕМУ БЕЗ !important. Все правила начинаются с id #servicesContainer,
+   поэтому перебивают утилиты Tailwind (0,1,0). У space-y-* в Tailwind v4
+   селектор обёрнут в :where() (специфичность 0), поэтому margin-block-end у
+   пунктов списка переопределяется обычным селектором.
+
+   Телефон (max-width: 639px) и планшет (640–1023px) не затронуты: правила
+   живут только в min-width: 1024px.
+   ═══════════════════════════════════════════════════════════════════════ */
+@media (min-width: 1024px) {
+  /* ── Лицевая сторона: крупные кегли ─────────────────────────────────── */
+  #servicesContainer .service-card-face--front .service-card-title {
+    font-size: clamp(24px, 2.05vw, 26px);
+  }
+
+  #servicesContainer .service-card-face--front .service-card-desc,
+  #servicesContainer .service-card-face--front .service-feature-item {
+    font-size: 16px;
+  }
+
+  #servicesContainer .service-card-face--front .service-card-from {
+    font-size: 13px;
+  }
+
+  #servicesContainer .service-card-face--front .service-card-price {
+    font-size: clamp(30px, 2.5vw, 32px);
+  }
+
+  #servicesContainer .service-card-face--front .service-card-order-btn {
+    font-size: clamp(16px, 1.35vw, 17px);
+  }
+
+  /* ── Лицевая сторона: плотнее по вертикали (как на телефоне) ────────── */
+  /* Пункты списка: зазор 12 → 10px (три зазора на список). */
+  #servicesContainer .service-card-face--front .service-card-features > :not(:last-child) {
+    margin-block-end: 10px;
+  }
+
+  /* Список: отступ снизу 20 → 16px. */
+  #servicesContainer .service-card-face--front .service-card-features {
+    margin-bottom: 16px;
+  }
+
+  /* Разделитель: сверху 12px, снизу 16px (было 20/20). */
+  #servicesContainer .service-card-divider {
+    margin-top: 12px;
+    margin-bottom: 16px;
+  }
+
+  /* ── Оборот ──────────────────────────────────────────────────────────── */
+  #servicesContainer .service-card-face--back .service-card-back-title {
+    font-size: 18px;
+  }
+
+  /* Дубликат списка «Что входит» скрыт — он уже есть на лицевой стороне. */
+  #servicesContainer .service-card-face--back .service-card-includes-title,
+  #servicesContainer .service-card-face--back .service-card-back-features {
+    display: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ВЫСОТА КАРТОЧЕК УСЛУГ НА ПК: АНГЛИЙСКАЯ ВЕРСИЯ = РУССКАЯ
+   ═══════════════════════════════════════════════════════════════════════
+   ЗАЧЕМ. Русские тексты длиннее английских, поэтому на одной и той же
+   ширине они занимают больше строк — и русские карточки выходят выше
+   (на 1280px: 505px против 479px). Английские при этом «недолитые»: снизу
+   остаётся пустое место, а при переключении языка секция прыгает по высоте.
+   Задача — одинаковая высота в обеих версиях.
+
+   ПОЧЕМУ min-height, А НЕ ЧТО-ТО ДРУГОЕ. Разница возникает из-за переносов
+   строк, а не из-за отступов или кеглей: править их — значит испортить вид.
+   Нужно только разрешить короткой версии занять столько же места, сколько
+   занимает длинная. Ровно это и делает min-height на самой карточке:
+     • .service-card-inner имеет flex: 1 1 auto, а обе грани лежат в одной
+       grid-ячейке с justify-content: space-between — добавленная высота
+       уходит в свободное место между списком и разделителем, поэтому
+       карточка выглядит так же, как русская, а не «растянутой»;
+     • если английский текст когда-нибудь станет длиннее минимума, правило
+       просто перестанет действовать — обрезать ничего не может.
+
+   ПОЧЕМУ ЗНАЧЕНИЙ СЕМЬ, А НЕ ОДНО. Высота карточки — это max() из трёх
+   карточек ряда, и она зависит от числа строк. При изменении ширины окна
+   строки «перещёлкиваются» ступеньками, поэтому и минимум задан ступеньками.
+   Значения измерены в браузере (headless Chrome, разметка 1:1 из script.js,
+   шрифты с сайта) как МАКСИМАЛЬНАЯ высота русских карточек в диапазоне,
+   округлённая ВВЕРХ, — так минимум гарантированно не ниже русского текста:
+
+     ширина окна (viewport)   высота русских карточек   min-height
+     1024 – 1039px            607.3px                   608px
+     1040 – 1059px            581.3px                   582px
+     1060 – 1158px            567.3px                   568px
+     1159 – 1165px            541.3px                   542px
+     1166 – 1229px            523.3 → 527.3px           528px
+     1230 – 1267px            517.8 → 519.9px           520px
+     1268px и шире            504.7px                   505px
+
+   ЦЕНА РЕШЕНИЯ. В диапазонах, где высота русских карточек не постоянна
+   (1166–1267px — там заголовок растёт по clamp от 24 до 26px), минимум
+   берётся по верхней границе, поэтому русские карточки на несколько
+   пикселей выше, чем были: максимум +4.7px при 1166px, к 1229px сходит
+   на нет. В остальных диапазонах расхождение ≤0.7px. Взамен английские
+   карточки совпадают с русскими по высоте на всём диапазоне ПК.
+
+   ОТКУДА БЕРУТСЯ ГРАНИЦЫ. Это точки, где у русских текстов меняется
+   количество строк (видно по замерам: 607.3 → 581.3 → 567.3 → 541.3 →
+   527.3 → 519.9 → 504.7). Если поменяются тексты услуг (config.js →
+   servicesData) или кегли выше в этом файле — числа надо перемерить,
+   иначе на какой-то ширине английская карточка окажется на строку ниже.
+
+   ПОЧЕМУ БЕЗ max-width В КАЖДОМ БЛОКЕ. Все правила — это min-width по
+   возрастанию с одинаковой специфичностью, поэтому работает обычный
+   каскад: побеждает последнее подходящее правило. Так лестница читается
+   одним списком, без парных min/max.
+
+   ХОЧЕШЬ ВЫШЕ/НИЖЕ — правь числа в списке ниже (например, 505px → 520px
+   сделает карточки на широких экранах выше в обеих версиях).
+   ═══════════════════════════════════════════════════════════════════════ */
+@media (min-width: 1024px) {
+  #servicesContainer > * { min-height: 608px; }
+}
+
+@media (min-width: 1040px) {
+  #servicesContainer > * { min-height: 582px; }
+}
+
+@media (min-width: 1060px) {
+  #servicesContainer > * { min-height: 568px; }
+}
+
+@media (min-width: 1159px) {
+  #servicesContainer > * { min-height: 542px; }
+}
+
+@media (min-width: 1166px) {
+  #servicesContainer > * { min-height: 528px; }
+}
+
+@media (min-width: 1230px) {
+  #servicesContainer > * { min-height: 520px; }
+}
+
+@media (min-width: 1268px) {
+  #servicesContainer > * { min-height: 505px; }
+}
+

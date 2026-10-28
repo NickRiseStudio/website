@@ -1,0 +1,131 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   NICK RISE STUDIO — ANIMATION / КОНТАКТЫ И ПОДВАЛ
+   Источник: animations.css, строки 2067–2190 (нарезка 1:1, поведение не менялось)
+   Слой: css/anim/* — после ВСЕХ css/style/*.
+         Порядок подключения = порядок номеров файлов.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ═══ 11. КОНТАКТЫ И ПОДВАЛ ═══════════════════════════════════════════ */
+
+#contacts .rack-card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(from 0deg,
+    rgba(245, 158, 11, 0) 0deg 200deg,
+    rgba(245, 158, 11, 0.55) 268deg,
+    rgba(251, 191, 36, 0.9) 292deg,
+    rgba(245, 158, 11, 0.45) 312deg,
+    rgba(245, 158, 11, 0) 350deg 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* Наведение — только там, где есть курсор: на телефонах и планшетах :hover
+   «залипает» после касания, и карточки контактов оставались подсвеченными
+   (подъём, свечение, крутящаяся рамка) и при свайпе, и при тапе. */
+@media (hover: hover) and (pointer: fine) {
+  #contacts .rack-card:hover::before { animation: nrSpin 6s linear infinite; opacity: 0.9; }
+}
+
+#contacts .grid > a,
+#contacts .grid > button,
+#contactModal .grid > a,
+#contactModal .grid > button {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.35s var(--nr-ease), background-color 0.3s ease, box-shadow 0.4s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  #contacts .grid > a:hover,
+  #contacts .grid > button:hover,
+  #contactModal .grid > a:hover,
+  #contactModal .grid > button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(245, 158, 11, 0.12);
+  }
+}
+
+#contacts .grid svg,
+#contactModal .grid svg { transition: transform 0.45s var(--nr-snap); }
+
+/* Самолётик Telegram улетает и возвращается */
+@media (hover: hover) and (pointer: fine) {
+  #contacts .grid > a[href*="t.me"]:hover svg,
+  #contactModal .grid > a[href*="t.me"]:hover svg { animation: nrSend 0.75s var(--nr-ease); }
+}
+
+@keyframes nrSend {
+  0%   { transform: translate(0, 0); }
+  40%  { transform: translate(16px, -14px); opacity: 0; }
+  41%  { transform: translate(-16px, 14px); opacity: 0; }
+  100% { transform: translate(0, 0); opacity: 1; }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  #contacts .grid > button:hover svg,
+  #contactModal .grid > button:hover svg { transform: scale(1.18) rotate(-6deg); }
+
+  #contacts .grid > a[href*="vk"]:hover svg,
+  #contactModal .grid > a[href*="vk"]:hover svg,
+  #contacts .grid > a[href*="instagram"]:hover svg,
+  #contactModal .grid > a[href*="instagram"]:hover svg { animation: nrPop 0.6s var(--nr-snap); }
+}
+
+@keyframes nrPop {
+  0%, 100% { transform: scale(1); }
+  45%      { transform: scale(1.25); }
+}
+
+/* Отклик на тап по карточкам контактов. На сенсорных экранах :hover не
+   работает (правила выше), поэтому подъём, свечение и анимацию иконки
+   включает класс .nr-contact-tap: его ставит animations.js ровно на клик
+   (клик браузер шлёт только за тап) и снимает через ход. При свайпе и
+   прокрутке клика нет — карточка не оживает. */
+#contacts .grid > .nr-contact-tap,
+#contactModal .grid > .nr-contact-tap {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(245, 158, 11, 0.12);
+}
+
+#contacts .grid > a[href*="t.me"].nr-contact-tap svg,
+#contactModal .grid > a[href*="t.me"].nr-contact-tap svg { animation: nrSend 0.75s var(--nr-ease); }
+
+#contacts .grid > button.nr-contact-tap svg,
+#contactModal .grid > button.nr-contact-tap svg { transform: scale(1.18) rotate(-6deg); }
+
+#contacts .grid > a[href*="vk"].nr-contact-tap svg,
+#contactModal .grid > a[href*="vk"].nr-contact-tap svg,
+#contacts .grid > a[href*="instagram"].nr-contact-tap svg,
+#contactModal .grid > a[href*="instagram"].nr-contact-tap svg { animation: nrPop 0.6s var(--nr-snap); }
+
+/* Успешное копирование — зелёная вспышка */
+.nr-copied { animation: nrCopied 0.9s ease; }
+
+@keyframes nrCopied {
+  0%   { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.65); border-color: rgba(16, 185, 129, 0.9); }
+  100% { box-shadow: 0 0 0 16px rgba(16, 185, 129, 0); }
+}
+
+/* Карточки отзывов (#reviews): лента замирает при наведении (style.css),
+   а сама карточка мягко приподнимается — как плитки контактов. Подъём даём
+   только устройствам с курсором: на тач-экране :hover «залипает» после
+   касания, и карточка оставалась бы подсвеченной, а лента — в паузе. */
+#reviews .review-card {
+  transition: transform 0.35s var(--nr-ease), border-color 0.3s ease, box-shadow 0.4s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  #reviews .review-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.4), 0 0 20px rgba(245, 158, 11, 0.14);
+  }
+}
+

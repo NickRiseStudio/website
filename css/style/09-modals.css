@@ -1,0 +1,322 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   NICK RISE STUDIO — STYLE / МОДАЛКИ, ОВЕРЛЕИ, БУРГЕР, ТОСТ, ВЫСОТА ПО dvh
+   Источник: style.css, строки 1993–2307 (нарезка 1:1, поведение не менялось)
+   Слой: css/style/* — после tailwind.css и vendor/lenis.css,
+         перед css/anim/*. Порядок подключения = порядок номеров файлов.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Modals & Overlays */
+html.modal-open,
+body.modal-open {
+  overflow: hidden !important;
+  overscroll-behavior: contain !important;
+}
+
+/* Открытое мобильное/планшетное меню (бургер): страница не скроллится под меню.
+   Само меню (#mobileMenuDrawer) скроллится — touch-жесты внутри него не блокируются
+   (guard в initMobileMenuScrollLock, script.js). */
+html.nr-menu-open,
+body.nr-menu-open {
+  overflow: hidden !important;
+  overscroll-behavior: contain !important;
+}
+
+/* МОБИЛЬНОЕ МЕНЮ (бургер): предел высоты — от низа шапки до НИЗА ВИДИМОЙ
+   ОБЛАСТИ. Утилиты Tailwind считают от 100vh («большое» окно без нижней
+   панели браузера — см. блок «ГЛАВНЫЙ ЭКРАН»), поэтому в Яндекс.Браузере
+   последние пункты меню уезжали под адресную строку и долистать их было
+   нельзя: прокрутка шторки заканчивалась под панелью. 4rem — это top-16 у
+   самой шторки (высота шапки), от breakpoint sm — 5rem (top-20). Первая
+   декларация — фолбэк для браузеров без dvh. Специфичность: id (1,0,0)
+   против утилиты (0,1,0). */
+#mobileMenuDrawer {
+  max-height: calc(100vh - 4rem);
+  max-height: calc(100dvh - 4rem);
+}
+
+@media (min-width: 640px) {
+  #mobileMenuDrawer {
+    max-height: calc(100vh - 5rem);
+    max-height: calc(100dvh - 5rem);
+  }
+}
+
+.modal-overlay {
+  background: rgba(8, 10, 15, 0.82);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+              visibility 0.5s step-end;
+  z-index: 100;
+  overscroll-behavior: contain;
+  touch-action: none;
+  transform: translate3d(0, 0, 0);
+  -webkit-transform: translate3d(0, 0, 0);
+  will-change: opacity;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity 1.0s cubic-bezier(0.16, 1, 0.3, 1),
+              visibility 0s linear;
+}
+
+.modal-content {
+  transform: translate3d(0, 22px, 0) scale(0.96);
+  -webkit-transform: translate3d(0, 22px, 0) scale(0.96);
+  opacity: 0;
+  filter: blur(4px);
+  transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+              opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+              filter 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  will-change: transform, opacity, filter;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Mobile optimizations for modal animations */
+@media (max-width: 768px), (hover: none) {
+  .modal-overlay {
+    background: rgba(8, 10, 15, 0.94);
+    transition: opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+                visibility 0.5s step-end;
+  }
+  .modal-overlay.active {
+    transition: opacity 1.0s cubic-bezier(0.16, 1, 0.3, 1),
+                visibility 0s linear;
+  }
+  .modal-content {
+    transform: translate3d(0, 16px, 0) scale(0.97);
+    -webkit-transform: translate3d(0, 16px, 0) scale(0.97);
+    filter: none;
+    transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+                opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+  }
+  .modal-overlay.active .modal-content {
+    filter: none;
+    transition: transform 1.0s cubic-bezier(0.16, 1, 0.3, 1),
+                opacity 1.0s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+/* Полоса прокрутки окон — только кастомная (::-webkit-scrollbar).
+   Стандартные scrollbar-width/scrollbar-color у .modal-content убраны: пока они
+   заданы, браузер (Chrome/Яндекс на Android/планшетах) рисует СИСТЕМНУЮ
+   overlay-полосу по краю окна и полностью игнорирует ::-webkit-scrollbar —
+   она торчит за скруглением .rack-card (border-radius 18px) сверху справа и
+   снизу справа. Без стандартных свойств работает кастомная отрисовка, а
+   border-radius дорожки/ползунка 18px держит её внутри скругления. */
+.modal-content::-webkit-scrollbar {
+  display: block !important;
+  width: 6px !important;
+}
+
+.modal-content::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 18px;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+  background: rgba(245, 158, 11, 0.35);
+  border-radius: 18px;
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(245, 158, 11, 0.7);
+}
+
+.modal-overlay.active .modal-content {
+  transform: translate3d(0, 0, 0) scale(1);
+  -webkit-transform: translate3d(0, 0, 0) scale(1);
+  opacity: 1;
+  filter: blur(0px);
+  transition: transform 1.0s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 1.0s cubic-bezier(0.16, 1, 0.3, 1),
+              filter 1.0s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ВСПЛЫВАЮЩИЕ ОКНА: ВЫСОТА СЧИТАЕТСЯ ПО ВИДИМОЙ ОБЛАСТИ (dvh), А НЕ ПО 100vh
+   ═══════════════════════════════════════════════════════════════════════
+
+   ПРОБЛЕМА. И у оверлеев (fixed inset-0 у #contactModal, #aboutModal и
+   #priceCalcModal), и у самих окон (утилита Tailwind max-h-[90vh]) высота
+   считается от 100vh, а 100vh в мобильных браузерах — это «большое» окно,
+   БЕЗ нижней панели браузера (см. разбор единиц выше, блок «ГЛАВНЫЙ
+   ЭКРАН»). Пока панель на экране, она
+   рисуется ПОВЕРХ страницы, и оверлей оказывается выше видимой области: окно
+   центрируется относительно невидимой полосы, а его низ вместе с футером
+   («Обсудить проект» / «Слушать A/B демо») уезжает под панель. Внутренняя
+   прокрутка окна этого не лечит — нижние пиксели коробки спрятаны под
+   панелью физически. Ярче всего это в Яндекс.Браузере (адресная строка снизу
+   и страницу она не сжимает); в Chrome нижняя панель область раскладки
+   сжимает, поэтому там обрезки не было.
+
+   РЕШЕНИЕ. dvh (dynamic viewport height) — ровно то, что видно ПРЯМО СЕЙЧАС:
+   пока панель на экране, её высота уже вычтена. Оверлею задаём высоту 100dvh
+   (bottom: auto — иначе inset-0 спорит с height), окнам — прежний кап 90dvh:
+   окно висит по центру видимой области, а его собственная прокрутка
+   (overflow-y-auto, index.html) доходит до последней кнопки.
+
+   У ОКНА «КОНТАКТЫ» своей прокрутки в разметке не было (только
+   overflow-hidden): с одним max-height низ срезался бы без возможности
+   долистать, поэтому ему добавлен парный overflow-y: auto (по оси X обрезка
+   остаётся: hidden). У «Обо мне» и у калькулятора overflow-y-auto уже стоит —
+   именно их нижний футер с кнопками и уезжал под панель.
+
+   ФОЛБЭК. Первой строкой — прежние vh/90vh: браузер без dvh (Chrome < 108,
+   Safari < 15.4, Firefox < 101) отбросит вторую декларацию целиком и
+   останется на старом поведении. Специфичность: .modal-overlay (0,1,0)
+   против утилиты .inset-0 (0,1,0) — перебивает порядком (style.css
+   подключён после tailwind.css); .modal-overlay .modal-content (0,2,0)
+   против .max-h-[90vh] (0,1,0) — по специфичности. Без !important.
+
+   НА КОМПЬЮТЕРЕ dvh == vh, вид не меняется (панелей, которые сворачиваются,
+   там нет). */
+
+.modal-overlay {
+  height: 100vh;   /* фолбэк */
+  height: 100dvh;
+  bottom: auto;
+}
+
+.modal-overlay .modal-content {
+  max-height: 90vh;   /* фолбэк, он же прежний Tailwind max-h-[90vh] */
+  max-height: 90dvh;
+}
+
+/* Единственное окно без своей прокрутки в разметке — нужен парный
+   overflow-y к overflow-hidden (см. абзац «У ОКНА «КОНТАКТЫ»» выше). */
+#contactModal .modal-content {
+  overflow-y: auto;
+}
+
+/* ОКНО «ОБО МНЕ»: НЕСТАНДАРТНЫЕ ОТСТУПЫ (шага 15px в шкале Tailwind нет).
+
+   Оба блока ниже размечены утилитами Tailwind, но нужные значения (15px)
+   в шкале отсутствуют, а произвольных утилит (my-[15px] / mb-[15px]) в
+   собранном tailwind.css тоже нет — пересобирать его по правилам проекта
+   нельзя (см. PROJECT-NOTES, §5). Поэтому отступы задаются здесь.
+
+   Специфичность: селектор (1,2,0) выше утилит .my-6 и .mb-8 (обe 0,1,0)
+   и перебивает их без !important — style.css подключён после tailwind.css. */
+
+/* 1) Плашка со статистикой (200+ / 6+ лет / 100%): my-6 = 24px сверху и
+      снизу -> 15px. Селектор по :has() привязан к самой плашке, а не к
+      позиции в разметке, поэтому не зацепит соседние блоки с .my-6. */
+#aboutModal .modal-content > .my-6:has(> .border-x) {
+  margin-top: 15px;
+  margin-bottom: 15px;
+}
+
+/* 2) Блок кнопок быстрого перехода к FAQ: mb-8 = 32px снизу -> 15px. */
+#aboutModal .modal-content > .mb-8 {
+  margin-bottom: 15px;
+}
+
+/* 3) Шапка профиля (логотип, «Александр (Nick Rise)», подпись): pb-6 = 24px
+      нижнего внутреннего отступа -> 15px. Это зазор между подписью и линией
+      border-b, отделяющей шапку от плашки статистики. Селектор привязан к
+      классам самой шапки (pb-6 + border-b), а не к позиции в разметке. */
+#aboutModal .modal-content > .pb-6.border-b {
+  padding-bottom: 15px;
+}
+
+/* 4) Внутренние отступы самого окна: утилиты p-5 sm:p-8 (на десктопе 32px
+      со всех сторон) -> 25px. Значения 25px в шкале Tailwind нет, утилит
+      p-[25px] в собранном tailwind.css тоже нет. Работает только на широких
+      экранах (min-width: 640px), чтобы не сломать мобильный вариант p-5,
+      который рассчитан на узкий экран. Специфичность (1,2,0) выше .sm\:p-8
+      (0,1,0), лишний !important не нужен. */
+@media (min-width: 640px) {
+  #aboutModal .modal-content {
+    padding: 25px;
+  }
+}
+
+/* Toast Notifications */
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 120;
+  pointer-events: none;
+}
+
+.toast {
+  background: #121622;
+  border: 1px solid #F59E0B;
+  color: #F3F4F6;
+  padding: 12px 22px;
+  border-radius: 14px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(245, 158, 11, 0.25);
+  font-weight: 700;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transform: translateY(20px);
+  opacity: 0;
+  transition: transform 0.48s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.48s ease;
+}
+
+.toast.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+body {
+  transition: padding-bottom 0.95s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body.has-sticky-player,
+body:has(#stickyPlayerBar.active) {
+  padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 640px) {
+  body.has-sticky-player,
+  body:has(#stickyPlayerBar.active) {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Sticky Bottom Player Bar */
+.sticky-player-bar,
+#stickyPlayerBar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 90;
+  background-color: rgba(9, 11, 18, 0.96);
+  border-top: 1px solid rgba(245, 158, 11, 0.35);
+  box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  transform: translate3d(0, calc(100% + 24px), 0);
+  -webkit-transform: translate3d(0, calc(100% + 24px), 0);
+  opacity: 0.8;
+  transition: transform 0.95s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.95s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.95s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, box-shadow, opacity;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+}
+
+.sticky-player-bar.active,
+#stickyPlayerBar.active {
+  transform: translate3d(0, 0, 0) !important;
+  -webkit-transform: translate3d(0, 0, 0) !important;
+  opacity: 1;
+  box-shadow: 0 -10px 45px rgba(0, 0, 0, 0.95), 0 -2px 16px rgba(245, 158, 11, 0.14);
+}
+

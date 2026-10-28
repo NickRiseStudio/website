@@ -1,0 +1,290 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   NICK RISE STUDIO — ANIMATION / РАЗДЕЛ «ОБО МНЕ» НА ПК
+   Источник: animations.css, строки 2745–3027 (нарезка 1:1, поведение не менялось)
+   Слой: css/anim/* — после ВСЕХ css/style/*.
+         Порядок подключения = порядок номеров файлов.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ═══ 20. РАЗДЕЛ «ОБО МНЕ» НА КОМПЬЮТЕРЕ ═════════════════════════════ */
+
+/* Текст кадра собирается, когда кадр становится активным: строки идут
+   лесенкой снизу (фото в это время уже проявлено кроссфейдом — style.css).
+   Вёрстка и цвета — style.css → «РАЗДЕЛ „ОБО МНЕ“ — ТОЛЬКО КОМПЬЮТЕР». */
+@media (min-width: 1024px) {
+  /* Текст кадра собирается сразу, как только кадр стал активным, — без придержки
+     на время проявления раздела: показывать раньше времени нечего, начальные
+     состояния держат armed-классы кадров. Лесенка ниже — вход при повторном
+     показе кадра, когда таймлайн уже отыгран. */
+  .nr-about-slide.is-active .nr-about-text > * {
+    animation: nrAboutTextIn 0.75s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+
+  .nr-about-slide.is-active .nr-about-text > *:nth-child(2) { animation-delay: 0.07s; }
+  .nr-about-slide.is-active .nr-about-text > *:nth-child(3) { animation-delay: 0.14s; }
+  .nr-about-slide.is-active .nr-about-text > *:nth-child(4) { animation-delay: 0.21s; }
+  .nr-about-slide.is-active .nr-about-text > *:nth-child(5) { animation-delay: 0.28s; }
+
+  /* ── Кадр 1: вход по таймлайну (animations.js → playAboutSlideOne()) ──
+     Плашка «6+ лет в индустрии» появляется, имя печатается по буквам, под ним
+     встают две строки подзаголовка (каждая своим шагом), затем биография слева
+     печатается по буквам — абзацами: все строки абзаца идут одновременно,
+     каждый абзац начинается сразу за предыдущим, без зазора. Последней всплывает
+     подсказка «Листайте»
+     и светится вспышками, пока зритель не листнёт, — она лежит вне кадров, её
+     правила ниже, у .nr-about-hint.
+     Пока стоит .nr-one-armed (полный таймлайн), общий вход колонок
+     (nrAboutTextIn выше) отключён: у каждого блока своё появление, иначе
+     лесенка колонок спорила бы с таймлайном. Начальные состояния держит тот же
+     .nr-one-armed — его ставит JS при запуске страницы, поэтому без JS и при
+     prefers-reduced-motion всё видно сразу. Когда таймлайн уже отыгран, JS
+     снимает armed, и при повторном входе на кадр колонки просто всплывают
+     лесенкой — как раньше. */
+  [data-about-slide="0"].nr-one-armed .nr-about-text > * {
+    animation: none;
+  }
+
+  /* Плашка и строки подзаголовка вставляются одинаково — как кнопки кадра 2:
+     проявление снизу с лёгким уменьшением за 0.3 с (ABOUT_SHOW_MS). Строки
+     подзаголовка идут порознь, своим шагом таймлайна каждая
+     (ABOUT1.subAt / subStep), поэтому класс is-in ставится не на общий
+     <p>, а на span.nr-about-subtitle-line. */
+  [data-about-slide="0"].nr-one-armed .nr-about-kicker,
+  [data-about-slide="0"].nr-one-armed .nr-about-subtitle-line {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(0.94);
+    transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  [data-about-slide="0"].nr-one-armed .nr-about-kicker.is-in,
+  [data-about-slide="0"].nr-one-armed .nr-about-subtitle-line.is-in {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Имя до старта печати скрыто целиком: aboutType() наполняет узел буквами
+     только в свой момент, а до него в заголовке лежит готовый текст — без этого
+     правила он мелькнул бы на полсекунды раньше времени. Класс is-in ставится
+     в тот же тик, когда начинается печать (буквы ещё прозрачные). */
+  [data-about-slide="0"].nr-one-armed .nr-about-title { opacity: 0; }
+
+  [data-about-slide="0"].nr-one-armed .nr-about-title.is-in { opacity: 1; }
+
+  /* Биография кадра 1 печатается по буквам, как заголовки кадров 2–3
+     (animations.js → about1TypePara()), поэтому построчной лесенки у неё больше
+     нет: строки всегда стоят на своих местах, а невидимы сами буквы
+     (.nr-about-type-char ниже — opacity: 0, пока у строки нет nr-type-on).
+     Прятать строки целиком нельзя: вместе с ними погасли бы и уже напечатанные
+     буквы. Строки одного абзаца печатаются одновременно, поэтому все они
+     получают nr-type-on в один кадр — сдвиг по времени задаётся задержками букв
+     внутри строки, а не классом. */
+
+  /* Сброс к началу при повторном входе на кадр: переходы гасим на один кадр
+     (класс ставит и сразу снимает JS) — иначе плашка и строки подзаголовка
+     гасли бы на глазах. */
+  [data-about-slide="0"].nr-one-reset .nr-about-kicker,
+  [data-about-slide="0"].nr-one-reset .nr-about-subtitle-line {
+    transition: none;
+  }
+
+  /* ── Кадр 2: вход по таймлайну (animations.js → playAboutSlideTwo()) ──
+     Заголовок печатается по буквам, кнопки обучения вставляются по одной,
+     разделяющая линия прочерчивается — и с того же кадра, что и линия, по одной
+     встают цифры (линия ещё в пути, они успевают раньше её конца). Начальные
+     состояния держит класс .nr-two-armed: его ставит JS при запуске страницы,
+     поэтому без JS (и при prefers-reduced-motion, когда класс не ставится) всё
+     видно сразу. */
+  [data-about-slide="1"].nr-two-armed .nr-about-trainer,
+  [data-about-slide="1"].nr-two-armed .nr-about-stat {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(0.94);
+    /* Появление — 0.3 с, ровно шаг таймлайна (ABOUT_SHOW_MS в animations.js):
+       кнопка встаёт на место как раз к старту следующей. Дальше идут переходы
+       самой кнопки из style.css (фон, рамка, цвет). */
+    transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+  }
+
+  [data-about-slide="1"].nr-two-armed .nr-about-trainer.is-in,
+  [data-about-slide="1"].nr-two-armed .nr-about-stat.is-in {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Нажатие кнопки (style.css → .nr-about-trainer:active) должно остаться
+     заметным: у появившейся кнопки transform задан выше. Скорость нажатия
+     возвращаем прежнюю (0.2 с) — появление идёт 0.3 с. */
+  [data-about-slide="1"].nr-two-armed .nr-about-trainer.is-in:active {
+    transform: scale(0.97);
+    transition-duration: 0.2s;
+  }
+
+  /* Линия идёт секунду (ABOUT2.ruleMs в animations.js). Общий вход колонки
+     (nrAboutTextIn выше) ей не нужен: анимация подменяет transform, и линия
+     мелькала бы во всю ширину перед стартом прочерчивания. */
+  [data-about-slide="1"].is-active .nr-about-text > .nr-about-rule {
+    animation: none;
+  }
+
+  [data-about-slide="1"].nr-two-armed .nr-about-rule {
+    transform: scaleX(0);
+    transition: transform 1s cubic-bezier(0.33, 1, 0.68, 1);
+  }
+
+  [data-about-slide="1"].nr-two-armed.nr-two-rule .nr-about-rule {
+    transform: scaleX(1);
+  }
+
+  /* Печать по буквам: слова не рвутся (nowrap), каждая буква проявляется со
+     своей задержкой — её выставляет JS (transition-delay). Буквы занимают
+     место и до появления, поэтому раскладка не дёргается. */
+  .nr-about-type-word { display: inline-block; white-space: nowrap; }
+
+  .nr-about-type-char {
+    display: inline-block;
+    opacity: 0;
+    transition: opacity 0.12s linear;
+  }
+
+  .nr-type-on .nr-about-type-char { opacity: 1; }
+
+  /* Сброс к началу при повторном входе на кадр: на один кадр отключаем
+     переходы (класс ставит и сразу снимает JS) — иначе элементы гасли бы на
+     глазах, а линия уезжала бы назад. */
+  [data-about-slide="1"].nr-two-reset .nr-about-trainer,
+  [data-about-slide="1"].nr-two-reset .nr-about-stat,
+  [data-about-slide="1"].nr-two-reset .nr-about-rule {
+    transition: none;
+  }
+
+  /* ── Кадр 3: вход по таймлайну (animations.js → playAboutSlideThree()) ──
+     Лид печатается по буквам, строка со скидкой выезжает слева, вопросы
+     выезжают слева по одному, кнопки появляются снизу по одной. Группы идут
+     встык, без пауз (ABOUT3_GAP = 0 в animations.js): скидка трогается с
+     последней буквой лида, вопросы — со скидкой, кнопки — с последним вопросом;
+     внутри пары шаг равен длительности появления (0.3 с).
+     Пока стоит .nr-three-armed (полный таймлайн), общий вход колонки
+     (nrAboutTextIn) отключён: у каждого блока своё появление, иначе оно
+     спорило бы с таймлайном. Начальные состояния держит тот же
+     .nr-three-armed — его ставит JS при запуске страницы, поэтому без JS и при
+     prefers-reduced-motion всё видно сразу. Когда таймлайн уже отыгран, JS
+     снимает armed, и при повторном входе на кадр колонка просто всплывает
+     лесенкой — как кадр 1. */
+  [data-about-slide="2"].nr-three-armed .nr-about-text > * {
+    animation: none;
+  }
+
+  [data-about-slide="2"].nr-three-armed .nr-about-discount,
+  [data-about-slide="2"].nr-three-armed .nr-about-link {
+    opacity: 0;
+    transform: translate3d(-2.2cqw, 0, 0);
+    pointer-events: none;
+    /* Появление — 0.3 с = шаг таймлайна (ABOUT_SHOW_MS в animations.js). */
+    transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+  }
+
+  [data-about-slide="2"].nr-three-armed .nr-about-btn {
+    opacity: 0;
+    transform: translate3d(0, 1.8cqw, 0);
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                background 0.35s ease, border-color 0.35s ease;
+  }
+
+  [data-about-slide="2"].nr-three-armed .nr-about-discount.is-in,
+  [data-about-slide="2"].nr-three-armed .nr-about-link.is-in,
+  [data-about-slide="2"].nr-three-armed .nr-about-btn.is-in {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+
+  /* Нажатие кнопки (style.css → .nr-about-btn:active) должно остаться заметным:
+     у появившихся кнопок transform уже занят выездом снизу, поэтому :active
+     повторяем здесь и возвращаем ему прежнюю скорость (0.2 с). */
+  [data-about-slide="2"].nr-three-armed .nr-about-btn.is-in:active {
+    transform: scale(0.97);
+    transition-duration: 0.2s;
+  }
+
+  /* Сброс к началу: переходы гасим на один кадр (см. кадр 2 выше). */
+  [data-about-slide="2"].nr-three-reset .nr-about-discount,
+  [data-about-slide="2"].nr-three-reset .nr-about-link,
+  [data-about-slide="2"].nr-three-reset .nr-about-btn {
+    transition: none;
+  }
+
+  /* Кадр 1 собран из двух колонок (имя справа, биография слева): каждая
+     анимируется своим списком детей, поэтому биографии даём ту же задержку,
+     что была у второй строки, — колонки идут лесенкой, а не разом. */
+  .nr-about-slide[data-about-slide="0"].is-active .nr-about-text--left > * {
+    animation-delay: 0.07s;
+  }
+}
+
+@keyframes nrAboutTextIn {
+  from { opacity: 0; transform: translate3d(0, 18px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+/* Подсказка «Листайте»: стрелка мягко качается вниз */
+@media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
+  .nr-about-hint-arrow { animation: nrAboutHintArrow 1.8s ease-in-out infinite; }
+}
+
+@keyframes nrAboutHintArrow {
+  0%, 100% { transform: translateY(-2px); opacity: 0.65; }
+  50%      { transform: translateY(3px);  opacity: 1; }
+}
+
+/* Появление подсказки «Листайте» на первом кадре: последний шаг таймлайна.
+   Пока идёт печать, подсказки нет вовсе (style.css → .nr-hint-wait), потом она
+   всплывает снизу и светится — вспышка → затухание → вспышка → затухание, по
+   кругу (nrAboutHintGlow ниже, infinite), пока зритель не листнёт: на первом
+   листании JS снимает класс is-in, и пульсация прекращается навсегда. Класс
+   is-in ставит JS (animations.js → aboutHintShow).
+   Прозрачность намеренно НЕ в кадрах: её ведёт обычный переход style.css
+   (.nr-about-hint → transition: opacity 0.4s). Анимация с залипанием
+   (fill-mode both) перебивала бы гашение подсказки на финальном кадре — у
+   анимаций приоритет выше любых обычных правил, включая
+   [data-about-active="2"] .nr-about-hint { opacity: 0 }.
+   transform тоже не трогаем: им подсказка центрируется (translateX(-50%) в
+   style.css), поэтому подъём сделан отдельным свойством translate.
+   Время 3.2 с подобрано так, чтобы первый пик свечения пришёлся на конец
+   подъёма (0.55 с): подсказка вспыхивает ровно в тот момент, когда встаёт на
+   место, и дальше пульсирует. */
+@media (min-width: 1024px) {
+  .nr-about-hint.is-in {
+    animation: nrAboutHintRise 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+               nrAboutHintGlow 3.2s ease-in-out infinite;
+  }
+}
+
+@keyframes nrAboutHintRise {
+  from { translate: 0 16px; }
+  to   { translate: 0 0; }
+}
+
+/* Свечение подсказки: вспышка на 17 % (≈0.54 с — конец подъёма), затухание к
+   50 %, вторая вспышка на 67 %, затухание к 100 % и снова по кругу. Нарастание
+   быстрее затухания — так читается именно «вспыхнул и погас», а не ровное
+   дыхание. Нулевые кадры обязательны: в них filter снят полностью, поэтому
+   между вспышками подсказка выглядит как обычный текст, без мутного ореола. */
+@keyframes nrAboutHintGlow {
+  0%   { filter: drop-shadow(0 0 0 rgba(251, 191, 36, 0)); }
+  17%  { filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.9))
+                  drop-shadow(0 0 26px rgba(251, 191, 36, 0.45)); }
+  50%  { filter: drop-shadow(0 0 0 rgba(251, 191, 36, 0)); }
+  67%  { filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.9))
+                  drop-shadow(0 0 26px rgba(251, 191, 36, 0.45)); }
+  100% { filter: drop-shadow(0 0 0 rgba(251, 191, 36, 0)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nr-about-slide.is-active .nr-about-text > *,
+  .nr-about-hint.is-in,
+  .nr-about-hint-arrow {
+    animation: none !important;
+  }
+}
+
