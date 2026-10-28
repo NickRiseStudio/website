@@ -135,11 +135,11 @@ const CONFIG = {
           optVocalRhythm: 'Коррекция ритмики и громкости вокала',
           optTrackout: 'Сведение trackout бита и доработка',
           optVocalNotes: 'Ручная коррекция нот вокала',
-          // Пункт формы на компьютере: срочность — отдельная галочка, в шагах
-          // мобильного окна её нет (см. priceCalc.rush ниже).
+          // Срочность — отдельная галочка в анкете: это условие работы, а не
+          // услуга (см. priceCalc.rush ниже).
           optRush: 'Срочный заказ (1-2 дня)',
-          // Пункт формы на компьютере: сколько исполнителей (фит). Число меняют
-          // стрелки, цена — config.js → priceCalc.performers.
+          // Сколько исполнителей (фит). Число меняют стрелки, цена —
+          // config.js → priceCalc.performers.
           optPerformers: 'Сколько исполнителей?',
           performersLessAria: 'Меньше исполнителей',
           performersMoreAria: 'Больше исполнителей',
@@ -147,8 +147,9 @@ const CONFIG = {
           writeBtn: 'Написать мне',
           restartBtn: 'Посчитать заново',
           stepLabel: 'Шаг',
-          // Форма расчёта стоимости на компьютере (#priceCalcShowcase): анкета
-          // слева, смета справа. Текст заявки собирает js/calculator.js →
+          // Расчёт стоимости (#priceCalcShowcase): анкета и смета. Компьютер —
+          // две колонки сразу, планшет и телефон — две страницы (анкета →
+          // «Далее» → итог). Текст заявки собирает js/calculator.js →
           // buildCalcOrderText, подписи строк сметы — из ключей выше (opt*).
           form: {
             badge: 'РАСЧЁТ СТОИМОСТИ',
@@ -161,10 +162,15 @@ const CONFIG = {
             summaryBadge: 'РАСЧЁТ ЗАКАЗА',
             summaryTitle: 'Итоговая стоимость',
             totalLabel: 'Итого',
-            emptyRow: 'Отметьте услуги слева',
+            emptyRow: 'Отметьте услуги в анкете',
             individualRow: 'Обговаривается индивидуально',
             telegramBtn: 'Отправить заявку в Telegram',
             copyBtn: 'Скопировать заявку',
+            // Кнопки страниц на планшете и телефоне: «Далее» внизу анкеты
+            // открывает итог, «Назад» возвращает к анкете. На компьютере обе
+            // колонки видны сразу, и кнопки не рендерятся.
+            nextBtn: 'Далее',
+            backBtn: 'Назад',
             toastCopied: 'Заявка скопирована — вставьте её в чат',
             // Текст заявки (js/calculator.js → buildCalcOrderText): срочность —
             // отдельной первой строкой, затем приветствие, услуги, хронометраж
@@ -409,8 +415,9 @@ const CONFIG = {
           writeBtn: 'Message me',
           restartBtn: 'Calculate again',
           stepLabel: 'Step',
-          // Форма расчёта стоимости на компьютере (#priceCalcShowcase): анкета
-          // слева, смета справа. Текст заявки собирает js/calculator.js →
+          // Расчёт стоимости (#priceCalcShowcase): анкета и смета. Компьютер —
+          // две колонки сразу, планшет и телефон — две страницы (анкета →
+          // «Далее» → итог). Текст заявки собирает js/calculator.js →
           // buildCalcOrderText, подписи строк сметы — из ключей выше (opt*).
           form: {
             badge: 'COST ESTIMATE',
@@ -423,10 +430,14 @@ const CONFIG = {
             summaryBadge: 'ORDER ESTIMATE',
             summaryTitle: 'Total cost',
             totalLabel: 'Total',
-            emptyRow: 'Tick the services on the left',
+            emptyRow: 'Tick the services in the form',
             individualRow: 'Quoted individually',
             telegramBtn: 'Send the request on Telegram',
             copyBtn: 'Copy the request',
+            // Кнопки страниц на планшете и телефоне («Далее» внизу анкеты,
+            // «Назад» в смете). На компьютере не рендерятся.
+            nextBtn: 'Next',
+            backBtn: 'Back',
             toastCopied: 'Request copied — paste it into the chat',
             // Заявка — тот же порядок строк, что в русской локали.
             msgRush: 'RUSH ORDER!!!',
@@ -718,8 +729,8 @@ const CONFIG = {
     }
   ],
 
-  // Данные калькулятора стоимости услуг: окно на планшете и телефоне
-  // (#priceCalcModal) и раздел на компьютере (#priceCalcShowcase) читают одно и то же.
+  // Данные калькулятора стоимости услуг: раздел #priceCalcShowcase на всех
+  // устройствах читает одно и то же.
   // Длительность: 1 мин и 6+ мин считаются индивидуально (individual: true).
   // Цены: RU — рубли, EN — доллары (шкала согласована с карточками услуг).
   priceCalc: {
@@ -738,17 +749,15 @@ const CONFIG = {
       { id: 'trackout', priceRu: 1000, priceEn: 20 },
       { id: 'vocalNotes', priceRu: 1500, priceEn: 30 }
     ],
-    // Срочность — НЕ в options: по options мобильное окно #priceCalcModal строит
-    // шаги 2..5 (по вопросу на пункт), и лишний элемент сдвинул бы нумерацию
-    // и сломал разметку шагов. Здесь она отдельной записью: на компьютере
-    // (#priceCalcShowcase) это своя галочка, а в смету и в текст заявки её
-    // добавляет js/calculator.js → calculatePriceCalcTotal / buildCalcOrderText.
+    // Срочность — НЕ в options: по options строится список услуг в анкете, и
+    // лишний элемент попал бы туда как услуга. Здесь она отдельной записью:
+    // в анкете это своя галочка, а в смету и в текст заявки её добавляет
+    // js/calculator.js → calculatePriceCalcTotal / buildCalcOrderText.
     // Цена — как в FAQ: срочный заказ (1–2 дня). Долларовая надбавка ниже
     // рублёвой по курсу сайта ($1 = 50 ₽): 5000 ₽ ≈ $100, но для зарубежных
     // клиентов держим $80.
     rush: { id: 'rush', priceRu: 5000, priceEn: 80 },
-    // Сколько исполнителей (фит) — тоже только форма на компьютере: в шагах
-    // мобильного окна вопроса нет, там всегда один, и цена не меняется.
+    // Сколько исполнителей (фит) — цена за количество людей в работе.
     // 1 — без доплаты, 2 — +3000 ₽, 3 — +5000 ₽, 4 и больше — индивидуально
     // (individualFrom). Доллары — по той же шкале 50 ₽ = $1, что у options.
     performers: {

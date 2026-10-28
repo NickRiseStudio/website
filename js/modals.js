@@ -30,10 +30,9 @@ function lockPageScroll() {
 function unlockPageScroll() {
   const contactActive = document.getElementById('contactModal')?.classList.contains('active');
   const aboutActive = document.getElementById('aboutModal')?.classList.contains('active');
-  const calcActive = document.getElementById('priceCalcModal')?.classList.contains('active');
   const calcFormActive = document.getElementById('priceCalcShowcase')?.classList.contains('active');
   const showcaseActive = document.getElementById('aboutShowcase')?.classList.contains('active');
-  if (contactActive || aboutActive || calcActive || calcFormActive || showcaseActive) return;
+  if (contactActive || aboutActive || calcFormActive || showcaseActive) return;
 
   if (!isPageScrollLocked) return;
   isPageScrollLocked = false;
@@ -61,16 +60,8 @@ function initModalAndToast() {
     });
   }
 
-  // Окно-калькулятор стоимости услуг: закрытие по клику на затемнение
-  const priceCalcModal = document.getElementById('priceCalcModal');
-  if (priceCalcModal) {
-    priceCalcModal.addEventListener('click', (e) => {
-      if (e.target === priceCalcModal) closePriceCalcModal();
-    });
-  }
-
   // Прокрутка не уходит за затемнение (backdrop)
-  [contactModal, aboutModal, priceCalcModal].forEach(modalEl => {
+  [contactModal, aboutModal].forEach(modalEl => {
     if (!modalEl) return;
     modalEl.addEventListener('wheel', (e) => {
       const content = modalEl.querySelector('.modal-content');
@@ -91,7 +82,6 @@ function initModalAndToast() {
     if (e.key === 'Escape') {
       closeContactModal();
       closeAboutModal();
-      closePriceCalcModal();
       closePriceCalcShowcase();
     }
   });

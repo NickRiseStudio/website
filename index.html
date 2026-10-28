@@ -575,9 +575,8 @@
 
         </div>
 
-        <!-- Кнопка «Заказать»: ведёт в расчёт стоимости — на компьютере это
-             раздел-всплывашка #priceCalcShowcase, на планшете и телефоне окно
-             #priceCalcModal (js/calculator.js → openPriceCalc решает по ширине).
+        <!-- Кнопка «Заказать»: ведёт в расчёт стоимости — раздел-всплывашка
+             #priceCalcShowcase (js/calculator.js → openPriceCalc).
              Стоит внизу раздела с примерами сведения — сразу под пагинацией
              треков — и показывается на ВСЕХ устройствах (без sm:-скрытия, в
              отличие от кнопки в шапке, которая на телефоне живёт в меню).
@@ -646,9 +645,8 @@
           </button>
         </div>
 
-        <!-- Кнопка-калькулятор: ведёт в расчёт стоимости — на компьютере это
-             раздел-всплывашка #priceCalcShowcase, на планшете и телефоне окно
-             #priceCalcModal (js/calculator.js → openPriceCalc решает по ширине).
+        <!-- Кнопка-калькулятор: ведёт в расчёт стоимости — раздел-всплывашка
+             #priceCalcShowcase (js/calculator.js → openPriceCalc).
              Класс .nr-calc-cta включает постоянную привлекающую анимацию (css/anim). -->
         <div id="servicesCalcCta" class="flex justify-center mt-5 sm:mt-7">
           <button
@@ -1167,222 +1165,16 @@
     </div>
   </div>
 
-  <!-- 7.6 МОДАЛКА КАЛЬКУЛЯТОРА СТОИМОСТИ -->
-  <div id="priceCalcModal" class="modal-overlay fixed inset-0 z-[105] flex items-center justify-center p-3 sm:p-5">
-    <div class="modal-content rack-card max-w-xl w-full p-5 sm:p-8 relative overflow-hidden shadow-2xl my-auto max-h-[90vh] overflow-y-auto text-center">
-
-      <!-- Close Button -->
-      <button onclick="closePriceCalcModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-2 rounded-xl hover:bg-gray-800/80 transition-colors z-20 cursor-pointer" title="Закрыть" data-i18n-title="a11y.close">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-          <path d="M18 6L6 18M6 6l12 12"/>
-        </svg>
-      </button>
-
-      <!-- Верхняя планка-стойка -->
-      <div class="flex justify-between items-center mb-5 opacity-40">
-        <div class="rack-bolt"></div>
-        <div class="text-[10px] font-mono text-gray-400 tracking-widest uppercase" data-i18n="services.priceCalc.badge">
-          SERVICE COST CALCULATOR // NICK RISE
-        </div>
-        <div class="rack-bolt"></div>
-      </div>
-
-      <!-- Навигация: «Назад», полоса прогресса и счётчик шагов -->
-      <div class="flex items-center gap-3 mb-6">
-        <button type="button" id="calcBackBtn" onclick="prevCalcStep()" class="nr-calc-back">
-          <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
-          <span data-i18n="services.priceCalc.prevBtn">Назад</span>
-        </button>
-        <div class="nr-calc-progress flex-1">
-          <div id="calcProgressFill" class="nr-calc-progress-fill"></div>
-        </div>
-        <div class="text-[10px] font-mono text-gray-500 tracking-wider flex-shrink-0">
-          <span data-i18n="services.priceCalc.stepLabel">Шаг</span> <span id="calcStepNow">1</span>/<span id="calcStepTotal">7</span>
-        </div>
-      </div>
-
-      <!-- STEP 0: предупреждение (is-active — стартовый шаг, чтобы окно было валидным и без JS) -->
-      <div class="nr-calc-step is-active" data-calc-step="0">
-        <div class="mx-auto mb-4 w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/40 flex items-center justify-center">
-          <svg class="w-7 h-7 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-          </svg>
-        </div>
-        <h3 class="text-2xl sm:text-3xl font-black text-amber-400 tracking-tight uppercase mb-3" data-i18n="services.priceCalc.warnTitle">ВАЖНО</h3>
-        <p class="text-sm sm:text-base text-gray-300 leading-relaxed mb-6 max-w-md mx-auto" data-i18n="services.priceCalc.warnText">
-          Стоимость услуг примерная и зависит от конкретного проекта.
-        </p>
-        <div class="flex justify-center">
-          <button type="button" onclick="nextCalcStep()" class="nr-calc-next-btn">
-            <span data-i18n="services.priceCalc.nextBtn">Далее</span>
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- STEP 1: длительность трека -->
-      <div class="nr-calc-step" data-calc-step="1">
-        <h3 class="text-lg sm:text-2xl font-black text-white tracking-tight mb-6 leading-snug" data-i18n="services.priceCalc.durationQ">
-          Сколько длится Ваш трек (в минутах)?
-        </h3>
-
-        <div class="mb-4">
-          <span id="calcDurationValue" class="text-4xl sm:text-5xl font-black text-amber-400 font-mono tracking-tight">3</span>
-          <span class="text-sm font-bold text-gray-400 ml-1.5" data-i18n="services.priceCalc.durationMin">мин</span>
-        </div>
-
-        <input id="calcDurationRange" type="range" min="1" max="6" step="1" value="3" oninput="onCalcDurationInput(this.value)" class="nr-calc-range w-full" aria-label="Track duration">
-
-        <div id="calcDurationScale" class="nr-calc-scale mb-4"></div>
-
-        <p id="calcIndividualNote" class="nr-calc-individual hidden">
-          <span data-i18n="services.priceCalc.individualNote">Обговаривается индивидуально</span>
-        </p>
-
-        <div class="flex justify-center">
-          <button type="button" onclick="nextCalcStep()" class="nr-calc-next-btn">
-            <span data-i18n="services.priceCalc.nextBtn">Далее</span>
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- STEP 2: мастеринг -->
-      <div class="nr-calc-step" data-calc-step="2">
-        <h3 class="nr-calc-question">
-          <span data-i18n="services.priceCalc.qMastering">Вам нужен мастеринг?</span>
-          <!-- Кружок «i» с подсказкой: наведение/фокус — показ, тап — переключение
-               (js/calculator.js → showCalcHint / hideCalcHint). Текст — config.js →
-               hintMastering, вид бабла — как у подсказки BEFORE / AFTER. -->
-          <button
-            type="button"
-            class="nr-calc-hint-dot"
-            data-calc-hint="mastering"
-            aria-label="Что такое мастеринг?"
-            data-i18n-aria-label="services.priceCalc.hintMasteringAria"
-            onclick="toggleCalcHint('mastering')"
-            onmouseenter="showCalcHint('mastering')"
-            onmouseleave="hideCalcHint('mastering')"
-            onfocus="showCalcHint('mastering')"
-            onblur="hideCalcHint('mastering')"
-          >i</button>
-        </h3>
-        <div class="nr-calc-choice" data-calc-option="mastering">
-          <button type="button" class="nr-calc-choice-btn" data-value="yes" onclick="setCalcAnswer('mastering', true)">
-            <span data-i18n="services.priceCalc.yes">Да</span>
-          </button>
-          <button type="button" class="nr-calc-choice-btn" data-value="no" onclick="setCalcAnswer('mastering', false)">
-            <span data-i18n="services.priceCalc.no">Нет</span>
-          </button>
-        </div>
-        <!-- Кнопки «Далее» здесь нет: выбранный ответ сразу ведёт к следующему вопросу. -->
-      </div>
-
-      <!-- STEP 3: коррекция ритмики и выравнивание громкости вокала -->
-      <div class="nr-calc-step" data-calc-step="3">
-        <h3 class="nr-calc-question" data-i18n="services.priceCalc.qVocalRhythm">Вам нужна коррекция ритмики / выравнивание громкости вокала?</h3>
-        <div class="nr-calc-choice" data-calc-option="vocalRhythm">
-          <button type="button" class="nr-calc-choice-btn" data-value="yes" onclick="setCalcAnswer('vocalRhythm', true)">
-            <span data-i18n="services.priceCalc.yes">Да</span>
-          </button>
-          <button type="button" class="nr-calc-choice-btn" data-value="no" onclick="setCalcAnswer('vocalRhythm', false)">
-            <span data-i18n="services.priceCalc.no">Нет</span>
-          </button>
-        </div>
-        <!-- Кнопки «Далее» здесь нет: выбранный ответ сразу ведёт к следующему вопросу. -->
-      </div>
-
-      <!-- STEP 4: сведение trackout бита и доработка бита -->
-      <div class="nr-calc-step" data-calc-step="4">
-        <h3 class="nr-calc-question">
-          <span data-i18n="services.priceCalc.qTrackout">Вам нужно сведение trackout бита (бит по дорожкам) / доработка бита?</span>
-          <!-- Кружок «i» с подсказкой про trackout (бит по дорожкам). -->
-          <button
-            type="button"
-            class="nr-calc-hint-dot"
-            data-calc-hint="trackout"
-            aria-label="Что такое бит по дорожкам (trackout)?"
-            data-i18n-aria-label="services.priceCalc.hintTrackoutAria"
-            onclick="toggleCalcHint('trackout')"
-            onmouseenter="showCalcHint('trackout')"
-            onmouseleave="hideCalcHint('trackout')"
-            onfocus="showCalcHint('trackout')"
-            onblur="hideCalcHint('trackout')"
-          >i</button>
-        </h3>
-        <div class="nr-calc-choice" data-calc-option="trackout">
-          <button type="button" class="nr-calc-choice-btn" data-value="yes" onclick="setCalcAnswer('trackout', true)">
-            <span data-i18n="services.priceCalc.yes">Да</span>
-          </button>
-          <button type="button" class="nr-calc-choice-btn" data-value="no" onclick="setCalcAnswer('trackout', false)">
-            <span data-i18n="services.priceCalc.no">Нет</span>
-          </button>
-        </div>
-        <!-- Кнопки «Далее» здесь нет: выбранный ответ сразу ведёт к следующему вопросу. -->
-      </div>
-
-      <!-- STEP 5: ручная коррекция нот вокала -->
-      <div class="nr-calc-step" data-calc-step="5">
-        <h3 class="nr-calc-question" data-i18n="services.priceCalc.qVocalNotes">Вам нужна ручная коррекция нот вокала?</h3>
-        <div class="nr-calc-choice" data-calc-option="vocalNotes">
-          <button type="button" class="nr-calc-choice-btn" data-value="yes" onclick="setCalcAnswer('vocalNotes', true)">
-            <span data-i18n="services.priceCalc.yes">Да</span>
-          </button>
-          <button type="button" class="nr-calc-choice-btn" data-value="no" onclick="setCalcAnswer('vocalNotes', false)">
-            <span data-i18n="services.priceCalc.no">Нет</span>
-          </button>
-        </div>
-        <!-- Кнопки «Далее» здесь нет: выбранный ответ сразу ведёт к следующему вопросу. -->
-      </div>
-
-      <!-- STEP 6: итоговая стоимость -->
-      <div class="nr-calc-step" data-calc-step="6">
-        <h3 class="nr-calc-result-title text-xl sm:text-2xl font-black text-white tracking-tight mb-2" data-i18n="services.priceCalc.resultTitle">Ориентировочная стоимость</h3>
-        <p class="nr-calc-result-sub text-xs sm:text-sm text-gray-400 mb-5 max-w-md mx-auto leading-relaxed" data-i18n="services.priceCalc.resultSub">
-          Это предварительный расчёт — точную цену я назову после прослушивания вашего материала.
-        </p>
-
-        <div id="calcReceipt" class="nr-calc-receipt mb-5">
-          <div id="calcBreakdown" class="space-y-2"></div>
-          <div class="nr-calc-total-row">
-            <span class="text-[10px] font-mono text-gray-400 uppercase tracking-widest" data-i18n="services.priceCalc.totalLabel">ИТОГО</span>
-            <span id="calcTotalPrice" class="text-3xl sm:text-4xl font-black text-amber-400 font-mono tracking-tight">—</span>
-          </div>
-        </div>
-
-        <div id="calcIndividualResult" class="nr-calc-individual hidden mb-5">
-          <strong class="block text-amber-400 font-black text-base sm:text-lg mb-1" data-i18n="services.priceCalc.resultIndividualTitle">Обговаривается индивидуально</strong>
-          <span class="text-sm text-gray-300 leading-relaxed" data-i18n="services.priceCalc.resultIndividualSub">Для такого хронометража стоимость рассчитывается индивидуально.</span>
-        </div>
-
-        <p class="text-sm sm:text-base text-gray-300 leading-relaxed mb-6 max-w-md mx-auto" data-i18n="services.priceCalc.cta">
-          Напишите мне — обсудим ваш проект и я назову точную стоимость.
-        </p>
-
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <button type="button" onclick="openContactModal(); closePriceCalcModal();" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl transition-all shadow-lg shadow-amber-500/20 active:scale-95 text-sm cursor-pointer">
-            <span data-i18n="services.priceCalc.writeBtn">Написать мне</span>
-            <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-          </button>
-          <button type="button" onclick="resetPriceCalc(true)" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#14171F] hover:bg-[#1C212E] text-white font-bold rounded-xl border border-gray-800 transition-all text-sm cursor-pointer active:scale-95">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v6h6M20 20v-6h-6"/><path d="M4 10a8 8 0 0114.24-3.24M20 14a8 8 0 01-14.24 3.24"/></svg>
-            <span data-i18n="services.priceCalc.restartBtn">Посчитать заново</span>
-          </button>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- 7.7 РАСЧЁТ СТОИМОСТИ НА КОМПЬЮТЕРЕ (#priceCalcShowcase)
-       С 1024px «Рассчитать стоимость» и «Заказать» открывают этот раздел
-       вместо окна #priceCalcModal: слева анкета, справа смета, которая
-       пересчитывается сразу. Ниже 1024px разметка не рендерится вовсе
-       (display: none) — там работает прежнее окно.
+  <!-- 7.6 РАСЧЁТ СТОИМОСТИ (#priceCalcShowcase)
+       Открывается кнопками «Заказать» и «Рассчитать стоимость услуг» на всех
+       устройствах (js/calculator.js → openPriceCalc). Компьютер: две колонки —
+       анкета слева, смета справа, обе видны сразу. Планшет и телефон: две
+       страницы внутри панели — анкета с кнопкой «Далее» и итог с кнопкой
+       «Назад» (css/style/19-calculator.css, группа 4).
        Логика — js/calculator.js → openPriceCalc / initPriceCalcForm,
-       вид — css/style/19-calculator.css, блок «РАСЧЁТ СТОИМОСТИ НА КОМПЬЮТЕРЕ».
-       Ответы Да/Нет лежат в том же calcAnswers, что у окна, поэтому цена в
-       обоих видах всегда одна и та же. -->
+       вид — css/style/19-calculator.css, блок «РАСЧЁТ СТОИМОСТИ».
+       Ответы лежат в общем calcAnswers, поэтому цена на всех устройствах
+       одна и та же. -->
   <div id="priceCalcShowcase" class="nr-calcshow-overlay" role="dialog" aria-modal="true" aria-labelledby="nrCalcShowcaseTitle" aria-hidden="true">
     <div class="nr-calcshow-panel">
 
@@ -1404,7 +1196,7 @@
         <h2 class="nr-calcshow-title" id="nrCalcShowcaseTitle" data-i18n="services.priceCalc.form.title">Укажите детали работы</h2>
         <p class="nr-calcshow-sub" data-i18n="services.priceCalc.form.sub">Отметьте, что нужно сделать, — стоимость пересчитается сразу.</p>
 
-        <!-- Длительность: тот же набор значений, что у окна (config.js → priceCalc.durations) -->
+        <!-- Длительность: набор значений — config.js → priceCalc.durations -->
         <div class="nr-calcshow-block">
           <span class="nr-calcshow-label" data-i18n="services.priceCalc.form.durationLabel">Длительность трека</span>
           <div class="nr-calcshow-duration">
@@ -1437,7 +1229,8 @@
              в любое место рамки переключает галочку.
              Кружок «i» стоит ВНЕ <label>: внутри он переключал бы галочку
              вместо показа подсказки.
-             Карточки лежат по две в ряд (сетка в css/style/19-calculator.css),
+             Карточки лежат по одной в ряд на телефоне и по две — с 640px
+             (сетка в css/style/19-calculator.css),
              порядок здесь и есть порядок на экране: услуги, счётчик
              исполнителей, срочность. -->
         <div class="nr-calcshow-block">
@@ -1523,8 +1316,7 @@
             <!-- Сколько исполнителей — не услуга, а объём работы: число меняют
                  стрелки (js/calculator.js → changeCalcPerformers), галочки нет.
                  1 — цена не меняется, 2 — +3000 ₽, 3 — +5000 ₽, 4+ — цена
-                 обговаривается индивидуально (config.js → priceCalc.performers).
-                 В шагах мобильного окна вопроса нет, там всегда один. -->
+                 обговаривается индивидуально (config.js → priceCalc.performers). -->
             <div class="nr-calcshow-option nr-calcshow-option-stepper">
               <span class="nr-calcshow-check-text" data-i18n="services.priceCalc.optPerformers">Сколько исполнителей?</span>
               <div class="nr-calcshow-stepper">
@@ -1573,10 +1365,24 @@
         </div>
 
         <!-- Комментарий: уходит в текст заявки (js/calculator.js → buildCalcOrderText).
-             Плейсхолдер ставит renderPriceCalcForm — по языку. -->
-        <div class="nr-calcshow-block">
+             Плейсхолдер ставит renderPriceCalcForm — по языку.
+             Класс nr-calcshow-block-comment отмечает последний блок анкеты: поле
+             держит свою высоту, а не тянется до низа панели
+             (css/style/19-calculator.css, группа 1). -->
+        <div class="nr-calcshow-block nr-calcshow-block-comment">
           <label class="nr-calcshow-label" for="calcFormComment" data-i18n="services.priceCalc.form.commentLabel">Комментарий</label>
           <textarea id="calcFormComment" class="nr-calcshow-comment" rows="3"></textarea>
+        </div>
+
+        <!-- Подвал анкеты: «Далее» открывает вторую страницу панели — итог со
+             сметой (js/calculator.js → showCalcSummaryView). Есть только на
+             планшете и телефоне: на компьютере анкета и смета стоят рядом
+             (css/style/19-calculator.css, группа 4). -->
+        <div class="nr-calcshow-form-foot">
+          <button type="button" class="nr-calcshow-next" onclick="showCalcSummaryView()">
+            <span data-i18n="services.priceCalc.form.nextBtn">Далее</span>
+            <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+          </button>
         </div>
 
       </div>
@@ -1584,6 +1390,14 @@
       <!-- ПРАВАЯ КОЛОНКА — СМЕТА. Показывает только выбранное: строки собирает
            js/calculator.js → renderPriceCalcForm. -->
       <aside class="nr-calcshow-summary">
+        <!-- «Назад» к анкете: на планшете и телефоне смета — вторая страница
+             панели (js/calculator.js → showCalcFormView). На компьютере
+             кнопка скрыта: там обе колонки видны сразу. -->
+        <button type="button" class="nr-calcshow-back" onclick="showCalcFormView()">
+          <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+          <span data-i18n="services.priceCalc.form.backBtn">Назад</span>
+        </button>
+
         <div class="nr-calcshow-summary-head">
           <span class="nr-calcshow-summary-icon" aria-hidden="true">
             <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
@@ -1672,7 +1486,7 @@
     </button>
   </div>
 
-  <!-- ПОДСКАЗКА ПРО ВОПРОСЫ КАЛЬКУЛЯТОРА (кружок «i»): один общий бабл, который
+  <!-- ПОДСКАЗКА ПРО УСЛУГИ КАЛЬКУЛЯТОРА (кружок «i»): один общий бабл, который
        переиспользует вид подсказки BEFORE / AFTER (css/style → .nr-ab-hint-tip).
        Текст и позиция задаются из js/calculator.js → showCalcHint / positionCalcHint. -->
   <div id="calcHintTip" class="nr-ab-hint-tip nr-calc-hint-tip" aria-hidden="true">
