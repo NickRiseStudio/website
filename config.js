@@ -81,7 +81,7 @@ const CONFIG = {
         // включении трека (js/player-ui.js → maybeShowAbHint). «до» и «после»
         // выделены оранжевым, а <br> делит подсказку на две строки: inline-HTML
         // внутри строки допустим, renderI18nText вставит его как HTML
-        // (классы и вид — в style.css).
+        // (классы и вид — в css/style).
         abHint: 'Здесь вы можете переключать<br>версии <span class="nr-ab-hint-accent">до</span> и <span class="nr-ab-hint-accent">после</span> обработки'
       },
       services: {
@@ -175,10 +175,10 @@ const CONFIG = {
         // Оранжевые акценты в биографии расставлены ПО ПОМЕТКАМ ЗАКАЗЧИКА
         // (в тексте он помечал нужные слова «звёздочками»). Цвет — тем же
         // классом nr-ab-hint-accent, что у подсказок плеера и логотипа
-        // (style.css). Ничего сверх пометок не выделяем.
+        // (css/style). Ничего сверх пометок не выделяем.
         // Биография кадра 1 (#aboutShowcase) разбита на строки-элементы
         // .nr-about-line: каждая строка — отдельный span, поэтому её можно
-        // править и сдвигать по отдельности (сдвиги — style.css, таблица
+        // править и сдвигать по отдельности (сдвиги — css/style, таблица
         // «Сдвиги строк биографии кадра 1»). Переносов «само собой» там нет:
         // строки не переносятся, длина строки задана этой разбивкой.
         // Между «мик-» и «шерами» пробела нет намеренно: на телефоне дефис скрыт
@@ -191,14 +191,13 @@ const CONFIG = {
         // bioText2 (только мобильная модалка #aboutModal): та же мысль, что у
         // заголовка кадра 2 (bioTraining ниже), но списком. Каждое название —
         // ссылка на тот же адрес, что у кнопок кадра 2 в index.html; вид ссылки
-        // (оранжевый, пунктир, нажатие) — style.css → .nr-about-trainer-link.
+        // (оранжевый, пунктир, нажатие) — css/style/14-hints.css → .nr-about-trainer-link.
         // Вступление — отдельной строкой (.nr-about-training-lead): фраза
         // «Проходил обучение у лучших в индустрии:» стоит в одну строку и тем
         // же видом, что «С радостью готов поработать с тобой!». Кегль обеих
-        // считают style.css (блок «ДВЕ ГЛАВНЫЕ СТРОКИ…») и js/about.js →
+        // считают css/style (блок «ДВЕ ГЛАВНЫЕ СТРОКИ…») и js/about.js →
         // fitAboutLeads(), поэтому <br> здесь не нужен и вреден — он вернул бы
-        // перенос. Раньше стоял <br> после «Проходил обучение», и фраза рвалась
-        // на две строки.
+        // перенос и разорвал фразу на две строки.
         bioText2: '<span class="nr-about-training-lead">Проходил обучение у лучших в индустрии:</span> <a class="nr-about-trainer-link" href="https://mixwiththemasters.com" target="_blank" rel="noopener noreferrer">MIX With The MASTERS</a>, <a class="nr-about-trainer-link" href="https://www.waves.com/courses" target="_blank" rel="noopener noreferrer">Waves Audio Courses</a>, <a class="nr-about-trainer-link" href="https://genius.com/artists/Ilya-lukashev" target="_blank" rel="noopener noreferrer">Илья Лукашев</a>, <a class="nr-about-trainer-link" href="https://genius.com/artists/Konstantin-matafonov" target="_blank" rel="noopener noreferrer">Константин Матафонов</a> и других.',
         // Кадр 2 раздела #aboutShowcase на компьютере: заголовок колонки перед
         // кнопками обучения. Полная фраза с именами (bioText2 выше) осталась
@@ -213,7 +212,7 @@ const CONFIG = {
         // Финальная фраза мобильной модалки. Класс .nr-about-final-lead стоит
         // на span в index.html, а не здесь: значение подставляется как
         // textContent (тегов в нём нет), и обёртку задаёт разметка. Поэтому
-        // строка тоже всегда одна — style.css → «ДВЕ ГЛАВНЫЕ СТРОКИ…».
+        // строка тоже всегда одна — css/style → «ДВЕ ГЛАВНЫЕ СТРОКИ…».
         bioText3: 'С радостью готов поработать с тобой!',
         // Строка под «С радостью готов поработать с тобой!» на финальном кадре
         // #aboutShowcase. Промокод — кнопка (data-about-action="copy-discount"):
@@ -284,8 +283,8 @@ const CONFIG = {
           tablet: 'Specialization: Pop/House • Rock/Metal • Rap/R&B',
           mobile: 'Pop/House • Rock/Metal • Rap/R&B'
         },
-        /* USP text. Desktop and tablet get the full two-sentence version;
-           the phone keeps only the first sentence so the hero stays tall. */
+        /* Текст УТП. Компьютер и планшет — полная версия из двух предложений,
+           телефон — только первое, чтобы главный экран оставался высоким. */
         usp: {
           desktop: 'I turn raw demos and multitracks into a powerful, wide and competitive world-class sound. From the first bar to the final master — every element in its place, every frequency under control.',
           tablet: 'I turn raw demos and multitracks into a powerful, wide and competitive world-class sound. From the first bar to the final master — every element in its place, every frequency under control.',
@@ -304,25 +303,25 @@ const CONFIG = {
         prevBtn: 'Previous',
         nextBtn: 'Next',
         audioError: 'Could not load the track file. Check your connection and tap the track again.',
-        // Hint above the BEFORE / AFTER switch — shown on the first track start
-        // (js/player-ui.js → maybeShowAbHint). "before" and "after" are highlighted in
-        // orange and the <br> splits the hint into two lines: inline HTML inside
-        // a string is allowed, renderI18nText inserts it as HTML (the look lives
-        // in style.css).
+        // Подсказка над переключателем BEFORE / AFTER — показывается при первом
+        // запуске трека (js/player-ui.js → maybeShowAbHint). Слова «before» и
+        // «after» подсвечены янтарным, <br> делит подсказку на две строки:
+        // инлайн-HTML внутри строки разрешён, renderI18nText вставляет его как
+        // HTML (вид — в css/style).
         abHint: 'Here you can switch between<br>the <span class="nr-ab-hint-accent">before</span> and <span class="nr-ab-hint-accent">after</span> versions'
       },
       services: {
         title: 'Services & Pricing',
         popularBadge: 'MOST CHOSEN',
         orderBtn: 'Order',
-        // Back side of a service card (revealed on card click): "what it is"
-        // (aboutEn) + the "what's included" list (featuresEn).
+        // Оборот карточки услуги (открывается по клику): «что это»
+        // (aboutEn) плюс список «что входит» (featuresEn).
         backTitle: 'What it is',
         includesTitle: "What's included",
         backBtn: 'Back',
         flipHint: 'Tap to learn more',
-        // Service cost calculator modal (steps: warning → duration → 4 Yes/No
-        // questions → final price).
+        // Окно калькулятора стоимости услуг (шаги: предупреждение → длительность
+        // → 4 вопроса Да/Нет → итоговая цена).
         priceCalc: {
           button: 'Calculate service cost',
           badge: 'SERVICE COST CALCULATOR // NICK RISE',
@@ -334,15 +333,16 @@ const CONFIG = {
           durationMin: 'min',
           individualNote: 'Quoted individually',
           qMastering: 'Do you need mastering?',
-          // Hint for the mastering question: shown on hover/tap of the "i" circle
-          // next to the question (js/calculator.js → showCalcHint). The look matches the
-          // BEFORE / AFTER hint bubble; orange accents use nr-ab-hint-accent.
-          // The text flows naturally (the browser wraps it to the bubble width).
+          // Подсказка к вопросу про мастеринг: показывается при наведении или тапе
+          // на кружок «i» рядом с вопросом (js/calculator.js → showCalcHint). Вид
+          // совпадает с баблом подсказки BEFORE / AFTER, янтарные акценты —
+          // nr-ab-hint-accent. Текст течёт естественно: переносы делает браузер
+          // по ширине бабла.
           hintMastering: 'Mastering is the final treatment of a finished mix: frequency balance, <span class="nr-ab-hint-accent">streaming loudness</span>, density and a polished sound. It comes <span class="nr-ab-hint-accent">after mixing</span>.',
           hintMasteringAria: 'What is mastering?',
           qVocalRhythm: 'Do you need vocal timing correction / loudness leveling?',
           qTrackout: 'Do you need beat trackout mixing (beat stems) / beat refinement?',
-          // Hint for the beat trackout question (beat stems).
+          // Подсказка к вопросу про трекаут бита (стемы бита).
           hintTrackout: 'Trackout (beat stems) is a beat split into <span class="nr-ab-hint-accent">separate tracks</span> (kick, snare, hats, bass, etc.) instead of a single finished file. It lets us blend the vocal with the beat and <span class="nr-ab-hint-accent">refine the beat itself</span>.',
           hintTrackoutAria: 'What are beat stems (trackout)?',
           qVocalNotes: 'Do you need manual vocal pitch correction?',
@@ -378,9 +378,9 @@ const CONFIG = {
       },
       reviews: {
         title: 'Reviews',
-        // Translation notice under the review text (English version only)
+        // Пометка о переводе под текстом отзыва (только в английской версии)
         translated: 'Translated',
-        // Label under a long truncated review and its state when expanded
+        // Подпись под длинным обрезанным отзывом и её состояние после раскрытия
         more: 'Read more…',
         less: 'Show less'
       },
@@ -388,43 +388,43 @@ const CONFIG = {
         tag: 'STUDIO ENGINEER PROFILE // NICK RISE',
         title: 'Alexander (Nick Rise)',
         subtitle: 'Mixing &<br>Mastering Engineer',
-        // Slide 1 of #aboutShowcase: the same two lines, printed one after the
-        // other (animations.js → ABOUT1.subAt / sub2At). The `subtitle` key above
-        // stays for the mobile #aboutModal, where the phrase is one <br> line.
+        // Слайд 1 в #aboutShowcase: те же две строки, напечатанные одна за другой
+        // (animations.js → ABOUT1.subAt / sub2At). Ключ `subtitle` выше остаётся
+        // для мобильной #aboutModal, где фраза — одна строка с <br>.
         subtitle1: 'Mixing &',
         subtitle2: 'Mastering Engineer',
         experience: '6+ Years Industry Experience',
         bioTitle: 'About Me',
-        // Orange highlights mirror the customer-marked words in the Russian text
-        // (same nr-ab-hint-accent class as the player / logo hints, style.css).
-        // Line-by-line split for English (11 .nr-about-line spans: first
-        // paragraph 1–6, second 7–11). Per-line offsets in style.css are shared
-        // by both languages, the paragraph gap there is set per language.
+        // Янтарные акценты повторяют слова, отмеченные заказчиком в русском тексте
+        // (тот же класс nr-ab-hint-accent, что у подсказок плеера и логотипа).
+        // Построчный разбор для английского (11 спанов .nr-about-line: первый
+        // абзац 1–6, второй 7–11). Сдвиги строк в css/style общие для обоих
+        // языков, зазор между абзацами задаётся по языку.
         bioText1: '<span class="nr-about-line">Hello! I\'m Alexander — a beatmaker, audio</span> <span class="nr-about-line">technician, and <span class="nr-ab-hint-accent">sound engineer</span> based in</span> <span class="nr-about-line">Moscow. My background spans working</span> <span class="nr-about-line">with both <span class="nr-ab-hint-accent">analog</span> and <span class="nr-ab-hint-accent">digital</span></span> <span class="nr-about-line">consoles across <span class="nr-ab-hint-accent">live concerts</span></span> <span class="nr-about-line">and <span class="nr-ab-hint-accent">studio sessions</span>.</span> <span class="nr-about-line nr-about-para">I work <span class="nr-ab-hint-accent">with artists</span>, not a</span> <span class="nr-about-line">stream of orders: I reply the</span> <span class="nr-about-line"><span class="nr-ab-hint-accent">same day</span>, explain things in</span> <span class="nr-about-line"><span class="nr-ab-hint-accent">plain words</span> and <span class="nr-ab-hint-accent">never go silent</span></span> <span class="nr-about-line">mid-project.</span>',
-        // bioText1: mobile #aboutModal uses the same key — one text for desktop
-        // and phone (in the modal the line spans simply flow as a paragraph).
-        // bioText2 (mobile #aboutModal only): same idea as slide 2's heading
-        // (bioTraining below), as a list. Each name links to the same URL as
-        // slide 2's buttons in index.html; the look (orange, dotted underline,
-        // press) is style.css → .nr-about-trainer-link.
-        // The lead-in is its own line (.nr-about-training-lead): the phrase
-        // "I've trained with the best in the industry:" stays on one line and
-        // looks like bioText3 (white, 800). A <br> used to split it in two.
+        // bioText1: мобильная #aboutModal использует тот же ключ — один текст на
+        // компьютер и телефон (в модалке спаны строк просто текут абзацем).
+        // bioText2 (только мобильная #aboutModal): та же мысль, что в заголовке
+        // слайда 2 (bioTraining ниже), но списком. Каждое имя ведёт на тот же URL,
+        // что и кнопки слайда 2 в index.html; вид (янтарный, пунктир, нажатие) —
+        // css/style/14-hints.css → .nr-about-trainer-link.
+        // Вступление вынесено отдельной строкой (.nr-about-training-lead): фраза
+        // «I've trained with the best in the industry:» стоит в одну строку и
+        // выглядит как bioText3 (белая, 800). <br> внутри неё разорвал бы фразу.
         bioText2: '<span class="nr-about-training-lead">I\'ve trained with the best in the industry:</span> <a class="nr-about-trainer-link" href="https://mixwiththemasters.com" target="_blank" rel="noopener noreferrer">MIX With The MASTERS</a>, <a class="nr-about-trainer-link" href="https://www.waves.com/courses" target="_blank" rel="noopener noreferrer">Waves Audio Courses</a>, <a class="nr-about-trainer-link" href="https://genius.com/artists/Ilya-lukashev" target="_blank" rel="noopener noreferrer">Ilya Lukashev</a>, <a class="nr-about-trainer-link" href="https://genius.com/artists/Konstantin-matafonov" target="_blank" rel="noopener noreferrer">Konstantin Matafonov</a>, and more.',
-        // Slide 2 of the desktop #aboutShowcase: heading above the training
-        // buttons. The full sentence with names (bioText2 above) stays in the
-        // mobile #aboutModal — it has no buttons. Button URLs live in index.html.
-        // <br> is a line break: the typewriter (animations.js → aboutType())
-        // understands the tag and starts a new line on it.
+        // Слайд 2 в компьютерном #aboutShowcase: заголовок над кнопками обучения.
+        // Полная фраза с именами (bioText2 выше) остаётся в мобильной #aboutModal —
+        // там кнопок нет. URL кнопок лежат в index.html.
+        // <br> — перенос строки: печатная машинка (animations.js → aboutType())
+        // понимает тег и начинает с него новую строку.
         bioTraining: 'Trained with<br>the best in the industry:',
         trainer1: 'MIX With The MASTERS',
         trainer2: 'Waves Audio Courses',
         trainer3: 'Ilya Lukashev',
         trainer4: 'Konstantin Matafonov',
         bioText3: 'I would be happy to work with you!',
-        // Promo line under the lead on the last #aboutShowcase slide. The code is
-        // a button (data-about-action="copy-discount"): a click copies it and
-        // shows the toastDiscountCopied toast.
+        // Промо-строка под подводкой на последнем слайде #aboutShowcase. Код —
+        // кнопка (data-about-action="copy-discount"): клик копирует его и
+        // показывает тост toastDiscountCopied.
         discount: 'Grab a 10% discount with <button type="button" class="nr-about-discount-code" data-about-action="copy-discount" title="Copy promo code">«NRSDiscount»</button>',
         toastDiscountCopied: 'Promo code NRSDiscount copied!',
         promoCodePrefix: 'Promo code: ',
@@ -438,22 +438,22 @@ const CONFIG = {
         btnFaqWorkflow: 'How does the process work?',
         btnDiscuss: 'Discuss Project',
         btnDemos: 'Hear A/B Demos',
-        // Full-screen about section on desktop (#aboutShowcase): scroll hint on
-        // the first slide and the dot indicator labels on the right.
+        // Полноэкранный раздел «Обо мне» на компьютере (#aboutShowcase): подсказка
+        // о прокрутке на первом слайде и подписи точек-индикаторов справа.
         hint: 'Scroll',
         dot1: 'Slide 1 of 3',
         dot2: 'Slide 2 of 3',
         dot3: 'Slide 3 of 3'
       },
 
-      // Page metadata: title and meta description are set per language
-      // by js/i18n.js → updateDocumentMeta(). og:*/twitter:* are static and bilingual.
+      // Метаданные страницы: title и meta description задаются по языку
+      // в js/i18n.js → updateDocumentMeta(). og:*/twitter:* статичны и двуязычны.
       meta: {
         title: 'Nick Rise Studio — Professional Mixing & Mastering',
         description: 'Premium mixing and mastering by Nick Rise. Analog SSL, Neve and Tube-Tech sound, mastered to Spotify, Apple Music and radio standards.'
       },
 
-      // Tooltip and aria-label captions (data-i18n-title / data-i18n-aria-label attributes).
+      // Подписи подсказок и aria-label (атрибуты data-i18n-title / data-i18n-aria-label).
       a11y: {
         mixerStrip: 'Interactive SSL mixer strip',
         aboutTitle: 'About Me // Nick Rise',

@@ -9,7 +9,7 @@
   <title>Nick Rise Studio — Профессиональное сведение & мастеринг</title>
   <meta name="description" content="Премиальное сведение и мастеринг треков от Ника Райза (Nick Rise). Аналоговый звук SSL, Neve, Tube-Tech под стандарты Spotify, Apple Music и Радио.">
 
-  <!-- OpenGraph / Social Meta Tags -->
+  <!-- Open Graph и метаданные для соцсетей -->
   <meta property="og:type" content="website">
   <meta property="og:title" content="Nick Rise Studio — Mixing & Mastering / Сведение и мастеринг">
   <meta property="og:description" content="Premium mixing & mastering / Премиальное сведение и мастеринг треков от Ника Райза (Nick Rise). Analog SSL, Neve, Tube-Tech.">
@@ -40,7 +40,7 @@
   <link rel="icon" type="image/webp" sizes="3000x3000" href="./image/Logo.webp">
   <link rel="apple-touch-icon" sizes="3000x3000" href="./image/Logo.webp">
 
-  <!-- Production Tailwind CSS (Compiled via CLI) -->
+  <!-- Tailwind CSS, собранный через CLI -->
   <link rel="stylesheet" href="./tailwind.css">
 
   <!-- ШРИФТЫ (self-hosted): один файл на всё, генерируется
@@ -52,13 +52,13 @@
   <link rel="stylesheet" href="./fonts.css">
 
   <!-- Lenis (плавный скролл): минимальный служебный CSS библиотеки.
-       Лежит локально в vendor/, как GSAP. Подключаем ПЕРЕД style.css,
+       Лежит локально в vendor/, как GSAP. Подключаем ПЕРЕД css/style,
        чтобы правила самого сайта шли после и в спорных местах побеждали. -->
   <link rel="stylesheet" href="./vendor/lenis.css">
 
-  <!-- Custom Styles: бывший style.css, 20 файлов по секциям страницы.
-       Порядок подключения = порядок номеров в именах = прежний порядок блоков,
-       поэтому каскад и приоритеты стилей не изменились (нарезка 1:1).
+  <!-- Custom Styles: 20 файлов базовых стилей по секциям страницы (css/style).
+       Порядок подключения = порядок номеров в именах файлов, и он же задаёт
+       каскад: файл раздела идёт после общих утилит, анимации — после всех стилей.
        Что в каком файле — в шапке самого файла и в PROJECT-NOTES.md §3.
        Правила планшета (640–1023.98px) и телефона (до 639px) лежат внутри
        файла своей секции, рядом с её ПК-правилами. -->
@@ -83,8 +83,8 @@
   <link rel="stylesheet" href="./css/style/19-calculator.css">
   <link rel="stylesheet" href="./css/style/20-about.css">
 
-  <!-- Animation Layer (добавляет только анимации): бывший animations.css,
-       15 файлов. Номера — те же, что в баннерах-комментариях внутри файлов. -->
+  <!-- Animation Layer: 15 файлов анимаций (css/anim), добавляют только движение,
+       ни одно правило стилей не переопределяют. Подключаются после css/style. -->
   <link rel="stylesheet" href="./css/anim/01-boot.css">
   <link rel="stylesheet" href="./css/anim/02-atmosphere.css">
   <link rel="stylesheet" href="./css/anim/03-header.css">
@@ -103,7 +103,7 @@
 
   <!-- Главное фото hero (элемент LCP): грузим заранее, не дожидаясь разбора разметки.
        Один оригинал — без srcset. media: на телефоне и планшете фото героя не
-       показывается вовсе (style.css → «ФОТО ГЕРОЯ И КНОПКА „ОБО МНЕ“»), поэтому
+       показывается вовсе (css/style → «ФОТО ГЕРОЯ И КНОПКА „ОБО МНЕ“»), поэтому
        там предзагрузка не нужна и файл не качается. -->
   <link rel="preload" as="image"
         media="(min-width: 1024px)"
@@ -231,8 +231,7 @@
     })();
   </script>
 
-  <!-- 0. FIXED STUDIO MIXER FADER (GSAP TRACKED) -->
-  <!-- 0. FIXED STUDIO MIXER FADER (GSAP TRACKED) -->
+  <!-- 0. БОКОВАЯ СТОЙКА МИКШЕРА (фейдер ведёт GSAP) -->
   <aside id="side-mixer-strip" class="mixer-track-fixed hidden lg:flex" title="Интерактивная полоса микшера SSL" data-i18n-title="a11y.mixerStrip">
     <!-- Верхний VU индикатор -->
     <div class="text-[8px] font-mono text-gray-400 text-center uppercase tracking-tighter">SSL</div>
@@ -268,7 +267,7 @@
   </aside>
 
 
-  <!-- 1. HEADER -->
+  <!-- 1. ШАПКА -->
   <header id="mainHeader" class="fixed top-0 left-0 right-0 z-50 bg-[#0C0E12]/90 border-b border-gray-800/60 transition-colors duration-300">
     <div class="px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
       
@@ -306,7 +305,7 @@
           </svg>
         </button>
 
-        <!-- Mobile/Tablet Menu Toggle Button -->
+        <!-- Кнопка бургер-меню (телефон и планшет) -->
         <button id="mobileMenuToggle" onclick="toggleMobileMenu()" aria-label="Toggle mobile menu" class="lg:hidden w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-[#14171F] border border-gray-800 flex items-center justify-center text-gray-300 hover:text-white hover:border-amber-500/40 transition-all duration-300 active:scale-95 focus:outline-none relative overflow-hidden">
           <svg id="hamburgerIcon" class="w-5 h-5 fill-current text-amber-400 transition-all duration-[1200ms] ease-[cubic-bezier(0.16,1,0.3,1)] transform" viewBox="0 0 24 24">
             <path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/>
@@ -320,10 +319,10 @@
     </div>
   </header>
 
-  <!-- Mobile/Tablet Backdrop Overlay -->
+  <!-- Затемнение под меню (телефон и планшет) -->
   <div id="mobileMenuOverlay" onclick="closeMobileMenu()" class="lg:hidden fixed inset-0 z-30 bg-black/75"></div>
 
-  <!-- Mobile/Tablet Navigation Drawer (Slides smoothly out from under header) -->
+  <!-- Шторка меню (телефон и планшет): выезжает из-под шапки -->
   <div id="mobileMenuDrawer" class="lg:hidden fixed top-16 sm:top-20 left-0 right-0 z-40 bg-[#0C0E12] border-b border-gray-800/80 px-4 sm:px-6 py-5 shadow-2xl max-h-[calc(100vh-4rem)] sm:max-h-[calc(100vh-5rem)] overflow-y-auto overscroll-contain">
     <div class="max-w-7xl mx-auto flex flex-col space-y-2 text-base font-semibold text-gray-200">
       
@@ -362,10 +361,10 @@
     </div>
   </div>
 
-  <!-- MAIN CONTENT -->
+  <!-- ОСНОВНОЙ КОНТЕНТ -->
   <main class="pt-16 lg:pt-0 space-y-8 sm:space-y-16 lg:space-y-20">
 
-    <!-- 2. HERO SECTION -->
+    <!-- 2. ГЛАВНЫЙ ЭКРАН -->
     <section id="hero" class="relative min-h-[75vh] sm:min-h-[82vh] lg:min-h-[85vh] flex items-center justify-center pt-4 sm:pt-10 lg:pt-28 pb-4 sm:pb-10 lg:pb-8 overflow-hidden">
       <!-- Фон главного экрана: 5 кадров студии (hero-bg-1..5.webp), которые по
            кругу сменяют друг друга плавным растворением (animations.js →
@@ -373,7 +372,7 @@
            бы анимацию «дыхания» подсветки (#hero > div.absolute:first-of-type).
            Кадр 1 отдан прямо в разметке (виден и без JS), остальные четыре
            подгружает скрипт из data-bg. Затемнение поверх кадров — ::after
-           слоя (см. style.css). -->
+           слоя (см. css/style). -->
       <div class="hero-bg-layer" aria-hidden="true">
         <div class="hero-bg-slide is-active" style="background-image:url('./image/hero-bg-1.webp');--nr-hero-focus-x:26%;--nr-hero-shift-y:-2.4vw"></div>
         <div class="hero-bg-slide" data-bg="./image/hero-bg-2.webp" style="--nr-hero-focus-x:42%;--nr-hero-shift-y:-2.8vw"></div>
@@ -382,13 +381,13 @@
         <div class="hero-bg-slide" data-bg="./image/hero-bg-5.webp" style="--nr-hero-focus-x:50%"></div>
       </div>
 
-      <!-- Ambient Studio Lighting Effect.
-           Свечение — РАДИАЛЬНЫЙ ГРАДИЕНТ, а не blur(130px) (правка 26.10).
-           Safari на iOS считает большие радиусы размытия в софте (у Blink это
-           быстрый путь на GPU), и на DPR 3 буфер под пятно 500–700px выходит
-           ~2100x2100 px — дорого ровно на старте. Градиент даёт то же мягкое
-           пятно и не стоит почти ничего. Класс absolute оставлен: на него
-           завязано «дыхание» подсветки в animations.css. -->
+      <!-- Подсветка студии.
+           Свечение — РАДИАЛЬНЫЙ ГРАДИЕНТ, а не blur(130px): Safari на iOS
+           считает большие радиусы размытия в софте (у Blink это быстрый путь на
+           GPU), и на DPR 3 буфер под пятно 500–700px выходит ~2100x2100 px —
+           дорого ровно на старте. Градиент даёт то же мягкое пятно почти
+           бесплатно. Класс absolute обязателен: на него завязано «дыхание»
+           подсветки в css/anim/04-hero.css. -->
       <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] sm:w-[700px] h-[500px] sm:h-[700px] rounded-full pointer-events-none -z-10" style="background:radial-gradient(circle, rgba(245,158,11,0.16) 0%, rgba(245,158,11,0.07) 45%, rgba(245,158,11,0) 72%)"></div>
 
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
@@ -458,7 +457,7 @@
       </div>
     </section>
 
-    <!-- 3. A/B PLAYER SECTION -->
+    <!-- 3. ПЛЕЕР A/B -->
     <section id="player" class="relative scroll-mt-28 pt-8 sm:pt-24 pb-16 sm:pb-36 lg:pb-44 bg-[#131824] border-y border-gray-800/60 shadow-inner overflow-hidden">
       <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         
@@ -468,9 +467,9 @@
           </h2>
         </div>
 
-        <!-- TRACK SELECTOR SECTION -->
+        <!-- ВЫБОР ТРЕКА -->
         <div id="playerContentContainer" class="space-y-6">
-          <!-- Audio Language Switch (EN / RU) -->
+          <!-- Переключатель языка аудио (RU / EN) -->
           <div class="flex items-center justify-center">
             <div id="trackLangSwitcher" class="flex flex-row flex-nowrap items-center p-1 bg-[#090C12] border border-gray-800/80 rounded-2xl shadow-inner gap-1.5">
               <button
@@ -500,7 +499,7 @@
                СПРАВА — предыдущая. Соседние страницы видны только внутри
                #trackListSwipeClip: он обрезает ленту ровно по области карточек,
                поэтому треки «уходят за границу», а не заезжают в боковые зоны
-               со стрелками (см. animations.css). -->
+               со стрелками (см. css/anim). -->
           <div id="trackListNavWrap" class="relative">
             <div id="trackListSwipeViewport" class="relative">
               <div id="trackListSwipeClip" class="nr-swipe-clip">
@@ -510,12 +509,12 @@
                   <!-- Колонки: телефон — две, планшет (640–1023px) — одна (название
                        трека должно влезать целиком), компьютер — четыре (карточки
                        там вертикальные, как на телефоне). Число колонок для
-                       компьютера задано в animations.css: класса lg:grid-cols-4 в
+                       компьютера задано в css/anim: класса lg:grid-cols-4 в
                        собранном tailwind.css нет. Ширину единственной карточки на
                        планшете ограничивает боковая зона вьюпорта
-                       (см. animations.css → --nr-track-nav-zone). -->
+                       (см. css/anim → --nr-track-nav-zone). -->
                   <div id="trackListContainer" class="grid grid-cols-2 gap-2.5 sm:grid-cols-1 sm:gap-3">
-                    <!-- Dynamically populated by js/player-ui.js -->
+                    <!-- Заполняется из js/player-ui.js -->
                   </div>
 
                   <div id="trackListPanelRight" class="track-peek-panel" aria-hidden="true"></div>
@@ -528,7 +527,7 @@
                  фона, со свечением; анимация — «мячик отскакивает от края».
                  Живут в обёртке, а не во вьюпорте: тот во время свайпа обрезает
                  содержимое, и стрелки, вынесенные за его края, иначе срезались бы.
-                 Включаются классом .nr-track-nav-mode на вьюпорте (animations.css).
+                 Включаются классом .nr-track-nav-mode на вьюпорте (css/anim).
                  На компьютере (≥1024px) список идёт в четыре колонки — стрелки там
                  не показываются (см. js/player-ui.js → syncTrackNav). -->
             <button type="button" id="trackNavPrevBtn" class="nr-track-nav nr-track-nav-prev" aria-label="Назад" data-i18n-aria-label="a11y.prev">
@@ -560,7 +559,7 @@
                 1 - 6 из 30
               </span>
               <div id="carouselDots" class="flex items-center gap-1.5">
-                <!-- Dots populated by js/player-ui.js -->
+                <!-- Точки заполняются из js/player-ui.js -->
               </div>
             </div>
 
@@ -578,7 +577,7 @@
              отличие от кнопки в шапке, которая на телефоне живёт в меню).
              Текст берётся из общего ключа nav.contactBtn («Связаться» /
              «Contact») — тем же ключом подписаны остальные кнопки связи.
-             Класс .nr-calc-cta (animations.css, раздел 18) — тот же, что у
+             Класс .nr-calc-cta (css/anim/13-cta.css) — тот же, что у
              кнопки «Рассчитать стоимость услуг»: дышащее янтарное свечение,
              бегущий блик и «волна» по контуру. Класс общий на обе CTA,
              поэтому внешний вид и тайминги у них совпадают до пикселя.
@@ -599,7 +598,7 @@
       </div>
     </section>
 
-    <!-- 4. SERVICES & PRICING SECTION -->
+    <!-- 4. УСЛУГИ И ЦЕНЫ -->
     <section id="services" class="scroll-mt-28 pt-4 pb-6 sm:pt-6 sm:pb-8 lg:pt-8 lg:pb-10">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
@@ -615,14 +614,14 @@
              ребёнком и по-прежнему растянут на всю ширину (-mx-4). -->
         <div class="relative">
           <div id="servicesContainer" class="services-carousel-container flex sm:grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8 items-stretch overflow-x-auto sm:overflow-visible snap-x snap-mandatory py-8 sm:py-2 -mx-4 sm:mx-0 no-scrollbar">
-            <!-- Dynamically populated by js/player-ui.js -->
+            <!-- Заполняется из js/player-ui.js -->
           </div>
 
           <!-- Стрелки листания карусели услуг (телефон, <640px). Вид и анимация —
                те же, что у стрелок раздела с примерами (#trackNavPrevBtn /
                #trackNavNextBtn): янтарная дуга-«галочка» без фона, со свечением и
                «отскоком мячика». Показываются только там, где услуги — карусель:
-               на планшете и ПК это сетка (см. animations.css → .nr-services-nav).
+               на планшете и ПК это сетка (см. css/anim → .nr-services-nav).
                На крайних карточках стрелка плавно гаснет (класс .is-hidden,
                js/services.js → syncServicesNav) и нажатие по ней ничего не делает. -->
           <button type="button" id="servicesNavPrevBtn" class="nr-services-nav nr-services-nav-prev" aria-label="Назад" data-i18n-aria-label="a11y.prev">
@@ -638,7 +637,7 @@
         </div>
 
         <!-- Кнопка-калькулятор: ведёт в окно «Рассчитать стоимость услуг» (#priceCalcModal).
-             Класс .nr-calc-cta включает постоянную привлекающую анимацию (animations.css). -->
+             Класс .nr-calc-cta включает постоянную привлекающую анимацию (css/anim). -->
         <div id="servicesCalcCta" class="flex justify-center mt-5 sm:mt-7">
           <button
             onclick="openPriceCalcModal()"
@@ -656,7 +655,7 @@
       </div>
     </section>
 
-    <!-- 5. REVIEWS SECTION -->
+    <!-- 5. ОТЗЫВЫ -->
     <section id="reviews" class="scroll-mt-28 pt-2 pb-8 sm:pt-4 sm:pb-14 lg:pt-6 lg:pb-16 bg-[#131824] border-y border-gray-800/60 shadow-inner">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
@@ -678,7 +677,7 @@
       </div>
     </section>
 
-    <!-- 6. DIRECT CONTACTS SECTION -->
+    <!-- 6. КОНТАКТЫ -->
     <section id="contacts" class="scroll-mt-28 pt-2 pb-8 sm:pt-4 sm:pb-14 lg:pt-6 lg:pb-16">
       <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         
@@ -740,7 +739,7 @@
       </div>
     </section>
 
-    <!-- 6.5 FAQ SECTION -->
+    <!-- 6.5 ЧАСТЫЕ ВОПРОСЫ -->
     <section id="faq" class="scroll-mt-28 py-8 sm:py-14 lg:py-16 bg-[#131824] border-y border-gray-800/60 shadow-inner">
       <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         
@@ -751,7 +750,7 @@
         </div>
 
         <div id="faqContainer" class="space-y-4">
-          <!-- Dynamically populated by js/player-ui.js -->
+          <!-- Заполняется из js/player-ui.js -->
         </div>
 
       </div>
@@ -759,7 +758,7 @@
 
   </main>
 
-  <!-- FOOTER -->
+  <!-- ПОДВАЛ -->
   <footer class="py-8 sm:py-10 px-4 sm:px-6 text-center relative z-10">
     <div class="max-w-7xl mx-auto flex flex-col items-center justify-center gap-2">
       <p class="text-xs sm:text-sm text-gray-300 font-medium tracking-wide">
@@ -768,7 +767,7 @@
     </div>
   </footer>
 
-  <!-- 7. CONTACT MODAL -->
+  <!-- 7. МОДАЛКА «СВЯЗАТЬСЯ» -->
   <div id="contactModal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-4">
     <div class="modal-content rack-card max-w-2xl w-full p-6 sm:p-10 relative overflow-hidden text-center shadow-2xl">
       <!-- Close Button -->
@@ -825,7 +824,7 @@
     </div>
   </div>
 
-  <!-- 7.5 ABOUT MODAL -->
+  <!-- 7.5 МОДАЛКА «ОБО МНЕ» -->
   <div id="aboutModal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto">
     <div class="modal-content rack-card max-w-3xl w-full p-5 sm:p-8 relative overflow-hidden shadow-2xl my-auto text-left max-h-[90vh] overflow-y-auto">
       <!-- Close Button -->
@@ -835,7 +834,7 @@
         </svg>
       </button>
 
-      <!-- Top Rack Strip -->
+      <!-- Верхняя планка-стойка -->
       <div class="flex justify-between items-center mb-6 opacity-40">
         <div class="rack-bolt"></div>
         <div class="text-[10px] font-mono text-gray-400 tracking-widest uppercase" data-i18n="aboutModal.tag">
@@ -844,7 +843,7 @@
         <div class="rack-bolt"></div>
       </div>
 
-      <!-- Engineer Profile Header -->
+      <!-- Шапка профиля инженера -->
       <div class="flex flex-col sm:flex-row items-center sm:items-start gap-5 pb-6 border-b border-gray-800/80">
         <div class="relative w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden border-2 border-amber-500/50 shadow-xl flex-shrink-0 group">
           <img src="./image/logo-256.webp" width="112" height="112" alt="Nick Rise" class="w-full h-full object-cover" loading="lazy" decoding="async">
@@ -868,7 +867,7 @@
         </div>
       </div>
 
-      <!-- Stats Banner -->
+      <!-- Плашка со статистикой -->
       <div class="grid grid-cols-3 gap-2 sm:gap-4 my-6 p-3 sm:p-4 bg-[#090C12] border border-gray-800/80 rounded-2xl text-center">
         <div>
           <div class="text-xl sm:text-2xl font-black text-amber-400 font-mono" data-i18n="aboutModal.stat1Num">200+</div>
@@ -884,7 +883,7 @@
         </div>
       </div>
 
-      <!-- Bio / Description -->
+      <!-- Биография -->
       <div class="space-y-3 mb-6">
         <h4 class="text-lg font-extrabold text-white flex items-center gap-2" data-i18n="aboutModal.bioTitle">
           <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
@@ -893,11 +892,11 @@
         <p class="text-sm sm:text-base text-gray-300 leading-relaxed font-medium" data-i18n="aboutModal.bioText1">
           Приветствую! Меня зовут Александр, я битмейкер, техник по звуку и звукорежиссёр из Москвы. В моём портфолио — работа с аналоговыми и цифровыми микшерами на концертах и студиях. Работаю с артистами, а не с потоком заявок: отвечаю в тот же день, объясняю простым языком и не пропадаю на середине проекта.
         </p>
-        <!-- nr-about-bio2 — не оформление, а контейнер: в style.css он объявлен
+        <!-- nr-about-bio2 — не оформление, а контейнер: в css/style он объявлен
              container-type: inline-size, и кегль вступления внутри считается в
              cqi (процент ширины этого абзаца), поэтому фраза «Проходил обучение
              у лучших в индустрии:» всегда влезает в одну строку на любой ширине
-             телефона. Подробности — style.css, блок «ДВЕ ГЛАВНЫЕ СТРОКИ…». -->
+             телефона. Подробности — css/style/14-hints.css, блок «ДВЕ ГЛАВНЫЕ СТРОКИ». -->
         <p class="nr-about-bio2 text-sm sm:text-base text-gray-300 leading-relaxed font-medium" data-i18n="aboutModal.bioText2">
           <span class="nr-about-training-lead">Проходил обучение у лучших в индустрии:</span> <a class="nr-about-trainer-link" href="https://mixwiththemasters.com" target="_blank" rel="noopener noreferrer">MIX With The MASTERS</a>, <a class="nr-about-trainer-link" href="https://www.waves.com/courses" target="_blank" rel="noopener noreferrer">Waves Audio Courses</a>, <a class="nr-about-trainer-link" href="https://genius.com/artists/Ilya-lukashev" target="_blank" rel="noopener noreferrer">Илья Лукашев</a>, <a class="nr-about-trainer-link" href="https://genius.com/artists/Konstantin-matafonov" target="_blank" rel="noopener noreferrer">Константин Матафонов</a> и других.
         </p>
@@ -908,7 +907,7 @@
              Поэтому «как Обо мне» = крупный белый жирный текст.
 
              nr-about-bio3 — контейнер для cqi (как .nr-about-bio2 выше),
-             nr-about-final-lead — сама фраза: кегль в style.css считается от
+             nr-about-final-lead — сама фраза: кегль в css/style считается от
              ширины абзаца, поэтому строка всегда одна, а точный размер под
              конкретное устройство доводит js/about.js → fitAboutLeads().
              Класс стоит на span, а не на p: data-i18n тоже на нём, и
@@ -918,7 +917,7 @@
         </p>
       </div>
 
-      <!-- FAQ Quick Navigation Buttons -->
+      <!-- Кнопки быстрого перехода в FAQ -->
       <div class="mb-8 space-y-3">
         <button
           onclick="goToFaqItem(0)"
@@ -959,7 +958,7 @@
         </button>
       </div>
 
-      <!-- Footer action buttons -->
+      <!-- Кнопки действий в подвале -->
       <div class="flex flex-col sm:flex-row items-center gap-3 pt-4 border-t border-gray-800/80">
         <button
           onclick="closeAboutModal(); openContactModal();"
@@ -992,7 +991,7 @@
        «Листайте» — крупно по центру внизу, видна на первых двух кадрах; на первом
        светится вспышками до первого листания.
        Открытие и листание — js/about.js → initAboutShowcase(),
-       вид — style.css → «РАЗДЕЛ „ОБО МНЕ“ — ТОЛЬКО КОМПЬЮТЕР». -->
+       вид — css/style → «РАЗДЕЛ „ОБО МНЕ“ — ТОЛЬКО КОМПЬЮТЕР». -->
   <div id="aboutShowcase" class="nr-about-overlay" role="dialog" aria-modal="true" aria-labelledby="nrAboutShowcaseTitle" aria-hidden="true">
     <div class="nr-about-frame">
 
@@ -1022,7 +1021,7 @@
         <!-- Кадр 1: биография — слева, крупнее, по левому краю. Каждая строка —
              отдельный span.nr-about-line (как и в config.js → bioText1): строки не
              переносятся, их длину задаёт эта разбивка, а положение — таблица
-             сдвигов в style.css («Сдвиги строк биографии кадра 1»).
+             сдвигов в css/style («Сдвиги строк биографии кадра 1»).
              Печать идёт абзацами (animations.js → about1TypePara): все строки
              абзаца стартуют одновременно и набираются слева направо, потом так же
              следующий абзац. Первая строка нового абзаца помечена классом
@@ -1054,7 +1053,7 @@
                стоят прямо в href, поэтому renderI18nText() их не трогает.
                Заголовок — h3.nr-about-subhead: крупно, жирно, по центру колонки,
                двумя строками (<br>), печатается по буквам (размер и
-               центрирование — style.css, блок кадра 2). Заголовка «Обо мне» на
+               центрирование — css/style/20-about.css, блок кадра 2). Заголовка «Обо мне» на
                кадре нет: он остался в мобильной модалке #aboutModal. -->
           <h3 class="nr-about-subhead" data-i18n="aboutModal.bioTraining">Проходил обучение<br>у лучших в индустрии:</h3>
 
@@ -1067,7 +1066,7 @@
 
           <!-- Разделяющая линия перед цифрами: отдельный элемент, а не
                border-top у .nr-about-stats, — её «прочерчивание» слева направо
-               анимируется (animations.css, секция 20; таймлайн —
+               анимируется (css/anim/15-about.css; таймлайн —
                animations.js → playAboutSlideTwo()). -->
           <div class="nr-about-rule"></div>
 
@@ -1099,7 +1098,7 @@
           <!-- Строка со скидкой. Промокод — кнопка, а не span: по клику он
                копируется в буфер, а внизу всплывает тост (js/about.js →
                initAboutShowcase(), действие copy-discount). Оформление —
-               style.css → «Строка со скидкой». -->
+               css/style → «Строка со скидкой». -->
           <p class="nr-about-discount" data-i18n="aboutModal.discount">Забери скидку в 10% <button type="button" class="nr-about-discount-code" data-about-action="copy-discount" title="Скопировать промокод">«NRSDiscount»</button></p>
 
           <!-- Сначала вопросы, ниже — кнопки действий. Обработчик клика живёт
@@ -1156,7 +1155,7 @@
     </div>
   </div>
 
-  <!-- 7.6 SERVICE COST CALCULATOR MODAL -->
+  <!-- 7.6 МОДАЛКА КАЛЬКУЛЯТОРА СТОИМОСТИ -->
   <div id="priceCalcModal" class="modal-overlay fixed inset-0 z-[105] flex items-center justify-center p-3 sm:p-5">
     <div class="modal-content rack-card max-w-xl w-full p-5 sm:p-8 relative overflow-hidden shadow-2xl my-auto max-h-[90vh] overflow-y-auto text-center">
 
@@ -1167,7 +1166,7 @@
         </svg>
       </button>
 
-      <!-- Top Rack Strip -->
+      <!-- Верхняя планка-стойка -->
       <div class="flex justify-between items-center mb-5 opacity-40">
         <div class="rack-bolt"></div>
         <div class="text-[10px] font-mono text-gray-400 tracking-widest uppercase" data-i18n="services.priceCalc.badge">
@@ -1176,7 +1175,7 @@
         <div class="rack-bolt"></div>
       </div>
 
-      <!-- Navigation: back button + progress + step counter -->
+      <!-- Навигация: «Назад», полоса прогресса и счётчик шагов -->
       <div class="flex items-center gap-3 mb-6">
         <button type="button" id="calcBackBtn" onclick="prevCalcStep()" class="nr-calc-back">
           <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
@@ -1367,8 +1366,8 @@
        первом включении трека (js/player-ui.js → maybeShowAbHint). Оверлей гасит и
        размывает страницу, ловит клик «по фону» и держит прокрутку; сам бабл
        живёт вне пульта, чтобы затемнение его не гасило, и ставится по кнопке
-       (js/player-ui.js → positionAbHint). Стили — style.css, блок «ПОДСКАЗКА ПРО
-       ПЕРЕКЛЮЧАТЕЛЬ BEFORE / AFTER». -->
+       (js/player-ui.js → positionAbHint). Стили — css/style/14-hints.css, блок
+       «ПОДСКАЗКА ПРО ПЕРЕКЛЮЧАТЕЛЬ BEFORE / AFTER». -->
   <div
     id="abHintOverlay"
     class="nr-ab-overlay"
@@ -1388,9 +1387,9 @@
        нажатий, поэтому кнопки под ним (логотип, бургер, язык) работают. Уходит
        бабл по крестику или по клику на то, что открывает «Обо мне» — логотип в
        шапке или фото в hero. Прокрутка и тапы мимо его не гасят; на телефоне он
-       при прокрутке гаснет вместе с логотипом (style.css, media max-width 639px).
+       при прокрутке гаснет вместе с логотипом (css/style/14-hints.css, media max-width 639px).
        Позицию и место хвостика считает js/logo-hint.js → positionLogoHint. Стили —
-       style.css, блок «ПОДСКАЗКА ПРО ЛОГОТИП В ШАПКЕ». -->
+       css/style/14-hints.css, блок «ПОДСКАЗКА ПРО ЛОГОТИП В ШАПКЕ». -->
   <div id="logoHintTip" class="nr-ab-hint-tip nr-logo-hint-tip">
     <span data-i18n="nav.logoHint">Здесь вы можете узнать <span class="nr-ab-hint-accent">обо мне</span></span>
     <button
@@ -1408,14 +1407,14 @@
   </div>
 
   <!-- ПОДСКАЗКА ПРО ВОПРОСЫ КАЛЬКУЛЯТОРА (кружок «i»): один общий бабл, который
-       переиспользует вид подсказки BEFORE / AFTER (style.css → .nr-ab-hint-tip).
+       переиспользует вид подсказки BEFORE / AFTER (css/style → .nr-ab-hint-tip).
        Текст и позиция задаются из js/calculator.js → showCalcHint / positionCalcHint. -->
   <div id="calcHintTip" class="nr-ab-hint-tip nr-calc-hint-tip" aria-hidden="true">
     <span id="calcHintTipText" data-i18n="services.priceCalc.hintMastering">Мастеринг — это финальная обработка готового микса.</span>
   </div>
 
-  <!-- 8. STICKY BOTTOM AUDIO PLAYER BAR -->
-  <!-- Клик по затемнению пульта (см. style.css → #stickyPlayerBar::after) тоже
+  <!-- 8. НИЖНИЙ ПУЛЬТ ПЛЕЕРА -->
+  <!-- Клик по затемнению пульта (см. css/style → #stickyPlayerBar::after) тоже
        убирает подсказку: клик по самой кнопке BEFORE / AFTER доходит до неё
        (она выше слоя затемнения) и всплывает сюда же. -->
   <div
@@ -1424,7 +1423,7 @@
     onclick="hideAbHint()"
   >
     
-    <!-- Top Progress / Seek Bar with Expanded Touch Hit Area -->
+    <!-- Полоса прогресса и перемотки с увеличенной областью касания -->
     <div
       id="deckSeekHitArea"
       onclick="seekDeckTrack(event)"
@@ -1440,7 +1439,7 @@
         class="h-full bg-gradient-to-r from-amber-600 via-amber-500 to-amber-300 transition-all duration-75 relative shadow-[0_0_8px_rgba(245,158,11,0.5)]"
         style="width: 0%"
       >
-        <!-- Glowing Scrubber Knob, centered on the progress tip -->
+        <!-- Светящаяся головка перемотки по центру кончика прогресса -->
         <div class="deck-scrubber-knob-wrapper">
           <div class="deck-scrubber-knob"></div>
         </div>
@@ -1452,7 +1451,7 @@
          перекрывает, трек можно докрутить до самого конца. Сама кнопка —
          прозрачная дорожка во всю высоту ряда кнопок, чтобы на телефоне по
          ней легко попадать пальцем. Переключатель BEFORE / AFTER подвинут
-         левее (см. .deck-close-notch в style.css), чтобы крестик встал на
+         левее (см. .deck-close-notch в css/style), чтобы крестик встал на
          своё место. -->
     <button
       type="button"
@@ -1469,9 +1468,9 @@
       </svg>
     </button>
 
-    <!-- MOBILE PLAYER BAR (sm:hidden) -->
+    <!-- ПУЛЬТ НА ТЕЛЕФОНЕ (sm:hidden) -->
     <div class="sm:hidden max-w-7xl mx-auto px-3 py-2.5 flex items-center justify-between">
-      <!-- Left: Track Title & Artist (w-0 flex-1 for symmetric centering) -->
+      <!-- Слева: название и исполнитель (w-0 flex-1 — для симметричного центрирования) -->
       <div class="w-0 flex-1 min-w-0 pr-1">
         <h4 class="deck-title text-xs font-black text-white truncate tracking-tight">
           Masochist
@@ -1481,7 +1480,7 @@
         </p>
       </div>
 
-      <!-- Center: Controls (Prev, Play, Next) - Perfectly Centered -->
+      <!-- По центру: кнопки назад / play / вперёд -->
       <div class="flex items-center justify-center gap-1.5 flex-shrink-0">
         <button
           onclick="prevDeckTrack()"
@@ -1533,7 +1532,7 @@
 
     <div class="hidden sm:flex max-w-7xl mx-auto px-5 py-3 items-center justify-between gap-4">
       
-      <!-- Track Meta Info (Left) -->
+      <!-- Слева: информация о треке -->
       <div class="flex items-center gap-3.5 min-w-0 flex-1 justify-start">
         <div class="relative w-12 h-12 rounded-xl overflow-hidden border border-amber-500/40 flex-shrink-0 bg-gray-900 shadow-md">
           <img class="deck-cover w-full h-full object-cover" src="./image/!image_none.jpg" alt="Track Cover" loading="lazy" decoding="async" />
@@ -1553,7 +1552,7 @@
         </div>
       </div>
 
-      <!-- Controls: Prev, Play Icon, Next (Center) -->
+      <!-- По центру: кнопки назад / play / вперёд -->
       <div class="flex items-center justify-center gap-2 flex-shrink-0">
         <button
           onclick="prevDeckTrack()"
@@ -1580,7 +1579,7 @@
         </button>
       </div>
 
-      <!-- Big Horizontal Rectangular BEFORE / AFTER Switch + Volume (Right) -->
+      <!-- Справа: широкий переключатель BEFORE / AFTER и громкость -->
       <div class="deck-close-notch flex items-center justify-end gap-4 flex-1 flex-shrink-0">
         <div
           onclick="toggleDeckSource()"
@@ -1602,7 +1601,7 @@
           </div>
         </div>
 
-        <!-- Volume (visible on desktop) -->
+        <!-- Громкость (только на компьютере) -->
         <div class="hidden lg:flex items-center gap-1.5 bg-[#06070B] px-2.5 py-1.5 rounded-xl border border-gray-800 ml-1">
           <svg class="w-4 h-4 text-amber-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
@@ -1624,7 +1623,7 @@
     </div>
   </div>
 
-  <!-- 8.5 SCROLL TO TOP FLOATING BUTTON (CENTER BOTTOM) -->
+  <!-- 8.5 КНОПКА «НАВЕРХ» (ПО ЦЕНТРУ СНИЗУ) -->
   <button
     id="scrollToTopBtn"
     onclick="scrollToTop()"
@@ -1640,7 +1639,7 @@
     </svg>
   </button>
 
-  <!-- TOAST NOTIFICATION -->
+  <!-- ВСПЛЫВАЮЩЕЕ УВЕДОМЛЕНИЕ -->
   <div class="toast-container">
     <div id="toast" class="toast">
       <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -1651,15 +1650,15 @@
     </div>
   </div>
 
-  <!-- Scripts -->
+  <!-- Скрипты -->
   <!-- GSAP, ScrollTrigger, ScrollToPlugin, Lenis.
-       Лежат ЛОКАЛЬНО (public/vendor): так парсер не ждёт сторонний CDN, нет
-       лишнего соединения и сайт не зависит от доступности cdnjs.
+       Лежат ЛОКАЛЬНО (public/vendor): парсер не ждёт сторонний CDN, нет лишнего
+       соединения и сайт не зависит от доступности cdnjs.
 
        Все внешние скрипты стоят с defer: браузер не блокирует отрисовку на их
        загрузке, а выполняет их после разбора разметки — но в прежнем порядке
        (gsap → ScrollTrigger → ScrollToPlugin → lenis → config → smoothscroll-nr →
-       script → animations) и всегда до DOMContentLoaded. Inline-блок
+       js/state.js → js/animations) и всегда до DOMContentLoaded. Inline-блок
        плавного скролла подписывается на DOMContentLoaded, поэтому SmoothScroll
        к моменту вызова уже загружен. -->
   <script defer src="./vendor/gsap.min.js"></script>
@@ -1696,7 +1695,7 @@
       };
 
       function applySmoothScroll() {
-        // Pure touch-only mobile devices without pointer/mouse
+        // Только сенсорные устройства без мыши и курсора
         var isTouchOnly = ('ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0)) &&
                           window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
         var isDesktop = !isTouchOnly || window.innerWidth >= 1024;
@@ -1734,7 +1733,7 @@
 
       // На resize/zoom достаточно лёгкого resync (сброс незавершённой инерции
       // без пересоздания обработчиков) — если модуль его поддерживает.
-      // Иначе (внешняя либа) ведём себя как раньше: полный applySmoothScroll.
+      // Иначе (внешняя либа) — полный applySmoothScroll.
       function onViewportChange() {
         var ns = window.nrSmoothScroll;
         if (ns && typeof ns.resync === 'function') {
@@ -1747,7 +1746,7 @@
       window.addEventListener('orientationchange', onViewportChange, { passive: true });
     })();
   </script>
-  <!-- Логика сайта: бывший script.js, разделённый по смыслу на 15 файлов.
+  <!-- Логика сайта: бывший js, разделённый по смыслу на 15 файлов.
        Порядок ВАЖЕН и не произвольный:
          • state.js первым — он владеет общим состоянием (currentLang,
            activeTrackLang, activeTrackId, currentTrackPage, trackAudioMap);

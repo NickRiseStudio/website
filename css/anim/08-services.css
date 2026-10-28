@@ -1,21 +1,29 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   NICK RISE STUDIO — ANIMATION / УСЛУГИ: СТОЙКА РЭКА, БОЛТЫ, HOVER
-   Источник: animations.css, строки 1815–1999 (нарезка 1:1, поведение не менялось)
-   Слой: css/anim/* — после ВСЕХ css/style/*.
-         Порядок подключения = порядок номеров файлов.
+   css/anim/08-services.css — УСЛУГИ: СТОЙКА РЭКА, БОЛТЫ, HOVER
+   Что: появление стоек, болты по углам, наведение на карточку.
+   Разметку создаёт: js/services.js → renderServices.
+   Подключён: index.html, после всех css/style/*; здесь после 07-player.css, до 09-faq.css.
+   Группы блоков в файле: 1, 2, 6 (телефон), 8 (ввод).
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* ═══ 09. УСЛУГИ — стойка рэка ════════════════════════════════════════ */
+/* ── ПОРЯДОК БЛОКОВ В ФАЙЛЕ (одинаков во всех css/style и css/anim) ──
+   1. ОБЩИЕ — все устройства            5. ПЛАНШЕТ (640–1023.98px)
+   2. ПЛАНШЕТ И ШИРЕ (min-width: 640px) 6. ТЕЛЕФОН (max-width: 639.98px)
+   3. КОМПЬЮТЕР (min-width: 1024px)     7. УЗКИЙ ТЕЛЕФОН (480px / 380px)
+   4. ВСЁ, КРОМЕ КОМПЬЮТЕРА (≤1023.98)  8. ВВОД (hover / pointer)
+                                        9. «УМЕНЬШИТЬ ДВИЖЕНИЕ»
+   «И выше» — min-width, «и ниже» — max-width на 0.02px меньше границы
+   Tailwind (sm 640, lg 1024): так соседние диапазоны не пересекаются и
+   между ними не остаётся полосы без правил. Печатаются только те группы,
+   блоки которых в файле есть. */
+
+/* ═══ УСЛУГИ — стойка рэка (css/style/06-services.css) ══════════════════════ */
+
+/* ═══ 1. ОБЩИЕ — ВСЕ УСТРОЙСТВА ═════════════════════════════════════════════ */
 
 #servicesContainer > * {
   position: relative;
   transform-style: flat !important;
-}
-
-@media (min-width: 640px) {
-  #servicesContainer > * {
-    transform-style: flat !important;
-  }
 }
 
 #servicesContainer > *::after {
@@ -30,29 +38,8 @@
   transition: background-position 1s var(--nr-ease);
 }
 
-@media (max-width: 639px) {
-  #servicesContainer > *::after { display: none; }
-  .nr-ledstrip { display: none !important; }
-}
-
-/* Наведение — только там, где есть настоящий курсор: на телефонах и планшетах
-   :hover «залипает» после касания, поэтому карточки услуг оставались
-   подсвеченными (блик, винты, LED-лента, блик по цене) и при свайпе, и при
-   тапе. Тот же приём, что у карточек треков (выше) и отзывов (ниже). */
-@media (hover: hover) and (pointer: fine) {
-  #servicesContainer > *:hover::after { background-position: -60% 0; }
-}
-
 /* Винты рэка поворачиваются при наведении */
 .rack-bolt { transition: transform 0.6s var(--nr-snap), box-shadow 0.4s ease; }
-
-@media (hover: hover) and (pointer: fine) {
-  #servicesContainer > *:hover .rack-bolt,
-  .rack-card:hover .rack-bolt {
-    transform: rotate(92deg);
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 8px rgba(245, 158, 11, 0.5);
-  }
-}
 
 /* Лента индикаторов по верхней кромке карточки */
 .nr-ledstrip {
@@ -74,20 +61,22 @@
 }
 
 .nr-ledstrip i:nth-child(1) { animation-delay: 0s; }
+
 .nr-ledstrip i:nth-child(2) { animation-delay: 0.14s; }
+
 .nr-ledstrip i:nth-child(3) { animation-delay: 0.28s; }
+
 .nr-ledstrip i:nth-child(4) { animation-delay: 0.42s; }
+
 .nr-ledstrip i:nth-child(5) { animation-delay: 0.56s; }
+
 .nr-ledstrip i:nth-child(6) { animation-delay: 0.7s; }
+
 .nr-ledstrip i:nth-child(7) { animation-delay: 0.84s; }
+
 .nr-ledstrip i:nth-child(8) { animation-delay: 0.98s; }
 
 .popular-rack-card .nr-ledstrip { top: 22px; }
-
-@media (hover: hover) and (pointer: fine) {
-  #servicesContainer > *:hover .nr-ledstrip { opacity: 1; }
-  #servicesContainer > *:hover .nr-ledstrip i { animation: nrLedChase 1.3s ease-in-out infinite; }
-}
 
 @keyframes nrLedChase {
   0%, 100% { background: #222836; box-shadow: none; }
@@ -164,10 +153,6 @@
 /* Цена — блик по градиенту */
 #servicesContainer .bg-clip-text { background-size: 220% 100%; }
 
-@media (hover: hover) and (pointer: fine) {
-  #servicesContainer > *:hover .bg-clip-text { animation: nrPriceShine 2.6s ease-in-out infinite; }
-}
-
 @keyframes nrPriceShine {
   0%, 100% { background-position: 0% 0; }
   50%      { background-position: 100% 0; }
@@ -186,7 +171,40 @@
   transition: background-position 0.8s var(--nr-ease);
 }
 
-@media (hover: hover) and (pointer: fine) {
-  #servicesContainer button:hover::after { background-position: -60% 0; }
+/* ═══ 2. ПЛАНШЕТ И ШИРЕ (min-width: 640px) ══════════════════════════════════ */
+
+@media (min-width: 640px) {
+  #servicesContainer > * {
+    transform-style: flat !important;
+  }
 }
 
+/* ═══ 6. ТЕЛЕФОН (max-width: 639.98px) ══════════════════════════════════════ */
+
+@media (max-width: 639.98px) {
+  #servicesContainer > *::after { display: none; }
+  .nr-ledstrip { display: none !important; }
+}
+
+/* ═══ 8. ВВОД: hover / pointer ══════════════════════════════════════════════ */
+
+/* Наведение — только там, где есть настоящий курсор: на телефонах и планшетах
+   :hover «залипает» после касания, поэтому карточки услуг оставались
+   подсвеченными (блик, винты, LED-лента, блик по цене) и при свайпе, и при
+   тапе. Тот же приём, что у карточек треков (выше) и отзывов (ниже). */
+@media (hover: hover) and (pointer: fine) {
+  #servicesContainer > *:hover::after { background-position: -60% 0; }
+
+  #servicesContainer > *:hover .rack-bolt,
+  .rack-card:hover .rack-bolt {
+    transform: rotate(92deg);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 8px rgba(245, 158, 11, 0.5);
+  }
+
+  #servicesContainer > *:hover .nr-ledstrip { opacity: 1; }
+  #servicesContainer > *:hover .nr-ledstrip i { animation: nrLedChase 1.3s ease-in-out infinite; }
+
+  #servicesContainer > *:hover .bg-clip-text { animation: nrPriceShine 2.6s ease-in-out infinite; }
+
+  #servicesContainer button:hover::after { background-position: -60% 0; }
+}

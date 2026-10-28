@@ -1,14 +1,16 @@
 // ═══════════════════════════════════════════════════════════════════════
-// NICK RISE STUDIO — JS / УСЛУГИ: РЕНДЕР, ПЕРЕВОРОТ КАРТОЧКИ, КАРУСЕЛЬ
-// Источник: script.js, строки 4982–5665 (перенос 1:1, поведение не менялось)
-// Читает снаружи: currentLang, CONFIG
-// Обязан грузиться после: js/state.js
-// Публичные точки входа (window): initServices, renderServices,
-//          flipServiceCard, syncServicesNav, nextService, prevService.
-// animations.js вешает hook на renderServices.
+// js/services.js — УСЛУГИ: РЕНДЕР, ПЕРЕВОРОТ КАРТОЧКИ, КАРУСЕЛЬ
+// Грузится после: js/state.js. Читает: currentLang, CONFIG.
+// Владеет: —
+// Публичные (window): initServices, renderServices, flipServiceCard, syncServicesNav, nextService, prevService.
+// Блоки файла:
+//   • renderServices — карточки-стойки из CONFIG.services, контейнер #servicesContainer.
+//   • flipServiceCard — переворот внутреннего слоя .service-card-inner.
+//   • Карусель на телефоне: nextService / prevService, syncServicesNav.
+//   • animations.js вешает hook на renderServices.
 // ═══════════════════════════════════════════════════════════════════════
 
-// --- SERVICES SECTION ---
+// --- РАЗДЕЛ УСЛУГ ---
 // Переворот карточки услуги: клик по карточке показывает обратную сторону
 // («что это такое» + «что входит»), повторный клик / кнопка «Назад» возвращает.
 // Крутится внутренний слой .service-card-inner — саму оболочку нельзя: её
@@ -60,7 +62,7 @@ function initServicesNav() {
 }
 
 /* Гасит стрелку, за которой карточек больше нет. Класс .is-hidden плавно
-   уводит её в opacity: 0 (animations.css), поэтому при листании к крайней
+   уводит её в opacity: 0 (css/anim), поэтому при листании к крайней
    карточке стрелка исчезает ровно за время прокрутки — к остановке её уже нет.
 
    Состояние считается по servicesActiveIndex: scrollToServiceCard выставляет
@@ -86,7 +88,7 @@ function renderServices() {
   const currentDevice = getDeviceType();
   const t = CONFIG.i18n[currentLang];
 
-  // In-place update to prevent DOM destruction, layout jitter, and scroll reset on language toggle
+  // Обновление на месте: DOM не пересобирается, раскладка не дрожит, прокрутка не сбрасывается
   const existingCards = container.querySelectorAll('.service-mobile-card');
   if (existingCards.length === CONFIG.servicesData.length) {
     CONFIG.servicesData.forEach((s, idx) => {
@@ -197,7 +199,7 @@ function renderServices() {
       ? 'service-mobile-card popular-rack-card p-4 sm:p-5 flex flex-col justify-between transition-colors duration-200 w-[78vw] max-w-[310px] sm:w-auto sm:max-w-none flex-shrink-0 snap-center cursor-pointer select-none'
       : 'service-mobile-card rack-card p-4 sm:p-5 flex flex-col justify-between transition-colors duration-200 w-[78vw] max-w-[310px] sm:w-auto sm:max-w-none flex-shrink-0 snap-center cursor-pointer select-none';
 
-    // Set initial custom attribute
+    // Начальное значение собственного атрибута
     card.setAttribute('data-card-index', idx);
 
     // Клик по карточке услуги (кроме кнопок внутри). На телефоне (карусель)
@@ -383,7 +385,7 @@ function renderServices() {
     servicesContainerObserver.observe(container);
   }
 
-  // Refresh ScrollTrigger and animations after cards are rendered
+  // Пересчёт ScrollTrigger и анимаций после отрисовки карточек
   if (typeof initServicesGsapAnimation === 'function') {
     initServicesGsapAnimation();
   }
@@ -608,9 +610,9 @@ function updateServicesDots(withTransition = false) {
   // coverflow-трансформа, поэтому coverflow считается точно.
   //
   // ВАЖНО: сначала ЧИТАЕМ все размеры (одна переклейка раскладки), и только
-  // потом пишем стили. Раньше чтение offsetWidth/offsetLeft переплеталось с
-  // записью transform, и браузер пересчитывал раскладку заново на каждой
-  // карточке — при листании карусели это давало «фризы».
+  // потом пишем стили. Если чтение offsetWidth/offsetLeft перемешать с записью
+  // transform, браузер пересчитывает раскладку заново на каждой карточке — при
+  // листании карусели это даёт «фризы».
   const padding = parseFloat(window.getComputedStyle(container).paddingLeft) || 0;
   const firstLeft = cards[0].offsetLeft;
   const metrics = new Array(cards.length);
@@ -643,12 +645,11 @@ function updateServicesDots(withTransition = false) {
   const transitionChanged = transitionValue !== servicesCoverflowTransition;
   servicesCoverflowTransition = transitionValue;
 
-  // ГОРИЗОНТАЛЬНОГО СДВИГА КАРТОЧЕК НЕТ НИ НА ОДНОМ УСТРОЙСТВЕ (правка 26.10).
-  // Раньше соседние карточки подтягивались к центру на ±28px (shiftX). На
-  // Android (Blink) это работало, а на iPhone (WebKit) ломало снап: WebKit
-  // считает снап-точку по ТРАНСФОРМИРОВАННОМУ боксу карточки, поэтому её центр
-  // уезжал вместе со сдвигом, и после свайпа карточка вставала не по центру
-  // экрана (зеркально в сторону, откуда свайпали). Сдвиг убран везде — так
+  // ГОРИЗОНТАЛЬНОГО СДВИГА КАРТОЧЕК НЕТ НИ НА ОДНОМ УСТРОЙСТВЕ.
+  // Подтягивание соседних карточек к центру на ±28px (shiftX) ломает снап на
+  // iPhone: WebKit считает снап-точку по ТРАНСФОРМИРОВАННОМУ боксу карточки,
+  // поэтому её центр уезжает вместе со сдвигом и после свайпа карточка встаёт
+  // не по центру экрана (зеркально в сторону, откуда свайпали). Без сдвига
   // поведение и вид одинаковые на iOS и Android. Масштаб (0.90) и наклон
   // rotateY оставлены: центр карточки они не двигают, coverflow сохраняется.
 
@@ -657,12 +658,12 @@ function updateServicesDots(withTransition = false) {
     const cardWidth = metrics[idx].w;
     const diff = metrics[idx].center - containerCenter;
 
-    // Normalized distance from viewport center (-1 to 1)
+    // Нормированное расстояние от центра экрана (от −1 до 1)
     const progress = Math.max(-1.5, Math.min(1.5, diff / cardWidth));
     const clampedAbs = Math.min(1, Math.abs(progress));
 
-    // Coverflow 3D transformation:
-    // When behind: scaled down (0.90), partially transparent (0.50), slightly rotated on Y axis, shifted inwards
+    // 3D-преобразование карусели coverflow:
+    // Карточка сзади: уменьшена (0.90), полупрозрачна (0.50), чуть повёрнута по оси Y и сдвинута внутрь
     const scale = 1 - 0.10 * clampedAbs;
     const opacity = 1 - 0.50 * clampedAbs;
     const shiftX = 0; // горизонтального сдвига нет — см. пояснение выше

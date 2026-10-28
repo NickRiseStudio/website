@@ -1,11 +1,27 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   NICK RISE STUDIO — ANIMATION / ТОСТ, МОДАЛКИ, БОКОВОЙ МИКШЕР, МОБИЛЬНОЕ МЕНЮ
-   Источник: animations.css, строки 2191–2392 (нарезка 1:1, поведение не менялось)
-   Слой: css/anim/* — после ВСЕХ css/style/*.
-         Порядок подключения = порядок номеров файлов.
+   css/anim/11-toast-modals-menu.css — ТОСТ, МОДАЛКИ, БОКОВОЙ МИКШЕР, МОБИЛЬНОЕ МЕНЮ
+   Что: счётчик времени жизни тоста, открытие и закрытие окон, выезд
+        меню и каскад пунктов.
+   Разметку создаёт: js/toast.js, js/modals.js, js/mobile-menu.js; разметка —
+                    index.html → #toast, #mobileMenuDrawer.
+   Подключён: index.html, после всех css/style/*; здесь после 10-contacts.css, до 12-reveal.css.
+   Группы блоков в файле: 1 (общие), 2 (планшет и шире).
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* ═══ 12. ТОСТ — счётчик времени жизни ════════════════════════════════ */
+/* ── ПОРЯДОК БЛОКОВ В ФАЙЛЕ (одинаков во всех css/style и css/anim) ──
+   1. ОБЩИЕ — все устройства            5. ПЛАНШЕТ (640–1023.98px)
+   2. ПЛАНШЕТ И ШИРЕ (min-width: 640px) 6. ТЕЛЕФОН (max-width: 639.98px)
+   3. КОМПЬЮТЕР (min-width: 1024px)     7. УЗКИЙ ТЕЛЕФОН (480px / 380px)
+   4. ВСЁ, КРОМЕ КОМПЬЮТЕРА (≤1023.98)  8. ВВОД (hover / pointer)
+                                        9. «УМЕНЬШИТЬ ДВИЖЕНИЕ»
+   «И выше» — min-width, «и ниже» — max-width на 0.02px меньше границы
+   Tailwind (sm 640, lg 1024): так соседние диапазоны не пересекаются и
+   между ними не остаётся полосы без правил. Печатаются только те группы,
+   блоки которых в файле есть. */
+
+/* ═══ ТОСТ — счётчик времени жизни (css/style/09-modals.css) ════════════════ */
+
+/* ═══ 1. ОБЩИЕ — ВСЕ УСТРОЙСТВА ═════════════════════════════════════════════ */
 
 #toast { position: relative; overflow: hidden; }
 
@@ -26,8 +42,7 @@
   to   { transform: scaleX(0); }
 }
 
-/* ═══ 13. МОДАЛЬНЫЕ ОКНА — плавное кинематографичное открытие/закрытие ═════ */
-
+/* ═══ МОДАЛЬНЫЕ ОКНА — плавное открытие и закрытие (css/style/09-modals.css) ═══ */
 .modal-content { position: relative; }
 
 .modal-overlay.active .modal-content::after {
@@ -57,6 +72,7 @@
 }
 
 #aboutModal .modal-content img { transition: transform 6s ease-out; }
+
 .modal-overlay.active #aboutModal img,
 #aboutModal.active .modal-content > div img { transform: scale(1.06); }
 
@@ -77,8 +93,7 @@
 
 #aboutModal button[onclick^="goToFaqItem"]:hover::after { background-position: -60% 0; }
 
-/* ═══ 14. БОКОВОЙ МИКШЕР ══════════════════════════════════════════════ */
-
+/* ═══ БОКОВОЙ МИКШЕР (css/style/08-mixer.css) ═══════════════════════════════ */
 #side-mixer-strip { transition: box-shadow 0.5s ease, transform 0.5s var(--nr-ease); }
 
 body.nr-playing #side-mixer-strip {
@@ -86,8 +101,8 @@ body.nr-playing #side-mixer-strip {
 }
 
 /* Позиция ползунка — общий transform, собранный из CSS-переменной --fader-y
-   (её пишет script.js → updateFaderUI). Здесь задаём ТОЛЬКО длительность/кривую
-   догона для случая «колесо», сам transform берём из style.css (.fader-knob).
+   (её пишет js → updateFaderUI). Здесь задаём ТОЛЬКО длительность/кривую
+   догона для случая «колесо», сам transform берём из css/style (.fader-knob).
    Раньше здесь стоял transition по `top`, который конфликтовал с базовым
    правилом и подвешивал «пружину» 0.15s на каждое движение — источник
    дёрганья ползунка. Теперь анимируется transform (композит), а scale
@@ -115,8 +130,7 @@ body.nr-playing #side-mixer-strip > div:first-child {
 
 #side-db-label { transition: color 0.3s ease, text-shadow 0.3s ease; }
 
-/* ═══ 15. МОБИЛЬНОЕ МЕНЮ — выезд сверху вниз (1.2s) и каскадное появление пунктов ════════ */
-
+/* ═══ МОБИЛЬНОЕ МЕНЮ — выезд сверху вниз и каскад пунктов (css/style/09-modals.css) ═══ */
 #mobileMenuDrawer {
   position: fixed;
   top: 4rem;
@@ -138,12 +152,6 @@ body.nr-playing #side-mixer-strip > div:first-child {
   will-change: transform;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
-}
-
-@media (min-width: 640px) {
-  #mobileMenuDrawer {
-    top: 5rem;
-  }
 }
 
 #mobileMenuDrawer.is-open {
@@ -193,10 +201,15 @@ body.nr-playing #side-mixer-strip > div:first-child {
 
 /* Каскадная задержка (stagger) для каждого отдельного элемента при выезде */
 #mobileMenuDrawer.is-open .mobile-drawer-item:nth-child(1) { transition-delay: 0.18s; }
+
 #mobileMenuDrawer.is-open .mobile-drawer-item:nth-child(2) { transition-delay: 0.30s; }
+
 #mobileMenuDrawer.is-open .mobile-drawer-item:nth-child(3) { transition-delay: 0.42s; }
+
 #mobileMenuDrawer.is-open .mobile-drawer-item:nth-child(4) { transition-delay: 0.54s; }
+
 #mobileMenuDrawer.is-open .mobile-drawer-item:nth-child(5) { transition-delay: 0.66s; }
+
 #mobileMenuDrawer.is-open .mobile-drawer-item:nth-child(6) { transition-delay: 0.78s; }
 
 /* При закрытии элементы мягко уходят вверх синхронно без задержки */
@@ -207,3 +220,10 @@ body.nr-playing #side-mixer-strip > div:first-child {
   transition-delay: 0s !important;
 }
 
+/* ═══ 2. ПЛАНШЕТ И ШИРЕ (min-width: 640px) ══════════════════════════════════ */
+
+@media (min-width: 640px) {
+  #mobileMenuDrawer {
+    top: 5rem;
+  }
+}

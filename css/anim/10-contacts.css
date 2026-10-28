@@ -1,11 +1,25 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   NICK RISE STUDIO — ANIMATION / КОНТАКТЫ И ПОДВАЛ
-   Источник: animations.css, строки 2067–2190 (нарезка 1:1, поведение не менялось)
-   Слой: css/anim/* — после ВСЕХ css/style/*.
-         Порядок подключения = порядок номеров файлов.
+   css/anim/10-contacts.css — КОНТАКТЫ И ПОДВАЛ
+   Что: появление кнопок контактов, наведение, подвал.
+   Разметку создаёт: index.html → #contacts, #footer.
+   Подключён: index.html, после всех css/style/*; здесь после 09-faq.css, до 11-toast-modals-menu.css.
+   Группы блоков в файле: 1 (общие), 8 (ввод).
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* ═══ 11. КОНТАКТЫ И ПОДВАЛ ═══════════════════════════════════════════ */
+/* ── ПОРЯДОК БЛОКОВ В ФАЙЛЕ (одинаков во всех css/style и css/anim) ──
+   1. ОБЩИЕ — все устройства            5. ПЛАНШЕТ (640–1023.98px)
+   2. ПЛАНШЕТ И ШИРЕ (min-width: 640px) 6. ТЕЛЕФОН (max-width: 639.98px)
+   3. КОМПЬЮТЕР (min-width: 1024px)     7. УЗКИЙ ТЕЛЕФОН (480px / 380px)
+   4. ВСЁ, КРОМЕ КОМПЬЮТЕРА (≤1023.98)  8. ВВОД (hover / pointer)
+                                        9. «УМЕНЬШИТЬ ДВИЖЕНИЕ»
+   «И выше» — min-width, «и ниже» — max-width на 0.02px меньше границы
+   Tailwind (sm 640, lg 1024): так соседние диапазоны не пересекаются и
+   между ними не остаётся полосы без правил. Печатаются только те группы,
+   блоки которых в файле есть. */
+
+/* ═══ КОНТАКТЫ И ПОДВАЛ (css/style/17-contacts.css) ═════════════════════════ */
+
+/* ═══ 1. ОБЩИЕ — ВСЕ УСТРОЙСТВА ═════════════════════════════════════════════ */
 
 #contacts .rack-card::before {
   content: '';
@@ -27,13 +41,6 @@
   opacity: 0.5;
 }
 
-/* Наведение — только там, где есть курсор: на телефонах и планшетах :hover
-   «залипает» после касания, и карточки контактов оставались подсвеченными
-   (подъём, свечение, крутящаяся рамка) и при свайпе, и при тапе. */
-@media (hover: hover) and (pointer: fine) {
-  #contacts .rack-card:hover::before { animation: nrSpin 6s linear infinite; opacity: 0.9; }
-}
-
 #contacts .grid > a,
 #contacts .grid > button,
 #contactModal .grid > a,
@@ -43,40 +50,14 @@
   transition: transform 0.35s var(--nr-ease), background-color 0.3s ease, box-shadow 0.4s ease;
 }
 
-@media (hover: hover) and (pointer: fine) {
-  #contacts .grid > a:hover,
-  #contacts .grid > button:hover,
-  #contactModal .grid > a:hover,
-  #contactModal .grid > button:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(245, 158, 11, 0.12);
-  }
-}
-
 #contacts .grid svg,
 #contactModal .grid svg { transition: transform 0.45s var(--nr-snap); }
-
-/* Самолётик Telegram улетает и возвращается */
-@media (hover: hover) and (pointer: fine) {
-  #contacts .grid > a[href*="t.me"]:hover svg,
-  #contactModal .grid > a[href*="t.me"]:hover svg { animation: nrSend 0.75s var(--nr-ease); }
-}
 
 @keyframes nrSend {
   0%   { transform: translate(0, 0); }
   40%  { transform: translate(16px, -14px); opacity: 0; }
   41%  { transform: translate(-16px, 14px); opacity: 0; }
   100% { transform: translate(0, 0); opacity: 1; }
-}
-
-@media (hover: hover) and (pointer: fine) {
-  #contacts .grid > button:hover svg,
-  #contactModal .grid > button:hover svg { transform: scale(1.18) rotate(-6deg); }
-
-  #contacts .grid > a[href*="vk"]:hover svg,
-  #contactModal .grid > a[href*="vk"]:hover svg,
-  #contacts .grid > a[href*="instagram"]:hover svg,
-  #contactModal .grid > a[href*="instagram"]:hover svg { animation: nrPop 0.6s var(--nr-snap); }
 }
 
 @keyframes nrPop {
@@ -114,7 +95,7 @@
   100% { box-shadow: 0 0 0 16px rgba(16, 185, 129, 0); }
 }
 
-/* Карточки отзывов (#reviews): лента замирает при наведении (style.css),
+/* Карточки отзывов (#reviews): лента замирает при наведении (css/style),
    а сама карточка мягко приподнимается — как плитки контактов. Подъём даём
    только устройствам с курсором: на тач-экране :hover «залипает» после
    касания, и карточка оставалась бы подсвеченной, а лента — в паузе. */
@@ -122,10 +103,36 @@
   transition: transform 0.35s var(--nr-ease), border-color 0.3s ease, box-shadow 0.4s ease;
 }
 
+/* ═══ 8. ВВОД: hover / pointer ══════════════════════════════════════════════ */
+
+/* Наведение — только там, где есть курсор: на телефонах и планшетах :hover
+   «залипает» после касания, и карточки контактов оставались подсвеченными
+   (подъём, свечение, крутящаяся рамка) и при свайпе, и при тапе. */
 @media (hover: hover) and (pointer: fine) {
+  #contacts .rack-card:hover::before { animation: nrSpin 6s linear infinite; opacity: 0.9; }
+
+  #contacts .grid > a:hover,
+  #contacts .grid > button:hover,
+  #contactModal .grid > a:hover,
+  #contactModal .grid > button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(245, 158, 11, 0.12);
+  }
+
+/* Самолётик Telegram улетает и возвращается */
+  #contacts .grid > a[href*="t.me"]:hover svg,
+  #contactModal .grid > a[href*="t.me"]:hover svg { animation: nrSend 0.75s var(--nr-ease); }
+
+  #contacts .grid > button:hover svg,
+  #contactModal .grid > button:hover svg { transform: scale(1.18) rotate(-6deg); }
+
+  #contacts .grid > a[href*="vk"]:hover svg,
+  #contactModal .grid > a[href*="vk"]:hover svg,
+  #contacts .grid > a[href*="instagram"]:hover svg,
+  #contactModal .grid > a[href*="instagram"]:hover svg { animation: nrPop 0.6s var(--nr-snap); }
+
   #reviews .review-card:hover {
     transform: translateY(-3px);
     box-shadow: 0 10px 22px rgba(0, 0, 0, 0.4), 0 0 20px rgba(245, 158, 11, 0.14);
   }
 }
-

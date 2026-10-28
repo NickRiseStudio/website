@@ -1,21 +1,37 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   NICK RISE STUDIO — STYLE / КАЛЬКУЛЯТОР СТОИМОСТИ
-   Источник: style.css, строки 4246–4553 (нарезка 1:1, поведение не менялось)
-   Слой: css/style/* — после tailwind.css и vendor/lenis.css,
-         перед css/anim/*. Порядок подключения = порядок номеров файлов.
+   css/style/19-calculator.css — КАЛЬКУЛЯТОР СТОИМОСТИ
+   Что: окно калькулятора: шаги, ползунок длительности, смета, подсказки.
+   Разметку создаёт: index.html → #priceCalcModal; логика — js/calculator.js.
+   Подключён: index.html, после 18-reviews.css, до 20-about.css.
+   Группы блоков в файле: 1 (общие), 2 (планшет и шире), 8 (ввод), 9 (уменьшить движение).
    ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── ПОРЯДОК БЛОКОВ В ФАЙЛЕ (одинаков во всех css/style и css/anim) ──
+   1. ОБЩИЕ — все устройства            5. ПЛАНШЕТ (640–1023.98px)
+   2. ПЛАНШЕТ И ШИРЕ (min-width: 640px) 6. ТЕЛЕФОН (max-width: 639.98px)
+   3. КОМПЬЮТЕР (min-width: 1024px)     7. УЗКИЙ ТЕЛЕФОН (480px / 380px)
+   4. ВСЁ, КРОМЕ КОМПЬЮТЕРА (≤1023.98)  8. ВВОД (hover / pointer)
+                                        9. «УМЕНЬШИТЬ ДВИЖЕНИЕ»
+   «И выше» — min-width, «и ниже» — max-width на 0.02px меньше границы
+   Tailwind (sm 640, lg 1024): так соседние диапазоны не пересекаются и
+   между ними не остаётся полосы без правил. Печатаются только те группы,
+   блоки которых в файле есть. */
+
+/* ═══ 1. ОБЩИЕ — ВСЕ УСТРОЙСТВА ═════════════════════════════════════════════ */
 
 /* ═══════════════════════════════════════════════════════════════════════
    КАЛЬКУЛЯТОР СТОИМОСТИ УСЛУГ (окно «Рассчитать стоимость услуг»)
    Шаги окна, ползунок длительности, выбор Да/Нет, итоговая смета.
    ═══════════════════════════════════════════════════════════════════════ */
-
 /* Шаги окна: виден только активный */
 .nr-calc-step { display: none; }
-/* Новый шаг проявляется в такт с перетеканием высоты окна (см. goToCalcStepAnimated
-   в script.js): 0.82s и небольшая задержка, чтобы контент не «догонял» растущее окно.
-   fill-mode только backwards: он держит стартовое состояние во время задержки, но не
-   «залипает» в конечном — иначе CSS-анимация перебивала бы GSAP-затухание уходящего шага. */
+
+/* Новый шаг проявляется в такт с перетеканием высоты окна (см.
+   goToCalcStepAnimated в js/calculator.js): 0.82s и задержка 0.08s, чтобы
+   контент не «догонял» растущее окно.
+   fill-mode только backwards: держит стартовое состояние во время задержки, но
+   не «залипает» в конечном — иначе CSS-анимация перебивала бы GSAP-затухание
+   уходящего шага. */
 .nr-calc-step.is-active {
   display: block;
   animation: nrCalcStepIn 0.82s cubic-bezier(0.16, 1, 0.3, 1) 0.08s backwards;
@@ -43,8 +59,11 @@
   transition: background-color 0.5s ease, color 0.45s ease,
               border-color 0.5s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
 .nr-calc-back.is-visible { display: inline-flex; }
+
 .nr-calc-back:hover { background: #1C212E; color: #F3F4F6; }
+
 .nr-calc-back:active { transform: scale(0.96); transition-duration: 0.2s; }
 
 /* Пока окно перетекает в новый размер, кнопки навигации мягко приглушены:
@@ -84,9 +103,6 @@
   margin-bottom: 1.5rem;
   letter-spacing: -0.01em;
 }
-@media (min-width: 640px) {
-  .nr-calc-question { font-size: 1.375rem; }
-}
 
 .nr-calc-choice {
   display: grid;
@@ -111,15 +127,9 @@
               box-shadow 0.7s cubic-bezier(0.16, 1, 0.3, 1),
               transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
-/* Наведение подсвечиваем только там, где есть настоящий курсор: на телефонах и
-   планшетах :hover «залипает» на кнопке, оказавшейся под последним касанием
-   (после авто-перехода это как раз «Нет» следующего вопроса) — подсветки быть
-   не должно. */
-@media (hover: hover) and (pointer: fine) {
-  .nr-calc-choice-btn:hover { border-color: rgba(245, 158, 11, 0.5); color: #F3F4F6; }
-}
 
 .nr-calc-choice-btn:active { transform: scale(0.97); transition-duration: 0.2s; }
+
 .nr-calc-choice-btn.is-selected {
   background: #f59e0b;
   border-color: #f59e0b;
@@ -147,12 +157,15 @@
               transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 10px 25px rgba(245, 158, 11, 0.2);
 }
+
 .nr-calc-next-btn:hover {
   background: #fbbf24;
   transform: translateY(-2px);
   box-shadow: 0 16px 32px rgba(245, 158, 11, 0.32);
 }
+
 .nr-calc-next-btn:active { transform: translateY(0) scale(0.96); transition-duration: 0.2s; }
+
 .nr-calc-next-btn:disabled { opacity: 0.35; pointer-events: none; }
 
 /* Ползунок длительности трека */
@@ -195,10 +208,12 @@
   transition: box-shadow 0.55s cubic-bezier(0.16, 1, 0.3, 1),
               transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
 .nr-calc-range:hover::-webkit-slider-thumb {
   box-shadow: 0 0 22px rgba(245, 158, 11, 0.95);
   transform: scale(1.06);
 }
+
 .nr-calc-range:active::-webkit-slider-thumb {
   cursor: grabbing;
   transform: scale(0.98);
@@ -216,6 +231,7 @@
   transition: box-shadow 0.55s cubic-bezier(0.16, 1, 0.3, 1),
               transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
 .nr-calc-range:hover::-moz-range-thumb {
   box-shadow: 0 0 22px rgba(245, 158, 11, 0.95);
   transform: scale(1.06);
@@ -232,11 +248,9 @@
   color: #6B7280;
   letter-spacing: 0.03em;
 }
-@media (min-width: 640px) {
-  .nr-calc-scale { font-size: 10px; }
-}
 
 .nr-calc-scale-item { white-space: nowrap; transition: color 0.6s cubic-bezier(0.16, 1, 0.3, 1), text-shadow 0.7s cubic-bezier(0.16, 1, 0.3, 1); }
+
 .nr-calc-scale-item.is-active {
   color: #fbbf24;
   text-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
@@ -257,21 +271,15 @@
   font-size: 0.875rem;
   line-height: 1.45;
 }
+
 .nr-calc-individual.hidden { display: none; }
+
 /* Появление предупреждения/индивидуального итога — мягко, а не рывком */
 .nr-calc-individual:not(.hidden) { animation: nrCalcNoteIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
 
 @keyframes nrCalcNoteIn {
   from { opacity: 0; transform: translate3d(0, -8px, 0); }
   to   { opacity: 1; transform: translate3d(0, 0, 0); }
-}
-
-/* Уважение к системной настройке «уменьшить движение» */
-@media (prefers-reduced-motion: reduce) {
-  .nr-calc-step.is-active,
-  .nr-calc-individual:not(.hidden) {
-    animation: none !important;
-  }
 }
 
 /* Смета итоговой стоимости */
@@ -284,6 +292,7 @@
   border: 1px solid rgba(55, 65, 81, 0.8);
   text-align: left;
 }
+
 .nr-calc-receipt.hidden { display: none; }
 
 .nr-calc-row {
@@ -294,13 +303,16 @@
   font-size: 0.8125rem;
   color: #D1D5DB;
 }
+
 .nr-calc-row-label { line-height: 1.35; }
+
 .nr-calc-row-price {
   font-family: 'Space Grotesk', 'Manrope', ui-monospace, monospace;
   font-weight: 700;
   color: #E5E7EB;
   white-space: nowrap;
 }
+
 .nr-calc-row-plus { color: #fbbf24; }
 
 .nr-calc-total-row {
@@ -313,3 +325,30 @@
   border-top: 1px solid rgba(55, 65, 81, 0.8);
 }
 
+/* ═══ 2. ПЛАНШЕТ И ШИРЕ (min-width: 640px) ══════════════════════════════════ */
+
+@media (min-width: 640px) {
+  .nr-calc-question { font-size: 1.375rem; }
+
+  .nr-calc-scale { font-size: 10px; }
+}
+
+/* ═══ 8. ВВОД: hover / pointer ══════════════════════════════════════════════ */
+
+/* Наведение подсвечиваем только там, где есть настоящий курсор: на телефонах и
+   планшетах :hover «залипает» на кнопке, оказавшейся под последним касанием
+   (после авто-перехода это как раз «Нет» следующего вопроса) — подсветки быть
+   не должно. */
+@media (hover: hover) and (pointer: fine) {
+  .nr-calc-choice-btn:hover { border-color: rgba(245, 158, 11, 0.5); color: #F3F4F6; }
+}
+
+/* ═══ 9. «УМЕНЬШИТЬ ДВИЖЕНИЕ» ═══════════════════════════════════════════════ */
+
+/* Уважение к системной настройке «уменьшить движение» */
+@media (prefers-reduced-motion: reduce) {
+  .nr-calc-step.is-active,
+  .nr-calc-individual:not(.hidden) {
+    animation: none !important;
+  }
+}

@@ -1,15 +1,15 @@
 // ═══════════════════════════════════════════════════════════════════════
-// NICK RISE STUDIO — JS / БУРГЕР-МЕНЮ
-// Источник: script.js, строки 7916–8065 (перенос 1:1, поведение не менялось)
-// Читает снаружи: — (самодостаточен)
-// Обязан грузиться после: js/state.js
+// js/mobile-menu.js — БУРГЕР-МЕНЮ
+// Грузится после: js/state.js. Внешних данных не читает.
 // Владеет: mobileMenuCloseTimer, mobileMenuHeaderTimer.
-// Публичные точки входа (window): toggleMobileMenu, openMobileMenu,
-//          closeMobileMenu, initMobileMenuScrollLock — стоят в onclick.
-// animations.js вешает hook на openMobileMenu / closeMobileMenu.
+// Публичные (window): toggleMobileMenu, openMobileMenu, closeMobileMenu, initMobileMenuScrollLock.
+// Блоки файла:
+//   • Шторка #mobileMenuDrawer: выезд сверху и каскад пунктов (css/anim/11-toast-modals-menu.css).
+//   • initMobileMenuScrollLock — страница не скроллится под меню, сама шторка скроллится.
+//   • animations.js вешает hook на openMobileMenu / closeMobileMenu.
 // ═══════════════════════════════════════════════════════════════════════
 
-// --- MOBILE MENU ---
+// --- МОБИЛЬНОЕ МЕНЮ ---
 let mobileMenuCloseTimer = null;
 let mobileMenuHeaderTimer = null;
 
@@ -86,7 +86,7 @@ function closeMobileMenu() {
      плавный переход фона на 1.2s — ровно столько же едет шторка, поэтому
      к её приезду шапка уже стоит в состоянии «меню закрыто». Класс
      снимается по таймеру (иначе он сглаживал бы и обычную прокрутку) или
-     досрочно при скролле — см. animations.css → «Закрытие бургер-меню».
+     досрочно при скролле — см. css/anim → «Закрытие бургер-меню».
      Проверка is-open — до его снятия: closeMobileMenu зовут и с десктопа
      (клик по пункту меню), там закрывать нечего. */
   if (header && drawer.classList.contains('is-open')) {
@@ -113,8 +113,8 @@ function closeMobileMenu() {
   }
 
   /* Шторка едет 1.2s — столько же держим крестик, иначе он исчезнет раньше,
-     чем меню уедет. Класс шапки здесь больше не снимается: это делается
-     сразу при закрытии (см. выше). */
+     чем меню уедет. Класс шапки здесь не снимается: это делается сразу при
+     закрытии (см. выше). */
   mobileMenuCloseTimer = setTimeout(() => {
     if (closeIcon && !drawer.classList.contains('is-open')) {
       closeIcon.classList.add('hidden');
@@ -128,10 +128,10 @@ function closeMobileMenu() {
    может «протащить» страницу жестом — поэтому touch-жесты вне меню отменяются.
    Внутри #mobileMenuDrawer прокрутка работает (длинные меню).
 
-   СЛУШАТЕЛЬ ЖИВЁТ НА ОВЕРЛЕЕ, А НЕ НА document (правка 26.10). Safari на iOS
+   СЛУШАТЕЛЬ ЖИВЁТ НА ОВЕРЛЕЕ, А НЕ НА document. Safari на iOS
    снимает быструю композитную прокрутку со ВСЕЙ страницы, если в цепочке события
    есть хоть один не-passive touchmove: перед каждым сдвигом пальца движок обязан
-   дождаться JS. У оверлея в закрытом меню pointer-events: none (animations.css),
+   дождаться JS. У оверлея в закрытом меню pointer-events: none (css/anim),
    поэтому в пути события его нет и прокрутка остаётся быстрой. Открыли меню —
    оверлей перекрывает экран (z-30, pointer-events: auto) и жесты вне шторки
    отменяет, как раньше. В шторке событие до оверлея не доходит вовсе: это

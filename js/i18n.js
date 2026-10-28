@@ -1,13 +1,14 @@
 // ═══════════════════════════════════════════════════════════════════════
-// NICK RISE STUDIO — JS / ЯЗЫК: АВТООПРЕДЕЛ ПО РЕГИОНУ, I18N-РЕНДЕР, META
-// Источник: script.js, строки 148–509 (перенос 1:1, поведение не менялось)
-// Читает снаружи: currentLang (js/state.js), CONFIG (config.js)
-// Обязан грузиться после: js/state.js, js/player-ui.js
+// js/i18n.js — ЯЗЫК: АВТООПРЕДЕЛ ПО РЕГИОНУ, I18N-РЕНДЕР, META
+// Грузится после: js/state.js и js/player-ui.js (зовёт renderTrackList и
+//         updateMasterDeckUI по имени). Читает: currentLang, CONFIG.
 // Владеет: lastDetectedDevice, isSwitchingLanguage, RU_SPHERE_LANGS,
-//          RU_SPHERE_COUNTRIES, RU_SPHERE_TIMEZONES.
-// Публичные точки входа (window): setLanguage, initI18n, updateDocumentMeta.
-// После смены языка зовёт updateMasterDeckUI и renderTrackList из
-// js/player-ui.js — по имени в момент вызова, поэтому грузится ПОСЛЕ него.
+//         RU_SPHERE_COUNTRIES, RU_SPHERE_TIMEZONES.
+// Публичные (window): setLanguage, initI18n, updateDocumentMeta.
+// Блоки файла:
+//   • Автоопределение языка по региону (RU_SPHERE_*): RU для России и СНГ.
+//   • getDeviceType и resolveDeviceText — выбор desktop/tablet/mobile текста.
+//   • I18N-система: расстановка текстов по data-i18n, updateDocumentMeta.
 // ═══════════════════════════════════════════════════════════════════════
 
 // --- АВТООПРЕДЕЛЕНИЕ ЯЗЫКА ПО РЕГИОНУ ---
@@ -86,7 +87,7 @@ function detectUserLanguage() {
   return 'en';
 }
 
-// --- DEVICE DETECTION & MULTI-SCREEN TEXT RESOLUTION ---
+// --- ОПРЕДЕЛЕНИЕ УСТРОЙСТВА И ВЫБОР ТЕКСТА ПОД ЭКРАН ---
 function getDeviceType() {
   const w = window.innerWidth;
   if (w < 768) return 'mobile';
@@ -100,7 +101,7 @@ function resolveDeviceText(val, device = getDeviceType()) {
   if (typeof val === 'number') return String(val);
 
   if (typeof val === 'object') {
-    // If it's an object with device keys: { desktop: "...", tablet: "...", mobile: "..." }
+    // Объект с ключами устройств { desktop, tablet, mobile } — берётся нужный вариант
     if ('mobile' in val || 'tablet' in val || 'desktop' in val) {
       if (device === 'mobile') {
         return val.mobile !== undefined ? val.mobile : (val.tablet !== undefined ? val.tablet : val.desktop || '');
@@ -134,7 +135,7 @@ function resolveI18nValue(obj, lang = currentLang, device = getDeviceType()) {
   return resolveDeviceText(fallback, device);
 }
 
-// --- I18N SYSTEM ---
+// --- СИСТЕМА ПЕРЕВОДОВ ---
 let lastDetectedDevice = getDeviceType();
 
 function initI18n() {
@@ -187,20 +188,20 @@ function getI18nAnimatedElements() {
   const elements = [];
   const currentDevice = getDeviceType();
 
-  // 1. All [data-i18n] elements (excluding language switch container & strings that don't differ)
+  // 1. Все элементы [data-i18n], кроме контейнера переключателя языка и совпадающих строк
   document.querySelectorAll('[data-i18n]').forEach(el => {
     if (el.closest('#langToggleContainer')) return;
     const keyPath = el.getAttribute('data-i18n');
     if (keyPath) {
       const ruVal = getI18nValue('ru', keyPath, currentDevice);
       const enVal = getI18nValue('en', keyPath, currentDevice);
-      // If the translated string is identical in both languages, skip animating to keep UI rock-solid
+      // Если строка в обоих языках одинаковая, анимация пропускается — интерфейс не дёргается
       if (ruVal && enVal && ruVal === enVal) return;
     }
     elements.push(el);
   });
 
-  // 2. Services section dynamic texts: badge, title, desc, bullet list, price prefix, button text
+  // 2. Динамические тексты услуг: бейдж, заголовок, описание, список, префикс цены, кнопка
   document.querySelectorAll(
     '#servicesContainer .popular-badge, ' +
     '#servicesContainer .service-card-title, ' +
@@ -217,7 +218,7 @@ function getI18nAnimatedElements() {
     if (!elements.includes(el)) elements.push(el);
   });
 
-  // 3. Dynamic FAQ texts (only target the question text container, not plus icons or entire buttons)
+  // 3. Динамические тексты FAQ: только контейнер текста вопроса, без иконок и кнопок целиком
   document.querySelectorAll(
     '#faqContainer .faq-q-text, ' +
     '#faqContainer .faq-content-wrapper p'
@@ -228,7 +229,7 @@ function getI18nAnimatedElements() {
   // 4. Reviews (#reviews): текст и имя меняются мгновенно — карточки живут
   //    в бегущих лентах и их в разы больше, чем остальных текстов на странице.
 
-  // Filter out any elements whose ancestor is already in the list to avoid nested blurs
+  // Элементы внутри уже выбранных отбрасываются — иначе размытие накладывается дважды
   return elements.filter(el => {
     let parent = el.parentElement;
     while (parent) {
@@ -359,7 +360,7 @@ function renderI18nText() {
   // без пересчёта русская строка после английской не влезла бы в nowrap.
   queueAboutLeadsFit();
 
-  // Do not call animateHeroTitle on language toggle to prevent visual jitter/layout shift
+  // animateHeroTitle при смене языка не вызывается: иначе заголовок дёргается и раскладка едет
 }
 
 // Заголовок вкладки (<title>) и meta description — динамические по языку.

@@ -1,11 +1,26 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   NICK RISE STUDIO — ANIMATION / ПОЯВЛЕНИЕ БЛОКОВ ПРИ ПРОКРУТКЕ, REDUCED MOTION
-   Источник: animations.css, строки 2393–2497 (нарезка 1:1, поведение не менялось)
-   Слой: css/anim/* — после ВСЕХ css/style/*.
-         Порядок подключения = порядок номеров файлов.
+   css/anim/12-reveal.css — ПОЯВЛЕНИЕ БЛОКОВ ПРИ ПРОКРУТКЕ, REDUCED MOTION
+   Что: классы появления из js/gsap-reveal.js, экономия ресурсов,
+        отключение всплытий на телефоне и планшете.
+   Разметку создаёт: js/gsap-reveal.js → initGsapAnimations.
+   Подключён: index.html, после всех css/style/*; здесь после 11-toast-modals-menu.css, до 13-cta.css.
+   Группы блоков в файле: 1, 4, 6, 9 (уменьшить движение).
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* ═══ 16. ПОЯВЛЕНИЕ БЛОКОВ ПРИ СКРОЛЛЕ ════════════════════════════════ */
+/* ── ПОРЯДОК БЛОКОВ В ФАЙЛЕ (одинаков во всех css/style и css/anim) ──
+   1. ОБЩИЕ — все устройства            5. ПЛАНШЕТ (640–1023.98px)
+   2. ПЛАНШЕТ И ШИРЕ (min-width: 640px) 6. ТЕЛЕФОН (max-width: 639.98px)
+   3. КОМПЬЮТЕР (min-width: 1024px)     7. УЗКИЙ ТЕЛЕФОН (480px / 380px)
+   4. ВСЁ, КРОМЕ КОМПЬЮТЕРА (≤1023.98)  8. ВВОД (hover / pointer)
+                                        9. «УМЕНЬШИТЬ ДВИЖЕНИЕ»
+   «И выше» — min-width, «и ниже» — max-width на 0.02px меньше границы
+   Tailwind (sm 640, lg 1024): так соседние диапазоны не пересекаются и
+   между ними не остаётся полосы без правил. Печатаются только те группы,
+   блоки которых в файле есть. */
+
+/* ═══ ПОЯВЛЕНИЕ БЛОКОВ ПРИ СКРОЛЛЕ — классы ставит js/gsap-reveal.js ════════ */
+
+/* ═══ 1. ОБЩИЕ — ВСЕ УСТРОЙСТВА ═════════════════════════════════════════════ */
 
 .nr-reveal {
   opacity: 0;
@@ -16,17 +31,42 @@
 .nr-reveal.nr-in { opacity: 1; transform: none; }
 
 .nr-reveal[data-nr-d="1"] { transition-delay: 0.08s; }
+
 .nr-reveal[data-nr-d="2"] { transition-delay: 0.16s; }
+
 .nr-reveal[data-nr-d="3"] { transition-delay: 0.24s; }
+
 .nr-reveal[data-nr-d="4"] { transition-delay: 0.32s; }
 
-/* ═══ 16.1. ТЕЛЕФОН И ПЛАНШЕТ: ВСПЛЫТИЙ ПРИ ПРОКРУТКЕ НЕТ ═════════════
-   Тот же медиазапрос, что в script.js (NR_NO_SCROLL_REVEAL) и в
+/* ═══ ЭКОНОМИЯ РЕСУРСОВ — что выключаем на слабых устройствах ══════════════════
+   Секции за пределами экрана не анимируются вовсе.
+   Одноразовые анимации появления при этом не замирают.
+═════════════════════════════════════════════════════════════════════ */
+.nr-off,
+.nr-off *,
+.nr-off *::before,
+.nr-off *::after { animation-play-state: paused !important; }
+
+.nr-off .nr-w,
+.nr-off .nr-eqline path,
+.nr-off .nr-eqline circle,
+.nr-off #servicesContainer li { animation-play-state: running !important; }
+
+footer,
+footer p {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
+}
+
+/* ═══ 4. ВСЁ, КРОМЕ КОМПЬЮТЕРА (max-width: 1023.98px) ═══════════════════════ */
+
+/* ═══ ТЕЛЕФОН И ПЛАНШЕТ: ВСПЛЫТИЙ ПРИ ПРОКРУТКЕ НЕТ ════════════════════════════
+   Тот же медиазапрос, что в js (NR_NO_SCROLL_REVEAL) и в
    animations.js (NO_REVEAL). Элементы, которые GSAP и наблюдатель
    появления держат скрытыми до прокрутки, здесь выведены сразу.
    ПК-версия (от 1024px) не затрагивается.
 ═══════════════════════════════════════════════════════════════════════ */
-
 @media (max-width: 1023.98px) {
   .nr-reveal {
     opacity: 1;
@@ -47,23 +87,17 @@
   }
 }
 
-/* ═══ 16.5. ЭКОНОМИЯ РЕСУРСОВ ═════════════════════════════════════════
-   Секции за пределами экрана не анимируются вовсе.
-   Одноразовые анимации появления при этом не замирают.
-═════════════════════════════════════════════════════════════════════ */
+/* ═══ 6. ТЕЛЕФОН (max-width: 639.98px) ══════════════════════════════════════ */
 
-.nr-off,
-.nr-off *,
-.nr-off *::before,
-.nr-off *::after { animation-play-state: paused !important; }
+/* Мобильная оптимизация: убираем самые тяжёлые эффекты */
+@media (max-width: 639.98px) {
+  #nr-glass { display: none; }
+  .nr-scan { display: none; }
+}
 
-.nr-off .nr-w,
-.nr-off .nr-eqline path,
-.nr-off .nr-eqline circle,
-.nr-off #servicesContainer li { animation-play-state: running !important; }
+/* ═══ 9. «УМЕНЬШИТЬ ДВИЖЕНИЕ» ═══════════════════════════════════════════════ */
 
-/* ═══ 17. REDUCED MOTION — уважение к системным настройкам ════════════ */
-
+/* ═══ REDUCED MOTION — гасим все декоративные циклы ═════════════════════════ */
 @media (prefers-reduced-motion: reduce) {
   #nr-glass::after,
   .nr-scan,
@@ -96,17 +130,3 @@
     filter: none !important;
   }
 }
-
-/* Мобильная оптимизация: убираем самые тяжёлые эффекты */
-@media (max-width: 640px) {
-  #nr-glass { display: none; }
-  .nr-scan { display: none; }
-}
-
-footer,
-footer p {
-  opacity: 1 !important;
-  visibility: visible !important;
-  transform: none !important;
-}
-

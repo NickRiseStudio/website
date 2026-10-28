@@ -1,15 +1,29 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   NICK RISE STUDIO — STYLE / ПЕРЕКЛЮЧАТЕЛИ RU/EN И BEFORE/AFTER
-   Источник: style.css, строки 2849–3059 (нарезка 1:1, поведение не менялось)
-   Слой: css/style/* — после tailwind.css и vendor/lenis.css,
-         перед css/anim/*. Порядок подключения = порядок номеров файлов.
+   css/style/13-switchers.css — ПЕРЕКЛЮЧАТЕЛИ RU/EN И BEFORE/AFTER
+   Что: капсулы переключателей, активное состояние, точки-индикаторы.
+   Разметку создаёт: index.html → #langSwitch, .deck-source-switch; состояние —
+                    js/i18n.js → setLanguage, js/player-ui.js.
+   Подключён: index.html, после 12-hero-title.css, до 14-hints.css.
+   Группы блоков в файле: 1 (общие), 2 (планшет и шире), 5 (планшет).
    ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── ПОРЯДОК БЛОКОВ В ФАЙЛЕ (одинаков во всех css/style и css/anim) ──
+   1. ОБЩИЕ — все устройства            5. ПЛАНШЕТ (640–1023.98px)
+   2. ПЛАНШЕТ И ШИРЕ (min-width: 640px) 6. ТЕЛЕФОН (max-width: 639.98px)
+   3. КОМПЬЮТЕР (min-width: 1024px)     7. УЗКИЙ ТЕЛЕФОН (480px / 380px)
+   4. ВСЁ, КРОМЕ КОМПЬЮТЕРА (≤1023.98)  8. ВВОД (hover / pointer)
+                                        9. «УМЕНЬШИТЬ ДВИЖЕНИЕ»
+   «И выше» — min-width, «и ниже» — max-width на 0.02px меньше границы
+   Tailwind (sm 640, lg 1024): так соседние диапазоны не пересекаются и
+   между ними не остаётся полосы без правил. Печатаются только те группы,
+   блоки которых в файле есть. */
+
+/* ═══ 1. ОБЩИЕ — ВСЕ УСТРОЙСТВА ═════════════════════════════════════════════ */
 
 /* ═══════════════════════════════════════════════════════════════════════
-   PREMIUM ANALOG & TACTILE SWITCHERS: RU / EN & BEFORE / AFTER
+   АНАЛОГОВЫЕ ТАКТИЛЬНЫЕ ПЕРЕКЛЮЧАТЕЛИ: RU / EN И BEFORE / AFTER
    ═══════════════════════════════════════════════════════════════════════ */
-
-/* 1. LANGUAGE SWITCHER (RU / EN) */
+/* 1. ПЕРЕКЛЮЧАТЕЛЬ ЯЗЫКА (RU / EN) */
 #langToggleContainer {
   position: relative;
   overflow: hidden;
@@ -32,16 +46,6 @@
   z-index: 1;
   pointer-events: none;
   box-shadow: 0 2px 10px rgba(245, 158, 11, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.4);
-}
-
-@media (min-width: 640px) {
-  .lang-slider-pill {
-    top: 4px;
-    bottom: 4px;
-    left: 4px;
-    width: calc(50% - 4px);
-    border-radius: 8px;
-  }
 }
 
 #langToggleContainer[data-lang="ru"] .lang-slider-pill {
@@ -67,44 +71,6 @@
   text-align: center;
 }
 
-@media (min-width: 640px) {
-  #btnLangRu,
-  #btnLangEn {
-    width: 38px;
-  }
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
-   ПЛАНШЕТ (640–1023.98px): ПЕРЕКЛЮЧАТЕЛИ КРУПНЕЕ
-   ═══════════════════════════════════════════════════════════════════════
-   RU/EN. Правило выше задаёт половинку 38px на sm и шире — то есть и на
-   планшете. Поднимаем до 44px (кегль 12 → 13px, у него в разметке text-xs):
-   на экране 768–1023px переключатель в шапке выглядел игрушечным рядом с
-   кнопкой «Связаться» (она рядом крупнее — 11-utilities.css).
-   Одна тонкость: ползунок .lang-slider-pill шириной calc(50% - 2px), поэтому
-   он растягивается вместе с контейнером сам — пересчитывать нечего.
-
-   BEFORE/AFTER в нижнем пульте. На планшете видна мобильная раскладка пульта:
-   подписи 9px (text-[9px]) и min-w-[86px]. Ставим 13px и 112px — как
-   компьютерная половина тумблера (text-xs / min-w-[104px]), плюс шаг на
-   размер экрана. Ползунок громкости на планшете остаётся скрытым
-   (hidden lg:flex в index.html) — раскладку пульта не трогаем.
-   Селекторы по классу (0,1,0) идут после tailwind.css, поэтому утилиты
-   text-[9px] и min-w-[86px] перебиваются без !important. */
-@media (min-width: 640px) and (max-width: 1023.98px) {
-  #btnLangRu,
-  #btnLangEn {
-    width: 44px;
-    font-size: 13px;
-  }
-
-  .deck-btn-before,
-  .deck-btn-after {
-    font-size: 13px;
-    min-width: 112px;
-  }
-}
-
 #langToggleContainer[data-lang="ru"] #btnLangRu {
   color: #020617 !important;
   font-weight: 800 !important;
@@ -125,7 +91,7 @@
   font-weight: 800 !important;
 }
 
-/* 2. SOURCE SWITCHER (BEFORE / AFTER) */
+/* 2. ПЕРЕКЛЮЧАТЕЛЬ ИСТОЧНИКА (BEFORE / AFTER) */
 .deck-source-switch {
   position: relative;
   overflow: hidden;
@@ -136,7 +102,7 @@
   transform: scale(0.98);
 }
 
-/* Desktop horizontal sliding pill */
+/* Компьютер: ползунок едет по горизонтали */
 .deck-slider-pill-desktop {
   position: absolute;
   top: 6px;
@@ -159,7 +125,7 @@
   transform: translate3d(100%, 0, 0);
 }
 
-/* Mobile vertical sliding pill */
+/* Телефон: ползунок едет по вертикали */
 .deck-slider-pill-mobile {
   position: absolute;
   top: 4px;
@@ -182,7 +148,7 @@
   transform: translate3d(0, 100%, 0);
 }
 
-/* Text and button styles inside BEFORE / AFTER switch */
+/* Подписи и кнопки внутри переключателя BEFORE / AFTER */
 .deck-btn-before,
 .deck-btn-after {
   position: relative;
@@ -197,7 +163,7 @@
   transition: color 0.55s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
-/* In BEFORE mode: BEFORE text is dark slate, AFTER text is gray */
+/* Режим BEFORE: подпись BEFORE тёмная, AFTER серая */
 .deck-source-switch[data-source="before"] .deck-text-before {
   color: #020617 !important;
   font-weight: 900 !important;
@@ -208,7 +174,7 @@
   font-weight: 700 !important;
 }
 
-/* In AFTER mode: AFTER text is dark slate, BEFORE text is gray */
+/* Режим AFTER: подпись AFTER тёмная, BEFORE серая */
 .deck-source-switch[data-source="after"] .deck-text-after {
   color: #020617 !important;
   font-weight: 900 !important;
@@ -219,7 +185,7 @@
   font-weight: 700 !important;
 }
 
-/* LEDs on BEFORE / AFTER with smooth studio bloom and dim */
+/* Светодиоды BEFORE / AFTER: плавное студийное разгорание и затухание */
 .deck-led-before,
 .deck-led-after {
   transition: background-color 0.55s cubic-bezier(0.16, 1, 0.3, 1),
@@ -227,7 +193,7 @@
               opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
-/* BEFORE LED active when source is before */
+/* Светодиод BEFORE горит, когда источник — before */
 .deck-source-switch[data-source="before"] .deck-led-before {
   background-color: #22c55e !important;
   box-shadow: 0 0 10px rgba(34, 197, 94, 0.95), 0 0 3px #ffffff !important;
@@ -240,10 +206,59 @@
   opacity: 0.3 !important;
 }
 
-/* AFTER LED active when source is after */
+/* Светодиод AFTER горит, когда источник — after */
 .deck-source-switch[data-source="after"] .deck-led-after {
   background-color: #22c55e !important;
   box-shadow: 0 0 10px rgba(34, 197, 94, 0.95), 0 0 3px #ffffff !important;
   opacity: 1 !important;
 }
 
+/* ═══ 2. ПЛАНШЕТ И ШИРЕ (min-width: 640px) ══════════════════════════════════ */
+
+@media (min-width: 640px) {
+  .lang-slider-pill {
+    top: 4px;
+    bottom: 4px;
+    left: 4px;
+    width: calc(50% - 4px);
+    border-radius: 8px;
+  }
+
+  #btnLangRu,
+  #btnLangEn {
+    width: 38px;
+  }
+}
+
+/* ═══ 5. ПЛАНШЕТ (640–1023.98px) ════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ПЛАНШЕТ (640–1023.98px): ПЕРЕКЛЮЧАТЕЛИ КРУПНЕЕ
+   ═══════════════════════════════════════════════════════════════════════
+   RU/EN. Правило выше задаёт половинку 38px на sm и шире, то есть и на
+   планшете. Здесь 44px и кегль 13px: на 768–1023.98px переключатель в шапке
+   выглядел игрушечным рядом с кнопкой «Связаться» (она крупнее —
+   11-utilities.css). Ползунок .lang-slider-pill шириной calc(50% - 2px)
+   растягивается вместе с контейнером сам — пересчитывать нечего.
+
+   BEFORE/AFTER в нижнем пульте. На планшете видна мобильная раскладка пульта:
+   подписи 9px (text-[9px]) и min-w-[86px]. Здесь 13px и 112px — как
+   компьютерная половина тумблера (text-xs / min-w-[104px]), плюс шаг на размер
+   экрана. Ползунок громкости на планшете скрыт (hidden lg:flex в index.html) —
+   раскладку пульта не трогаем.
+
+   Селекторы по классу (0,1,0) идут после tailwind.css, поэтому утилиты
+   text-[9px] и min-w-[86px] перебиваются без !important. */
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  #btnLangRu,
+  #btnLangEn {
+    width: 44px;
+    font-size: 13px;
+  }
+
+  .deck-btn-before,
+  .deck-btn-after {
+    font-size: 13px;
+    min-width: 112px;
+  }
+}

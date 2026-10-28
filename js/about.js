@@ -1,12 +1,12 @@
 // ═══════════════════════════════════════════════════════════════════════
-// NICK RISE STUDIO — JS / «ОБО МНЕ»: РАЗДЕЛ НА ПК, КАДРЫ, ПРОМОКОД
-// Источник: script.js, строки 6827–7135 (перенос 1:1, поведение не менялось)
-// Читает снаружи: currentLang, CONFIG
-// Обязан грузиться после: js/state.js
+// js/about.js — «ОБО МНЕ»: РАЗДЕЛ НА ПК, КАДРЫ, ПРОМОКОД
+// Грузится после: js/state.js. Читает: currentLang, CONFIG.
 // Владеет: PROMO_CODE, aboutSlideIndex, aboutSlideLockedUntil, ABOUT_*.
-// PROMO_CODE читает js/toast.js — поэтому toast.js подключается ПОСЛЕ.
-// Публичные точки входа (window): initAboutShowcase, openAboutModal,
-//          closeAboutModal, closeAboutShowcase, aboutGoToSlide.
+// Публичные (window): initAboutShowcase, openAboutModal, closeAboutModal, closeAboutShowcase, aboutGoToSlide.
+// Блоки файла:
+//   • #aboutShowcase на ПК (от 1024px): кадры about-1..3.webp, подписи, точки, «Листайте».
+//   • #aboutModal — тот же контент на телефоне и планшете.
+//   • PROMO_CODE читает js/toast.js → copyPromoCode, поэтому toast.js грузится после.
 // ═══════════════════════════════════════════════════════════════════════
 
 // --- «ОБО МНЕ»: ПОЛНОЭКРАННЫЙ РАЗДЕЛ НА КОМПЬЮТЕРЕ (от 1024px) ---
@@ -67,7 +67,7 @@ function aboutGoToSlide(index) {
   });
 
   // Текущий кадр нужен и вёрстке: по нему CSS гасит подсказку «Листайте» на
-  // финальном кадре (style.css → .nr-about-overlay[data-about-active="2"]).
+  // финальном кадре (css/style/20-about.css → .nr-about-overlay[data-about-active="2"]).
   const box = document.getElementById('aboutShowcase');
   if (box) box.setAttribute('data-about-active', String(next));
 }
@@ -194,12 +194,12 @@ function initAboutShowcase() {
 
 /* ── ПОДГОНКА «ГЛАВНЫХ» СТРОК БИОГРАФИИ ПОД ШИРИНУ ОКНА ────────────────────
 
-   Речь о двух строках окна «Обо мне» (style.css → «ДВЕ ГЛАВНЫЕ СТРОКИ…»):
+   Речь о двух строках окна «Обо мне» (css/style → «ДВЕ ГЛАВНЫЕ СТРОКИ…»):
    вступлении «Проходил обучение у лучших в индустрии:» и финальной фразе
    «С радостью готов поработать с тобой!». Обе должны стоять ОДНОЙ строкой на
    телефоне любой ширины.
 
-   В style.css кегль задан долей ширины абзаца (4.62cqi и 5.12cqi) с запасом 4%
+   В css/style кегль задан долей ширины абзаца (4.62cqi и 5.12cqi) с запасом 4%
    — этого хватает, чтобы строка не переносилась даже без скрипта. Здесь кегль
    доводится до точного: он зависит от реальной ширины текста, а она меняется
    по трём причинам:

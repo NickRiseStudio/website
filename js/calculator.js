@@ -1,13 +1,15 @@
 // ═══════════════════════════════════════════════════════════════════════
-// NICK RISE STUDIO — JS / КАЛЬКУЛЯТОР СТОИМОСТИ
-// Источник: script.js, строки 7136–7915 (перенос 1:1, поведение не менялось)
-// Читает снаружи: currentLang, CONFIG
-// Обязан грузиться после: js/state.js
-// Владеет: CALC_LAST_STEP, CALC_*, calc* (состояние шагов и сметы).
-// Публичные точки входа (window): openPriceCalcModal, closePriceCalcModal,
-//          nextCalcStep, prevCalcStep, resetPriceCalc, setCalcAnswer,
-//          onCalcDurationInput, initCalcHints, showCalcHint, hideCalcHint,
-//          toggleCalcHint — все они стоят в инлайн-onclick разметки.
+// js/calculator.js — КАЛЬКУЛЯТОР СТОИМОСТИ
+// Грузится после: js/state.js. Читает: currentLang, CONFIG.
+// Владеет: CALC_LAST_STEP и состояние шагов со сметой (calc*).
+// Публичные (window): openPriceCalcModal, closePriceCalcModal, nextCalcStep, prevCalcStep, resetPriceCalc,
+//         setCalcAnswer, onCalcDurationInput, initCalcHints, showCalcHint, hideCalcHint,
+//         toggleCalcHint — все стоят в инлайн-onclick разметки.
+// Блоки файла:
+//   • Шаги окна: 0 — предупреждение, 1 — длительность, 2..5 — вопросы Да/Нет, 6 — итог.
+//   • Смета и цена: пересчёт на каждом шаге, промо-скидка.
+//   • Подсказки «i» у вопросов: initCalcHints, showCalcHint, hideCalcHint, toggleCalcHint.
+//   • Разметка окна — index.html → #priceCalcModal.
 // ═══════════════════════════════════════════════════════════════════════
 
 // --- SERVICE COST CALCULATOR (окно «Рассчитать стоимость услуг») ---
@@ -165,7 +167,7 @@ function cancelCalcStepFade() {
 }
 
 // Видимая высота окна в пикселях — JS-эквивалент CSS-единицы dvh, по которой
-// теперь ограничены модальные окна (style.css, блок «ВСПЛЫВАЮЩИЕ ОКНА»).
+// теперь ограничены модальные окна (css/style/09-modals.css, блок «ВСПЛЫВАЮЩИЕ ОКНА»).
 // window.innerHeight в мобильных браузерах — это «большое» окно БЕЗ нижней
 // панели браузера: она рисуется поверх страницы (в Яндекс.Браузере страницу
 // не сжимает), поэтому высоту окна-калькулятора упирало в запас за панелью.
@@ -418,7 +420,7 @@ function cancelCalcAutoAdvance() {
 
 function scheduleCalcAutoAdvance() {
   cancelCalcAutoAdvance();
-  // Шаги 2..5 — вопросы Да/Нет; шаги 0, 1 и итог работают как раньше.
+  // Шаги 2..5 — вопросы Да/Нет; шаги 0, 1 и итог автопереход не используют.
   if (calcStep < 2 || calcStep >= CALC_LAST_STEP) return;
 
   let waited = 0;
@@ -528,7 +530,7 @@ function renderPriceCalcDuration() {
     }
   }
 
-  // Заполненная янтарная часть дорожки ползунка (--calc-fill читает style.css)
+  // Заполненная янтарная часть дорожки ползунка (--calc-fill читает css/style)
   const rangeEl = document.getElementById('calcDurationRange');
   if (rangeEl) {
     const min = parseInt(rangeEl.min, 10) || 1;

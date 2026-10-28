@@ -1,21 +1,21 @@
 // ═══════════════════════════════════════════════════════════════════════
-// NICK RISE STUDIO — JS / ЗАМОК ПРОКРУТКИ И ОБРАБОТЧИКИ ОКОН
-// Источник: script.js, строки 6723–6826 (перенос 1:1, поведение не менялось)
-// Читает снаружи: — (самодостаточен)
-// Обязан грузиться после: js/state.js
+// js/modals.js — ЗАМОК ПРОКРУТКИ И ОБРАБОТЧИКИ ОКОН
+// Грузится после: js/state.js.
 // Владеет: isPageScrollLocked.
-// Публичные точки входа (window): lockPageScroll, unlockPageScroll,
-//          initModalAndToast.
+// Публичные (window): lockPageScroll, unlockPageScroll, initModalAndToast.
+// Блоки файла:
+//   • lockPageScroll / unlockPageScroll — страница стоит под открытым окном.
+//   • initModalAndToast — закрытие по фону, Esc и крестику.
 // ═══════════════════════════════════════════════════════════════════════
 
-// --- MODAL SCROLL LOCK SYSTEM ---
+// --- БЛОКИРОВКА ПРОКРУТКИ ПОД МОДАЛКАМИ ---
 let isPageScrollLocked = false;
 
 function lockPageScroll() {
   if (isPageScrollLocked) return;
   isPageScrollLocked = true;
 
-  // Prevent scrollbar layout shift on desktop without altering document scroll position
+  // Без сдвига раскладки от исчезающего скроллбара: позиция прокрутки не меняется
   const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
   if (scrollbarWidth > 0) {
     document.body.style.paddingRight = `${scrollbarWidth}px`;
@@ -44,7 +44,7 @@ function unlockPageScroll() {
   if (header) header.style.paddingRight = '';
 }
 
-// --- MODAL & TOAST HANDLERS ---
+// --- ОБРАБОТЧИКИ МОДАЛОК И ТОСТОВ ---
 function initModalAndToast() {
   const contactModal = document.getElementById('contactModal');
   if (contactModal) {
@@ -68,7 +68,7 @@ function initModalAndToast() {
     });
   }
 
-  // Prevent scroll propagation from backdrop area
+  // Прокрутка не уходит за затемнение (backdrop)
   [contactModal, aboutModal, priceCalcModal].forEach(modalEl => {
     if (!modalEl) return;
     modalEl.addEventListener('wheel', (e) => {

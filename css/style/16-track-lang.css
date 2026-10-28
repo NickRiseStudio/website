@@ -1,9 +1,23 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   NICK RISE STUDIO — STYLE / ПЕРЕКЛЮЧАТЕЛЬ ЯЗЫКА ЛЕНТЫ A/B
-   Источник: style.css, строки 3690–3805 (нарезка 1:1, поведение не менялось)
-   Слой: css/style/* — после tailwind.css и vendor/lenis.css,
-         перед css/anim/*. Порядок подключения = порядок номеров файлов.
+   css/style/16-track-lang.css — ПЕРЕКЛЮЧАТЕЛЬ ЯЗЫКА ЛЕНТЫ A/B
+   Что: две кнопки RU/EN, активное состояние, точка-индикатор, узкие экраны.
+   Разметку создаёт: js/player-ui.js → updateTrackLangButtonsUI.
+   Подключён: index.html, после 15-faq-text.css, до 17-contacts.css.
+   Группы блоков в файле: 1, 5, 6, 7 (узкий телефон), 9 (уменьшить движение).
    ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── ПОРЯДОК БЛОКОВ В ФАЙЛЕ (одинаков во всех css/style и css/anim) ──
+   1. ОБЩИЕ — все устройства            5. ПЛАНШЕТ (640–1023.98px)
+   2. ПЛАНШЕТ И ШИРЕ (min-width: 640px) 6. ТЕЛЕФОН (max-width: 639.98px)
+   3. КОМПЬЮТЕР (min-width: 1024px)     7. УЗКИЙ ТЕЛЕФОН (480px / 380px)
+   4. ВСЁ, КРОМЕ КОМПЬЮТЕРА (≤1023.98)  8. ВВОД (hover / pointer)
+                                        9. «УМЕНЬШИТЬ ДВИЖЕНИЕ»
+   «И выше» — min-width, «и ниже» — max-width на 0.02px меньше границы
+   Tailwind (sm 640, lg 1024): так соседние диапазоны не пересекаются и
+   между ними не остаётся полосы без правил. Печатаются только те группы,
+   блоки которых в файле есть. */
+
+/* ═══ 1. ОБЩИЕ — ВСЕ УСТРОЙСТВА ═════════════════════════════════════════════ */
 
 /* ═══════════════════════════════════════════════════════════════════════
    TRACK AUDIO LANGUAGE SWITCHER (SECTION A/B PLAYER) - HORIZONTAL LAYOUT
@@ -43,34 +57,6 @@
   min-width: 135px !important;
 }
 
-@media (max-width: 380px) {
-  #trackLangSwitcher {
-    gap: 4px !important;
-    padding: 3px !important;
-  }
-  .track-lang-btn {
-    min-width: 120px !important;
-    padding: 7px 10px !important;
-    font-size: 11px !important;
-  }
-}
-
-/* ── ЗАЗОР МЕЖДУ ПЕРЕКЛЮЧАТЕЛЕМ ЯЗЫКА И ЛЕНТОЙ ТРЕКОВ (телефон) ──────────
-   Отступ даёт не сам переключатель, а его родитель #playerContentContainer:
-   класс space-y-6 в Tailwind v4 разворачивается в
-   :where(.space-y-6 > :not(:last-child)) { margin-block-end: 24px }, то есть
-   между плашкой «На английском / На русском» и карточками треков было 24px.
-   На телефоне это много — здесь 15px. Правило заключено в max-width: 639px,
-   поэтому планшет и компьютер (там 24px смотрится нормально) не затронуты.
-   justify-center в селекторе нужен, чтобы не задеть #trackPagination: у неё
-   тоже есть flex items-center, но её выравнивание — justify-between, и она
-   последний ребёнок (значит, space-y-6 ей отступ вообще не даёт). */
-@media (max-width: 639px) {
-  #playerContentContainer > div.flex.items-center.justify-center {
-    margin-bottom: 15px;   /* было 24 (space-y-6) */
-  }
-}
-
 @keyframes nrLangVaporOut {
   0% {
     opacity: 1;
@@ -97,23 +83,7 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .lang-vapor-out {
-    animation: nrLangFadeOut 0.25s ease forwards !important;
-    filter: none !important;
-  }
-  .lang-vapor-in {
-    animation: nrLangFadeIn 0.3s ease forwards !important;
-    filter: none !important;
-  }
-  @keyframes nrLangFadeOut {
-    to { opacity: 0; }
-  }
-  @keyframes nrLangFadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-}
+/* ═══ 5. ПЛАНШЕТ (640–1023.98px) ════════════════════════════════════════════ */
 
 /* ═══════════════════════════════════════════════════════════════════════
    ПЛАНШЕТ (640–1023.98px): ПЕРЕКЛЮЧАТЕЛЬ «НА АНГЛИЙСКОМ / НА РУССКОМ»
@@ -141,9 +111,55 @@
   }
 }
 
+/* ═══ 6. ТЕЛЕФОН (max-width: 639.98px) ══════════════════════════════════════ */
 
+/* ── ЗАЗОР МЕЖДУ ПЕРЕКЛЮЧАТЕЛЕМ ЯЗЫКА И ЛЕНТОЙ ТРЕКОВ (телефон) ──────────
+   Отступ даёт не сам переключатель, а его родитель #playerContentContainer:
+   класс space-y-6 в Tailwind v4 разворачивается в
+   :where(.space-y-6 > :not(:last-child)) { margin-block-end: 24px }, то есть
+   между плашкой «На английском / На русском» и карточками треков получается
+   24px. На телефоне это много — здесь 15px. Правило заключено в
+   max-width: 639.98px, поэтому планшет и компьютер (там 24px смотрится
+   нормально) не затронуты.
+   justify-center в селекторе нужен, чтобы не задеть #trackPagination: у неё
+   тоже есть flex items-center, но её выравнивание — justify-between, и она
+   последний ребёнок (значит, space-y-6 ей отступ вообще не даёт). */
+@media (max-width: 639.98px) {
+  #playerContentContainer > div.flex.items-center.justify-center {
+    margin-bottom: 15px;
+  }
+}
 
+/* ═══ 7. УЗКИЙ ТЕЛЕФОН (max-width: 480px / 380px) ═══════════════════════════ */
 
+@media (max-width: 380px) {
+  #trackLangSwitcher {
+    gap: 4px !important;
+    padding: 3px !important;
+  }
+  .track-lang-btn {
+    min-width: 120px !important;
+    padding: 7px 10px !important;
+    font-size: 11px !important;
+  }
+}
 
+/* ═══ 9. «УМЕНЬШИТЬ ДВИЖЕНИЕ» ═══════════════════════════════════════════════ */
 
-
+@media (prefers-reduced-motion: reduce) {
+  .lang-vapor-out {
+    animation: nrLangFadeOut 0.25s ease forwards !important;
+    filter: none !important;
+  }
+  .lang-vapor-in {
+    animation: nrLangFadeIn 0.3s ease forwards !important;
+    filter: none !important;
+  }
+  @keyframes nrLangFadeOut {
+    to { opacity: 0; }
+  }
+  @keyframes nrLangFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+}

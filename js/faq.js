@@ -1,16 +1,15 @@
 // ═══════════════════════════════════════════════════════════════════════
-// NICK RISE STUDIO — JS / FAQ: РЕНДЕР И РАСКРЫТИЕ ВОПРОСОВ
-// Источник: script.js, строки 5666–5782, 6601–6722 (перенос 1:1, поведение не менялось)
-// Читает снаружи: currentLang, CONFIG
-// Обязан грузиться после: js/state.js
-// Публичные точки входа (window): initFaq, renderFaq, toggleFaq,
-//          openFaqItem, closeFaqItem.
-// ВАЖНО: toggleFaq зовётся из инлайн-onclick в HTML, который строит
-// renderFaq. Поэтому это ОБЯЗАТЕЛЬНО function-декларация, а не const.
-// animations.js вешает hook на openFaqItem / closeFaqItem.
+// js/faq.js — FAQ: РЕНДЕР И РАСКРЫТИЕ ВОПРОСОВ
+// Грузится после: js/state.js. Читает: currentLang, CONFIG.
+// Владеет: —
+// Публичные (window): initFaq, renderFaq, toggleFaq, openFaqItem, closeFaqItem.
+// Блоки файла:
+//   • renderFaq — список вопросов из CONFIG.faq, контейнер index.html → #faqContainer.
+//   • toggleFaq зовётся из инлайн-onclick построенной разметки — только function-декларация.
+//   • animations.js вешает hook на openFaqItem / closeFaqItem.
 // ═══════════════════════════════════════════════════════════════════════
 
-// --- FAQ SECTION ---
+// --- РАЗДЕЛ ЧАСТЫХ ВОПРОСОВ ---
 function initFaq() {
   renderFaq();
 
@@ -48,7 +47,7 @@ function renderFaq() {
 
   const currentDevice = getDeviceType();
 
-  // In-place update to prevent layout jumps and DOM destruction on language toggle
+  // Обновление на месте: без скачков раскладки и пересборки DOM при смене языка
   const existingCards = container.querySelectorAll('.rack-card');
   if (existingCards.length === CONFIG.faqData.length) {
     CONFIG.faqData.forEach((item, index) => {
@@ -128,7 +127,6 @@ function renderFaq() {
 }
 
 
-// ═══ 5783–6600 → js/reviews.js (прогрев фото, ленты, свайп, раскрытие) ═══
 function toggleFaq(id) {
   const currentBody = document.getElementById(`faq-body-${id}`);
   if (!currentBody) return;

@@ -1,11 +1,12 @@
 // ═══════════════════════════════════════════════════════════════════════
-// NICK RISE STUDIO — JS / ТОСТ И КОПИРОВАНИЕ В БУФЕР
-// Источник: script.js, строки 8526–8613 (перенос 1:1, поведение не менялось)
-// Читает снаружи: currentLang, CONFIG, PROMO_CODE (about.js)
-// Обязан грузиться после: about.js
-// Публичные точки входа (window): showToast, writeToClipboard, copyText,
-//          copyPromoCode. animations.js вешает hook на showToast —
-//          поэтому файл обязан грузиться ДО animations.js.
+// js/toast.js — ТОСТ И КОПИРОВАНИЕ В БУФЕР
+// Грузится после: js/about.js (читает PROMO_CODE). Читает: currentLang, CONFIG.
+// Владеет: —
+// Публичные (window): showToast, writeToClipboard, copyText, copyPromoCode.
+// Блоки файла:
+//   • showToast — плашка #toast с текстом #toastText.
+//   • copyText / copyPromoCode — буфер обмена и тост о копировании.
+//   • animations.js вешает hook на showToast, поэтому файл грузится до animations.js.
 // ═══════════════════════════════════════════════════════════════════════
 
 function showToast(msg) {

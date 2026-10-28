@@ -1,28 +1,25 @@
 // ═══════════════════════════════════════════════════════════════════════
-// NICK RISE STUDIO — JS / ПЛЕЕР: ИНТЕРФЕЙС (ЛЕНТА ТРЕКОВ, ПУЛЬТ, ПОДСКАЗКА A/B)
-// Источник: script.js, строки 510–767, 1972–3231, 4017–4252, 4537–4981 (перенос 1:1, поведение не менялось)
-// Читает снаружи: currentLang, activeTrackLang, activeTrackId, currentTrackPage (js/state.js), CONFIG
-// Обязан грузиться после: js/state.js, js/player-audio.js
-// Владеет всем, что видно и нажимается:
-//   • модель ленты: треки языка, страницы, шаги, точки (getEnabledTracks*,
-//     setTrackLanguage, stepTrackPage, goToTrackStep, renderTrackDots);
-//   • переход ленты и свайп (animateTrackTransition, runTrackTransition,
-//     peek-панели, блик по карточкам);
-//   • initPlayer — сборка списка треков и нижнего пульта из CONFIG;
-//   • нижний пульт (showStickyPlayer, closeStickyPlayer, toggleDeckPlay,
-//     switchDeckSource), подсказка A/B (abHint*);
-//   • перемотка и навигация (seekDeckTrack, initDeckSeekBar, prevDeckTrack,
-//     nextDeckTrack), индикаторы (updateMasterDeckUI, syncPlayStateUI,
-//     updateDeckProgressUI, setDeckBuffering);
-//   • карточки и лента (createTrackCard, renderTrackList, прогрев обложек).
-// Публичные точки входа (window): initPlayer, toggleTrack, selectTrack,
-//   toggleDeckPlay, toggleDeckSource, prevDeckTrack, nextDeckTrack,
-//   prevTrackPage, nextTrackPage, setTrackLanguage, renderTrackList,
-//   closeStickyPlayer — часть стоит в инлайн-onclick, поэтому только function.
-// Звук (js/player-audio.js) только вызывается — сам он сюда не ходит.
+// js/player-ui.js — ПЛЕЕР: ИНТЕРФЕЙС (ЛЕНТА ТРЕКОВ, ПУЛЬТ, ПОДСКАЗКА A/B)
+// Грузится после: js/state.js и js/player-audio.js. Читает: currentLang,
+//         activeTrackLang, activeTrackId, currentTrackPage, CONFIG.
+// Владеет: видимая часть плеера; звук — только вызовы в js/player-audio.js.
+// Публичные (window): initPlayer, toggleTrack, selectTrack, toggleDeckPlay, toggleDeckSource,
+//         prevDeckTrack, nextDeckTrack, prevTrackPage, nextTrackPage, setTrackLanguage,
+//         renderTrackList, closeStickyPlayer — часть стоит в инлайн-onclick, поэтому
+//         только function-декларация.
+// Блоки файла:
+//   • Модель ленты: треки языка, страницы, шаги, точки (getEnabledTracks*, setTrackLanguage,
+//     stepTrackPage, goToTrackStep, renderTrackDots).
+//   • Переход ленты и свайп (animateTrackTransition, runTrackTransition, peek-панели).
+//   • initPlayer — сборка списка треков и нижнего пульта из CONFIG.
+//   • Нижний пульт (showStickyPlayer, closeStickyPlayer, toggleDeckPlay, switchDeckSource)
+//     и подсказка A/B (abHint*).
+//   • Перемотка и индикаторы (seekDeckTrack, initDeckSeekBar, updateMasterDeckUI,
+//     syncPlayStateUI, updateDeckProgressUI, setDeckBuffering).
+//   • Карточки и лента (createTrackCard, renderTrackList, прогрев обложек).
 // ═══════════════════════════════════════════════════════════════════════
 
-// --- PLAYER & MASTER DECK ENGINE ---
+// --- ДВИЖОК ПЛЕЕРА И ПУЛЬТА ---
 // Доступные треки конкретного языка (RU/EN) — нужно и для текущего списка,
 // и для «соседних» peek-панелей во время свайпа.
 function getEnabledTracksForLang(lang) {
@@ -78,7 +75,7 @@ function setTrackLanguage(targetLang, targetPage = 0) {
   // Первый трек нового языка не выделяется: подсветка живёт только у трека,
   // который пользователь включил сам. Плеер просто обновляет подписи.
 
-  // Smooth entrance animation exclusively for track cards
+  // Мягкое появление только у карточек треков
   renderTrackList(true);
   updateMasterDeckUI();
 }
@@ -94,7 +91,7 @@ function getTracksPerPage() {
 /* Раскладка карточки трека. «Вертикальная» (как на телефоне): обложка-квадрат
    во всю ширину карточки, ниже название с артистом и жанр. Так карточки идут на
    телефоне (<640px, две колонки) и на компьютере (≥1024px, четыре колонки —
-   число колонок в animations.css). На планшете (640–1023px) список стоит в одну
+   число колонок в css/anim). На планшете (640–1023px) список стоит в одну
    колонку, поэтому там карточка — строка: обложка-миниатюра и текст в ряд. */
 function isVerticalTrackCardView() {
   const w = window.innerWidth;
@@ -281,7 +278,6 @@ function renderTrackDots(lang = activeTrackLang, page = currentTrackPage) {
 }
 
 
-// ═══ 768–1971 → js/player-audio.js (аудио-движок: загрузка, поток MP3, прогрев) ═══
 // Анимация перехода ленты треков (свайп-эффект) и синхронизация стрелок
 // листания: назначаются в initPlayer, вызываются из renderTrackList и кнопок.
 let animateTrackTransition = null;
@@ -311,7 +307,7 @@ function finishTrackSwipeTail() {
    Тот же янтарный «пробегающий» блик, что и при наведении, но запускается
    явно: каскадом по карточкам страницы и всегда целиком — полоса плавно
    входит из-за кромки и так же уходит (см. @keyframes nrCardSheen
-   в animations.css). */
+   в css/anim). */
 let trackSheenToken = 0;
 
 function playTrackSheen() {
@@ -353,7 +349,7 @@ function initPlayer() {
     trackListEl.addEventListener('focusin', warmCardAudio);
   }
 
-  // Track Audio Language Switch (RU / EN)
+  // Переключатель языка аудио треков (RU / EN)
   // Смена языка проходит свайпом-лентой на ЛЮБОЙ ширине (и на компьютере):
   // треки уезжают в сторону выбранной кнопки — правая кнопка ведёт список влево,
   // левая вправо, — а не «вкатываются снизу». Если свайп-лента недоступна
@@ -388,10 +384,9 @@ function initPlayer() {
   // ни одна карточка не должна выглядеть активной. Подсветка появляется только
   // после того, как пользователь сам включит трек (клик по карточке / play).
 
-  /* Прогрев аудио. Раньше здесь грузился только активный трек, а до первого
-     клика активного трека нет — то есть не грузилось вообще ничего. Теперь
-     подход к секции плеера запускает общую очередь прогрева (см. блок
-     «ФОНОВЫЙ ПРОГРЕВ АУДИО» выше по файлу). */
+  /* Прогрев аудио: подход к секции плеера запускает общую очередь прогрева
+     (см. блок «ФОНОВЫЙ ПРОГРЕВ АУДИО» выше по файлу). До первого клика
+     активного трека нет, поэтому грузить «активный» бессмысленно. */
   if ('IntersectionObserver' in window) {
     const playerSec = document.getElementById('player');
     if (playerSec) {
@@ -578,7 +573,7 @@ function initPlayer() {
        PEEK_DISSOLVE_MS (чуть медленнее, чтобы растворение читалось). */
     const PEEK_FADE_MS = 280;
     const PEEK_DISSOLVE_MS = 360;
-    // Доводка ленты (transform в .track-swipe-track, см. animations.css): въезжающая
+    // Доводка ленты (transform в .track-swipe-track, см. css/anim): въезжающая
     // панель должна дойти до полной видимости ровно к концу доводки.
     const TRACK_SETTLE_MS = 340;
     let peekFadeOutPanel = null;   // панель, которая сейчас гаснет
@@ -636,17 +631,17 @@ function initPlayer() {
       setTrackX('', false);
       swipeViewport.classList.remove('nr-swipe-active');
       // Клики по панелям включала доводка (см. runTrackTransition) — возвращаем
-      // штатное «не принимать клики» (см. animations.css → .track-peek-panel).
+      // штатное «не принимать клики» (см. css/anim/06-tracks.css → .track-peek-panel).
       peekLeftPanel.style.pointerEvents = '';
       peekRightPanel.style.pointerEvents = '';
       peekLeftPanel.style.touchAction = '';
       peekRightPanel.style.touchAction = '';
       // Панели НЕ очищаем: их карточки (и уже декодированные обложки) остаются
-      // готовыми к следующему свайпу. Раньше содержимое сбрасывалось, и при
-      // быстром листании панель успевала показаться раньше, чем декодируются
-      // картинки — соседние треки «моргали» пустыми обложками. Подпись тоже
-      // сохраняем: если состояние списка не изменилось, содержимое панелей
-      // остаётся верным и пересобирать его не нужно (см. fillPeekPanels).
+      // готовыми к следующему свайпу. При быстром листании панель иначе успевает
+      // показаться раньше, чем декодируются картинки, и соседние треки «моргают»
+      // пустыми обложками. Подпись тоже сохраняем: если состояние списка не
+      // изменилось, содержимое панелей остаётся верным и пересобирать его не
+      // нужно (см. fillPeekPanels).
       clearPeekFade();
       peekReady = false;
       // Переход закончен — индикаторы снова считаются по состоянию списка.
@@ -711,7 +706,7 @@ function initPlayer() {
     // targetLang / targetPage — куда перейдёт список ('last' — последняя страница
     // целевого языка). По ним переключатель языка и точки-индикатор переключаются
     // СРАЗУ, в кадре старта ленты: applyStep срабатывает только по transitionend,
-    // и раньше подсветка отставала от треков.
+    // поэтому без этого подсветка отставала бы от треков.
     const runTrackTransition = (motion, applyStep, layout = 'swipe', targetLang = null, targetPage = null) => {
       /* Косметический хвост предыдущего перехода (растворение уехавшей
          панели, доводка возврата) закрываем сразу: он уже ничего не значит,
@@ -749,7 +744,7 @@ function initPlayer() {
       enterSwipeMode(layout);
       // Пока идёт доводка, видимая страница нарисована в ПАНЕЛИ: контейнер в этот
       // момент стоит за кадром, а панель по умолчанию кликов не принимает
-      // (animations.css → .track-peek-panel). Без этого тап по карточке сразу
+      // (css/anim/06-tracks.css → .track-peek-panel). Без этого тап по карточке сразу
       // после свайпа пропадал бы впустую. Клик по панели обрабатывает
       // делегированный слушатель swipeTrack (см. initPlayer).
       // touch-action: pan-y — панель принимает клики, но новый свайп по ней всё
@@ -941,7 +936,7 @@ function initPlayer() {
     syncTrackNav = () => {
       // Стрелки нужны там, где список идёт в одну колонку — на телефоне и на
       // планшете (до 1024px, как lg в Tailwind): там вьюпорт резервирует под них
-      // боковые зоны (см. animations.css). На компьютере карточки стоят в
+      // боковые зоны (см. css/anim). На компьютере карточки стоят в
       // четыре колонки, места под стрелки нет — не показываем.
       const shouldShow = window.innerWidth < 1024 && getTrackSteps().length > 1;
       swipeViewport.classList.toggle('nr-track-nav-mode', shouldShow);
@@ -970,11 +965,11 @@ function initPlayer() {
       const bandLeft = cardsLeft;                             // полоса 0 … карточки
       const bandRight = window.innerWidth - cardsRight;       // полоса карточки … край окна
 
-      // Стрелку ставим вплотную к карточке. Раньше она вставала в середину
-      // свободной полосы: на телефоне полоса узкая (28–34px), и разницы не было,
-      // а на планшете полоса широкая — стрелка «висела» бы в пустоте далеко от
-      // списка. От края окна оставляем небольшой зазор: на узком экране он и
-      // задаёт положение (там вся полоса занята стрелкой).
+      // Стрелку ставим вплотную к карточке, а не в середину свободной полосы:
+      // на телефоне полоса узкая (28–34px) и разницы не видно, а на планшете
+      // широкая полоса оставила бы стрелку «висеть» в пустоте далеко от списка.
+      // От края окна остаётся небольшой зазор: на узком экране он и задаёт
+      // положение (там вся полоса занята стрелкой).
       const ARROW_GAP = 10;      // зазор между стрелкой и карточкой
       const ARROW_EDGE_MIN = 6;  // минимум от края окна
 
@@ -1148,7 +1143,7 @@ function showStickyPlayer() {
 /* ── ЗАКРЫТИЕ ПУЛЬТА (крестик справа сверху) ───────────────────────────────
    Уход — одно движение: пульт уезжает вниз целиком (корпус вместе с начинкой),
    ровно как приезжал, и за то же время (PLAYER_CLOSING_SLIDE_MS ≈ возврат
-   отступа body — style.css, body.has-sticky-player). Раздельных фаз нет.
+   отступа body — css/style, body.has-sticky-player). Раздельных фаз нет.
    Звук останавливаем сразу, но трек остаётся выбранным: повторный клик по
    нему (или по кнопке Play) возвращает пульт на место — showStickyPlayer(). */
 function closeStickyPlayer() {
@@ -1244,8 +1239,8 @@ function selectTrack(trackId, shouldPlay = true) {
       showStickyPlayer();
 
       // Соседние треки — сразу в начало очереди прогрева: следующий клик по
-      // «Next» не должен ждать сеть. Раньше здесь стоял таймер 1.5 с и грузился
-      // один трек — при быстром листании он просто не успевал сработать.
+      // «Next» не должен ждать сеть. Таймер на 1.5 с и загрузка одного трека
+      // при быстром листании не успевают сработать.
       warmOnPlay(trackId);
       // Слушают этот трек — фоновую очередь удерживаем, канал свободен.
       warmHold(trackId);
@@ -1375,7 +1370,7 @@ function toggleDeckSource() {
    Первое включение трека за сессию: пульт выезжает, через секунду (когда он
    уже стоит на месте) страница уходит в затемнение, а над переключателем
    появляется подсказка с хвостиком. Гаснет плавно по клику на фон, на
-   затемнение пульта или на саму кнопку (см. style.css → блок «ПОДСКАЗКА ПРО
+   затемнение пульта или на саму кнопку (см. css/style → блок «ПОДСКАЗКА ПРО
    ПЕРЕКЛЮЧАТЕЛЬ BEFORE / AFTER»).
 
    Флаг — в sessionStorage (как язык в localStorage: с try/catch): в новой
@@ -1384,14 +1379,13 @@ function toggleDeckSource() {
    ────────────────────────────────────────────────────────────────────── */
 
 const AB_HINT_KEY = 'nick_rise_ab_hint';
-const AB_HINT_DELAY_MS = 950;   // ждём, пока пульт доедет (0.95s — style.css)
+const AB_HINT_DELAY_MS = 950;   // ждём, пока пульт доедет (0.95s — css/style)
 const AB_HINT_GAP_PX = 12;      // зазор между хвостиком бабла и кромкой пульта
 const AB_HINT_CENTER_VW = 640;  // узкое окно (телефон): пульт показывает мобильный ряд — бабл ставим по центру
 const AB_HINT_TAIL_MARGIN_PX = 28;  // хвостик не ближе этого к углу плашки (скругление 20px + половина хвостика 16px)
-/* ВРЕМЕННО, ДЛЯ ПРОВЕРКИ: true — подсказка показывается один раз за загрузку
-   страницы (флаг живёт в памяти, обновление страницы его сбрасывает). Вернуть
-   false, когда проверка закончится: включится обычный режим — один раз за
-   сессию (sessionStorage). */
+/* true — подсказка показывается один раз за загрузку страницы (флаг живёт в
+   памяти, обновление страницы его сбрасывает). false — обычный режим: один раз
+   за сессию (sessionStorage). */
 const AB_HINT_EVERY_LOAD = true;
 
 let abHintTimer = null;
@@ -1421,7 +1415,7 @@ function markAbHintSeen() {
    переключатели свои — берём видимый) и над верхней кромкой пульта, чтобы
    внутри пульта он ничего не перекрывал. Хвостик указывает на середину кнопки,
    но не вылезает за скругление плашки. Размеры читаем при скрытом бабле — он
-   поэтому и не убирается через display: none (см. style.css). */
+   поэтому и не убирается через display: none (см. css/style). */
 function positionAbHint() {
   const tip = document.getElementById('abHintTip');
   const bar = document.getElementById('stickyPlayerBar');
@@ -1543,8 +1537,6 @@ function maybeShowAbHint() {
 }
 
 
-// ═══ 3232–3335 → js/logo-hint.js (подсказка под логотипом);
-//     3336–4016 → js/player-audio.js (кроссфейд, синхронизация, звуковой тракт) ═══
 function seekDeckTrack(e) {
   if (!activeTrackId) return;
   const item = trackAudioMap[activeTrackId];
@@ -1570,7 +1562,7 @@ function seekDeckTrack(e) {
        те самые секунды. Поэтому перемотка немедленно забирает канал: активный
        трек получает максимальный приоритет, фоновая загрузка прерывается. */
     warmOnSeek(activeTrackId, newTime);
-    // Тянем только звучащую дорожку: два seek одновременно и давали рывок звука.
+    // Тянем только звучащую дорожку: два seek одновременно дают рывок звука.
     audible.currentTime = newTime;
     item.seekPending = true;
     /* Позиция окончательная — просим порцию (15 с) отсюда для ОБЕИХ дорожек
@@ -1616,7 +1608,7 @@ function initDeckSeekBar() {
     }
   };
 
-  // Pointer drag events
+  // Перетаскивание указателем (мышь, перо)
   seekArea.addEventListener('pointerdown', (e) => {
     isSeeking = true;
     seekMoved = false;
@@ -1657,7 +1649,7 @@ function initDeckSeekBar() {
   seekArea.addEventListener('pointerup', stopSeeking);
   seekArea.addEventListener('pointercancel', stopSeeking);
 
-  // Touch fallback
+  // Запасной путь для касаний
   seekArea.addEventListener('touchmove', (e) => {
     seekMoved = true;
     handleSeekFromEvent(e);
@@ -1716,12 +1708,12 @@ function updateMasterDeckUI() {
   document.querySelectorAll('.deck-artist').forEach(el => { el.textContent = trackArtist; });
   document.querySelectorAll('.deck-genre').forEach(el => { el.textContent = genreText; });
 
-  // Source Switches (BEFORE / AFTER)
+  // Переключатели источника (BEFORE / AFTER)
   document.querySelectorAll('.deck-source-switch').forEach(sw => {
     sw.setAttribute('data-source', item.source);
   });
 
-  // Play Button & Icons
+  // Кнопка Play и иконки
   const playIcons = document.querySelectorAll('.deck-play-icon');
   const playBtns = document.querySelectorAll('.deck-play-btn');
 
@@ -1782,7 +1774,6 @@ function syncPlayStateUI(trackId) {
 }
 
 
-// ═══ 4253–4536 → js/player-audio.js (гейт буфера, сторож залипания, play/pause пары) ═══
 function updateDeckProgressUI() {
   if (!activeTrackId) return;
   const item = trackAudioMap[activeTrackId];
@@ -2012,7 +2003,7 @@ function renderTrackList(animate = false) {
   const isVerticalView = isVerticalTrackCardView();
   const currentView = isVerticalView ? 'vertical' : 'row';
   const perPage = getTracksPerPage();
-  // Жанровые фильтры убраны: показываем все треки текущего языка (RU/EN).
+  // Жанровых фильтров нет: показываем все треки текущего языка (RU/EN).
   const tracks = getEnabledTracks();
   const totalItems = tracks.length;
   const maxPages = Math.ceil(totalItems / perPage) || 1;
@@ -2182,7 +2173,7 @@ function renderTrackList(animate = false) {
     }
   }
 
-  // Controls UI
+  // Интерфейс управления пультом
   const btnPrev = document.getElementById('btnPrevPage');
   const btnNext = document.getElementById('btnNextPage');
   const pageInfo = document.getElementById('carouselPageInfo');
@@ -2228,6 +2219,3 @@ function renderTrackList(animate = false) {
   if (typeof syncTrackNav === 'function') syncTrackNav();
 }
 
-
-// ═══ 4982–9720 → js/services.js, faq.js, reviews.js, modals.js, about.js,
-//     calculator.js, mobile-menu.js, scroll.js, toast.js, gsap-reveal.js ═══

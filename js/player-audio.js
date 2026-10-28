@@ -1,28 +1,23 @@
 // ═══════════════════════════════════════════════════════════════════════
-// NICK RISE STUDIO — JS / ПЛЕЕР: АУДИО-ДВИЖОК (ЗАГРУЗКА, ПОТОК MP3, КРОССФЕЙД A/B)
-// Источник: script.js, строки 768–1971, 3336–4016, 4253–4536 (перенос 1:1, поведение не менялось)
-// Читает снаружи: currentLang, activeTrackLang, activeTrackId, trackAudioMap (js/state.js), CONFIG
-// Обязан грузиться после: js/state.js
-// Владеет всем звуком плеера A/B:
-//   • создание пары <audio> по требованию, обход кэша (audioUrl, audioCacheStamp*);
-//   • очередь фонового прогрева (audioWarm*, warmQueue*, warmOnPlay, warmHold);
-//   • порционное чтение MP3 по Range (audioStream*, stream*, разбор кадров mp3*);
-//   • кроссфейд и подтяжка пары BEFORE/AFTER (audioFade*, syncAudioPair,
-//     applyAudioVolumes, fadePairToSource, syncActivePairTick);
-//   • звуковой тракт Web Audio (audioCtx, ensureAudioGraph, rampAudioLevel);
-//   • гейт буфера, сторож залипания, play/pause пары (checkPairBufferGate,
-//     watchAudioStall, ensurePairPlaying, playPairAudio, pausePairAudio).
-// Публичные точки входа (window): changeDeckVolume (инлайн-oninput разметки —
-//   только function!), window.nrAudioStream, window.nrAudioWarm (отладка).
-// ВАЖНО: два setInterval верхнего уровня (syncActivePairTick, watchAudioStall)
-//   вызываются сразу при загрузке файла — их функции обязаны быть ЗДЕСЬ.
-// Модель ленты (какие треки у языка, страницы, точки) — в js/player-ui.js:
-//   отсюда она только вызывается, в момент клика/прогрева, а не при загрузке.
+// js/player-audio.js — ПЛЕЕР: АУДИО-ДВИЖОК (ЗАГРУЗКА, ПОТОК MP3, КРОССФЕЙД A/B)
+// Грузится после: js/state.js. Читает: currentLang, activeTrackLang,
+//         activeTrackId, trackAudioMap, CONFIG.
+// Владеет: пара <audio> в trackAudioMap, очередь прогрева, буферы потока, граф Web Audio.
+// Публичные (window): changeDeckVolume (инлайн-oninput разметки — только function), window.nrAudioStream
+//         и window.nrAudioWarm (отладка).
+// Блоки файла:
+//   • Ленивое создание пары <audio> и обход кэша (audioUrl, audioCacheStamp*).
+//   • Очередь фонового прогрева (audioWarm*, warmQueue*, warmOnPlay, warmHold).
+//   • Порционное чтение MP3 по Range (audioStream*, stream*, разбор кадров mp3*).
+//   • Кроссфейд и подтяжка BEFORE/AFTER (audioFade*, syncAudioPair, fadePairToSource,
+//     syncActivePairTick), звуковой тракт Web Audio (audioCtx, ensureAudioGraph).
+//   • Гейт буфера, сторож залипания, play/pause пары (checkPairBufferGate,
+//     watchAudioStall, playPairAudio, pausePairAudio).
+//   • Два setInterval верхнего уровня срабатывают сразу при загрузке — их функции
+//     обязаны остаться в этом файле.
+//   • Модель ленты (треки языка, страницы, точки) — в js/player-ui.js, отсюда только вызовы.
 // ═══════════════════════════════════════════════════════════════════════
 
-
-// ═══ 148–509 → js/i18n.js (язык, i18n-рендер); 510–767 → js/player-ui.js
-//     (модель ленты: треки языка, страницы, точки) ═══
 /* ══ ЛЕНИВОЕ СОЗДАНИЕ ДОРОЖЕК ПЛЕЕРА ═══════════════════════════════════════
    Раньше при загрузке страницы сразу создавались 16 элементов <audio>
    (8 треков × BEFORE/AFTER) с preload='metadata' — браузер тут же открывал
@@ -1105,9 +1100,9 @@ function streamCheckOffset(st, chunk) {
      участок на доли секунды позже timestampOffset, и строгая проверка считала
      это промахом — порция снова качалась с той же позиции, и так по кругу. */
   if (getBufferedEndAt(st.el, chunk.time + 0.5) > chunk.time + 0.5) return true;
-  /* Порция с перемотки легла не туда. Раньше здесь режим выключался целиком,
-     а streamRevertToFile переводил элемент на файл и браузер качал его С НАЧАЛА.
-     Повторяем порцию с той же позиции — режим порций остаётся рабочим. */
+  /* Порция с перемотки легла не туда. Выключать режим целиком нельзя:
+     streamRevertToFile переводит элемент на файл, и браузер качает его С
+     НАЧАЛА. Повторяем порцию с той же позиции — режим порций остаётся рабочим. */
   streamRetryChunk(st, 'порция легла не в позицию перемотки');
   return false;
 }
@@ -1228,7 +1223,6 @@ window.nrAudioWarm = {
 };
 
 
-// ═══ 1972–3231 → js/player-ui.js (переходы ленты, initPlayer, пульт, подсказка A/B) ═══
 function changeDeckVolume(val) {
   if (!activeTrackId) return;
   const item = trackAudioMap[activeTrackId];
@@ -1911,7 +1905,6 @@ if (AB_DEBUG) {
 }
 
 
-// ═══ 4017–4252 → js/player-ui.js (перемотка, стрелки, индикаторы пульта) ═══
 /* ── гейт общим буфером пары ───────────────────────────────────────────
    Переключение BEFORE / AFTER возможно только тогда, когда данные есть у ОБЕИХ
    дорожек: если входящая отстала, кроссфейд придётся откладывать, и плавность

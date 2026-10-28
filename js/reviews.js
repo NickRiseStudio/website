@@ -1,15 +1,17 @@
 // ═══════════════════════════════════════════════════════════════════════
-// NICK RISE STUDIO — JS / ОТЗЫВЫ: ПРОГРЕВ ФОТО, ЛЕНТЫ, СВАЙП, РАСКРЫТИЕ
-// Источник: script.js, строки 5783–6600 (перенос 1:1, поведение не менялось)
-// Читает снаружи: currentLang, CONFIG
-// Обязан грузиться после: js/state.js
-// Публичные точки входа (window): initReviews, renderReviews, toggleReview,
-//          warmReviewsAvatars.
-// ВАЖНО: toggleReview зовётся из инлайн-onclick в HTML, который строит
-// renderReviews. Только function-декларация.
+// js/reviews.js — ОТЗЫВЫ: ПРОГРЕВ ФОТО, ЛЕНТЫ, СВАЙП, РАСКРЫТИЕ
+// Грузится после: js/state.js. Читает: currentLang, CONFIG.
+// Владеет: —
+// Публичные (window): initReviews, renderReviews, toggleReview, warmReviewsAvatars.
+// Блоки файла:
+//   • warmReviewsAvatars — фото аватаров в скрытом контейнере до появления ленты.
+//   • renderReviews — карточки из CONFIG.reviewsData, контейнер #reviews.
+//   • Две бегущие ленты: свайп, перетаскивание, пауза под курсором.
+//   • Раскрытие длинного отзыва и «Читать далее» (syncReviewsMore).
+//   • toggleReview зовётся из инлайн-onclick построенной разметки — только function.
 // ═══════════════════════════════════════════════════════════════════════
 
-// --- REVIEWS SECTION ---
+// --- РАЗДЕЛ ОТЗЫВОВ ---
 // До появления ленты (initReviews) фото аватаров держим вставленными в скрытый
 // контейнер: браузер качает их на первом же кадре, вместе со страницей, а не
 // когда лента доедет до секции. Карточки получают уже готовые картинки из кэша.
@@ -62,7 +64,7 @@ function initReviews() {
 
 // Ссылка на автора открывается в новой вкладке (target="_blank") и после клика
 // остаётся в фокусе. Возвращаешься на сайт — лента стоит: её держит пауза
-// .nr-marquee:focus-within (style.css), а снимается она только следующим кликом
+// .nr-marquee:focus-within (css/style), а снимается она только следующим кликом
 // в любом месте страницы. Поэтому после клика мышью или пальцем фокус снимаем —
 // тот же приём, что у «Читать далее…» (toggleReview). С клавиатуры фокус не
 // трогаем: там по нему идёт переход по Tab, и лента под фокусом должна стоять.
@@ -121,7 +123,7 @@ function fillReviewCard(card, review) {
 // Отзывы раскладываются в две бегущие ленты (#reviewsRowTop / #reviewsRowBottom):
 // чётные — в верхнюю, нечётные — в нижнюю. Каждый ряд строится двумя
 // одинаковыми половинами, чтобы лента ехала безразрывно: трек сдвигается ровно
-// на половину своей ширины (style.css → @keyframes nrMarqueeLeft / nrMarqueeRight).
+// на половину своей ширины (css/style → @keyframes nrMarqueeLeft / nrMarqueeRight).
 function renderReviews() {
   const rows = [
     document.getElementById('reviewsRowTop'),
@@ -137,7 +139,7 @@ function renderReviews() {
     reviews.filter((review, index) => index % 2 === 1)
   ];
 
-  // In-place update to prevent layout jumps and DOM destruction on language toggle
+  // Обновление на месте: без скачков раскладки и пересборки DOM при смене языка
   const isBuilt = rows.every((row, idx) => row.children.length === groups[idx].length * 2);
   if (isBuilt) {
     rows.forEach((row, idx) => {
@@ -195,13 +197,13 @@ function renderReviews() {
   syncReviewCardHeights();
 }
 
-// Обрезан ли текст карточки по высоте (style.css → .review-text: max-height)
+// Обрезан ли текст карточки по высоте (css/style/18-reviews.css → .review-text: max-height)
 function isReviewTextClamped(card) {
   const textEl = card.querySelector('.review-text');
   return !!textEl && textEl.scrollHeight > textEl.clientHeight + 1;
 }
 
-// Высота, до которой обрезан свёрнутый текст (style.css → .review-text: max-height).
+// Высота, до которой обрезан свёрнутый текст (css/style/18-reviews.css → .review-text: max-height).
 // У раскрытой карточки обрезка снята классом, поэтому нужное значение берём у
 // свёрнутой карточки того же ряда: оно вычисленное (1.6em * 6), то есть одинаковое
 // для всех и не зависит от длины конкретного отзыва.
@@ -217,7 +219,7 @@ function getReviewClampHeight(card) {
 }
 
 // Общая высота свёрнутой карточки ряда — переменная --nr-review-card-h, которую
-// ставит syncReviewCardHeights(). Именно она в style.css держит height свёрнутой
+// ставит syncReviewCardHeights(). Именно она в css/style держит height свёрнутой
 // карточки, поэтому сворачивание должно заканчиваться ровно на этом значении.
 function getReviewRowHeight(card) {
   const track = card.closest('.nr-marquee-track');
@@ -256,10 +258,10 @@ function syncReviewsMore() {
 }
 
 // Общая высота свёрнутой карточки для ОБЕИХ лент — переменная --nr-review-card-h,
-// которую читают и style.css (.nr-marquee-track / .review-card), и JS.
-// Раньше высота была общей через align-items: stretch, но тогда раскрытый отзыв
-// растягивал весь ряд; теперь карточки не тянутся друг за другом, и высоту нужно
-// задать. Меряем только свёрнутые: у раскрытой карточки height: auto.
+// которую читают и css/style (.nr-marquee-track / .review-card), и JS.
+// Через align-items: stretch высоту задавать нельзя: раскрытый отзыв растягивает
+// весь ряд. Поэтому карточки друг за другом не тянутся, а высота задаётся явно.
+// Меряем только свёрнутые: у раскрытой карточки height: auto.
 // Значение одно на две ленты: длинные отзывы (верхний ряд) задают «полку», и
 // короткий нижний ряд поднимается до неё — так карточки в лентах выглядят
 // одинаковыми, а не двумя разными по высоте рядами.
@@ -297,13 +299,13 @@ const REVIEW_TOGGLE_DURATION = 1;
 const REVIEW_TOGGLE_EASE = 'sine.inOut';
 
 // Раскрывает и сворачивает отзыв: класс .is-open ставит конечное состояние
-// (style.css), а ход ведёт GSAP — как у вопроса в FAQ (openFaqItem).
+// (css/style), а ход ведёт GSAP — как у вопроса в FAQ (openFaqItem).
 // Едут две синхронные величины: высота карточки и обрезка самого текста
 // (maxHeight от высоты обрезки до полной высоты текста). За счёт этого при
 // раскрытии нижняя часть текста плавно выезжает из карточки, а при сворачивании
 // так же плавно прячется вместе с ней, а не обрезается рывком. Вместе с текстом
 // опускается вниз только эта карточка — остальные стоят на общей высоте ряда
-// (style.css → .nr-marquee-track: flex-start).
+// (css/style/18-reviews.css → .nr-marquee-track: flex-start).
 function setReviewOpen(card, willOpen) {
   const textEl = card.querySelector('.review-text');
   if (!textEl) return;
@@ -359,7 +361,7 @@ function setReviewOpen(card, willOpen) {
   // скрывать подпись будем по завершении хода, иначе у сворачиваемой карточки
   // она пропала бы в самом начале, а не уехала с нижней частью текста.
   // Видимость при этом снимаем: у раскрываемой карточки короткого отзыва подпись
-  // раньше была скрыта, а теперь её нужно показать («Свернуть»).
+  // скрыта, а показать её нужно («Свернуть»).
   setReviewMoreLabelText(card, willOpen);
   if (moreEl) moreEl.hidden = false;
 
@@ -452,7 +454,7 @@ function toggleReview(button, event) {
 
   // Мышь и палец фокус с кнопки снимают: иначе пауза по :focus-within держала
   // ленту до следующего клика в другом месте. С клавиатуры фокус остаётся —
-  // по нему идёт переход по Tab, и лента под фокусом стоит (как и раньше).
+  // по нему идёт переход по Tab, и лента под фокусом стоит.
   if (!byKeyboard) button.blur();
 
   // Свёрнутый отзыв прочитан — движение ленты возвращаем сразу, даже если
@@ -473,14 +475,14 @@ function toggleReview(button, event) {
   if (willOpen && isTouchActivation(event)) pauseReviewsMarquee(card);
 
   // Позиции триггеров анимаций пересчитываются по завершении хода высоты —
-  // в setReviewOpen (как у вопроса в FAQ). Раньше refresh стоял ещё и здесь,
-  // то есть запускался в первых кадрах движения и переклеивал раскладку всей
-  // страницы прямо посреди анимации: ход читался резким, с пропуском кадров.
+  // в setReviewOpen (как у вопроса в FAQ). Пересчёт в первых кадрах движения
+  // переклеивал бы раскладку всей страницы прямо посреди анимации: ход читается
+  // резким, с пропуском кадров.
 }
 
 // Тап ли это пальцем — по нему решается пауза ленты на сенсорных экранах.
 // На гибридных устройствах (тач-экран + мышь) клик мышью паузы не даёт: там
-// отзыв под курсором и так стоит (:hover в style.css), а лента продолжает ехать.
+// отзыв под курсором и так стоит (:hover в css/style), а лента продолжает ехать.
 function isTouchActivation(event) {
   if (!hasTouchInput()) return false;
   if (!event) return false;                        // вызов без события — не тап
@@ -489,7 +491,7 @@ function isTouchActivation(event) {
   return true;                                     // старые: событие без pointerType
 }
 
-// Пауза ленты, в которой тапнули «Читать далее…» (style.css →
+// Пауза ленты, в которой тапнули «Читать далее…» (css/style →
 // .nr-marquee-track.nr-paused). Вешаем только на сенсорных экранах: там нет
 // hover-паузы, и раскрытый отзыв иначе уезжал бы из-под пальца.
 function pauseReviewsMarquee(card) {
@@ -537,7 +539,7 @@ function clearReviewsSelection() {
   else if (selection.empty) selection.empty(); // старый WebKit
 }
 
-// Возвращает движение ленте после свёртки отзыва (style.css →
+// Возвращает движение ленте после свёртки отзыва (css/style →
 // .nr-marquee-track.nr-resume). Нужно потому, что карточка остаётся под
 // курсором/пальцем: на сенсорных экранах браузер держит на ней :hover до
 // следующего тапа, а мышь продолжала бы держать обычную паузу. Обычное
@@ -568,10 +570,10 @@ function resumeReviewsMarquee(card) {
    всегда остаётся внутри одного «круга» ленты, поэтому трек никогда не уезжает
    за свои копии и справа не появляется пустота. На время касания лента стоит.
    Жест определяем по преобладающей оси, вертикальная прокрутка страницы
-   остаётся нативной (touch-action: pan-y в style.css). */
+   остаётся нативной (touch-action: pan-y в css/style). */
 const REVIEW_SWIPE_AXIS_THRESHOLD = 12; // px: отсекает дрожание пальца при тапе
 const REVIEW_SWIPE_GAIN = 1.4; // усиление свайпа: палец 100 px → лента 140 px (1 — как было)
-/* px: с какого перевеса горизонтали отменяем прокрутку страницы — раньше
+/* px: с какого перевеса горизонтали отменяем прокрутку страницы — ниже
    браузерного порога скролла (~8 px), иначе страница «уедет» вместе с лентой
    и её инерция съест первый тап после свайпа (см. touchmove ниже). */
 const REVIEW_SWIPE_SCROLL_CANCEL = 6;
@@ -583,7 +585,7 @@ function hasTouchInput() {
     !!(navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
 }
 
-// Ход ленты в секундах — из style.css (.nr-marquee-track: animation 110s).
+// Ход ленты в секундах — из css/style (.nr-marquee-track: animation 110s).
 // Читаем его, а не держим своим числом: иначе правка длительности в стилях
 // молча разошлась бы с расчётом сдвига.
 function getReviewMarqueeDuration(track) {
@@ -642,17 +644,17 @@ function wrapReviewColumnShift(value, span) {
 
 function initReviewSwipe() {
   if (!hasTouchInput()) return;
-  // «Уменьшить движение»: колонка прокручивается нативно (style.css) — свой свайп не нужен
+  // «Уменьшить движение»: колонка прокручивается нативно (css/style) — свой свайп не нужен
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
   document.querySelectorAll('#reviews .nr-marquee').forEach((marquee) => {
     const track = marquee.querySelector('.nr-marquee-track');
     if (!track) return;
 
-    marquee.classList.add('nr-swipeable'); // touch-action: pan-y (style.css)
+    marquee.classList.add('nr-swipeable'); // touch-action: pan-y (css/style)
 
     let span = 0;       // половина трека = один «круг» ленты
-    let duration = 0;   // ход ленты в секундах (style.css → animation)
+    let duration = 0;   // ход ленты в секундах (css/style → animation)
     let base = { offset: 0, delay: 0 }; // положение ленты в начале касания
     let dragShift = 0;  // оно же на момент распознавания жеста
     let startX = 0;
@@ -688,8 +690,8 @@ function initReviewSwipe() {
 
       // Ось жеста определяем один раз по первым сантиметрам движения.
       // Пауза и замер — только здесь: при вертикальной прокрутке страницы лента
-      // продолжает ехать, как и раньше, а сдвиг считается от того положения,
-      // в котором ленту застал горизонтальный жест.
+      // продолжает ехать, а сдвиг считается от того положения, в котором ленту
+      // застал горизонтальный жест.
       if (axis === null) {
         // Горизонталь уже перевешивает — сразу отменяем прокрутку страницы:
         // иначе вместе с лентой ехала бы и страница, а после отпускания пальца
@@ -734,13 +736,13 @@ function initReviewSwipe() {
    можно было только ждать, пока лента доедет сама. Тянем её курсором так же, как
    пальцем на сенсорном экране: сдвиг пишем в фазу анимации (setReviewColumnShift),
    поэтому лента остаётся бесконечной, а не спорит с анимацией. Пока держим, она
-   стоит (style.css → .nr-marquee.nr-dragging) и едет ровно за курсором.
+   стоит (css/style → .nr-marquee.nr-dragging) и едет ровно за курсором.
    Короткое нажатие без движения остаётся кликом — по нему работают «Читать
    далее…» и ссылка на автора. На тач-экранах жест по-прежнему ведёт initReviewSwipe. */
 const REVIEW_DRAG_THRESHOLD = 6; // px: меньше — это клик, а не перетаскивание
 
 function initReviewDrag() {
-  // «Уменьшить движение»: колонка прокручивается нативно (style.css) — тянуть нечего
+  // «Уменьшить движение»: колонка прокручивается нативно (css/style) — тянуть нечего
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   // Только точный указатель: у тач-экранов свой свайп (initReviewSwipe)
   if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
@@ -749,10 +751,10 @@ function initReviewDrag() {
     const track = marquee.querySelector('.nr-marquee-track');
     if (!track) return;
 
-    marquee.classList.add('nr-draggable'); // cursor: grab (style.css)
+    marquee.classList.add('nr-draggable'); // cursor: grab (css/style)
 
     let span = 0;         // половина трека = один «круг» ленты
-    let duration = 0;     // ход ленты в секундах (style.css → animation)
+    let duration = 0;     // ход ленты в секундах (css/style → animation)
     let base = { offset: 0, delay: 0 }; // положение ленты в начале нажатия
     let dragShift = 0;    // оно же, снятое в момент нажатия
     let startX = 0;

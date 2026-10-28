@@ -1,17 +1,30 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   NICK RISE STUDIO — ANIMATION / ЗАСТАВКА ВКЛЮЧЕНИЯ ПУЛЬТА (#nr-boot)
-   Источник: animations.css, строки 1–353 (нарезка 1:1, поведение не менялось)
-   Слой: css/anim/* — после ВСЕХ css/style/*.
-         Порядок подключения = порядок номеров файлов.
+   css/anim/01-boot.css — ЗАСТАВКА ВКЛЮЧЕНИЯ ПУЛЬТА (#nr-boot)
+   Что: появление заставки, шкалы и лампы, растворение.
+   Разметку создаёт: index.html → #nr-boot; скрывает animations.js → initBoot.
+   Подключён: index.html, после всех css/style/*; здесь первым, до 02-atmosphere.css.
+   Группы блоков в файле: 1 (общие), 7 (узкий телефон), 9 (уменьшить движение).
    ═══════════════════════════════════════════════════════════════════════ */
 
+/* ── ПОРЯДОК БЛОКОВ В ФАЙЛЕ (одинаков во всех css/style и css/anim) ──
+   1. ОБЩИЕ — все устройства            5. ПЛАНШЕТ (640–1023.98px)
+   2. ПЛАНШЕТ И ШИРЕ (min-width: 640px) 6. ТЕЛЕФОН (max-width: 639.98px)
+   3. КОМПЬЮТЕР (min-width: 1024px)     7. УЗКИЙ ТЕЛЕФОН (480px / 380px)
+   4. ВСЁ, КРОМЕ КОМПЬЮТЕРА (≤1023.98)  8. ВВОД (hover / pointer)
+                                        9. «УМЕНЬШИТЬ ДВИЖЕНИЕ»
+   «И выше» — min-width, «и ниже» — max-width на 0.02px меньше границы
+   Tailwind (sm 640, lg 1024): так соседние диапазоны не пересекаются и
+   между ними не остаётся полосы без правил. Печатаются только те группы,
+   блоки которых в файле есть. */
+
+/* ═══ 1. ОБЩИЕ — ВСЕ УСТРОЙСТВА ═════════════════════════════════════════════ */
+
 /* ═══════════════════════════════════════════════════════════════════════
-   NICK RISE STUDIO — ANIMATION LAYER  (animations.css)
-   Слой анимаций студийного пульта. Подключается ПОСЛЕ style.css.
+   NICK RISE STUDIO — ANIMATION LAYER  (css/anim)
+   Слой анимаций студийного пульта. Подключается ПОСЛЕ css/style.
    Ничего из существующей вёрстки и логики не переопределяет —
    только добавляет движение, свечение и микро-взаимодействия.
    ═══════════════════════════════════════════════════════════════════════ */
-
 :root {
   --nr-amber: #F59E0B;
   --nr-amber-lt: #FBBF24;
@@ -22,14 +35,13 @@
   --nr-snap: cubic-bezier(0.34, 1.4, 0.64, 1);
 }
 
-/* ═══ 01. BOOT SCREEN — заставка «включения пульта» ═══════════════════
+/* ═══ BOOT SCREEN — заставка «включения пульта» (index.html → #nr-boot) ════════
    Видна при каждом заходе/обновлении страницы, прячет animations.js
    после готовности. ВАЖНО: все движения здесь через transform/opacity
    (композитор) — никаких чтений layout и изменений width/height.
    Пока заставка видна — страница заморожена (html.nr-boot-active):
    скролл выключен, фокус не уходит из оверлея, клики съедает #nr-boot.
    Разблокировка происходит только в момент #nr-boot-done (display:none).  */
-
 #nr-boot {
   position: fixed;
   inset: 0;
@@ -84,6 +96,7 @@ html.nr-boot-active body {
   border: 2px solid rgba(245, 158, 11, 0.45);
   animation: nrBootLogoIn 0.7s var(--nr-ease) both;
 }
+
 .nr-boot-logo-img {
   width: 100%;
   height: 100%;
@@ -106,6 +119,7 @@ html.nr-boot-active body {
   white-space: nowrap;
   animation: nrBootFadeIn 0.6s var(--nr-ease) 0.08s both;
 }
+
 .nr-boot-title-accent {
   color: var(--nr-amber-lt);
   text-shadow: 0 0 12px rgba(245, 158, 11, 0.5);
@@ -121,7 +135,6 @@ html.nr-boot-active body {
    загораются по одной слева направо и служат индикатором загрузки),
    снизу — два VU-метра, стрелки которых уходят с «нуля» к рабочей
    отметке. Движение — только opacity/transform (композитор). */
-
 /* Скрытый источник SVG-шкалы VU (инстансы — через <use href="#nrVuDial">).
    position:absolute убирает его из flex-потока .nr-boot-inner (иначе 0-й
    элемент добавил бы лишний gap перед панелью). */
@@ -160,6 +173,7 @@ html.nr-boot-active body {
   background: radial-gradient(circle at 35% 30%, #7b8291, #23262e 72%);
   box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.9), 0 1px 1px rgba(255, 255, 255, 0.12);
 }
+
 .nr-boot-screw::after {
   content: '';
   position: absolute;
@@ -170,9 +184,13 @@ html.nr-boot-active body {
   background: rgba(0, 0, 0, 0.65);
   transform: rotate(35deg);
 }
+
 .nr-boot-screw:nth-child(1) { left: 6px; top: 6px; }
+
 .nr-boot-screw:nth-child(2) { right: 6px; top: 6px; }
+
 .nr-boot-screw:nth-child(3) { left: 6px; bottom: 6px; }
+
 .nr-boot-screw:nth-child(4) { right: 6px; bottom: 6px; }
 
 /* Верхний ряд панели: слева тумблер питания, справа — ряд ламп накаливания */
@@ -191,6 +209,7 @@ html.nr-boot-active body {
   align-items: center;
   gap: 8px;
 }
+
 .nr-boot-switch {
   position: relative;
   width: 16px;
@@ -199,6 +218,7 @@ html.nr-boot-active body {
   background: linear-gradient(180deg, #3a4150 0%, #1a1e26 100%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 2px 5px rgba(0, 0, 0, 0.6);
 }
+
 .nr-boot-switch::after {
   content: '';
   position: absolute;
@@ -211,11 +231,13 @@ html.nr-boot-active body {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
   animation: nrBootSwitchFlip 0.4s ease-out 0.16s both;
 }
+
 @keyframes nrBootSwitchFlip {
   0%   { transform: translateY(9px); }
   70%  { transform: translateY(-1px); }
   100% { transform: translateY(0); }
 }
+
 .nr-boot-pilot {
   position: relative;
   width: 6px;
@@ -224,6 +246,7 @@ html.nr-boot-active body {
   background: #3a2606;
   box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.8);
 }
+
 .nr-boot-pilot::after {
   content: '';
   position: absolute;
@@ -234,6 +257,7 @@ html.nr-boot-active body {
   opacity: 0;
   animation: nrBootPilotOn 0.4s ease-out 0.36s both;
 }
+
 @keyframes nrBootPilotOn {
   0%   { opacity: 0; }
   100% { opacity: 1; }
@@ -241,6 +265,7 @@ html.nr-boot-active body {
 
 /* VU-метры: светлая шкала, «стекло», стрелка с «нуля» к рабочей отметке */
 .nr-boot-meters { display: flex; gap: 11px; }
+
 .nr-boot-meter {
   position: relative;
   width: 84px;
@@ -255,6 +280,7 @@ html.nr-boot-active body {
     inset 0 2px 5px rgba(0, 0, 0, 0.32),
     0 1px 0 rgba(255, 255, 255, 0.12);
 }
+
 .nr-boot-meter::after {
   content: '';
   position: absolute;
@@ -267,7 +293,9 @@ html.nr-boot-active body {
   background: radial-gradient(circle at 38% 34%, #565b66, #101216 74%);
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
 }
+
 .nr-boot-vu { position: absolute; inset: 0; width: 100%; height: 100%; }
+
 /* Стрелка: закреплена по оси снизу, уходит с «нуля» к рабочей отметке */
 .nr-boot-needle {
   position: absolute;
@@ -282,6 +310,7 @@ html.nr-boot-active body {
   transform: rotate(-52deg);
   animation: nrBootNeedle 1.05s var(--nr-snap) 0.4s both;
 }
+
 .nr-boot-glass {
   position: absolute;
   inset: 0;
@@ -289,6 +318,7 @@ html.nr-boot-active body {
   pointer-events: none;
   background: linear-gradient(115deg, rgba(255, 255, 255, 0.36) 0%, rgba(255, 255, 255, 0.07) 25%, rgba(255, 255, 255, 0) 44%, rgba(255, 255, 255, 0) 66%, rgba(255, 255, 255, 0.13) 100%);
 }
+
 @keyframes nrBootNeedle {
   0%   { transform: rotate(-52deg); }
   72%  { transform: rotate(32deg); }
@@ -299,6 +329,7 @@ html.nr-boot-active body {
    (animation-delay с шагом 0.21 с): так ряд читается как прогресс и заменяет
    прежнюю полосу. Последняя лампа «доезжает» ровно к ~1.5 с — моменту MIN_HOLD. */
 .nr-boot-tubes { display: flex; gap: 10px; }
+
 .nr-boot-tubes span {
   position: relative;
   width: 12px;
@@ -307,6 +338,7 @@ html.nr-boot-active body {
   background: radial-gradient(circle at 40% 34%, #4a3a12 0%, #2a2008 60%, #17130a 100%);
   box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.7);
 }
+
 .nr-boot-tubes span::after {
   content: '';
   position: absolute;
@@ -318,16 +350,24 @@ html.nr-boot-active body {
   transform: scale(0.72);
   animation: nrBootTubeOn 0.34s ease-out both;
 }
+
 .nr-boot-tubes span:nth-child(1)::after { animation-delay: 0.32s; }
+
 .nr-boot-tubes span:nth-child(2)::after { animation-delay: 0.53s; }
+
 .nr-boot-tubes span:nth-child(3)::after { animation-delay: 0.74s; }
+
 .nr-boot-tubes span:nth-child(4)::after { animation-delay: 0.95s; }
+
 .nr-boot-tubes span:nth-child(5)::after { animation-delay: 1.16s; }
+
 @keyframes nrBootTubeOn {
   0%   { opacity: 0; transform: scale(0.72); }
   55%  { opacity: 1; transform: scale(1.15); }
   100% { opacity: 1; transform: scale(1); }
 }
+
+/* ═══ 7. УЗКИЙ ТЕЛЕФОН (max-width: 480px / 380px) ═══════════════════════════ */
 
 /* Узкие экраны: rack уменьшается, чтобы влезал в ширину */
 @media (max-width: 480px) {
@@ -339,6 +379,8 @@ html.nr-boot-active body {
   .nr-boot-tubes { gap: 7px; }
   .nr-boot-tubes span { width: 10px; height: 10px; }
 }
+
+/* ═══ 9. «УМЕНЬШИТЬ ДВИЖЕНИЕ» ═══════════════════════════════════════════════ */
 
 /* Пользователям prefers-reduced-motion заставка показывается статичным
    кадром «прогрева»: без движения — лампы горят, стрелки в рабочем
@@ -357,4 +399,3 @@ html.nr-boot-active body {
   #nr-boot .nr-boot-tubes span::after { opacity: 1; transform: scale(1); }
   #nr-boot .nr-boot-needle { transform: rotate(26deg); }
 }
-

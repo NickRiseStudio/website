@@ -1,11 +1,26 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   NICK RISE STUDIO — ANIMATION / КАРТОЧКИ ТРЕКОВ, ЭКВАЛАЙЗЕР A/B, СТРЕЛКИ КАРУСЕЛИ
-   Источник: animations.css, строки 1144–1670 (нарезка 1:1, поведение не менялось)
-   Слой: css/anim/* — после ВСЕХ css/style/*.
-         Порядок подключения = порядок номеров файлов.
+   css/anim/06-tracks.css — КАРТОЧКИ ТРЕКОВ, ЭКВАЛАЙЗЕР A/B, СТРЕЛКИ КАРУСЕЛИ
+   Что: появление карточек, эквалайзер секции «Слушай разницу», лента и
+        её стрелки, стрелки карусели услуг на телефоне.
+   Разметку создаёт: js/player-ui.js → createTrackCard, renderTrackList.
+   Подключён: index.html, после всех css/style/*; здесь после 05-section-titles.css, до 07-player.css.
+   Группы блоков в файле: 1–6, 8 (ввод), 9 (уменьшить движение).
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* ═══ 07. КАРТОЧКИ ТРЕКОВ ═════════════════════════════════════════════ */
+/* ── ПОРЯДОК БЛОКОВ В ФАЙЛЕ (одинаков во всех css/style и css/anim) ──
+   1. ОБЩИЕ — все устройства            5. ПЛАНШЕТ (640–1023.98px)
+   2. ПЛАНШЕТ И ШИРЕ (min-width: 640px) 6. ТЕЛЕФОН (max-width: 639.98px)
+   3. КОМПЬЮТЕР (min-width: 1024px)     7. УЗКИЙ ТЕЛЕФОН (480px / 380px)
+   4. ВСЁ, КРОМЕ КОМПЬЮТЕРА (≤1023.98)  8. ВВОД (hover / pointer)
+                                        9. «УМЕНЬШИТЬ ДВИЖЕНИЕ»
+   «И выше» — min-width, «и ниже» — max-width на 0.02px меньше границы
+   Tailwind (sm 640, lg 1024): так соседние диапазоны не пересекаются и
+   между ними не остаётся полосы без правил. Печатаются только те группы,
+   блоки которых в файле есть. */
+
+/* ═══ КАРТОЧКИ ТРЕКОВ — появление, лента, стрелки (css/style/07-tracks.css) ═══ */
+
+/* ═══ 1. ОБЩИЕ — ВСЕ УСТРОЙСТВА ═════════════════════════════════════════════ */
 
 /* Телефон: свайп-лента треков. Вертикальная прокрутка страницы остаётся
    нативной (pan-y). Обрезка включается только на время свайпа
@@ -13,22 +28,6 @@
 #trackListSwipeViewport { touch-action: pan-y; }
 
 #trackListSwipeViewport.nr-swipe-active { overflow: hidden; }
-
-/* Телефон: обложка карточки трека чуть ниже квадрата — карточки становятся
-   компактнее по высоте (8/7 вместо 1/1: на 375px обложка ≈142 → ≈124px,
-   вся карточка ниже примерно на 18px). Сначала стояло 5/4 (−28px), затем
-   по просьбе вернули 10px высоты. Обложка не искажается: у картинки
-   object-fit: cover (script.js → createTrackCard), поэтому лишнее
-   подрезается по центру. Ширина карточки, сетка и текст не меняются.
-   Панели соседних страниц (.track-peek-panel) — в том же правиле, иначе при
-   свайпе «приезжающая» страница выглядела бы иначе. Планшет (карточка-строка)
-   и компьютер (≥1024px, там тоже вертикальные карточки) — как было. */
-@media (max-width: 639px) {
-  #trackListContainer .track-cover-box,
-  .track-peek-panel .track-cover-box {
-    aspect-ratio: 8 / 7;
-  }
-}
 
 /* Клип ленты — ровно по области карточек. У вьюпорта на телефоне и на планшете
    есть боковые зоны под стрелки (--nr-track-nav-zone), и без этого клипа
@@ -68,35 +67,9 @@
 
 #trackListSwipeViewport.nr-swipe-active .track-peek-panel { display: grid; }
 
-@media (min-width: 640px) {
-  .track-peek-panel { gap: 0.75rem; }
-}
-
-/* Планшет (640–1024px): в контейнере одна колонка (см. index.html), поэтому и
-   панели соседних страниц должны идти в одну колонку — иначе при свайпе
-   соседняя страница выглядела бы не так, как текущая. */
-@media (min-width: 640px) and (max-width: 1023.98px) {
-  .track-peek-panel { grid-template-columns: repeat(1, minmax(0, 1fr)); }
-}
-
-/* Компьютер (≥1024px): карточки вертикальные, как на телефоне (см. script.js →
-   isVerticalTrackCardView), поэтому в ряд их встаёт четыре. Панели соседних
-   страниц держим в том же числе колонок — иначе при листании соседняя страница
-   выглядела бы не так, как текущая.
-
-   Число колонок контейнера задаём здесь, а не классом lg:grid-cols-4 в
-   index.html: в собранном tailwind.css такого класса нет (файл генерируется,
-   правка вручную не предусмотрена). ID-селектор перекрывает grid-cols-2 и без
-   !important. */
-@media (min-width: 1024px) {
-  #trackListContainer,
-  .track-peek-panel { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-}
-
-/* ПРАВКА 10.10: у карточек треков «спокойная» тень — ровно та же, что у
-   карточек отзывов (style.css → #reviews .review-card), и та же, что у услуг,
-   FAQ и контактов. Раньше тень была только при наведении, и в спокойном
-   состоянии карточки выглядели плоскими.
+/* У карточек треков «спокойная» тень — ровно та же, что у
+   карточек отзывов (css/style/18-reviews.css → #reviews .review-card) и у услуг,
+   FAQ, контактов: без неё в спокойном состоянии карточки выглядят плоскими.
    Панели соседних страниц перечислены в том же селекторе: во время свайпа в
    них лежат копии тех же карточек, и без этого «приезжающая» страница была бы
    без тени — то есть отличалась от текущей.
@@ -125,7 +98,7 @@
    всей карточке и так же плавно уходит. Это анимация, а не transition по
    background-position: так полоса никогда не «вспыхивает» в середине карточки,
    даже когда карточки пересоздаются сразу после свайпа. Класс .nr-sheen
-   навешивает script.js (playTrackSheen), наведение — на компьютере. */
+   навешивает js (playTrackSheen), наведение — на компьютере. */
 #trackListContainer > div.nr-sheen::after {
   animation: nrCardSheen 1.35s var(--nr-ease);
 }
@@ -135,19 +108,6 @@
   18%  { opacity: 1; }
   76%  { opacity: 1; }
   100% { background-position: -55% 0; opacity: 0; }
-}
-
-/* Наведение и подъём карточки — только там, где есть настоящий курсор:
-   на тач-устройствах :hover «залипает» после касания и мешает свайпу. */
-@media (hover: hover) and (pointer: fine) {
-  #trackListContainer > div:hover {
-    transform: translateY(-4px);
-    /* Наведение — как у карточек отзывов (style.css/animations.css →
-       #reviews .review-card:hover): тень подъёма тоже короткая и мягкая. */
-    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.4), 0 0 20px rgba(245, 158, 11, 0.14);
-  }
-
-  #trackListContainer > div:hover::after { animation: nrCardSheen 1.35s var(--nr-ease); }
 }
 
 /* Активный трек */
@@ -163,20 +123,6 @@
 
 /* Эквалайзер поверх обложки играющего трека */
 #trackListContainer > div.nr-live .absolute.inset-0 > .animate-ping { display: none; }
-
-/* Крупная квадратная обложка — на телефоне и на компьютере (карточки там
-   одинаковые, вертикальные — см. script.js → isVerticalTrackCardView). На время
-   проигрывания центр обложки занимает эквалайзер, поэтому иконку «пауза» убираем:
-   иначе она накладывается на полоски. Тап по центру обложки и по самой карточке
-   по-прежнему ставит паузу. В режиме «уменьшить движение» полоски не рисуются
-   (см. раздел 17), поэтому там иконку не скрываем. */
-@media (max-width: 639px) and (prefers-reduced-motion: no-preference),
-       (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
-  #trackListContainer > div.nr-live .track-play-btn .track-play-svg {
-    opacity: 0;
-    transition: opacity 0.25s var(--nr-ease);
-  }
-}
 
 .nr-eqbars {
   position: absolute;
@@ -202,8 +148,11 @@
    ровно четыре (поведение прежнее), на телефоне и компьютере их больше — и волна
    внутри такой широкой полосы выглядит живой. */
 .nr-eqbars i:nth-child(4n+1) { animation-duration: 0.62s; }
+
 .nr-eqbars i:nth-child(4n+2) { animation-duration: 0.94s; }
+
 .nr-eqbars i:nth-child(4n+3) { animation-duration: 0.73s; }
+
 .nr-eqbars i:nth-child(4n+4) { animation-duration: 1.06s; }
 
 @keyframes nrEqBar {
@@ -211,12 +160,108 @@
   to   { transform: scaleY(1); opacity: 1; }
 }
 
+/* Пагинация */
+#btnPrevPage:not(:disabled):hover, #btnNextPage:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(245, 158, 11, 0.22);
+}
+
+#carouselDots button { transition: all 0.35s var(--nr-snap); }
+
+.nr-track-nav { display: none; }
+
+/* Отскок «мячика»: каждая фаза со своим сглаживанием — удар резкий, возврат
+   мягкий, в конце короткая пауза (стрелка «успокаивается»). */
+@keyframes nrTrackNavBounceLeft {
+  0%   { transform: translateX(0) scaleX(1);        animation-timing-function: cubic-bezier(0.5, 0, 0.75, 1); }
+  22%  { transform: translateX(-6px) scaleX(0.84);  animation-timing-function: cubic-bezier(0.34, 1.4, 0.64, 1); }
+  46%  { transform: translateX(2.5px) scaleX(1.03); animation-timing-function: ease-in-out; }
+  66%  { transform: translateX(-1.5px) scaleX(0.99); animation-timing-function: ease-in-out; }
+  84%  { transform: translateX(0.5px) scaleX(1);    animation-timing-function: ease-out; }
+  100% { transform: translateX(0) scaleX(1); }
+}
+
+@keyframes nrTrackNavBounceRight {
+  0%   { transform: translateX(0) scaleX(1);         animation-timing-function: cubic-bezier(0.5, 0, 0.75, 1); }
+  22%  { transform: translateX(6px) scaleX(0.84);    animation-timing-function: cubic-bezier(0.34, 1.4, 0.64, 1); }
+  46%  { transform: translateX(-2.5px) scaleX(1.03); animation-timing-function: ease-in-out; }
+  66%  { transform: translateX(1.5px) scaleX(0.99);  animation-timing-function: ease-in-out; }
+  84%  { transform: translateX(-0.5px) scaleX(1);    animation-timing-function: ease-out; }
+  100% { transform: translateX(0) scaleX(1); }
+}
+
+/* ═══ СТРЕЛКИ КАРУСЕЛИ УСЛУГ (телефон) — карточки в css/style/06-services.css ═══
+   Тот же вид и то же поведение, что у стрелок раздела с примерами
+   (.nr-track-nav, выше): янтарная дуга-«галочка» без фона, свечение, «отскок
+   мячика» (keyframes nrTrackNavBounceLeft/Right переиспользуются — они общие).
+   Отличие только в том, ГДЕ стрелки стоят: карусель услуг занимает всю ширину
+   экрана, поэтому стрелки лежат поверх неё у самых краёв — 6px от края окна,
+   как ARROW_EDGE_MIN в js → syncTrackNav. Показываются только там, где
+   услуги действительно карусель (телефон, <640px): на планшете и ПК это сетка,
+   листать нечего. */
+.nr-services-nav { display: none; }
+
+/* Стрелка на краю карусели плавно гаснет: листать в эту сторону больше нечего
+   (класс вешает js → syncServicesNav). Зона нажатия при этом остаётся —
+   pointer-events НЕ отключаем: иначе тап по невидимой стрелке «проваливался» бы
+   на карточку под ней и переворачивал её. Так нажатие просто ничего не делает. */
+.nr-services-nav.is-hidden {
+  opacity: 0;
+}
+
+/* Точки-индикатор листания треков (внешний вид — как у карусели услуг).
+   На телефоне их нет: листать ленту там можно стрелками по бокам и свайпом,
+   а точки под карточками только дублировали навигацию. Планшет и компьютер
+   не затронуты. JS прячет блок инлайновым display: none, когда страница одна,
+   поэтому здесь display: none стоит с !important — иначе инлайновый '' вернул
+   бы точки на телефоне. */
+.nr-track-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* ═══ ЭКВАЛАЙЗЕР «СЛУШАЙ РАЗНИЦУ» (A/B) — панель в css/style/07-tracks.css ═══ */
+#nr-player-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.9;
+}
+
+/* ═══ 2. ПЛАНШЕТ И ШИРЕ (min-width: 640px) ══════════════════════════════════ */
+
+@media (min-width: 640px) {
+  .track-peek-panel { gap: 0.75rem; }
+}
+
+/* ═══ 3. КОМПЬЮТЕР (min-width: 1024px) ══════════════════════════════════════ */
+
+/* Компьютер (≥1024px): карточки вертикальные, как на телефоне (см. js →
+   isVerticalTrackCardView), поэтому в ряд их встаёт четыре. Панели соседних
+   страниц держим в том же числе колонок — иначе при листании соседняя страница
+   выглядела бы не так, как текущая.
+
+   Число колонок контейнера задаём здесь, а не классом lg:grid-cols-4 в
+   index.html: в собранном tailwind.css такого класса нет (файл генерируется,
+   правка вручную не предусмотрена). ID-селектор перекрывает grid-cols-2 и без
+   !important. */
+@media (min-width: 1024px) {
+  #trackListContainer,
+  .track-peek-panel { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
 /* Телефон и компьютер: эквалайзер поверх квадратной обложки делаем низким и
    широким — вытянутая «полоса» вместо длинных вертикальных штрихов. Полоски
    получают одинаковую гибкую ширину (не толще 14px), поэтому блок сам
    подстраивается под ширину обложки: от 320px до 639px на телефоне и ~260px на
    компьютере. */
-@media (max-width: 639px), (min-width: 1024px) {
+@media (max-width: 639.98px), (min-width: 1024px) {
   .nr-eqbars {
     inset: auto;
     top: 50%;
@@ -241,77 +286,40 @@
   }
 }
 
-/* Пагинация */
-#btnPrevPage:not(:disabled):hover, #btnNextPage:not(:disabled):hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 24px rgba(245, 158, 11, 0.22);
-}
-
-#carouselDots button { transition: all 0.35s var(--nr-snap); }
-
-/* Телефон и планшет: по бокам списка треков — стрелки листания. Вид — как у
-   кнопки «вернуться наверх» (#scrollToTopBtn): янтарная дуга-«галочка» без фона,
-   со свечением. Анимация вместо прежней (пульс/блик/волна) — «мячик отскакивает
-   от края»: стрелка уходит к своей стороне, «ударяется» (лёгкое сплющивание) и
-   возвращается с затухающим отскоком — так видно, что список можно тянуть
-   влево и вправо. Стрелки живут в обёртке #trackListNavWrap и стоят вплотную к
-   карточкам (положение считает script.js → syncTrackNav, здесь — запасная
-   формула). Боковые зоны (--nr-track-nav-zone) — только место под стрелки:
-   треки в них не заезжают, лента обрезается по области карточек
-   (#trackListSwipeClip, см. выше). */
-@media (max-width: 639px) {
-  #trackListSwipeViewport.nr-track-nav-mode {
-    --nr-track-nav-zone: clamp(28px, 7.5vw, 34px);
-    padding: 0 var(--nr-track-nav-zone) 30px;
-    margin-bottom: -30px;
+/* Крупная квадратная обложка — на телефоне и на компьютере (карточки там
+   одинаковые, вертикальные — см. js → isVerticalTrackCardView). На время
+   проигрывания центр обложки занимает эквалайзер, поэтому иконку «пауза» убираем:
+   иначе она накладывается на полоски. Тап по центру обложки и по самой карточке
+   по-прежнему ставит паузу. В режиме «уменьшить движение» полоски не рисуются
+   (см. REDUCED MOTION в css/anim/12-reveal.css), поэтому там иконку не скрываем. */
+@media (max-width: 639.98px) and (prefers-reduced-motion: no-preference),
+       (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
+  #trackListContainer > div.nr-live .track-play-btn .track-play-svg {
+    opacity: 0;
+    transition: opacity 0.25s var(--nr-ease);
   }
 }
 
-/* Планшет (640–1023.98px): список идёт по одному треку в ряд, карточка
-   занимает всю полосу между боковыми зонами, а зоны отданы только под
-   стрелки — по 44px с каждой стороны.
-
-   РАНЬШЕ ЗДЕСЬ БЫЛ «ПОТОЛОК» ШИРИНЫ КАРТОЧКИ 560px: зона считалась как
-   max(34px, calc((100% - 560px) / 2)), то есть на 1023px растягивалась до
-   207px. Карточка жалась в 560px, а стрелка по формуле syncTrackNav
-   (вплотную к карточке, зазор 10px) оказывалась в 191px от края окна —
-   далеко и «в пустоте».
-
-   ЧТО ТЕПЕРЬ: зона фиксированная и минимально нужная, карточка
-   растягивается — при 1023px она ~887px, при 640px ~504px. Стрелка встаёт
-   вплотную к карточке и в 24px от края окна (px-6 контейнера 24 + зона 44
-   − кнопка 34 − зазор 10 из JS). Название трека влезает целиком даже на
-   самом узком планшете: подписи при 19/16px занимают не больше ~200px.
-
-   Проценты больше не нужны: нижний порог зоны теперь равен самой зоне. */
-@media (min-width: 640px) and (max-width: 1023.98px) {
-  #trackListSwipeViewport.nr-track-nav-mode {
-    --nr-track-nav-zone: 44px;
-    padding: 0 var(--nr-track-nav-zone) 30px;
-    margin-bottom: -30px;
-  }
-}
-
-.nr-track-nav { display: none; }
+/* ═══ 4. ВСЁ, КРОМЕ КОМПЬЮТЕРА (max-width: 1023.98px) ═══════════════════════ */
 
 /* Стрелки нужны там, где список идёт в одну колонку: телефон и планшет.
-   Класс .nr-track-nav-mode ставит script.js → syncTrackNav. */
+   Класс .nr-track-nav-mode ставит js → syncTrackNav. */
 @media (max-width: 1023.98px) {
   #trackListSwipeViewport.nr-track-nav-mode ~ .nr-track-nav {
     display: flex;
     align-items: center;
     justify-content: center;
     position: absolute;
-    /* Середина области карточек. Точное значение подставляет script.js
+    /* Середина области карточек. Точное значение подставляет js
        (syncTrackNav), здесь — запасное: 50% обёртки минус половина нижнего
        padding'а вьюпорта (30px), который обёртка не компенсирует. */
     top: calc(50% - 15px);
     transform: translateY(-50%);
     z-index: 6;
-    /* Запасное положение (до первого syncTrackNav из script.js): середина полосы
+    /* Запасное положение (до первого syncTrackNav из js): середина полосы
        между краем страницы и карточками. --nr-track-nav-gutter — половина
        бокового отступа секции (px-4 = 16px) на телефоне; точное положение
-       стрелок считает script.js по фактическим размерам. */
+       стрелок считает js по фактическим размерам. */
     --nr-track-nav-gutter: 8px;
     /* Размер — это зона нажатия (сама дуга внутри меньше); положение считает
        syncTrackNav по offsetWidth, поэтому ширину менять можно, но с учётом
@@ -361,13 +369,39 @@
   }
 }
 
+/* ═══ 5. ПЛАНШЕТ (640–1023.98px) ════════════════════════════════════════════ */
+
+/* Планшет (640–1024px): в контейнере одна колонка (см. index.html), поэтому и
+   панели соседних страниц должны идти в одну колонку — иначе при свайпе
+   соседняя страница выглядела бы не так, как текущая. */
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  .track-peek-panel { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+
+/* Планшет (640–1023.98px): список идёт по одному треку в ряд, карточка
+   занимает всю полосу между боковыми зонами, а зоны отданы только под
+   стрелки — по 44px с каждой стороны.
+
+   Зона фиксированная и минимально нужная, карточка растягивается: при 1023px
+   она ~887px, при 640px ~504px. Стрелка встаёт вплотную к карточке и в 24px
+   от края окна (px-6 контейнера 24 + зона 44 − кнопка 34 − зазор 10 из JS).
+   Название трека влезает целиком даже на самом узком планшете: подписи при
+   19/16px занимают не больше ~200px.
+
+   Потолка ширины карточки нет намеренно: max(34px, calc((100% - 560px) / 2))
+   растягивает зону до 207px на 1023px, карточка жмётся в 560px, а стрелка по
+   формуле syncTrackNav оказывается в 191px от края окна — далеко и «в
+   пустоте». */
+  #trackListSwipeViewport.nr-track-nav-mode {
+    --nr-track-nav-zone: 44px;
+    padding: 0 var(--nr-track-nav-zone) 30px;
+    margin-bottom: -30px;
+  }
+
 /* На планшете боковой отступ секции другой (px-6 = 24px), поэтому и запасное
    положение стрелок считаем по нему. Здесь же — крупнее сами стрелки:
-   кнопка 30×54 → 34×62, дуга 24×40 → 26×44 (правка 28.10). Размер кнопки —
-   это зона нажатия; точное положение считает syncTrackNav по offsetWidth,
-   поэтому новые 34px подхватываются сами, а запасная формула left/right
-   ниже пересчитана под новую ширину. */
-@media (min-width: 640px) and (max-width: 1023.98px) {
+   кнопка 34×62, дуга 26×44. Размер кнопки — это зона нажатия; точное положение
+   считает syncTrackNav по offsetWidth, поэтому ширина 34px подхватывается сама,
+   а запасная формула left/right ниже рассчитана под неё. */
   #trackListSwipeViewport.nr-track-nav-mode ~ .nr-track-nav {
     --nr-track-nav-gutter: 12px;
     width: 34px;
@@ -388,61 +422,39 @@
   }
 }
 
-/* Наведение — только там, где есть курсор: на телефонах и планшетах :hover
-   «залипал» бы на стрелке после касания. */
-@media (hover: hover) and (pointer: fine) {
-  #trackListSwipeViewport.nr-track-nav-mode ~ .nr-track-nav:hover {
-    color: #FDE68A;
-    transform: translateY(-50%) scale(1.06);
+/* ═══ 6. ТЕЛЕФОН (max-width: 639.98px) ══════════════════════════════════════ */
+
+/* Телефон: обложка карточки трека чуть ниже квадрата — карточки становятся
+   компактнее по высоте (8/7 вместо 1/1: на 375px обложка ≈142 → ≈124px,
+   вся карточка ниже примерно на 18px). Сначала стояло 5/4 (−28px), затем
+   по просьбе вернули 10px высоты. Обложка не искажается: у картинки
+   object-fit: cover (js → createTrackCard), поэтому лишнее
+   подрезается по центру. Ширина карточки, сетка и текст не меняются.
+   Панели соседних страниц (.track-peek-panel) — в том же правиле, иначе при
+   свайпе «приезжающая» страница выглядела бы иначе. Планшет (карточка-строка)
+   и компьютер (≥1024px, там тоже вертикальные карточки) — как было. */
+@media (max-width: 639.98px) {
+  #trackListContainer .track-cover-box,
+  .track-peek-panel .track-cover-box {
+    aspect-ratio: 8 / 7;
   }
 
-  #trackListSwipeViewport.nr-track-nav-mode ~ .nr-track-nav:hover .nr-track-nav-glyph {
-    filter: drop-shadow(0 0 16px rgba(245, 158, 11, 0.95));
+/* Телефон и планшет: по бокам списка треков — стрелки листания. Вид — как у
+   кнопки «вернуться наверх» (#scrollToTopBtn): янтарная дуга-«галочка» без фона,
+   со свечением. Анимация вместо прежней (пульс/блик/волна) — «мячик отскакивает
+   от края»: стрелка уходит к своей стороне, «ударяется» (лёгкое сплющивание) и
+   возвращается с затухающим отскоком — так видно, что список можно тянуть
+   влево и вправо. Стрелки живут в обёртке #trackListNavWrap и стоят вплотную к
+   карточкам (положение считает js → syncTrackNav, здесь — запасная
+   формула). Боковые зоны (--nr-track-nav-zone) — только место под стрелки:
+   треки в них не заезжают, лента обрезается по области карточек
+   (#trackListSwipeClip, см. выше). */
+  #trackListSwipeViewport.nr-track-nav-mode {
+    --nr-track-nav-zone: clamp(28px, 7.5vw, 34px);
+    padding: 0 var(--nr-track-nav-zone) 30px;
+    margin-bottom: -30px;
   }
 }
-
-/* Отскок «мячика»: каждая фаза со своим сглаживанием — удар резкий, возврат
-   мягкий, в конце короткая пауза (стрелка «успокаивается»). */
-@keyframes nrTrackNavBounceLeft {
-  0%   { transform: translateX(0) scaleX(1);        animation-timing-function: cubic-bezier(0.5, 0, 0.75, 1); }
-  22%  { transform: translateX(-6px) scaleX(0.84);  animation-timing-function: cubic-bezier(0.34, 1.4, 0.64, 1); }
-  46%  { transform: translateX(2.5px) scaleX(1.03); animation-timing-function: ease-in-out; }
-  66%  { transform: translateX(-1.5px) scaleX(0.99); animation-timing-function: ease-in-out; }
-  84%  { transform: translateX(0.5px) scaleX(1);    animation-timing-function: ease-out; }
-  100% { transform: translateX(0) scaleX(1); }
-}
-
-@keyframes nrTrackNavBounceRight {
-  0%   { transform: translateX(0) scaleX(1);         animation-timing-function: cubic-bezier(0.5, 0, 0.75, 1); }
-  22%  { transform: translateX(6px) scaleX(0.84);    animation-timing-function: cubic-bezier(0.34, 1.4, 0.64, 1); }
-  46%  { transform: translateX(-2.5px) scaleX(1.03); animation-timing-function: ease-in-out; }
-  66%  { transform: translateX(1.5px) scaleX(0.99);  animation-timing-function: ease-in-out; }
-  84%  { transform: translateX(-0.5px) scaleX(1);    animation-timing-function: ease-out; }
-  100% { transform: translateX(0) scaleX(1); }
-}
-
-/* Уважение к системной настройке «уменьшить движение»: стрелки просто заметны */
-@media (prefers-reduced-motion: reduce) {
-  .nr-track-nav,
-  .nr-track-nav-glyph {
-    animation: none !important;
-  }
-  .nr-track-nav:active {
-    transform: translateY(-50%) !important;
-  }
-}
-
-/* ═══ 07.6. СТРЕЛКИ КАРУСЕЛИ УСЛУГ (телефон) ═════════════════════════════
-   Тот же вид и то же поведение, что у стрелок раздела с примерами
-   (.nr-track-nav, выше): янтарная дуга-«галочка» без фона, свечение, «отскок
-   мячика» (keyframes nrTrackNavBounceLeft/Right переиспользуются — они общие).
-   Отличие только в том, ГДЕ стрелки стоят: карусель услуг занимает всю ширину
-   экрана, поэтому стрелки лежат поверх неё у самых краёв — 6px от края окна,
-   как ARROW_EDGE_MIN в script.js → syncTrackNav. Показываются только там, где
-   услуги действительно карусель (телефон, <640px): на планшете и ПК это сетка,
-   листать нечего. */
-
-.nr-services-nav { display: none; }
 
 @media (max-width: 639.98px) {
   .nr-services-nav {
@@ -451,7 +463,7 @@
     justify-content: center;
     position: absolute;
     /* Середина карточки. У #servicesContainer на телефоне padding-top 25px и
-       padding-bottom 16px (style.css), поэтому центр содержимого выше центра
+       padding-bottom 16px (css/style), поэтому центр содержимого выше центра
        обёртки на (25 − 16) / 2 = 4.5px. */
     top: calc(50% + 4.5px);
     transform: translateY(-50%);
@@ -500,19 +512,37 @@
     transform: translateY(-50%) scale(0.94);
     transition-duration: 0.2s;
   }
+
+  .nr-track-dots { display: none !important; }
 }
 
-/* Стрелка на краю карусели плавно гаснет: листать в эту сторону больше нечего
-   (класс вешает script.js → syncServicesNav). Зона нажатия при этом остаётся —
-   pointer-events НЕ отключаем: иначе тап по невидимой стрелке «проваливался» бы
-   на карточку под ней и переворачивал её. Так нажатие просто ничего не делает. */
-.nr-services-nav.is-hidden {
-  opacity: 0;
-}
+/* ═══ 8. ВВОД: hover / pointer ══════════════════════════════════════════════ */
+
+/* Наведение и подъём карточки — только там, где есть настоящий курсор:
+   на тач-устройствах :hover «залипает» после касания и мешает свайпу. */
+@media (hover: hover) and (pointer: fine) {
+  #trackListContainer > div:hover {
+    transform: translateY(-4px);
+    /* Наведение — как у карточек отзывов (css/style/18-reviews.css →
+       #reviews .review-card:hover): тень подъёма тоже короткая и мягкая. */
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.4), 0 0 20px rgba(245, 158, 11, 0.14);
+  }
+
+  #trackListContainer > div:hover::after { animation: nrCardSheen 1.35s var(--nr-ease); }
 
 /* Наведение — только там, где есть курсор: на телефонах и планшетах :hover
    «залипал» бы на стрелке после касания. */
-@media (hover: hover) and (pointer: fine) {
+  #trackListSwipeViewport.nr-track-nav-mode ~ .nr-track-nav:hover {
+    color: #FDE68A;
+    transform: translateY(-50%) scale(1.06);
+  }
+
+  #trackListSwipeViewport.nr-track-nav-mode ~ .nr-track-nav:hover .nr-track-nav-glyph {
+    filter: drop-shadow(0 0 16px rgba(245, 158, 11, 0.95));
+  }
+
+/* Наведение — только там, где есть курсор: на телефонах и планшетах :hover
+   «залипал» бы на стрелке после касания. */
   .nr-services-nav:hover {
     color: #FDE68A;
     transform: translateY(-50%) scale(1.06);
@@ -523,8 +553,19 @@
   }
 }
 
+/* ═══ 9. «УМЕНЬШИТЬ ДВИЖЕНИЕ» ═══════════════════════════════════════════════ */
+
 /* Уважение к системной настройке «уменьшить движение»: стрелки просто заметны */
 @media (prefers-reduced-motion: reduce) {
+  .nr-track-nav,
+  .nr-track-nav-glyph {
+    animation: none !important;
+  }
+  .nr-track-nav:active {
+    transform: translateY(-50%) !important;
+  }
+
+/* Уважение к системной настройке «уменьшить движение»: стрелки просто заметны */
   .nr-services-nav,
   .nr-services-nav-glyph {
     animation: none !important;
@@ -533,34 +574,3 @@
     transform: translateY(-50%) !important;
   }
 }
-
-/* Точки-индикатор листания треков (внешний вид — как у карусели услуг).
-   На телефоне их нет: листать ленту там можно стрелками по бокам и свайпом,
-   а точки под карточками только дублировали навигацию. Планшет и компьютер
-   не затронуты. JS прячет блок инлайновым display: none, когда страница одна,
-   поэтому здесь display: none стоит с !important — иначе инлайновый '' вернул
-   бы точки на телефоне. */
-.nr-track-dots {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
-
-@media (max-width: 639.98px) {
-  .nr-track-dots { display: none !important; }
-}
-
-/* ═══ 07.5. ЭКВАЛАЙЗЕР СЕКЦИИ «СЛУШАЙ РАЗНИЦУ» (A/B) ═══════════════════ */
-
-#nr-player-canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.9;
-}
-

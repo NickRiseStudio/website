@@ -1,14 +1,19 @@
 // ═══════════════════════════════════════════════════════════════════════
-// NICK RISE STUDIO — JS / ПОЯВЛЕНИЕ БЛОКОВ ПРИ ПРОКРУТКЕ (GSAP / ScrollTrigger)
-// Источник: script.js, строки 8614–9507 (перенос 1:1, поведение не менялось)
-// Читает снаружи: NR_NO_SCROLL_REVEAL (js/state.js), GSAP + ScrollTrigger (vendor)
-// Обязан грузиться после: js/state.js
+// js/gsap-reveal.js — ПОЯВЛЕНИЕ БЛОКОВ ПРИ ПРОКРУТКЕ (GSAP / ScrollTrigger)
+// Грузится после: js/state.js. Читает: NR_NO_SCROLL_REVEAL, GSAP и
+//         ScrollTrigger из vendor/.
 // Владеет: playerTimelines, servicesTimelines, *Revealed, animateScrollBlock.
-// Публичные точки входа (window): initGsapAnimations, animateScrollBlock,
-//          initFaqGsapAnimation, initContactsGsapAnimation.
+// Публичные (window): initGsapAnimations, animateScrollBlock, initFaqGsapAnimation,
+//         initContactsGsapAnimation.
+// Блоки файла:
+//   • Каскад появления блоков с поправкой на высоту нижнего плеера
+//     (getStickyPlayerHeight).
+//   • Таймлайны треков, услуг, FAQ и контактов.
+//   • Всплывание героя стартует после заставки — по сигналу из animations.js.
+//   • На телефоне и планшете всплытий нет: NR_NO_SCROLL_REVEAL и css/anim/12-reveal.css.
 // ═══════════════════════════════════════════════════════════════════════
 
-// --- GSAP ANIMATIONS: STRICT POSITION-BOUND CASCADE WITH DYNAMIC PLAYER BAR OFFSET ---
+// --- GSAP-АНИМАЦИИ: КАСКАД ПРИВЯЗАН К ПОЗИЦИИ, СМЕЩЕНИЕ ПОД НИЖНИЙ ПУЛЬТ ---
 function getStickyPlayerHeight() {
   const bar = document.getElementById('stickyPlayerBar');
   const isActive = bar && (bar.classList.contains('active') || document.body.classList.contains('has-sticky-player'));
@@ -34,7 +39,7 @@ function computeDynamicStart(percentOrStr = 86) {
   return () => {
     const bottomBarHeight = getStickyPlayerHeight();
     if (bottomBarHeight > 0) {
-      // Visible viewport above the bottom sticky player bar
+      // Видимая область над нижним пультом плеера
       const effectiveViewportHeight = window.innerHeight - bottomBarHeight;
       const triggerY = Math.round(effectiveViewportHeight * (percent / 100));
       return `top ${triggerY}px`;
@@ -64,14 +69,14 @@ function animateScrollBlock(selectorOrEls, options = {}) {
   const clearProps = options.clearProps || undefined;
 
   els.forEach((el, idx) => {
-    // Kill existing triggers for this element
+    // Прежние триггеры этого элемента снимаются
     ScrollTrigger.getAll().forEach(st => {
       if (st.vars && st.vars.trigger === el) {
         st.kill();
       }
     });
 
-    // Strictly closed by default
+    // По умолчанию строго закрыто
     gsap.set(el, { y: yVal, opacity: 0 });
 
     const trigEl = trigger ? (typeof trigger === 'string' ? document.querySelector(trigger) : trigger) : el;
@@ -119,14 +124,14 @@ function initPlayerGsapAnimation() {
   if (!section) return;
 
   const sectionHeader = section.querySelector('.text-center');
-  // Жанровые фильтры убраны — анимируем только пагинацию и карточки треков.
+  // Жанровых фильтров нет — анимируем только пагинацию и карточки треков.
   const paginationContainer = section.querySelector('#playerContentContainer .border-t');
   // Переключатель языка примеров («На английском / На русском»): статичная
   // разметка внутри #playerContentContainer, поэтому анимируется вместе с
   // заголовком — иначе он просто стоит на экране и «не всплывает».
   const langSwitcher = document.getElementById('trackLangSwitcher');
 
-  // Clean up previous timelines or triggers attached to player
+  // Прошлые таймлайны и триггеры плеера снимаются
   if (playerTimelines && playerTimelines.length) {
     playerTimelines.forEach(tl => {
       try { tl.kill(); } catch (e) {}
@@ -152,7 +157,7 @@ function initPlayerGsapAnimation() {
   const trackContainer = document.getElementById('trackListContainer');
   const trackCards = trackContainer ? trackContainer.querySelectorAll(':scope > *') : [];
 
-  // Respect prefers-reduced-motion
+  // Учитывается системная настройка «уменьшить движение»
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     if (sectionHeader) gsap.set(sectionHeader, { opacity: 1, y: 0 });
     if (langSwitcher) gsap.set(langSwitcher, { opacity: 1, y: 0 });
@@ -161,7 +166,7 @@ function initPlayerGsapAnimation() {
     return;
   }
 
-  // Pre-hide elements if not already scrolled into view
+  // Элементы вне экрана скрываются заранее
   const vh = window.innerHeight || 800;
   const secRect = section.getBoundingClientRect();
   const isPlayerInView = secRect.top < vh * 0.88 && secRect.bottom > 0;
@@ -209,11 +214,11 @@ function initPlayerGsapAnimation() {
     playerTimelines.push(headerTl);
   }
 
-  // 2. TRACK LIST GRID TIMELINE (Individual track cards with cover art and play buttons)
+  // 2. ТАЙМЛАЙН СЕТКИ ТРЕКОВ (карточки с обложкой и кнопкой play)
   // Всплывает один раз при пересечении 83%.
   initPlayerTrackCardsTimeline(true);
 
-  // 3. PAGINATION CONTROLS TIMELINE (Prev/Next buttons + Page info / Dots)
+  // 3. ТАЙМЛАЙН ЛИСТАНИЯ (кнопки назад/вперёд, счётчик и точки)
   // Появление один раз при пересечении 80%, без скрытия при прокрутке вверх.
   // Если страница одна, блок пагинации скрыт (см. renderTrackList) — анимировать нечего.
   if (paginationContainer && paginationContainer.style.display !== 'none') {
@@ -349,7 +354,7 @@ function initServicesGsapAnimation() {
   // «неправильно» до первого пролистывания карусели.
   const mobileCarousel = window.innerWidth < 640;
 
-  // Clean up previous timelines or triggers attached to services
+  // Прошлые таймлайны и триггеры услуг снимаются
   if (servicesTimelines && servicesTimelines.length) {
     servicesTimelines.forEach(tl => {
       try {
@@ -376,7 +381,7 @@ function initServicesGsapAnimation() {
     }
   });
 
-  // Extract price data for number count-up animation
+  // Числа цен извлекаются для анимации набора
   const priceData = [];
   cards.forEach(card => {
     const priceEl = card.querySelector('.service-card-price');
@@ -399,7 +404,7 @@ function initServicesGsapAnimation() {
     });
   });
 
-  // Respect prefers-reduced-motion
+  // Учитывается системная настройка «уменьшить движение»
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     if (sectionHeader) gsap.set(sectionHeader, { opacity: 1, y: 0 });
     cards.forEach(card => {
@@ -424,8 +429,8 @@ function initServicesGsapAnimation() {
   // прокрутке вниз и остаётся на месте, когда листаешь обратно.
   //
   // На каждую карточку вешаем ОДИН таймлайн (оболочка + содержимое вместе):
-  // два отдельных триггера на одной карточке срабатывали не одновременно, и
-  // карточка «дёргалась».
+  // два отдельных триггера на одной карточке срабатывают не одновременно, и
+  // карточка «дёргается».
   //
   // На телефоне оболочки карточек НЕ трогаем: их transform/opacity принадлежат
   // coverflow из updateServicesDots(). Там всплывает только содержимое карточек.
@@ -471,7 +476,7 @@ function initServicesGsapAnimation() {
     gsap.set(sectionHeader, { y: 20, opacity: 0 });
   }
 
-  // Initialize prices to 0 so count-up starts cleanly
+  // Цены стартуют с нуля, чтобы набор шёл без рывка
   priceData.forEach(p => {
     p.el.textContent = p.targetText.replace(p.raw, '0');
   });
@@ -562,7 +567,7 @@ function initServicesGsapAnimation() {
     const priceGroup = card.querySelector('.service-card-price-group');
     const orderBtn = card.querySelector('.service-card-order-btn');
 
-    // Всё остальное (в основном оборот карточки) — мягкий фейд, как раньше:
+    // Всё остальное (в основном оборот карточки) — мягкий фейд:
     // его видно только после переворота, поэтому порядок здесь не важен.
     const otherInnerEls = [];
     innerEls.forEach(el => {
@@ -727,7 +732,7 @@ function initFaqGsapAnimation() {
 
   if (faqRevealed) return;
 
-  // Kill previous triggers attached to FAQ items
+  // Прежние триггеры пунктов FAQ снимаются
   ScrollTrigger.getAll().forEach(st => {
     if (st.vars && st.vars.trigger) {
       const tr = st.vars.trigger;
@@ -737,9 +742,9 @@ function initFaqGsapAnimation() {
     }
   });
 
-  // Each FAQ question is an independent object strictly bound to its own viewport position
+  // Каждый вопрос FAQ — независимый объект, привязанный к своей позиции на экране
   faqItems.forEach((item) => {
-    // Strictly closed by default
+    // По умолчанию строго закрыто
     gsap.set(item, { y: 20, opacity: 0 });
 
     gsap.fromTo(
@@ -879,22 +884,22 @@ function initGsapAnimations() {
     window.nrPlayHeroIntro();
   }, 5000);
 
-  // 1. Player Section: Unified scroll-driven sequence (Header -> Genre Filters -> Track Cards -> Pagination Controls)
+  // 1. Плеер: единая последовательность по прокрутке (заголовок → карточки треков → листание)
   initPlayerGsapAnimation();
 
-  // 2. Services Section: Unified scroll-driven sequence (Header -> Cards -> Main Text -> Checkmarks -> Prices & Buttons)
+  // 2. Услуги: единая последовательность (заголовок → карточки → текст → галочки → цены и кнопки)
   initServicesGsapAnimation();
 
-  // 3. FAQ Section: Phrase/header first at 88%, individual questions strictly by their position at 86%
+  // 3. FAQ: заголовок на 88% экрана, каждый вопрос — по своей позиции на 86%
   animateScrollBlock('#faq .text-center', { duration: 0.5, y: 20, start: 'top 88%' });
   initFaqGsapAnimation();
 
-  // 4. Contacts Section: Phrase/header first at 88%, rack card container at 85%, buttons cascade at 85%
+  // 4. Контакты: заголовок на 88%, корпус-стойка на 85%, каскад кнопок на 85%
   animateScrollBlock('#contacts .text-center', { duration: 0.5, y: 20, start: 'top 88%' });
   animateScrollBlock('#contacts .rack-card', { duration: 0.5, y: 18, start: 'top 85%' });
   initContactsGsapAnimation();
 
-  // 5. Footer Section: Opens at 92%
+  // 5. Подвал: раскрывается на 92%
   animateScrollBlock('footer', { y: 16, duration: 0.5, start: 'top 92%' });
 
   // 6. Reviews Section: заголовок раздела появляется первым.

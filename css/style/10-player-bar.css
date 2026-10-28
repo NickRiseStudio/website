@@ -1,28 +1,39 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   NICK RISE STUDIO — STYLE / НИЖНИЙ ПУЛЬТ: КРЕСТИК, «НАВЕРХ», ПОЛОСА ПЕРЕМОТКИ
-   Источник: style.css, строки 2308–2578 (нарезка 1:1, поведение не менялось)
-   Слой: css/style/* — после tailwind.css и vendor/lenis.css,
-         перед css/anim/*. Порядок подключения = порядок номеров файлов.
+   css/style/10-player-bar.css — НИЖНИЙ ПУЛЬТ: КРЕСТИК, «НАВЕРХ», ПОЛОСА ПЕРЕМОТКИ
+   Что: корпус пульта, отступ body под ним, полоса перемотки и её головка,
+        кнопка закрытия, кнопка «наверх».
+   Разметку создаёт: js/player-ui.js → initPlayer, showStickyPlayer, closeStickyPlayer.
+   Подключён: index.html, после 09-modals.css, до 11-utilities.css.
+   Группы блоков в файле: 1 (общие), 2 (планшет и шире).
    ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── ПОРЯДОК БЛОКОВ В ФАЙЛЕ (одинаков во всех css/style и css/anim) ──
+   1. ОБЩИЕ — все устройства            5. ПЛАНШЕТ (640–1023.98px)
+   2. ПЛАНШЕТ И ШИРЕ (min-width: 640px) 6. ТЕЛЕФОН (max-width: 639.98px)
+   3. КОМПЬЮТЕР (min-width: 1024px)     7. УЗКИЙ ТЕЛЕФОН (480px / 380px)
+   4. ВСЁ, КРОМЕ КОМПЬЮТЕРА (≤1023.98)  8. ВВОД (hover / pointer)
+                                        9. «УМЕНЬШИТЬ ДВИЖЕНИЕ»
+   «И выше» — min-width, «и ниже» — max-width на 0.02px меньше границы
+   Tailwind (sm 640, lg 1024): так соседние диапазоны не пересекаются и
+   между ними не остаётся полосы без правил. Печатаются только те группы,
+   блоки которых в файле есть. */
+
+/* ═══ 1. ОБЩИЕ — ВСЕ УСТРОЙСТВА ═════════════════════════════════════════════ */
 
 /* ═══════════════════════════════════════════════════════════════════════════
    КНОПКА ЗАКРЫТИЯ ПУЛЬТА (крестик справа сверху) И ЕГО ПЛАВНЫЙ УХОД
-   Уход — одно движение: пульт уезжает вниз целиком, ровно как приезжал, и за
-   то же время (0.95s), что и возврат отступа body выше. Раздельных фаз
-   («сначала гаснет начинка, потом уезжает корпус») нет.
-   Длительность держит script.js (PLAYER_CLOSING_SLIDE_MS), здесь она только
-   рисуется.
+   Уход — одно движение: пульт уезжает вниз целиком, как приезжал, и за то же
+   время (0.95s), что и возврат отступа body. Раздельных фаз нет.
+   Длительность держит js/player-ui.js (PLAYER_CLOSING_SLIDE_MS), здесь она
+   только рисуется.
    ═══════════════════════════════════════════════════════════════════════════ */
-
-/* Кнопка закрытия — прозрачная «дорожка» у правой кромки пульта, чуть отступя
-   от края (8px), во всю высоту ряда кнопок: по ней легко попадать пальцем.
-   Размер креста один на всех экранах — 20px, как на телефоне. Фона и рамки
-   нет, сам белый крест и есть кнопка. Лежит поверх пульта
-   (z-index 2 против 1 у рядов), но начинается ровно ПОД полосой перемотки (9px:
-   6px полосы + 1px рамки + зазор на её рост до 8px при наведении) — полосу
-   можно докрутить до самого правого края. Крест центрируется сам: он встаёт
-   вровень с кнопкой Play, потому что дорожка занимает ровно ряд от полосы до
-   его нижней кромки. */
+/* Кнопка закрытия — прозрачная «дорожка» у правой кромки пульта (8px от края) во
+   всю высоту ряда кнопок: по ней легко попадать пальцем. Размер креста один на
+   всех экранах — 20px. Фона и рамки нет, сам белый крест и есть кнопка. Лежит
+   поверх пульта (z-index 2 против 1 у рядов), но начинается ровно под полосой
+   перемотки (9px = 6px полосы + 1px рамки + зазор на рост до 8px при наведении),
+   чтобы полосу можно было докрутить до правого края. Крест встаёт вровень с
+   кнопкой Play: дорожка занимает ровно ряд от полосы до его нижней кромки. */
 .deck-close-btn {
   position: absolute;
   top: 9px;
@@ -74,11 +85,10 @@
 }
 
 /* Уход целиком, одним движением: класс задаёт только кривую и длительность —
-   те же 0.95s, что и у появления (см. .sticky-player-bar выше), но разгон
-   мягче, поэтому пульт не «выстреливает» из кадра, а именно уезжает. Сам уход
-   запускает снятие класса active в closeStickyPlayer: панель едет вниз вместе
-   с начинкой, отдельной фазы растворения нет. Пока пульт уезжает, он не
-   перехватывает нажатия. */
+   0.95s, как у появления (см. .sticky-player-bar выше), но разгон мягче, поэтому
+   пульт не «выстреливает» из кадра, а уезжает. Уход запускает снятие класса
+   active в closeStickyPlayer: панель едет вниз вместе с начинкой, отдельной фазы
+   растворения нет. Пока пульт уезжает, он не перехватывает нажатия. */
 #stickyPlayerBar.nr-closing {
   transition: transform 0.95s cubic-bezier(0.65, 0, 0.35, 1),
               box-shadow 0.95s ease,
@@ -87,10 +97,10 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   SCROLL TO TOP FLOATING BUTTON (CENTER BOTTOM)
-   - Appears when user scrolls down
-   - Floats above the sticky bottom player bar when active
-   - Perfectly synchronized 0.95s cubic-bezier bottom transition
+   КНОПКА «НАВЕРХ»: ВСПЛЫВАЕТ СНИЗУ ПО ЦЕНТРУ
+   Появляется при прокрутке вниз, поднимается над нижним пультом, когда тот
+   активен. Переход по bottom — 0.95s той же кривой, что у пульта, поэтому
+   кнопка и пульт едут синхронно.
    ═══════════════════════════════════════════════════════════════════════════ */
 .scroll-to-top-btn,
 #scrollToTopBtn {
@@ -119,14 +129,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-@media (min-width: 640px) {
-  .scroll-to-top-btn,
-  #scrollToTopBtn {
-    width: 68px;
-    height: 52px;
-  }
 }
 
 .scroll-to-top-btn.visible,
@@ -183,15 +185,6 @@ body:has(#stickyPlayerBar.active) #scrollToTopBtn {
   bottom: calc(var(--sticky-player-height, 84px) + 14px + env(safe-area-inset-bottom, 0px));
 }
 
-@media (min-width: 640px) {
-  body.has-sticky-player .scroll-to-top-btn,
-  body.has-sticky-player #scrollToTopBtn,
-  body:has(#stickyPlayerBar.active) .scroll-to-top-btn,
-  body:has(#stickyPlayerBar.active) #scrollToTopBtn {
-    bottom: calc(var(--sticky-player-height, 96px) + 16px + env(safe-area-inset-bottom, 0px));
-  }
-}
-
 /* Audio Seek Bar with Enhanced Touch Target for Mobile & Tablet */
 .deck-seek-hitarea {
   position: relative;
@@ -240,7 +233,7 @@ body:has(#stickyPlayerBar.active) #scrollToTopBtn {
   z-index: 1;
 }
 
-/* Scrubber Knob Wrapper strictly centers at right: 0, top: 50% */
+/* Обёртка головки перемотки: центр ровно на right: 0 / top: 50%. */
 .deck-scrubber-knob-wrapper {
   position: absolute;
   right: 0;
@@ -255,7 +248,7 @@ body:has(#stickyPlayerBar.active) #scrollToTopBtn {
   z-index: 5;
 }
 
-/* Scrubber Knob itself scales strictly from center without any offset */
+/* Головка перемотки: масштабируется строго от своего центра, без смещения. */
 .deck-scrubber-knob {
   width: 14px;
   height: 14px;
@@ -276,3 +269,19 @@ body:has(#stickyPlayerBar.active) #scrollToTopBtn {
   box-shadow: 0 0 16px rgba(245, 158, 11, 1), 0 0 5px rgba(255, 255, 255, 0.9);
 }
 
+/* ═══ 2. ПЛАНШЕТ И ШИРЕ (min-width: 640px) ══════════════════════════════════ */
+
+@media (min-width: 640px) {
+  .scroll-to-top-btn,
+  #scrollToTopBtn {
+    width: 68px;
+    height: 52px;
+  }
+
+  body.has-sticky-player .scroll-to-top-btn,
+  body.has-sticky-player #scrollToTopBtn,
+  body:has(#stickyPlayerBar.active) .scroll-to-top-btn,
+  body:has(#stickyPlayerBar.active) #scrollToTopBtn {
+    bottom: calc(var(--sticky-player-height, 96px) + 16px + env(safe-area-inset-bottom, 0px));
+  }
+}

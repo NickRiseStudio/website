@@ -1,19 +1,19 @@
 // ═══════════════════════════════════════════════════════════════════════
-// NICK RISE STUDIO — JS / ПРОКРУТКА: ЯКОРЯ, SCROLL-SPY, «НАВЕРХ», ФЕЙДЕР МИКШЕРА
-// Источник: script.js, строки 8066–8525, 9508–9720 (перенос 1:1, поведение не менялось)
-// Читает снаружи: — (вызывает чужие функции только внутри обработчиков)
-// Обязан грузиться после: js/state.js
-// Владеет: activeScrollTween, NAV_SECTIONS, scrollSpyAnchors,
-//          scrollSpyDocHeight, scrollSpyTicking.
-// Публичные точки входа (window): initSmoothAnchorNavigation, initScrollSpy,
-//          initScrollToTop, scrollToTop, goToFaqItem, initMixerFaderScroll,
-//          refreshScrollSpyAnchors, setActiveNavSection.
-// Из обработчиков зовёт closeAboutModal (about.js) и openFaqItem (faq.js) —
-// это вызовы по имени в момент клика, поэтому порядок файлов не важен.
+// js/scroll.js — ПРОКРУТКА: ЯКОРЯ, SCROLL-SPY, «НАВЕРХ», ФЕЙДЕР МИКШЕРА
+// Грузится после: js/state.js. Чужие функции зовёт только внутри обработчиков.
+// Владеет: activeScrollTween, NAV_SECTIONS, scrollSpyAnchors, scrollSpyDocHeight,
+//         scrollSpyTicking.
+// Публичные (window): initSmoothAnchorNavigation, initScrollSpy, initScrollToTop, scrollToTop,
+//         goToFaqItem, initMixerFaderScroll, refreshScrollSpyAnchors, setActiveNavSection.
+// Блоки файла:
+//   • Плавные якоря через Lenis (window.SmoothScroll) — секция «якоря».
+//   • Scroll-spy: подсветка пункта меню по текущей секции.
+//   • Кнопка «наверх» по центру внизу.
+//   • Фейдер бокового микшера: --fader-y, вид — css/style/08-mixer.css.
 // ═══════════════════════════════════════════════════════════════════════
 
 
-// --- SMOOTH & LUXURIOUS ANCHOR NAVIGATION (Header buttons & in-page anchors) ---
+// --- ПЛАВНАЯ ПРОКРУТКА К ЯКОРЯМ (кнопки шапки и ссылки внутри страницы) ---
 let activeScrollTween = null;
 
 function smoothScrollTo(targetY, customDuration) {
@@ -29,10 +29,10 @@ function smoothScrollTo(targetY, customDuration) {
     activeScrollTween = null;
   }
 
-  // Ensure html scroll-behavior is auto so browser doesn't fight GSAP/JS on every frame
+  // html scroll-behavior: auto — иначе браузер спорит с GSAP/JS на каждом кадре
   document.documentElement.style.scrollBehavior = 'auto';
 
-  // Smooth, gradual duration based on distance (1.1s for short, up to 1.55s for long distances)
+  // Длительность растёт с расстоянием: 1.1s на близких, до 1.55s на дальних
   const animDuration = customDuration || Math.min(1.55, Math.max(1.1, 0.95 + (distance / 3800) * 0.6));
 
   // Если плавный скролл ведёт Lenis — отдаём якорь ему: GSAP ScrollToPlugin и
@@ -52,7 +52,7 @@ function smoothScrollTo(targetY, customDuration) {
     return;
   }
 
-  // Allow a short 220ms grace window after click so trackpad/mouse lift momentum never aborts scroll
+  // Окно 220ms после клика: инерция трекпада и мыши не обрывает прокрутку
   let allowInterrupt = false;
   const graceTimer = setTimeout(() => {
     allowInterrupt = true;
@@ -60,7 +60,7 @@ function smoothScrollTo(targetY, customDuration) {
 
   function onUserInterrupt(e) {
     if (!allowInterrupt) return;
-    // Ignore micro-jitters from high-precision trackpads or mouse clicks
+    // Микроколебания точных трекпадов и щелчков мыши игнорируются
     if (e.type === 'wheel' && Math.abs(e.deltaY) < 6 && Math.abs(e.deltaX) < 6) return;
 
     if (activeScrollTween) {
@@ -215,7 +215,7 @@ function setActiveNavSection(sectionId) {
   if (currentActiveNavSection === sectionId) return;
   currentActiveNavSection = sectionId;
 
-  // Desktop header nav links
+  // Ссылки навигации в шапке на компьютере
   const desktopNavLinks = document.querySelectorAll('#mainHeader nav a[href^="#"]');
   desktopNavLinks.forEach(link => {
     const href = link.getAttribute('href');
@@ -330,7 +330,7 @@ function initScrollSpy() {
   }
   window.addEventListener('load', () => { refreshScrollSpyAnchors(); updateActiveNavSection(); });
 
-  // Recalculate on initial render
+  // Пересчёт при первой отрисовке
   updateActiveNavSection();
 }
 
@@ -387,12 +387,12 @@ function initSmoothAnchorNavigation() {
            меню в адресной строке появлялся #player и прочие хвосты. */
       }
     } catch (err) {
-      // Ignore invalid selectors
+      // Некорректные селекторы пропускаются
     }
   });
 }
 
-// --- SCROLL TO TOP FLOATING BUTTON (CENTER BOTTOM) ---
+// --- КНОПКА «НАВЕРХ» (ПО ЦЕНТРУ СНИЗУ) ---
 function scrollToTop() {
   setActiveNavSection(null);
   smoothScrollTo(0);
@@ -473,7 +473,6 @@ function goToFaqItem(faqIndex) {
 }
 
 
-// ═══ 8526–9507 → js/toast.js (тост, копирование) и js/gsap-reveal.js ═══
 function initMixerFaderScroll() {
   const knob = document.getElementById('side-fader-knob');
   const rail = knob ? knob.closest('.fader-rail') : null;
@@ -483,7 +482,7 @@ function initMixerFaderScroll() {
   let isDragging = false;
   let grabOffsetY = 12;
 
-  // Cache static DOM lookups once to avoid layout/query thrashing on scroll frames
+  // Статичные выборки DOM кешируются: на кадрах прокрутки нет лишних запросов и пересчёта раскладки
   const dbLabel = document.getElementById('side-db-label');
   const sideLeds = Array.from(document.querySelectorAll('.side-vu-led'));
   const totalLeds = sideLeds.length;
@@ -559,8 +558,9 @@ function initMixerFaderScroll() {
 
   // Высота документа меняется редко (открылся вопрос в FAQ, показался нижний
   // плеер), поэтому меряем её не в каждом кадре скролла, а по resize и через
-  // ResizeObserver. Раньше scrollHeight и clientHeight читались на каждом
-  // кадре прокрутки — это принудительная переклейка раскладки всей страницы.
+  // ResizeObserver. Замер на каждом кадре прокрутки — это принудительная
+  // переклейка раскладки всей страницы, поэтому scrollHeight и clientHeight
+  // читаются только при resize и изменении содержимого.
   let cachedMaxScroll = 0;
   function measureScrollMetrics() {
     const scrollHeight = document.documentElement.scrollHeight || (document.body && document.body.scrollHeight) || 0;
