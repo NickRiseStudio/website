@@ -104,3 +104,40 @@ span.faq-q-text.lang-vapor-in {
   text-decoration-color: #FCD34D;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   ПЛАНШЕТ (640–1023.98px): ВОПРОС, ОТВЕТ И КРУЖОК «±» КРУПНЕЕ
+   ═══════════════════════════════════════════════════════════════════════
+   Разметку аккордеона собирает js/faq.js → renderFaq(). Кегли в ней заданы
+   утилитами text-base sm:text-lg (вопрос) и text-sm sm:text-base (ответ),
+   то есть на планшете это 18px и 16px — мелко для экрана под 1024px.
+
+   ЧТО СТАЛО: вопрос 18 → 20px, ответ 16 → 17px, кружок «±» 32 → 36px,
+   иконка внутри 16 → 18px. Это нижние границы компьютерных значений
+   (там вопрос 20–22px, ответ 17–18px).
+
+   ПОЧЕМУ id + класс (1,1,0). Утилиты — (0,1,0), так что перебиваются без
+   !important. Вопрос берём через .faq-q-text, а не по span: в 15-faq-text.css
+   выше у этого класса стоит !important только на display/width/line-height —
+   font-size не тронут, конфликта нет.
+
+   Телефон (max-width: 639px) и компьютер (min-width: 1024px) не затронуты. */
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  #faqContainer .faq-q-text {
+    font-size: 20px;
+  }
+
+  #faqContainer .faq-content-wrapper > div {
+    font-size: 17px;
+  }
+
+  #faqContainer [id^="faq-icon-"] {
+    width: 36px;
+    height: 36px;
+  }
+
+  #faqContainer [id^="faq-svg-"] {
+    width: 18px;
+    height: 18px;
+  }
+}
+

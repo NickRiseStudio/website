@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   NICK RISE STUDIO — STYLE / КОНТАКТЫ НА ТЕЛЕФОНЕ И ПОРЯДОК КНОПОК
+   NICK RISE STUDIO — STYLE / КОНТАКТЫ НА ТЕЛЕФОНЕ И ПЛАНШЕТЕ, ПОРЯДОК КНОПОК
    Источник: style.css, строки 3806–3915 (нарезка 1:1, поведение не менялось)
    Слой: css/style/* — после tailwind.css и vendor/lenis.css,
          перед css/anim/*. Порядок подключения = порядок номеров файлов.
@@ -113,5 +113,75 @@
   #contactModal .grid > :nth-child(4) { order: 3; } /* Открыть ВК */
   #contactsGrid > :nth-child(3),
   #contactModal .grid > :nth-child(3) { order: 4; } /* Копировать Email */
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ПЛАНШЕТ (640–1023.98px): ТЕЛЕФОННАЯ РАСКЛАДКА И КРУПНЕЕ ТЕКСТ
+   ═══════════════════════════════════════════════════════════════════════
+   На планшете кнопки раздела встают одним столбиком во всю ширину — как на
+   телефоне, только крупными полосами. Причина: на ширине 640–1023px плитка
+   2×2 из sm:grid-cols-2 (index.html) давала приземистые «таблетки» с
+   подписями 14px, а на телефоне раздел читался заметно лучше.
+
+   РАЗМЕТКА НЕ МЕНЯЕТСЯ. Все четыре кнопки — те же ссылки и обработчики
+   copyText, что и раньше; переопределяются только размеры и порядок
+   (свойством order, как в блоке выше).
+
+   ЧТО СТАЛО:
+     корпус «стойки»  p-8 sm:p-12 (48px) → 40px сверху-снизу и 32px по бокам
+     сетка            sm:grid-cols-2      → один столбик, зазор 0.75rem
+     подписи кнопок   14px (text-sm)      → 16px
+     иконки           24 / 20px (w-6/w-5) → 26px
+     вертикальные отступы кнопок 16px (p-4) → 20px — как на ПК
+     подзаголовок     18px (sm:text-lg)   → 20px, ширина max-w-xl → 40rem
+
+   ПОРЯДОК КНОПОК — телефонный: Telegram → Копировать TG → ВК → Email.
+   В разметке они лежат иначе (TG, копия TG, копия Email, ВК), отсюда order
+   по nth-child. Плиточный порядок планшета и ПК (сначала оба способа
+   открыть, потом оба способа скопировать) задан выше, в блоке «ПОРЯДОК
+   КНОПОК В КОНТАКТАХ»; этот блок идёт ниже с той же специфичностью,
+   поэтому перекрывает его без !important.
+
+   МОДАЛКА #contactModal НЕ ЗАТРАГИВАЕТСЯ: все селекторы начинаются с
+   #contacts или #contactsGrid. В модалке остаётся плитка 2×2. */
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  #contacts .rack-card {
+    padding: 2.5rem 2rem;
+  }
+
+  #contactsGrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+  }
+
+  #contactsGrid > a span,
+  #contactsGrid > button span {
+    font-size: 16px;
+  }
+
+  #contactsGrid > a svg,
+  #contactsGrid > button svg {
+    width: 26px;
+    height: 26px;
+  }
+
+  #contactsGrid > a,
+  #contactsGrid > button {
+    padding-top: 1.25rem;
+    padding-bottom: 1.25rem;
+  }
+
+  #contactsGrid > :nth-child(1) { order: 1; } /* Открыть Telegram */
+  #contactsGrid > :nth-child(2) { order: 2; } /* Копировать TG */
+  #contactsGrid > :nth-child(4) { order: 3; } /* Открыть ВК */
+  #contactsGrid > :nth-child(3) { order: 4; } /* Копировать Email */
+
+  /* Подзаголовок: кегль и ширина. Селектор по data-i18n, чтобы не задеть
+     .rack-card других разделов; max-width поднят с 576px (max-w-xl в
+     разметке) до 640px — строки не ломаются раньше времени. */
+  #contacts .rack-card > p[data-i18n="contacts.subtitle"] {
+    font-size: 20px;
+    max-width: 40rem;
+  }
 }
 

@@ -532,7 +532,7 @@ function initServicesGsapAnimation() {
       );
     }
 
-    const innerStart = wave + (mobileCarousel ? 0 : 0.06);
+    const innerStart = wave + (mobileCarousel ? 0 : 0.04);
 
     // Пункты списка услуг («галочки») идут ОТДЕЛЬНЫМ каскадом с крупным шагом:
     // список читается строка за строкой сверху вниз (общая волна содержимого
@@ -545,15 +545,15 @@ function initServicesGsapAnimation() {
     // невидимые строки оборота и всплывали бы на полсекунды позже нужного.
     const frontFace = card.querySelector('.service-card-face--front');
     const frontFeatures = frontFace ? frontFace.querySelectorAll('.service-feature-item') : [];
-    const frontListSpan = 0.42 + ((frontFeatures.length || 4) - 1) * 0.12;
+    const frontListSpan = 0.28 + ((frontFeatures.length || 4) - 1) * 0.06;
 
     // Последовательность появления содержимого карточки:
     // верх → список построчно → разделитель → цена → кнопка «Заказать».
     const topStart = innerStart;
-    const listStart = topStart + 0.22;
+    const listStart = topStart + 0.08;
     const dividerStart = listStart + frontListSpan;
-    const priceStart = dividerStart + 0.1;
-    const orderStart = priceStart + 0.12;
+    const priceStart = dividerStart + 0.04;
+    const orderStart = priceStart + 0.04;
 
     const cardTop = card.querySelector('.service-card-top');
     /* Разделитель есть на ОБЕИХ сторонах карточки: берём все, иначе тот, что на
@@ -599,7 +599,7 @@ function initServicesGsapAnimation() {
       cardTl.fromTo(
         featureItems,
         { opacity: 0, y: 12 },
-        { opacity: 1, y: 0, duration: 0.42, stagger: 0.12, ease: 'power2.out', overwrite: 'auto' },
+        { opacity: 1, y: 0, duration: 0.28, stagger: 0.06, ease: 'power2.out', overwrite: 'auto' },
         listStart
       );
 
@@ -608,7 +608,7 @@ function initServicesGsapAnimation() {
         cardTl.fromTo(
           checkIcons,
           { opacity: 0, scale: 0.4 },
-          { opacity: 1, scale: 1, duration: 0.36, stagger: 0.12, ease: 'back.out(2.5)', overwrite: 'auto' },
+          { opacity: 1, scale: 1, duration: 0.26, stagger: 0.06, ease: 'back.out(2.5)', overwrite: 'auto' },
           listStart + 0.06
         );
       }
@@ -619,7 +619,7 @@ function initServicesGsapAnimation() {
       cardTl.fromTo(
         dividers,
         { opacity: 0, scaleX: 0, transformOrigin: 'left center' },
-        { opacity: 1, scaleX: 1, duration: 0.45, ease: 'power2.out', overwrite: 'auto' },
+        { opacity: 1, scaleX: 1, duration: 0.3, ease: 'power2.out', overwrite: 'auto' },
         dividerStart
       );
     }
@@ -628,7 +628,7 @@ function initServicesGsapAnimation() {
       cardTl.fromTo(
         priceGroup,
         { opacity: 0, y: 12 },
-        { opacity: 1, y: 0, duration: 0.42, ease: 'power2.out', overwrite: 'auto' },
+        { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out', overwrite: 'auto' },
         priceStart
       );
     }
@@ -638,7 +638,7 @@ function initServicesGsapAnimation() {
       cardTl.fromTo(
         orderBtn,
         { opacity: 0, y: 12 },
-        { opacity: 1, y: 0, duration: 0.42, ease: 'power2.out', overwrite: 'auto' },
+        { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out', overwrite: 'auto' },
         orderStart
       );
     }

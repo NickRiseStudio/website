@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   NICK RISE STUDIO — STYLE / ПОДПИСИ КАРТОЧЕК ТРЕКОВ НА ПК
+   NICK RISE STUDIO — STYLE / ПОДПИСИ И РАЗМЕРЫ КАРТОЧЕК ТРЕКОВ (ПК И ПЛАНШЕТ)
    Источник: style.css, строки 1805–1852 (нарезка 1:1, поведение не менялось)
    Слой: css/style/* — после tailwind.css и vendor/lenis.css,
          перед css/anim/*. Порядок подключения = порядок номеров файлов.
@@ -32,8 +32,8 @@
    на 4px. Все карточки в сетке выровнены по строке (grid), поэтому разнобоя
    нет; подписи однострочные (truncate), значит число строк не изменится.
 
-   Телефон и планшет не тронуты: на телефоне те же классы имеют свои
-   размеры (text-sm / text-xs), на планшете карточки горизонтальные. */
+   Телефон не тронут: на телефоне те же классы имеют свои размеры
+   (text-sm / text-xs). У планшета свои размеры — блок «ПЛАНШЕТ» ниже. */
 @media (min-width: 1024px) {
   #trackListContainer .track-card-title,
   .track-peek-panel .track-card-title {
@@ -50,6 +50,94 @@
     /* Важно: у text-xs межстрочный 16px, и при шрифте 14px коэффициент вышел бы
        1.14 — кириллица с «й»/«ё» и запятыми выглядит поджатой. 1.35 даёт 19px. */
     line-height: 1.35;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ПЛАНШЕТ (640–1023.98px): КАРТОЧКА-СТРОКА КРУПНЕЕ — ПО МЕРКАМ ПК
+   ═══════════════════════════════════════════════════════════════════════
+   Раскладка не меняется: на планшете работает ветка «row» из
+   js/player-ui.js → createTrackCard() — карточка-строка во всю ширину,
+   обложка слева, жанр и кнопка play справа. Меняются только размеры, а
+   ПК служит эталоном кеглей (см. блок min-width: 1024px выше).
+
+   ЧТО СТАЛО (было → стало):
+     обложка        56px (sm:w-14)        → 88px
+     название       16px (sm:text-base)   → 19px
+     исполнитель    14px (sm:text-sm)     → 16px
+     бейдж жанра    12px (text-xs)        → 14px
+     play: padding  12px (sm:p-3)         → 16px, иконка 16 → 22px
+     «Назад/Вперёд» 12px (text-xs)        → 14px, шире (min-w 102 → 120px)
+     счётчик страниц 12px                 → 13px
+
+   ПОЧЕМУ ОБЛОЖКА 88px. Высота карточки — это обложка плюс два отступа
+   карточки (p-4 = 16px): было 56 + 32 = 88px, стало 88 + 32 = 120px.
+   Четыре карточки и три зазора по 12px (sm:gap-3) дают 516px — страница
+   примеров A/B на планшете собирается без внутренней прокрутки. Отступы
+   самой секции при этом срезаны, чтобы раздел не вырос
+   (04-sections.css → «ОТСТУПЫ … НА ПЛАНШЕТЕ»).
+
+   ПРО ШИРИНУ. Карточка занимает всю полосу между стрелками
+   (anim/06-tracks.css → --nr-track-nav-zone): ~887px при 1023px и ~504px
+   при 640px. Подписям этого хватает с запасом: самая длинная в данных —
+   исполнитель «TytillidieXXollin» (17 знаков), при 16px это ~135px.
+
+   Селекторы с id (1,1,0) перебивают утилиты Tailwind (0,1,0) из
+   createTrackCard() без !important. Телефон (max-width: 639px) и компьютер
+   (min-width: 1024px) в этот диапазон не попадают. */
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  #trackListContainer .track-cover-box,
+  .track-peek-panel .track-cover-box {
+    width: 88px;
+    height: 88px;
+  }
+
+  /* Межстрочный задаём сами по той же причине, что и на ПК: у text-base он
+     1.5 (28.5px при кегле 19px) — для названия это рыхло. */
+  #trackListContainer .track-card-title,
+  .track-peek-panel .track-card-title {
+    font-size: 19px;
+    line-height: 1.3;
+  }
+
+  #trackListContainer .track-card-artist,
+  .track-peek-panel .track-card-artist {
+    font-size: 16px;
+    line-height: 1.35;
+  }
+
+  /* Бейдж жанра: кегль и отступы под стать подписям (px-3.5 py-1.5). */
+  #trackListContainer .track-genre-badge,
+  .track-peek-panel .track-genre-badge {
+    font-size: 14px;
+    padding: 0.4rem 0.9rem;
+  }
+
+  /* Кнопка play: зона нажатия крупнее, иконка 22px — под 88-пиксельную
+     обложку, иначе кнопка терялась рядом с ней. */
+  #trackListContainer .track-play-btn,
+  .track-peek-panel .track-play-btn {
+    padding: 16px;
+  }
+
+  #trackListContainer .track-play-svg,
+  .track-peek-panel .track-play-svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  /* Пагинация под лентой: те же 14px, что у переключателя языка примеров
+     (16-track-lang.css), иначе подписи в одном блоке расходились по кеглю. */
+  #btnPrevPage,
+  #btnNextPage {
+    font-size: 14px;
+    min-width: 120px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  #carouselPageInfo {
+    font-size: 13px;
   }
 }
 
