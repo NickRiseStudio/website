@@ -35,7 +35,9 @@ const CONFIG = {
         faq: 'FAQ',
         contacts: 'Контакты',
         reviews: 'Отзывы',
-        contactBtn: 'Связаться'
+        // Кнопки «Заказать»: шапка, меню-шторка и CTA под примерами A/B.
+        // Ведёт в расчёт стоимости — js/calculator.js → openPriceCalc().
+        orderBtn: 'Заказать'
       },
       hero: {
         /* Заголовок. На компьютере и планшете — две строки (перенос задаёт <br>).
@@ -133,10 +135,49 @@ const CONFIG = {
           optVocalRhythm: 'Коррекция ритмики и громкости вокала',
           optTrackout: 'Сведение trackout бита и доработка',
           optVocalNotes: 'Ручная коррекция нот вокала',
+          // Пункт формы на компьютере: срочность — отдельная галочка, в шагах
+          // мобильного окна её нет (см. priceCalc.rush ниже).
+          optRush: 'Срочный заказ (1-2 дня)',
+          // Пункт формы на компьютере: сколько исполнителей (фит). Число меняют
+          // стрелки, цена — config.js → priceCalc.performers.
+          optPerformers: 'Сколько исполнителей?',
+          performersLessAria: 'Меньше исполнителей',
+          performersMoreAria: 'Больше исполнителей',
           cta: 'Напишите мне — обсудим ваш проект и я назову точную стоимость.',
           writeBtn: 'Написать мне',
           restartBtn: 'Посчитать заново',
-          stepLabel: 'Шаг'
+          stepLabel: 'Шаг',
+          // Форма расчёта стоимости на компьютере (#priceCalcShowcase): анкета
+          // слева, смета справа. Текст заявки собирает js/calculator.js →
+          // buildCalcOrderText, подписи строк сметы — из ключей выше (opt*).
+          form: {
+            badge: 'РАСЧЁТ СТОИМОСТИ',
+            title: 'Укажите детали работы',
+            sub: 'Отметьте, что нужно сделать, — стоимость пересчитается сразу.',
+            durationLabel: 'Длительность трека',
+            optionsLabel: 'Что нужно сделать',
+            commentLabel: 'Комментарий',
+            commentPlaceholder: 'Жанр, референсы, дедлайн, ссылка на трек — всё, что важно знать',
+            summaryBadge: 'РАСЧЁТ ЗАКАЗА',
+            summaryTitle: 'Итоговая стоимость',
+            totalLabel: 'Итого',
+            emptyRow: 'Отметьте услуги слева',
+            individualRow: 'Обговаривается индивидуально',
+            telegramBtn: 'Отправить заявку в Telegram',
+            copyBtn: 'Скопировать заявку',
+            toastCopied: 'Заявка скопирована — вставьте её в чат',
+            // Текст заявки (js/calculator.js → buildCalcOrderText): срочность —
+            // отдельной первой строкой, затем приветствие, услуги, хронометраж
+            // и ориентировочная стоимость.
+            msgRush: 'СРОЧНЫЙ ЗАКАЗ!!!',
+            msgHello: 'Здравствуйте, меня заинтересовала ваша услуга',
+            msgNeed: 'Мне требуется',
+            msgDuration: 'Длительность трека',
+            msgPerformers: 'Количество исполнителей',
+            msgTotal: 'Ориентировочная стоимость',
+            msgComment: 'Комментарий',
+            msgIndividual: 'обговаривается индивидуально'
+          }
         }
       },
       faq: {
@@ -269,7 +310,9 @@ const CONFIG = {
         faq: 'FAQ',
         contacts: 'Contacts',
         reviews: 'Reviews',
-        contactBtn: 'Contact'
+        // Кнопки «Заказать»: шапка, меню-шторка и CTA под примерами A/B.
+        // Ведёт в расчёт стоимости — js/calculator.js → openPriceCalc().
+        orderBtn: 'Order'
       },
       hero: {
         /* Телефон — без принудительного переноса, как в RU (см. комментарий выше). */
@@ -358,10 +401,43 @@ const CONFIG = {
           optVocalRhythm: 'Vocal timing & loudness correction',
           optTrackout: 'Beat trackout mixing & refinement',
           optVocalNotes: 'Manual vocal pitch correction',
+          optRush: 'Rush order (1-2 days)',
+          optPerformers: 'How many performers?',
+          performersLessAria: 'Fewer performers',
+          performersMoreAria: 'More performers',
           cta: 'Message me — we\'ll discuss your project and I\'ll give you an exact quote.',
           writeBtn: 'Message me',
           restartBtn: 'Calculate again',
-          stepLabel: 'Step'
+          stepLabel: 'Step',
+          // Форма расчёта стоимости на компьютере (#priceCalcShowcase): анкета
+          // слева, смета справа. Текст заявки собирает js/calculator.js →
+          // buildCalcOrderText, подписи строк сметы — из ключей выше (opt*).
+          form: {
+            badge: 'COST ESTIMATE',
+            title: 'Tell me the job details',
+            sub: 'Tick what you need — the price is recalculated instantly.',
+            durationLabel: 'Track length',
+            optionsLabel: 'What you need',
+            commentLabel: 'Comment',
+            commentPlaceholder: 'Genre, references, deadline, a link to the track — anything important',
+            summaryBadge: 'ORDER ESTIMATE',
+            summaryTitle: 'Total cost',
+            totalLabel: 'Total',
+            emptyRow: 'Tick the services on the left',
+            individualRow: 'Quoted individually',
+            telegramBtn: 'Send the request on Telegram',
+            copyBtn: 'Copy the request',
+            toastCopied: 'Request copied — paste it into the chat',
+            // Заявка — тот же порядок строк, что в русской локали.
+            msgRush: 'RUSH ORDER!!!',
+            msgHello: 'Hello, I am interested in your service',
+            msgNeed: 'I need',
+            msgDuration: 'Track length',
+            msgPerformers: 'Number of performers',
+            msgTotal: 'Estimated price',
+            msgComment: 'Comment',
+            msgIndividual: 'quoted individually'
+          }
         }
       },
       faq: {
@@ -642,7 +718,8 @@ const CONFIG = {
     }
   ],
 
-  // Данные калькулятора стоимости услуг (окно «Рассчитать стоимость услуг»).
+  // Данные калькулятора стоимости услуг: окно на планшете и телефоне
+  // (#priceCalcModal) и раздел на компьютере (#priceCalcShowcase) читают одно и то же.
   // Длительность: 1 мин и 6+ мин считаются индивидуально (individual: true).
   // Цены: RU — рубли, EN — доллары (шкала согласована с карточками услуг).
   priceCalc: {
@@ -660,7 +737,29 @@ const CONFIG = {
       { id: 'vocalRhythm', priceRu: 1000, priceEn: 20 },
       { id: 'trackout', priceRu: 1000, priceEn: 20 },
       { id: 'vocalNotes', priceRu: 1500, priceEn: 30 }
-    ]
+    ],
+    // Срочность — НЕ в options: по options мобильное окно #priceCalcModal строит
+    // шаги 2..5 (по вопросу на пункт), и лишний элемент сдвинул бы нумерацию
+    // и сломал разметку шагов. Здесь она отдельной записью: на компьютере
+    // (#priceCalcShowcase) это своя галочка, а в смету и в текст заявки её
+    // добавляет js/calculator.js → calculatePriceCalcTotal / buildCalcOrderText.
+    // Цена — как в FAQ: срочный заказ (1–2 дня). Долларовая надбавка ниже
+    // рублёвой по курсу сайта ($1 = 50 ₽): 5000 ₽ ≈ $100, но для зарубежных
+    // клиентов держим $80.
+    rush: { id: 'rush', priceRu: 5000, priceEn: 80 },
+    // Сколько исполнителей (фит) — тоже только форма на компьютере: в шагах
+    // мобильного окна вопроса нет, там всегда один, и цена не меняется.
+    // 1 — без доплаты, 2 — +3000 ₽, 3 — +5000 ₽, 4 и больше — индивидуально
+    // (individualFrom). Доллары — по той же шкале 50 ₽ = $1, что у options.
+    performers: {
+      min: 1,
+      max: 4,
+      individualFrom: 4,
+      prices: [
+        { count: 2, priceRu: 3000, priceEn: 60 },
+        { count: 3, priceRu: 5000, priceEn: 100 }
+      ]
+    }
   },
 
   faqData: [
@@ -692,7 +791,7 @@ const CONFIG = {
       qRu: 'Какой срок выполнения заказа?',
       qEn: 'What is the estimated turnaround time?',
       aRu: 'Стандартный срок — от 3 до 5 рабочих дней на один трек.<br/><br/>Время зависит от количества дорожек и сложности материала. Точную дату я называю после того, как послушаю ваши мультитреки.<br/><br/>Если нужно быстрее — я могу сделать трек за 24–48 часов. Стоимость срочного заказа увеличивается на 5000₽.' + FAQ_PROMO_RU,
-      aEn: 'Standard turnaround is from 3 to 5 business days per track.<br/><br/>Delivery time depends on track count and complexity. I will provide an exact timeframe after reviewing your multitrack stems.<br/><br/>If you are in a rush, express delivery (24–48 hours) is available with a $100 rush fee.' + FAQ_PROMO_EN
+      aEn: 'Standard turnaround is from 3 to 5 business days per track.<br/><br/>Delivery time depends on track count and complexity. I will provide an exact timeframe after reviewing your multitrack stems.<br/><br/>If you are in a rush, express delivery (24–48 hours) is available with a $80 rush fee.' + FAQ_PROMO_EN
     },
   ],
 

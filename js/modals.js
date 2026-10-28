@@ -31,8 +31,9 @@ function unlockPageScroll() {
   const contactActive = document.getElementById('contactModal')?.classList.contains('active');
   const aboutActive = document.getElementById('aboutModal')?.classList.contains('active');
   const calcActive = document.getElementById('priceCalcModal')?.classList.contains('active');
+  const calcFormActive = document.getElementById('priceCalcShowcase')?.classList.contains('active');
   const showcaseActive = document.getElementById('aboutShowcase')?.classList.contains('active');
-  if (contactActive || aboutActive || calcActive || showcaseActive) return;
+  if (contactActive || aboutActive || calcActive || calcFormActive || showcaseActive) return;
 
   if (!isPageScrollLocked) return;
   isPageScrollLocked = false;
@@ -91,6 +92,7 @@ function initModalAndToast() {
       closeContactModal();
       closeAboutModal();
       closePriceCalcModal();
+      closePriceCalcShowcase();
     }
   });
 }

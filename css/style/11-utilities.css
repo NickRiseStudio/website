@@ -155,7 +155,7 @@ a, button, [role="button"], input, select, textarea, .cursor-pointer {
    подвал — одна строка в разметке, ему отдельный файл не нужен. Обе
    правки — про размеры элементов каркаса на планшете, поэтому лежат рядом.
 
-   ЗАЧЕМ. В разметке шапки кнопка «Связаться» задана как w-[136px] и
+   ЗАЧЕМ. В разметке шапки кнопка «Заказать» задана как w-[136px] и
    sm:text-sm (14px) — на экране шириной под 1024px это мелко. Подвал
    sm:text-sm (14px) — тоже. Поднимаем на один шаг, как остальной текст
    планшета: 14 → 15px, ширина 136 → 148px (RU/EN рядом крупнее — см.
@@ -171,7 +171,7 @@ a, button, [role="button"], input, select, textarea, .cursor-pointer {
    Селектор по onclick отличает кнопку в шапке от бургера: у обоих один
    родитель #headerActions, и без уточнения раздулся бы и бургер. */
 @media (min-width: 640px) and (max-width: 1023.98px) {
-  #headerActions > button[onclick="openContactModal()"] {
+  #headerActions > button[onclick="openPriceCalc()"] {
     width: 148px;
     font-size: 15px;
   }

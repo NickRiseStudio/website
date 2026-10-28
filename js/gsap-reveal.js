@@ -244,7 +244,7 @@ function initPlayerGsapAnimation() {
     playerTimelines.push(paginationTl);
   }
 
-  /* Кнопка «Связаться» стоит ВНЕ #playerContentContainer, поэтому ни в одну
+  /* Кнопка «Заказать» стоит ВНЕ #playerContentContainer, поэтому ни в одну
      выборку выше не попадала и появлялась без анимации. Анимируем ОБЁРТКУ:
      у самой кнопки занят transform (пульс .nr-calc-cta и hover-подъём), а
      инлайновый transform родителя к тому же промоутил бы надпись в отдельный

@@ -1,9 +1,13 @@
 /* ═══════════════════════════════════════════════════════════════════════
    css/style/19-calculator.css — КАЛЬКУЛЯТОР СТОИМОСТИ
-   Что: окно калькулятора: шаги, ползунок длительности, смета, подсказки.
-   Разметку создаёт: index.html → #priceCalcModal; логика — js/calculator.js.
+   Что: расчёт стоимости в двух видах — окно (планшет, телефон) и раздел-
+        всплывашка на компьютере: анкета слева, смета справа.
+        Шаги, ползунок длительности, смета, подсказки.
+   Разметку создаёт: index.html → #priceCalcModal и #priceCalcShowcase;
+                     логика — js/calculator.js.
    Подключён: index.html, после 18-reviews.css, до 20-about.css.
-   Группы блоков в файле: 1 (общие), 2 (планшет и шире), 8 (ввод), 9 (уменьшить движение).
+   Группы блоков в файле: 1 (общие), 2 (планшет и шире), 3 (компьютер),
+                          8 (ввод), 9 (уменьшить движение).
    ═══════════════════════════════════════════════════════════════════════ */
 
 /* ── ПОРЯДОК БЛОКОВ В ФАЙЛЕ (одинаков во всех css/style и css/anim) ──
@@ -18,6 +22,10 @@
    блоки которых в файле есть. */
 
 /* ═══ 1. ОБЩИЕ — ВСЕ УСТРОЙСТВА ═════════════════════════════════════════════ */
+
+/* Раздел-всплывашка «Расчёт стоимости» существует только на компьютере:
+   ниже 1024px вместо него работает окно #priceCalcModal. */
+.nr-calcshow-overlay { display: none; }
 
 /* ═══════════════════════════════════════════════════════════════════════
    КАЛЬКУЛЯТОР СТОИМОСТИ УСЛУГ (окно «Рассчитать стоимость услуг»)
@@ -333,6 +341,636 @@
   .nr-calc-scale { font-size: 10px; }
 }
 
+/* ═══ 3. КОМПЬЮТЕР (min-width: 1024px) ══════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════════════════
+   РАСЧЁТ СТОИМОСТИ НА КОМПЬЮТЕРЕ (#priceCalcShowcase)
+
+   С 1024px «Заказать» и «Рассчитать стоимость услуг» открывают этот
+   раздел вместо окна #priceCalcModal (js/calculator.js → openPriceCalc).
+   Устроен как «Обо мне»: затемнение на весь экран, по центру панель.
+   Внутри две колонки — анкета слева (скроллится сама), смета справа.
+   Ответы общие с окном (calcAnswers), поэтому цена везде одна.
+
+   Услуги отмечаются галочками — сразу несколько и любые, — а срочность идёт
+   отдельной строкой ниже списка: это условие работы, а не услуга.
+   ═══════════════════════════════════════════════════════════════════════ */
+@media (min-width: 1024px) {
+  .nr-calcshow-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 105;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(8, 10, 15, 0.86);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    overscroll-behavior: contain;
+    transition: opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+                visibility 0.5s step-end;
+  }
+
+  .nr-calcshow-overlay.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+                visibility 0s linear;
+  }
+
+  /* Панель: две колонки, высота ограничена экраном — скроллится анкета.
+     Высота задана явно (а не max-height): только с определённой высотой
+     grid-колонка получает свою высоту, и overflow-y внутри неё работает. */
+  .nr-calcshow-panel {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1.42fr) minmax(340px, 0.88fr);
+    grid-template-rows: minmax(0, 1fr);
+    width: min(1320px, 100%);
+    height: min(90vh, 900px);
+    max-height: 100%;
+    border-radius: 24px;
+    overflow: hidden;
+    background: #10141C;
+    border: 1px solid rgba(55, 65, 81, 0.75);
+    box-shadow: 0 40px 90px rgba(0, 0, 0, 0.6);
+    opacity: 0;
+    transform: translate3d(0, 18px, 0) scale(0.985);
+    transition: opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .nr-calcshow-overlay.active .nr-calcshow-panel {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Крестик: та же роль, что у окна, — закрывает раздел. */
+  .nr-calcshow-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    background: rgba(20, 23, 31, 0.92);
+    border: 1px solid rgba(55, 65, 81, 0.8);
+    color: #9CA3AF;
+    cursor: pointer;
+    transition: color 0.4s ease, border-color 0.4s ease, background-color 0.4s ease;
+  }
+
+  .nr-calcshow-close svg { width: 18px; height: 18px; }
+
+  /* ── Левая колонка: анкета ─────────────────────────────────────────── */
+  .nr-calcshow-form {
+    padding: 40px 40px 36px;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* Колонка: блок комментария забирает остаток высоты, поэтому поле
+       тянется до низа панели, а не обрывается на min-height. */
+    display: flex;
+    flex-direction: column;
+    /* Нумерация подписей блоков: «1. Длительность трека» и т.д. Счётчик
+       стоит здесь, а прирастает на каждом .nr-calcshow-block ниже. */
+    counter-reset: nr-calcshow-step;
+  }
+
+  /* Всё, кроме комментария, держит свой размер: при нехватке высоты
+     прокручивается сама анкета, а карточки услуг не сжимаются. */
+  .nr-calcshow-form > * { flex-shrink: 0; }
+
+  /* Последний блок — комментарий: подпись сверху, поле до низа панели. */
+  .nr-calcshow-form > .nr-calcshow-block:last-child {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .nr-calcshow-form > .nr-calcshow-block:last-child .nr-calcshow-comment {
+    flex: 1 1 auto;
+    min-height: 132px;
+  }
+
+  .nr-calcshow-kicker {
+    /* Обычный блок, текст идёт в inline-потоке: так чёрточку можно посадить
+       на нужную высоту через vertical-align (см. ::before). */
+    display: block;
+    font-family: 'Space Grotesk', 'Manrope', ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #f59e0b;
+  }
+
+  .nr-calcshow-kicker::before {
+    content: '';
+    display: inline-block;
+    width: 26px;
+    height: 2px;
+    margin-right: 10px;
+    border-radius: 2px;
+    background: #f59e0b;
+    /* Чёрточка встаёт чуть выше геометрического центра заглавных — так она
+       читается по центру. Замер в браузере: при 0.5cap центр штриха попадает
+       ровно на середину букв, но глаз видит его ниже (у заглавных масса
+       смещена вверх), поэтому берём 0.65 высоты заглавной.
+       1cap — высота заглавной из самого шрифта, поэтому правка одинаково
+       работает и с латиницей (Space Grotesk), и с кириллицей (Manrope), и в
+       любом кегле. Минус 1px — половина толщины штриха: выравниваем центр, а
+       не нижнюю кромку. Первая строка — запасной вариант для браузеров без
+       единицы cap. */
+    vertical-align: 4px;
+    vertical-align: calc(0.65cap - 1px);
+  }
+
+  .nr-calcshow-title {
+    margin: 14px 0 10px;
+    font-size: clamp(26px, 2.3vw, 34px);
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: #F9FAFB;
+  }
+
+  .nr-calcshow-sub {
+    margin-bottom: 26px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #9CA3AF;
+  }
+
+  .nr-calcshow-block + .nr-calcshow-block {
+    margin-top: 26px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(55, 65, 81, 0.45);
+  }
+
+  .nr-calcshow-label {
+    display: block;
+    margin-bottom: 14px;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    /* Подпись блока целиком оранжевая — вместе с номером. */
+    color: #f59e0b;
+  }
+
+  /* Номер блока — тот же оранжевый, что и сама подпись (цвет наследуется).
+     Номер рисует CSS, а не разметка: js/i18n.js при смене языка
+     перезаписывает textContent элемента с data-i18n, и вложенный <span> с
+     цифрой оттуда бы исчез. */
+  .nr-calcshow-block { counter-increment: nr-calcshow-step; }
+
+  .nr-calcshow-label::before {
+    content: counter(nr-calcshow-step) '.';
+    margin-right: 7px;
+    font-weight: 900;
+  }
+
+  /* Длительность: крупное значение + общий ползунок (.nr-calc-range) */
+  .nr-calcshow-duration {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  .nr-calcshow-duration-value {
+    font-family: 'Space Grotesk', 'Manrope', ui-monospace, monospace;
+    font-size: 40px;
+    font-weight: 900;
+    line-height: 1;
+    color: #fbbf24;
+    letter-spacing: -0.02em;
+  }
+
+  .nr-calcshow-duration-unit {
+    font-size: 13px;
+    font-weight: 700;
+    color: #6B7280;
+  }
+
+  /* Пометка «обговаривается индивидуально» в анкете — по левому краю */
+  .nr-calcshow-form .nr-calc-individual {
+    max-width: none;
+    margin: 12px 0 0;
+    text-align: left;
+  }
+
+  /* ── Услуги: карточки по две в ряд ─────────────────────────────────── */
+  /* Сетка из двух колонок: шесть карточек ложатся тремя рядами и оставляют
+     место под комментарий. Строки одного ряда тянутся на равную высоту. */
+  .nr-calcshow-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  /* Карточка: только рамка, фон и раскладка. Внутренние отступы заданы у
+     подписи ниже — так вся площадь внутри контура кликабельна и переключает
+     галочку, а не только текст с квадратиком. */
+  .nr-calcshow-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0;
+    min-width: 0;
+    padding: 0;
+    border-radius: 14px;
+    background: #0D1118;
+    border: 1px solid rgba(55, 65, 81, 0.5);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.35;
+    color: #E5E7EB;
+    transition: border-color 0.4s ease, background-color 0.4s ease;
+  }
+
+  /* Строка услуги: галочка и текст — одна <label>, и она растянута на всю
+     карточку (по ширине и по высоте), поэтому клик в любое место контура
+     переключает выбор. Подсказка «i» осталась вне её. */
+  .nr-calcshow-check {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+    align-self: stretch;
+    padding: 12px 14px;
+    cursor: pointer;
+  }
+
+  /* Кружок «i» стоит вне подписи, а у карточки своих отступов больше нет —
+     поэтому поле справа задаём ему самому. */
+  .nr-calcshow-option .nr-calc-hint-dot {
+    margin-left: 0;
+    margin-right: 14px;
+    flex-shrink: 0;
+  }
+
+  /* Карточка без галочки — счётчик исполнителей: отступы остаются у неё,
+     и зазор между подписью и стрелками тоже её. */
+  .nr-calcshow-option-stepper {
+    gap: 14px;
+    padding: 12px 14px;
+  }
+
+  /* Галочка нарисована сама (appearance: none): системный чекбокс на тёмной
+     панели выглядит чужим. Сам input остаётся настоящим — работают Tab,
+     пробел и скринридеры; размер клика добирает <label>. */
+  .nr-calcshow-checkbox {
+    position: relative;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    border-radius: 6px;
+    background: #14171F;
+    border: 1px solid rgba(55, 65, 81, 0.9);
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    transition: border-color 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  /* Отметка — два ребра квадрата, повёрнутые на 45°: «птичка» без картинок
+     и шрифтов, поэтому одинаково рисуется на всех системах. */
+  .nr-calcshow-checkbox::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 5px;
+    height: 9px;
+    border-right: 2px solid #0B0E14;
+    border-bottom: 2px solid #0B0E14;
+    opacity: 0;
+    transform: rotate(45deg) scale(0.55);
+    transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .nr-calcshow-checkbox:checked {
+    background: #f59e0b;
+    border-color: #f59e0b;
+    box-shadow: 0 0 14px rgba(245, 158, 11, 0.3);
+  }
+
+  .nr-calcshow-checkbox:checked::after {
+    opacity: 1;
+    transform: rotate(45deg) scale(1);
+  }
+
+  /* Фокус с клавиатуры: рамка видна, но системное кольцо не дублируется. */
+  .nr-calcshow-checkbox:focus-visible {
+    outline: none;
+    border-color: rgba(245, 158, 11, 0.7);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.22);
+  }
+
+  /* Название занимает всё свободное место: длинная подпись переносится, а
+     кружок «i» и стрелки остаются прижатыми к правому краю карточки. */
+  .nr-calcshow-check-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Отмеченная строка подсвечивается целиком — видно, что вошло в смету. */
+  .nr-calcshow-option.is-checked {
+    border-color: rgba(245, 158, 11, 0.45);
+    background: rgba(245, 158, 11, 0.07);
+  }
+
+  /* Срочность — не услуга, а условие работы: её карточка стоит в последнем
+     ряду и отличается пунктирной рамкой (отступ сверху в сетке сломал бы
+     выравнивание ряда). */
+  .nr-calcshow-option-rush {
+    border-style: dashed;
+  }
+
+  /* ── Сколько исполнителей: число и две стрелки ─────────────────────── */
+  .nr-calcshow-stepper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .nr-calcshow-stepper-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+    border: 1px solid rgba(55, 65, 81, 0.9);
+    background: #14171F;
+    color: #E5E7EB;
+    cursor: pointer;
+    transition: border-color 0.3s ease, background-color 0.3s ease,
+                color 0.3s ease, opacity 0.3s ease;
+  }
+
+  .nr-calcshow-stepper-btn svg { width: 14px; height: 14px; }
+
+  /* На краях диапазона стрелка не нажимается — это видно по ней самой. */
+  .nr-calcshow-stepper-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  .nr-calcshow-stepper-value {
+    min-width: 26px;
+    text-align: center;
+    font-family: 'Space Grotesk', 'Manrope', ui-monospace, monospace;
+    font-size: 16px;
+    font-weight: 900;
+    line-height: 1;
+    color: #fbbf24;
+  }
+
+  /* ── Комментарий ───────────────────────────────────────────────────── */
+  .nr-calcshow-comment {
+    display: block;
+    width: 100%;
+    min-height: 132px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: #0D1118;
+    border: 1px solid rgba(55, 65, 81, 0.5);
+    color: #F3F4F6;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+    /* Растягивать окно за угол нельзя: высота задана, а длинный текст
+       прокручивается внутри — для этого ниже включена полоса. */
+    resize: none;
+    overflow-y: auto;
+    outline: none;
+    transition: border-color 0.4s ease, box-shadow 0.4s ease;
+  }
+
+  /* Полоса прокрутки комментария. В css/style/01-base.css ВСЕ полосы скрыты
+     через !important, поэтому включаем обратно только кастомную отрисовку
+     (::-webkit-scrollbar) — тем же способом, что у .modal-content в
+     css/style/09-modals.css. Стандартные scrollbar-width/scrollbar-color не
+     задаём: пока они есть, Chrome рисует системную полосу и игнорирует
+     ::-webkit-scrollbar. */
+  .nr-calcshow-comment::-webkit-scrollbar {
+    display: block !important;
+    width: 8px !important;
+  }
+
+  .nr-calcshow-comment::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 8px;
+  }
+
+  .nr-calcshow-comment::-webkit-scrollbar-thumb {
+    background: rgba(245, 158, 11, 0.35);
+    border-radius: 8px;
+  }
+
+  .nr-calcshow-comment::-webkit-scrollbar-thumb:hover {
+    background: rgba(245, 158, 11, 0.7);
+  }
+
+  .nr-calcshow-comment::placeholder { color: #5B6472; }
+
+  .nr-calcshow-comment:focus {
+    border-color: rgba(245, 158, 11, 0.55);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.12);
+  }
+
+  /* ── Правая колонка: смета ─────────────────────────────────────────── */
+  .nr-calcshow-summary {
+    display: flex;
+    flex-direction: column;
+    padding: 34px 30px 28px;
+    background: #0A0D14;
+    border-left: 1px solid rgba(55, 65, 81, 0.5);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .nr-calcshow-summary-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid rgba(55, 65, 81, 0.5);
+  }
+
+  .nr-calcshow-summary-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    border-radius: 12px;
+    background: linear-gradient(140deg, #f59e0b, #d97706);
+    color: #0B0E14;
+    box-shadow: 0 8px 20px rgba(245, 158, 11, 0.25);
+  }
+
+  .nr-calcshow-summary-icon svg { width: 22px; height: 22px; }
+
+  .nr-calcshow-summary-titles {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .nr-calcshow-summary-kicker {
+    font-family: 'Space Grotesk', 'Manrope', ui-monospace, monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #6B7280;
+  }
+
+  .nr-calcshow-summary-title {
+    font-size: 19px;
+    font-weight: 900;
+    letter-spacing: -0.01em;
+    color: #F9FAFB;
+  }
+
+  /* Строки сметы: только выбранное */
+  .nr-calcshow-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 20px 0 4px;
+  }
+
+  .nr-calcshow-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
+    font-size: 13px;
+  }
+
+  .nr-calcshow-row-label {
+    color: #9CA3AF;
+    line-height: 1.4;
+  }
+
+  .nr-calcshow-row-price {
+    font-family: 'Space Grotesk', 'Manrope', ui-monospace, monospace;
+    font-weight: 800;
+    color: #E5E7EB;
+    white-space: nowrap;
+  }
+
+  .nr-calcshow-row-plus { color: #fbbf24; }
+
+  .nr-calcshow-empty {
+    font-size: 12px;
+    font-style: italic;
+    color: #5B6472;
+  }
+
+  /* Итог прижат к низу колонки: между сметой и кнопками остаётся воздух */
+  .nr-calcshow-total {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
+    margin-top: auto;
+    padding: 18px 0 20px;
+    border-top: 1px dashed rgba(55, 65, 81, 0.7);
+  }
+
+  .nr-calcshow-total-label {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #6B7280;
+  }
+
+  .nr-calcshow-total-value {
+    font-family: 'Space Grotesk', 'Manrope', ui-monospace, monospace;
+    font-size: 30px;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    color: #fbbf24;
+    text-align: right;
+  }
+
+  /* ── Кнопки: отправка в Telegram и копирование ─────────────────────── */
+  .nr-calcshow-send {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 16px 18px;
+    border: 0;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #fbbf24, #d97706);
+    color: #0B0E14;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow: 0 14px 30px rgba(245, 158, 11, 0.28);
+    transition: transform 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.55s ease;
+  }
+
+  .nr-calcshow-send-icon { width: 18px; height: 18px; flex-shrink: 0; }
+  .nr-calcshow-send-arrow { width: 16px; height: 16px; flex-shrink: 0; }
+
+  .nr-calcshow-send:active {
+    transform: translateY(0) scale(0.985);
+    transition-duration: 0.2s;
+  }
+
+  .nr-calcshow-copy {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    margin-top: 10px;
+    padding: 12px 16px;
+    border: 1px solid rgba(55, 65, 81, 0.8);
+    border-radius: 12px;
+    background: transparent;
+    color: #9CA3AF;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: color 0.4s ease, border-color 0.4s ease, background-color 0.4s ease;
+  }
+
+  .nr-calcshow-copy svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+  .nr-calcshow-note {
+    margin-top: 14px;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: #5B6472;
+  }
+}
+
 /* ═══ 8. ВВОД: hover / pointer ══════════════════════════════════════════════ */
 
 /* Наведение подсвечиваем только там, где есть настоящий курсор: на телефонах и
@@ -343,6 +981,40 @@
   .nr-calc-choice-btn:hover { border-color: rgba(245, 158, 11, 0.5); color: #F3F4F6; }
 }
 
+/* Раздел расчёта на компьютере: наведение есть только у мыши, а сам раздел
+   существует только с 1024px — оба условия в одном запросе. */
+@media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+  .nr-calcshow-close:hover {
+    color: #F3F4F6;
+    border-color: rgba(245, 158, 11, 0.5);
+    background: #1C212E;
+  }
+
+  .nr-calcshow-option:hover { border-color: rgba(245, 158, 11, 0.35); }
+
+  /* Галочка чуть отзывается на наведение строки — видно, что она нажимается. */
+  .nr-calcshow-option:hover .nr-calcshow-checkbox:not(:checked) {
+    border-color: rgba(245, 158, 11, 0.55);
+  }
+
+  .nr-calcshow-stepper-btn:not(:disabled):hover {
+    border-color: rgba(245, 158, 11, 0.55);
+    background: rgba(245, 158, 11, 0.08);
+    color: #F3F4F6;
+  }
+
+  .nr-calcshow-send:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 40px rgba(245, 158, 11, 0.38);
+  }
+
+  .nr-calcshow-copy:hover {
+    color: #F3F4F6;
+    border-color: rgba(245, 158, 11, 0.45);
+    background: rgba(245, 158, 11, 0.06);
+  }
+}
+
 /* ═══ 9. «УМЕНЬШИТЬ ДВИЖЕНИЕ» ═══════════════════════════════════════════════ */
 
 /* Уважение к системной настройке «уменьшить движение» */
@@ -350,5 +1022,12 @@
   .nr-calc-step.is-active,
   .nr-calc-individual:not(.hidden) {
     animation: none !important;
+  }
+
+  /* Раздел на компьютере: без «доезда» панели — только мгновенное появление */
+  .nr-calcshow-overlay,
+  .nr-calcshow-panel {
+    transition: none !important;
+    transform: none !important;
   }
 }

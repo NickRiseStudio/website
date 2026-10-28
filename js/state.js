@@ -145,6 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initScrollSpy();
   initScrollToTop();
   initCalcHints();
+  initPriceCalcForm();
   maybeShowLogoHint();
 });
 
