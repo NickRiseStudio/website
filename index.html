@@ -992,10 +992,11 @@
   <!-- 7.5.1 ABOUT SHOWCASE — «ОБО МНЕ» НА КОМПЬЮТЕРЕ (от 1024px)
        С 1024px тот же контент, что в модалке #aboutModal, открывается как
        полноэкранный раздел: три кадра about-1..3.webp (1672x941) листаются по
-       одному за щелчок колеса. Рамка держит пропорцию фото, поэтому на 16:9
-       раздел занимает экран целиком, а на мониторе шире 16:9 остаётся 16:9 по
-       центру (поля затемнены, сайт за ними виден, клик по ним закрывает
-       раздел). Текст стоит в свободных от персонажа зонах кадра: кадр 1 — имя
+       одному за щелчок колеса. Рамка держит 16:9 с мягко скруглёнными углами,
+       без рамки и виньетки — кадр доходит до кромки (css/style/20-about.css),
+       поэтому на 16:9 раздел занимает экран целиком, а на мониторе шире 16:9
+       остаётся 16:9 по центру (поля затемнены, сайт за ними виден, клик по ним
+       закрывает раздел). Текст стоит в свободных от персонажа зонах кадра: кадр 1 — имя
        справа у головы, биография слева (крупнее, строки обтекают силуэт),
        кадр 2 — справа, кадр 3 — слева, вопросы выше кнопок. Подсказка
        «Листайте» — крупно по центру внизу, видна на первых двух кадрах; на первом
@@ -1231,11 +1232,37 @@
              вместо показа подсказки.
              Карточки лежат по одной в ряд на телефоне и по две — с 640px
              (сетка в css/style/19-calculator.css),
-             порядок здесь и есть порядок на экране: услуги, счётчик
-             исполнителей, срочность. -->
+             порядок здесь и есть порядок на экране: Сведение, мастеринг,
+             коррекции, счётчик исполнителей, а срочность отделена от услуг и
+             стоит по центру (css/style/19-calculator.css, группа 2). -->
         <div class="nr-calcshow-block">
           <span class="nr-calcshow-label" data-i18n="services.priceCalc.form.optionsLabel">Что нужно сделать</span>
           <div class="nr-calcshow-options">
+
+            <div class="nr-calcshow-option">
+              <label class="nr-calcshow-check" for="calcFormOptMixing">
+                <input
+                  type="checkbox"
+                  id="calcFormOptMixing"
+                  class="nr-calcshow-checkbox"
+                  data-calc-option="mixing"
+                  onchange="setCalcFormAnswer('mixing', this.checked)"
+                >
+                <span class="nr-calcshow-check-text" data-i18n="services.priceCalc.optMixing">Сведение</span>
+              </label>
+              <button
+                type="button"
+                class="nr-calc-hint-dot"
+                data-calc-hint="mixing"
+                aria-label="Что такое сведение?"
+                data-i18n-aria-label="services.priceCalc.hintMixingAria"
+                onclick="toggleCalcHint('mixing')"
+                onmouseenter="showCalcHint('mixing')"
+                onmouseleave="hideCalcHint('mixing')"
+                onfocus="showCalcHint('mixing')"
+                onblur="hideCalcHint('mixing')"
+              >i</button>
+            </div>
 
             <div class="nr-calcshow-option">
               <label class="nr-calcshow-check" for="calcFormOptMastering">

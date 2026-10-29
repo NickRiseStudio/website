@@ -2,7 +2,8 @@
 // js/calculator.js — КАЛЬКУЛЯТОР СТОИМОСТИ
 // Грузится после: js/state.js. Читает: currentLang, CONFIG, calcAnswers.
 // Владеет: calcAnswers, calcPerformers, CALC_ORDER_TELEGRAM_URL, calcHintVisibleId.
-// Публичные (window): openPriceCalc, openPriceCalcShowcase, closePriceCalcShowcase,
+// Публичные (window): openPriceCalc, openPriceCalcForService, openPriceCalcShowcase,
+//         closePriceCalcShowcase,
 //         showCalcSummaryView, showCalcFormView, resetPriceCalc, setCalcFormAnswer,
 //         changeCalcPerformers, onCalcFormDurationInput, sendCalcOrderToTelegram,
 //         copyCalcOrder, initCalcHints, initPriceCalcForm, showCalcHint, hideCalcHint,
@@ -20,7 +21,7 @@
 // --- SERVICE COST CALCULATOR ---
 // Ответы анкеты. rush — срочность: это условие работы, а не услуга, поэтому
 // в CONFIG.priceCalc она лежит отдельной записью (см. calculatePriceCalcTotal).
-const calcAnswers = { mastering: null, vocalRhythm: null, trackout: null, vocalNotes: null, rush: null };
+const calcAnswers = { mixing: null, mastering: null, vocalRhythm: null, trackout: null, vocalNotes: null, rush: null };
 // Сколько исполнителей (фит): число меняют стрелки, цена — CONFIG.priceCalc.performers.
 let calcPerformers = 1;
 
@@ -172,6 +173,25 @@ function openPriceCalc() {
   openPriceCalcShowcase();
 }
 
+// Кнопка «Заказать» на карточке услуги: id карточек (config.js → servicesData)
+// → галочки анкеты (config.js → priceCalc.options). Пакет отмечает обе услуги.
+const CALC_SERVICE_PRESETS = {
+  'mixing': ['mixing'],
+  'mix-master': ['mixing', 'mastering'],
+  'mastering': ['mastering']
+};
+
+// Открывает расчёт с уже отмеченной услугой — той, на карточке которой нажали
+// «Заказать» (js/services.js → renderServices). Зовётся из инлайн-onclick,
+// поэтому объявлена как function на верхнем уровне.
+function openPriceCalcForService(serviceId) {
+  openPriceCalc();
+  const preset = CALC_SERVICE_PRESETS[serviceId];
+  if (!preset) return;
+  preset.forEach(id => { calcAnswers[id] = true; });
+  renderPriceCalcForm();
+}
+
 function openPriceCalcShowcase() {
   const box = getCalcFormBox();
   if (!box) return;
@@ -307,12 +327,18 @@ function renderPriceCalcForm() {
   const breakdown = document.getElementById('calcFormBreakdown');
   if (breakdown) {
     const rows = [];
+    // Длительность: доплата за хронометраж показывается как у услуг — со знаком
+    // «+» и янтарным цветом (css/style/19-calculator.css → .nr-calcshow-row-plus).
+    // 2–3 мин входят в цену сведения (config.js → priceCalc.durations), поэтому
+    // вместо «0 ₽» стоит белый прочерк.
+    const durationPlus = !entry.individual && entry[priceKey] > 0;
+    const durationPrice = entry.individual
+      ? form.individualRow
+      : (durationPlus ? '+' + formatCalcPrice(entry[priceKey], currentLang) : form.freeRow);
     rows.push(
       `<div class="nr-calcshow-row">` +
         `<span class="nr-calcshow-row-label">${t.durationRow}: ${entry.label} ${t.durationMin}</span>` +
-        `<span class="nr-calcshow-row-price">` +
-          (entry.individual ? form.individualRow : formatCalcPrice(entry[priceKey], currentLang)) +
-        `</span>` +
+        `<span class="nr-calcshow-row-price${durationPlus ? ' nr-calcshow-row-plus' : ''}">${durationPrice}</span>` +
       `</div>`
     );
 
@@ -455,7 +481,7 @@ function initPriceCalcForm() {
 // бабл, уход курсора — скрывают. На телефоне наведения нет, поэтому тап по
 // кружку переключает бабл. Вид бабла — как у подсказки BEFORE / AFTER (тот же
 // класс .nr-ab-hint-tip), позицию и место хвостика считает positionCalcHint.
-const CALC_HINT_KEYS = { mastering: 'hintMastering', trackout: 'hintTrackout' };
+const CALC_HINT_KEYS = { mixing: 'hintMixing', mastering: 'hintMastering', trackout: 'hintTrackout' };
 let calcHintVisibleId = null;
 // Момент последнего показа: на телефоне тап по кружку сначала даёт focus (показ),
 // а затем click (переключение). Без этой отметки click тут же погасил бы бабл.

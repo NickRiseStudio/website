@@ -105,7 +105,6 @@ footer p {
   .nr-eqbars i,
   .nr-ledstrip i,
   .popular-badge::after,
-  #contacts .rack-card::before,
   .deck-play-btn::before,
   .deck-play-btn::after {
     animation: none !important;

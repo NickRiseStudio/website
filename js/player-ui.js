@@ -311,7 +311,9 @@ function finishTrackSwipeTail() {
 let trackSheenToken = 0;
 
 function playTrackSheen() {
-  if (prefersReducedMotion()) return;
+  // «Уменьшить движение» — блик не запускаем. Проверка через matchMedia, как в
+  // js/reviews.js: общей функции-обёртки в проекте нет.
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
   const container = document.getElementById('trackListContainer');
   if (!container) return;

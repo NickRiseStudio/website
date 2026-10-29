@@ -300,7 +300,7 @@ function renderServices() {
               </div>
 
               <button
-                onclick="openContactModal()"
+                onclick="openPriceCalcForService('${s.id}')"
                 class="service-card-order-btn py-2.5 px-5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl transition-all duration-200 shadow-md shadow-amber-500/20 active:scale-95 text-sm sm:text-base cursor-pointer flex items-center gap-1.5 flex-shrink-0"
               >
                 <span>${orderBtnText}</span>

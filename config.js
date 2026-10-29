@@ -108,6 +108,10 @@ const CONFIG = {
           durationQ: 'Сколько длится Ваш трек (в минутах)?',
           durationMin: 'мин',
           individualNote: 'Обговаривается индивидуально',
+          // Подсказка к «Сведению» — первому пункту анкеты. Тот же кружок «i» и
+          // тот же бабл, что у мастеринга (js/calculator.js → CALC_HINT_KEYS).
+          hintMixing: 'Сведение — это баланс всех дорожек трека: вокал, бит, бас и инструменты собираются в <span class="nr-ab-hint-accent">один цельный микс</span>. Выравниваются громкости, убираются частотные конфликты, и каждый элемент встаёт на своё место.',
+          hintMixingAria: 'Что такое сведение?',
           qMastering: 'Вам нужен мастеринг?',
           // Подсказка к вопросу о мастеринге: появляется по наведению/тапу на
           // кружок «i» рядом с вопросом (js/calculator.js → showCalcHint). Вид — тот же,
@@ -131,6 +135,7 @@ const CONFIG = {
           resultIndividualSub: 'Для такого хронометража стоимость рассчитывается индивидуально. Напишите мне — обсудим ваш проект.',
           durationRow: 'Длительность трека',
           totalLabel: 'ИТОГО',
+          optMixing: 'Сведение',
           optMastering: 'Мастеринг',
           optVocalRhythm: 'Коррекция ритмики и громкости вокала',
           optTrackout: 'Сведение trackout бита и доработка',
@@ -164,6 +169,10 @@ const CONFIG = {
             totalLabel: 'Итого',
             emptyRow: 'Отметьте услуги в анкете',
             individualRow: 'Обговаривается индивидуально',
+            // Прочерк в смете у строки длительности, когда доплаты за
+            // хронометраж нет: 2–3 мин входят в цену сведения
+            // (config.js → priceCalc.durations).
+            freeRow: '—',
             telegramBtn: 'Отправить заявку в Telegram',
             copyBtn: 'Скопировать заявку',
             // Кнопки страниц на планшете и телефоне: «Далее» внизу анкеты
@@ -381,6 +390,9 @@ const CONFIG = {
           durationQ: 'How long is your track (in minutes)?',
           durationMin: 'min',
           individualNote: 'Quoted individually',
+          // Подсказка к «Сведению» — первому пункту анкеты.
+          hintMixing: 'Mixing balances every track in your song — vocals, beat, bass and instruments — into <span class="nr-ab-hint-accent">one cohesive mix</span>: levels are balanced, frequency clashes removed, and every element sits where it belongs.',
+          hintMixingAria: 'What is mixing?',
           qMastering: 'Do you need mastering?',
           // Подсказка к вопросу про мастеринг: показывается при наведении или тапе
           // на кружок «i» рядом с вопросом (js/calculator.js → showCalcHint). Вид
@@ -403,6 +415,7 @@ const CONFIG = {
           resultIndividualSub: 'For this track length the price is quoted individually. Message me and let\'s discuss your project.',
           durationRow: 'Track length',
           totalLabel: 'TOTAL',
+          optMixing: 'Multitrack Mixing',
           optMastering: 'Mastering',
           optVocalRhythm: 'Vocal timing & loudness correction',
           optTrackout: 'Beat trackout mixing & refinement',
@@ -432,6 +445,8 @@ const CONFIG = {
             totalLabel: 'Total',
             emptyRow: 'Tick the services in the form',
             individualRow: 'Quoted individually',
+            // Прочерк у строки длительности, когда доплаты нет (2–3 мин).
+            freeRow: '—',
             telegramBtn: 'Send the request on Telegram',
             copyBtn: 'Copy the request',
             // Кнопки страниц на планшете и телефоне («Далее» внизу анкеты,
@@ -731,19 +746,22 @@ const CONFIG = {
 
   // Данные калькулятора стоимости услуг: раздел #priceCalcShowcase на всех
   // устройствах читает одно и то же.
-  // Длительность: 1 мин и 6+ мин считаются индивидуально (individual: true).
+  // Длительность — надбавка к цене сведения: 2–3 мин без доплаты, 4 мин
+  // +500 ₽, 5 мин +1000 ₽; 1 мин и 6+ мин считаются индивидуально
+  // (individual: true).
   // Цены: RU — рубли, EN — доллары (шкала согласована с карточками услуг).
   priceCalc: {
     defaultMinutes: 3,
     durations: [
       { minutes: 1, label: '1', individual: true },
-      { minutes: 2, label: '2', priceRu: 3500, priceEn: 110 },
-      { minutes: 3, label: '3', priceRu: 3500, priceEn: 110 },
-      { minutes: 4, label: '4', priceRu: 4000, priceEn: 120 },
-      { minutes: 5, label: '5', priceRu: 4500, priceEn: 130 },
+      { minutes: 2, label: '2', priceRu: 0, priceEn: 0 },
+      { minutes: 3, label: '3', priceRu: 0, priceEn: 0 },
+      { minutes: 4, label: '4', priceRu: 500, priceEn: 10 },
+      { minutes: 5, label: '5', priceRu: 1000, priceEn: 20 },
       { minutes: 6, label: '6+', individual: true }
     ],
     options: [
+      { id: 'mixing', priceRu: 3500, priceEn: 110 },
       { id: 'mastering', priceRu: 2000, priceEn: 40 },
       { id: 'vocalRhythm', priceRu: 1000, priceEn: 20 },
       { id: 'trackout', priceRu: 1000, priceEn: 20 },

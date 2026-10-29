@@ -9,6 +9,8 @@
 //   • Каскад появления блоков с поправкой на высоту нижнего плеера
 //     (getStickyPlayerHeight).
 //   • Таймлайны треков, услуг, FAQ и контактов.
+//   • Цены услуг: readPriceTarget читает цель набора из data-target-price в
+//     момент старта отсчёта — смена языка попадает в анимацию.
 //   • Всплывание героя стартует после заставки — по сигналу из animations.js.
 //   • На телефоне и планшете всплытий нет: NR_NO_SCROLL_REVEAL и css/anim/12-reveal.css.
 // ═══════════════════════════════════════════════════════════════════════
@@ -328,6 +330,31 @@ function initPlayerTrackCardsTimeline(initialPreHide = true, alreadyAnimated = f
   }
 }
 
+/* Цена карточки услуги для анимации набора: текст целиком, число в нём и
+   разделитель разрядов. Источник — атрибут data-target-price: его переписывает
+   js/services.js → renderServices при смене языка, поэтому прочитанная здесь
+   цель всегда в валюте текущего языка. */
+function readPriceTarget(priceEl) {
+  if (!priceEl) return null;
+
+  const targetText = priceEl.getAttribute('data-target-price') || priceEl.textContent;
+  const match = targetText.match(/\d[\d\s\u00A0.,]*\d|\d/);
+  if (!match) return null;
+
+  const raw = match[0];
+  const sep = /[\s\u00A0]/.test(raw) ? raw.match(/[\s\u00A0]/)[0] : (raw.indexOf(',') > -1 ? ',' : '');
+  const targetVal = parseInt(raw.replace(/[^\d]/g, ''), 10);
+  if (isNaN(targetVal) || targetVal <= 0) return null;
+
+  return {
+    el: priceEl,
+    targetText: targetText,
+    raw: raw,
+    sep: sep,
+    targetVal: targetVal
+  };
+}
+
 let servicesTimelines = [];
 // Секция услуг уже всплыла: при перерисовке (смена языка) повторно не прячем.
 let servicesRevealed = false;
@@ -384,24 +411,8 @@ function initServicesGsapAnimation() {
   // Числа цен извлекаются для анимации набора
   const priceData = [];
   cards.forEach(card => {
-    const priceEl = card.querySelector('.service-card-price');
-    if (!priceEl) return;
-    const targetText = priceEl.getAttribute('data-target-price') || priceEl.textContent;
-    const match = targetText.match(/\d[\d\s\u00A0.,]*\d|\d/);
-    if (!match) return;
-
-    const raw = match[0];
-    const sep = /[\s\u00A0]/.test(raw) ? raw.match(/[\s\u00A0]/)[0] : (raw.indexOf(',') > -1 ? ',' : '');
-    const targetVal = parseInt(raw.replace(/[^\d]/g, ''), 10);
-    if (isNaN(targetVal) || targetVal <= 0) return;
-
-    priceData.push({
-      el: priceEl,
-      targetText: targetText,
-      raw: raw,
-      sep: sep,
-      targetVal: targetVal
-    });
+    const target = readPriceTarget(card.querySelector('.service-card-price'));
+    if (target) priceData.push(target);
   });
 
   // Учитывается системная настройка «уменьшить движение»
@@ -661,6 +672,18 @@ function initServicesGsapAnimation() {
       priceCountTween.kill();
       priceCountTween = null;
     }
+
+    /* Цель берётся из DOM в момент старта, а не из снимка priceData: между
+       сбором снимка и этим вызовом язык могли сменить, и js/services.js →
+       renderServices уже положил в data-target-price другую валюту. Отсчёт по
+       старому снимку вернул бы в карточку прежнюю цену. */
+    priceData.length = 0;
+    document.querySelectorAll('#servicesContainer .service-card-price').forEach(priceEl => {
+      const target = readPriceTarget(priceEl);
+      if (target) priceData.push(target);
+    });
+    if (!priceData.length) return;
+
     counterProxy.progress = 0;
     priceCountTween = gsap.to(counterProxy, {
       progress: 1,
@@ -670,6 +693,14 @@ function initServicesGsapAnimation() {
       onUpdate: () => {
         const pr = counterProxy.progress;
         priceData.forEach(p => {
+          // Язык сменили, пока идёт набор: в data-target-price уже новая цена —
+          // перечитываем цель, иначе счётчик допишет старую валюту.
+          const liveTarget = p.el.getAttribute('data-target-price');
+          if (liveTarget !== null && liveTarget !== p.targetText) {
+            const target = readPriceTarget(p.el);
+            if (target) Object.assign(p, target);
+          }
+
           if (pr <= 0.01) {
             p.el.textContent = p.targetText.replace(p.raw, '0');
           } else if (pr >= 0.99) {

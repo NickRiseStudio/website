@@ -21,25 +21,17 @@
 
 /* ═══ 1. ОБЩИЕ — ВСЕ УСТРОЙСТВА ═════════════════════════════════════════════ */
 
-#contacts .rack-card::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  padding: 1px;
-  background: conic-gradient(from 0deg,
-    rgba(245, 158, 11, 0) 0deg 200deg,
-    rgba(245, 158, 11, 0.55) 268deg,
-    rgba(251, 191, 36, 0.9) 292deg,
-    rgba(245, 158, 11, 0.45) 312deg,
-    rgba(245, 158, 11, 0) 350deg 360deg);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  mask-composite: exclude;
-  pointer-events: none;
-  opacity: 0.5;
-}
+/* ─── ПОЧЕМУ У «СТОЙКИ» КОНТАКТОВ НЕТ БЛИКА ПО КОНТУРУ ──────────────────
+   Раньше здесь стоял #contacts .rack-card::before — янтарная дуга по левой
+   стороне, нарисованная коническим градиентом и маской толщиной 1px.
+   Конструкция не работала: у карточки в разметке (index.html → #contacts)
+   есть overflow-hidden из Tailwind, а кольцо рисовалось по внешней кромке
+   (inset: -1px) и обрезалось целиком. На экране оставались только крохи
+   антиалиасинга на скруглениях — светлые «кромки» с обрывом на левых углах.
+   Сдвиг на inset: 0 обрезку снимал, но тогда дуга загоралась по всей левой
+   стороне постоянно, что тоже было дефектом. Псевдоэлемент удалён.
+   Янтарная подсветка при наведении приходит тенью из
+   css/style/06-services.css → #contacts .rack-card:hover — она осталась. */
 
 #contacts .grid > a,
 #contacts .grid > button,
@@ -107,10 +99,8 @@
 
 /* Наведение — только там, где есть курсор: на телефонах и планшетах :hover
    «залипает» после касания, и карточки контактов оставались подсвеченными
-   (подъём, свечение, крутящаяся рамка) и при свайпе, и при тапе. */
+   (подъём, свечение) и при свайпе, и при тапе. */
 @media (hover: hover) and (pointer: fine) {
-  #contacts .rack-card:hover::before { animation: nrSpin 6s linear infinite; opacity: 0.9; }
-
   #contacts .grid > a:hover,
   #contacts .grid > button:hover,
   #contactModal .grid > a:hover,
