@@ -51,6 +51,12 @@
   .nr-about-overlay {
     position: fixed;
     inset: 0;
+    /* Слои по z-index: раздел 100, расчёт стоимости 105
+       (css/style/19-calculator.css → .nr-calcshow-overlay), контакты 110
+       (css/style/09-modals.css → #contactModal). Оба слоя лежат соседями
+       раздела в body (index.html), поэтому открываются ПОВЕРХ него, а их
+       колесо и клики в обработчики раздела не попадают. Esc снимает их
+       сверху вниз (js/modals.js). */
     z-index: 100;
     display: flex;
     align-items: center;
@@ -647,11 +653,16 @@
   .nr-about-trainer:active { transform: scale(0.97); }
 
 
-  /* Кнопки финального кадра: занимают всю ширину колонки и делят строку, пока
-     помещаются (иначе переносятся — тогда каждая на всю ширину, как вопросы). */
+  /* Кнопки финального кадра — жёсткая сетка 2×2: «Обсудить проект» и «Контакты»
+     в первом ряду, «Примеры работ (A/B)» и «Отзывы» во втором. Сетка, а не
+     flex с переносом: пар должно быть видно как пары, и ряды обязаны совпадать
+     по высоте (grid-auto-rows: 1fr) — подписи вроде «Примеры работ (A/B)» на
+     узкой рамке переносятся на две строки, и без выравнивания соседняя кнопка
+     стала бы ниже. */
   .nr-about-actions {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: 1fr;
     width: 100%;
     gap: 1cqw;
     margin-top: 0.6cqw;
@@ -659,18 +670,23 @@
 
   .nr-about-btn {
     display: inline-flex;
-    flex: 1 1 auto;
+    width: 100%;
     min-width: 0;
     align-items: center;
     justify-content: center;
     gap: 0.8cqw;
-    padding: 1.05cqw 1.4cqw;
+    /* Горизонтальные поля уже, чем у прежней пары кнопок на всю строку:
+       теперь в ряду две штуки, и место под текст надо отдать подписи. */
+    padding: 1.05cqw 1.1cqw;
     border: 1px solid #374151;
     border-radius: 1cqw;
     background: #14171F;
     color: #F3F4F6; /* потолок яркости, см. .text-white */
     font-size: 1.2cqw;
     font-weight: 800;
+    /* 1.15 вместо базового: две строки подписи не слипаются. */
+    line-height: 1.15;
+    text-align: center;
     cursor: pointer;
     transition: background 0.35s ease, border-color 0.35s ease, transform 0.2s ease;
   }

@@ -168,9 +168,27 @@ function getCalcPanel() {
 }
 
 // Единая точка входа для «Заказать» и «Рассчитать стоимость услуг».
+// Затемнение расчёта набирает плотность за 0.7 с (css/style/19-calculator.css),
+// а шторка бургер-меню уезжает вверх за 1.2 с и на своей кривой открывает
+// верхнюю половину экрана уже через ~150 мс. Если закрыть меню сразу, главный
+// экран на долю секунды показывается сквозь ещё прозрачное затемнение — это и
+// читалось как «позади сверху что-то мелькнуло». Поэтому меню закрываем, когда
+// расчёт уже непрозрачен. Прокрутка при этом не разблокируется: её держит
+// modal-open (js/modals.js → lockPageScroll), а не nr-menu-open.
+const CALC_MENU_CLOSE_MS = 700;
+
+function isMobileMenuOpen() {
+  const drawer = document.getElementById('mobileMenuDrawer');
+  return !!drawer && drawer.classList.contains('is-open');
+}
+
 function openPriceCalc() {
-  if (typeof closeMobileMenu === 'function') closeMobileMenu();
   openPriceCalcShowcase();
+  if (typeof closeMobileMenu !== 'function') return;
+  // Меню закрыто (обычный клик со страницы) — зовём сразу: на десктопе и при
+  // закрытой шторке closeMobileMenu только приводит в порядок иконки.
+  if (isMobileMenuOpen()) setTimeout(closeMobileMenu, CALC_MENU_CLOSE_MS);
+  else closeMobileMenu();
 }
 
 // Кнопка «Заказать» на карточке услуги: id карточек (config.js → servicesData)

@@ -83,7 +83,7 @@
   <link rel="stylesheet" href="./css/style/19-calculator.css">
   <link rel="stylesheet" href="./css/style/20-about.css">
 
-  <!-- Animation Layer: 15 файлов анимаций (css/anim), добавляют только движение,
+  <!-- Animation Layer: 16 файлов анимаций (css/anim), добавляют только движение,
        ни одно правило стилей не переопределяют. Подключаются после css/style. -->
   <link rel="stylesheet" href="./css/anim/01-boot.css">
   <link rel="stylesheet" href="./css/anim/02-atmosphere.css">
@@ -100,6 +100,7 @@
   <link rel="stylesheet" href="./css/anim/13-cta.css">
   <link rel="stylesheet" href="./css/anim/14-particles.css">
   <link rel="stylesheet" href="./css/anim/15-about.css">
+  <link rel="stylesheet" href="./css/anim/16-calculator.css">
 
   <!-- Главное фото hero (элемент LCP): грузим заранее, не дожидаясь разбора разметки.
        Один оригинал — без srcset. media: на телефоне и планшете фото героя не
@@ -298,7 +299,17 @@
           <span id="btnLangEn" class="relative z-10 px-2 sm:px-3 py-1 text-xs font-extrabold rounded-md sm:rounded-lg pointer-events-none">EN</span>
         </div>
 
-        <button onclick="openPriceCalc()" class="hidden sm:flex items-center justify-center w-[120px] sm:w-[136px] gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold rounded-xl transition-all shadow-lg shadow-amber-500/20 active:scale-95 text-xs sm:text-sm whitespace-nowrap cursor-pointer">
+        <!-- Кнопка «Заказать» на панели: ведёт в расчёт стоимости
+             (js/calculator.js → openPriceCalc). На телефоне её нет (hidden),
+             там тот же пункт живёт в бургер-меню.
+             Класс .nr-calc-cta (css/anim/13-cta.css) — общий с CTA в услугах и
+             под примерами сведения: дышащее янтарное свечение, бегущий блик и
+             «волна» по контуру. Тень задаёт пульс класса, поэтому утилиты
+             shadow-lg shadow-amber-500/20 отсюда убраны — иначе они спорили бы
+             с ним за одно свойство. Ширину на планшете фиксирует
+             css/style/11-utilities.css (148px) — блик считается от ширины
+             кнопки и с ней совпадает. -->
+        <button onclick="openPriceCalc()" class="nr-calc-cta hidden sm:flex items-center justify-center w-[120px] sm:w-[136px] gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold rounded-xl transition-all active:scale-95 text-xs sm:text-sm whitespace-nowrap cursor-pointer">
           <span data-i18n="nav.orderBtn">Заказать</span>
           <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
             <rect x="4" y="2.5" width="16" height="19" rx="2.5"></rect>
@@ -353,7 +364,12 @@
         <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
       </a>
 
-      <button onclick="openPriceCalc(); closeMobileMenu();" class="mobile-drawer-item mt-2 w-full flex items-center justify-center gap-2 px-5 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold rounded-xl transition-all shadow-lg shadow-amber-500/20 active:scale-95 text-base">
+      <!-- «Заказать» в шторке: меню закрывает сам openPriceCalc — и только
+           когда затемнение расчёта уже плотное (js/calculator.js →
+           CALC_MENU_CLOSE_MS). Второй closeMobileMenu() здесь закрывал бы
+           шторку мгновенно, и главный экран мелькал бы сквозь ещё прозрачное
+           затемнение. -->
+      <button onclick="openPriceCalc()" class="mobile-drawer-item mt-2 w-full flex items-center justify-center gap-2 px-5 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold rounded-xl transition-all shadow-lg shadow-amber-500/20 active:scale-95 text-base">
         <span data-i18n="nav.orderBtn">Заказать</span>
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
           <rect x="4" y="2.5" width="16" height="19" rx="2.5"></rect>
@@ -780,9 +796,10 @@
   <!-- 7. МОДАЛКА «СВЯЗАТЬСЯ» -->
   <div id="contactModal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-4">
     <div class="modal-content rack-card max-w-2xl w-full p-6 sm:p-10 relative overflow-hidden text-center shadow-2xl">
-      <!-- Close Button -->
-      <button onclick="closeContactModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-2 rounded-xl hover:bg-gray-800/80 transition-colors z-20 cursor-pointer" title="Закрыть" data-i18n-title="a11y.close">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+      <!-- Close Button: та же рамка-кнопка, что у остальных всплывашек
+           (.nr-modal-close, css/style/09-modals.css) -->
+      <button type="button" onclick="closeContactModal()" class="nr-modal-close" title="Закрыть" data-i18n-title="a11y.close" aria-label="Закрыть" data-i18n-aria-label="a11y.close">
+        <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M18 6L6 18M6 6l12 12"/>
         </svg>
       </button>
@@ -837,12 +854,22 @@
   <!-- 7.5 МОДАЛКА «ОБО МНЕ» -->
   <div id="aboutModal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto">
     <div class="modal-content rack-card max-w-3xl w-full p-5 sm:p-8 relative overflow-hidden shadow-2xl my-auto text-left max-h-[90vh] overflow-y-auto">
-      <!-- Close Button -->
-      <button onclick="closeAboutModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-2 rounded-xl hover:bg-gray-800/80 transition-colors z-20 cursor-pointer" title="Закрыть" data-i18n-title="a11y.close">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+      <!-- Close Button: та же рамка-кнопка, что у остальных всплывашек
+           (.nr-modal-close, css/style/09-modals.css). Лежит на самой карточке, а
+           прокручивается вложенный .nr-about-scroll — как крестик расчёта
+           стоимости на .nr-calcshow-panel (css/style/19-calculator.css). Поэтому
+           кнопка не уезжает при прокрутке, а её зазор 14px (12px на телефоне)
+           отсчитывается прямо от края карточки и не зависит ни от полей окна,
+           ни от полосы прокрутки. -->
+      <button type="button" onclick="closeAboutModal()" class="nr-modal-close" title="Закрыть" data-i18n-title="a11y.close" aria-label="Закрыть" data-i18n-aria-label="a11y.close">
+        <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M18 6L6 18M6 6l12 12"/>
         </svg>
       </button>
+
+      <!-- Прокручиваемое тело профиля: вся карточка стоит на месте, листается
+           только этот блок (css/style/09-modals.css → .nr-about-scroll). -->
+      <div class="nr-about-scroll">
 
       <!-- Верхняя планка-стойка -->
       <div class="flex justify-between items-center mb-6 opacity-40">
@@ -968,24 +995,62 @@
         </button>
       </div>
 
-      <!-- Кнопки действий в подвале -->
-      <div class="flex flex-col sm:flex-row items-center gap-3 pt-4 border-t border-gray-800/80">
+      <!-- Кнопки действий в подвале — сетка 2×2, как на третьем кадре раздела на
+           компьютере (index.html → .nr-about-actions):
+             Обсудить проект | Контакты
+             Примеры работ   | Отзывы
+           «Обсудить проект» и «Контакты» окно НЕ закрывают: расчёт стоимости
+           (#priceCalcShowcase, z-index 105) и окно контактов (110) открываются
+           ПОВЕРХ него (100), а Esc возвращает в «Обо мне» на том же месте.
+           Пока слой открыт, окно помечается aria-hidden (js/about.js →
+           aboutMuteUnderLayer). Демо и отзывы, наоборот, окно закрывают: они
+           прокручивают страницу, а её прокрутка под окном заблокирована. -->
+      <div class="grid grid-cols-2 gap-2.5 sm:gap-3 pt-4 border-t border-gray-800/80">
         <button
-          onclick="closeAboutModal(); openContactModal();"
-          class="w-full sm:w-auto px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl transition-all shadow-lg shadow-amber-500/20 active:scale-95 text-sm flex items-center justify-center gap-2 cursor-pointer"
+          onclick="openPriceCalc(); aboutMuteUnderLayer('priceCalcShowcase');"
+          class="w-full px-3 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl transition-all shadow-lg shadow-amber-500/20 active:scale-95 text-sm flex items-center justify-center gap-2 cursor-pointer"
         >
           <span data-i18n="aboutModal.btnDiscuss">Обсудить проект</span>
-          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="4" y="2.5" width="16" height="19" rx="2.5"></rect>
+            <path d="M8 7.5h8"></path>
+            <path d="M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"></path>
+          </svg>
         </button>
 
         <button
-          onclick="closeAboutModal(); document.getElementById('player').scrollIntoView({behavior: 'smooth'});"
-          class="w-full sm:w-auto px-6 py-3 bg-[#14171F] hover:bg-[#1C212E] text-white font-bold rounded-xl border border-gray-800 transition-all text-sm flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+          onclick="openContactModal(); aboutMuteUnderLayer('contactModal');"
+          class="w-full px-3 py-3 bg-[#14171F] hover:bg-[#1C212E] text-white font-bold rounded-xl border border-gray-800 hover:border-amber-500/50 transition-all text-sm flex items-center justify-center gap-2 cursor-pointer active:scale-95"
         >
-          <span data-i18n="aboutModal.btnDemos">Слушать A/B демо</span>
+          <span data-i18n="aboutModal.btnContacts">Контакты</span>
+          <svg class="w-4 h-4 flex-shrink-0 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+            <polyline points="22,6 12,13 2,6"></polyline>
+          </svg>
+        </button>
+
+        <button
+          onclick="closeAboutModal(); scrollPageToElement('player');"
+          class="w-full px-3 py-3 bg-[#14171F] hover:bg-[#1C212E] text-white font-bold rounded-xl border border-gray-800 hover:border-amber-500/50 transition-all text-sm flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+        >
+          <span data-i18n="aboutModal.btnDemos">Примеры работ (A/B)</span>
+          <svg class="w-4 h-4 flex-shrink-0 text-amber-400" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 5v14l11-7z"/>
+          </svg>
+        </button>
+
+        <button
+          onclick="closeAboutModal(); scrollPageToElement('reviews');"
+          class="w-full px-3 py-3 bg-[#14171F] hover:bg-[#1C212E] text-white font-bold rounded-xl border border-gray-800 hover:border-amber-500/50 transition-all text-sm flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+        >
+          <span data-i18n="aboutModal.btnReviews">Отзывы</span>
+          <svg class="w-4 h-4 flex-shrink-0 text-amber-400" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+          </svg>
         </button>
       </div>
 
+      </div><!-- /.nr-about-scroll -->
     </div>
   </div>
 
@@ -1127,13 +1192,39 @@
             </button>
           </div>
 
+          <!-- Четыре действия финального кадра, сетка 2×2 (css/style/20-about.css →
+               .nr-about-actions). Порядок здесь и есть порядок на экране:
+                 Обсудить проект | Контакты
+                 Примеры работ   | Отзывы
+               «Обсудить проект» — единственная оранжевая и ведёт в расчёт
+               стоимости (js/calculator.js → openPriceCalc), поэтому иконка у неё
+               калькулятор, как у кнопок «Заказать». Остальные три серые.
+               Обработчик клика живёт в js/about.js → initAboutShowcase()
+               (data-about-action), а не в onclick: так клик по кнопке не уходит
+               в оверлей и раздел не закрывается «сам по себе». -->
           <div class="nr-about-actions">
-            <button type="button" class="nr-about-btn nr-about-btn--primary" data-about-action="contact">
+            <button type="button" class="nr-about-btn nr-about-btn--primary" data-about-action="calc">
               <span data-i18n="aboutModal.btnDiscuss">Обсудить проект</span>
-              <svg fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+              <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="4" y="2.5" width="16" height="19" rx="2.5"></rect>
+                <path d="M8 7.5h8"></path>
+                <path d="M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"></path>
+              </svg>
+            </button>
+            <button type="button" class="nr-about-btn" data-about-action="contact">
+              <span data-i18n="aboutModal.btnContacts">Контакты</span>
+              <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                <polyline points="22,6 12,13 2,6"></polyline>
+              </svg>
             </button>
             <button type="button" class="nr-about-btn" data-about-action="demos">
               <span data-i18n="aboutModal.btnDemos">Примеры работ (A/B)</span>
+              <svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+            <button type="button" class="nr-about-btn" data-about-action="reviews">
+              <span data-i18n="aboutModal.btnReviews">Отзывы</span>
+              <svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
             </button>
           </div>
         </div>
@@ -1175,7 +1266,10 @@
        Логика — js/calculator.js → openPriceCalc / initPriceCalcForm,
        вид — css/style/19-calculator.css, блок «РАСЧЁТ СТОИМОСТИ».
        Ответы лежат в общем calcAnswers, поэтому цена на всех устройствах
-       одна и та же. -->
+       одна и та же.
+       data-calc-rise — номер шага всплытия блоков анкеты при открытии
+       (css/anim/16-calculator.css): заголовок, затем содержимое, затем
+       следующий блок. «РАСЧЁТ СТОИМОСТИ» и смета шагов не имеют. -->
   <div id="priceCalcShowcase" class="nr-calcshow-overlay" role="dialog" aria-modal="true" aria-labelledby="nrCalcShowcaseTitle" aria-hidden="true">
     <div class="nr-calcshow-panel">
 
@@ -1194,13 +1288,13 @@
       <!-- ЛЕВАЯ КОЛОНКА — АНКЕТА -->
       <div class="nr-calcshow-form">
         <div class="nr-calcshow-kicker" data-i18n="services.priceCalc.form.badge">РАСЧЁТ СТОИМОСТИ</div>
-        <h2 class="nr-calcshow-title" id="nrCalcShowcaseTitle" data-i18n="services.priceCalc.form.title">Укажите детали работы</h2>
-        <p class="nr-calcshow-sub" data-i18n="services.priceCalc.form.sub">Отметьте, что нужно сделать, — стоимость пересчитается сразу.</p>
+        <h2 class="nr-calcshow-title" id="nrCalcShowcaseTitle" data-i18n="services.priceCalc.form.title" data-calc-rise="1">Укажите детали работы</h2>
+        <p class="nr-calcshow-sub" data-i18n="services.priceCalc.form.sub" data-calc-rise="2">Отметьте, что нужно сделать, — стоимость пересчитается сразу.</p>
 
         <!-- Длительность: набор значений — config.js → priceCalc.durations -->
         <div class="nr-calcshow-block">
-          <span class="nr-calcshow-label" data-i18n="services.priceCalc.form.durationLabel">Длительность трека</span>
-          <div class="nr-calcshow-duration">
+          <span class="nr-calcshow-label" data-i18n="services.priceCalc.form.durationLabel" data-calc-rise="3">Длительность трека</span>
+          <div class="nr-calcshow-duration" data-calc-rise="4">
             <span id="calcFormDurationValue" class="nr-calcshow-duration-value">3</span>
             <span class="nr-calcshow-duration-unit" data-i18n="services.priceCalc.durationMin">мин</span>
           </div>
@@ -1214,8 +1308,9 @@
             oninput="onCalcFormDurationInput(this.value)"
             class="nr-calc-range"
             aria-label="Track duration"
+            data-calc-rise="4"
           >
-          <div id="calcFormDurationScale" class="nr-calc-scale"></div>
+          <div id="calcFormDurationScale" class="nr-calc-scale" data-calc-rise="4"></div>
           <p id="calcFormIndividualNote" class="nr-calc-individual hidden">
             <span data-i18n="services.priceCalc.individualNote">Обговаривается индивидуально</span>
           </p>
@@ -1236,8 +1331,8 @@
              коррекции, счётчик исполнителей, а срочность отделена от услуг и
              стоит по центру (css/style/19-calculator.css, группа 2). -->
         <div class="nr-calcshow-block">
-          <span class="nr-calcshow-label" data-i18n="services.priceCalc.form.optionsLabel">Что нужно сделать</span>
-          <div class="nr-calcshow-options">
+          <span class="nr-calcshow-label" data-i18n="services.priceCalc.form.optionsLabel" data-calc-rise="5">Что нужно сделать</span>
+          <div class="nr-calcshow-options" data-calc-rise="6">
 
             <div class="nr-calcshow-option">
               <label class="nr-calcshow-check" for="calcFormOptMixing">
@@ -1397,15 +1492,15 @@
              держит свою высоту, а не тянется до низа панели
              (css/style/19-calculator.css, группа 1). -->
         <div class="nr-calcshow-block nr-calcshow-block-comment">
-          <label class="nr-calcshow-label" for="calcFormComment" data-i18n="services.priceCalc.form.commentLabel">Комментарий</label>
-          <textarea id="calcFormComment" class="nr-calcshow-comment" rows="3"></textarea>
+          <label class="nr-calcshow-label" for="calcFormComment" data-i18n="services.priceCalc.form.commentLabel" data-calc-rise="7">Комментарий</label>
+          <textarea id="calcFormComment" class="nr-calcshow-comment" rows="3" data-calc-rise="8"></textarea>
         </div>
 
         <!-- Подвал анкеты: «Далее» открывает вторую страницу панели — итог со
              сметой (js/calculator.js → showCalcSummaryView). Есть только на
              планшете и телефоне: на компьютере анкета и смета стоят рядом
              (css/style/19-calculator.css, группа 4). -->
-        <div class="nr-calcshow-form-foot">
+        <div class="nr-calcshow-form-foot" data-calc-rise="9">
           <button type="button" class="nr-calcshow-next" onclick="showCalcSummaryView()">
             <span data-i18n="services.priceCalc.form.nextBtn">Далее</span>
             <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
@@ -1447,21 +1542,35 @@
         </div>
 
         <!-- Отправка: ссылка t.me с уже набранным текстом заявки
-             (js/calculator.js → sendCalcOrderToTelegram). Кнопка копирования —
-             запасной путь, если клиент Telegram черновик не подставил. -->
+             (js/calculator.js → sendCalcOrderToTelegram). Ниже — два
+             запасных пути одним рядом: «Скопировать заявку» (буфер обмена,
+             если Telegram черновик не подставил) и «Контакты» — открывают
+             окно #contactModal поверх расчёта (js/modals.js →
+             openContactModal). Вид ряда — css/style/19-calculator.css,
+             блок .nr-calcshow-actions. -->
         <button type="button" class="nr-calcshow-send" onclick="sendCalcOrderToTelegram()">
           <svg class="nr-calcshow-send-icon" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
           <span data-i18n="services.priceCalc.form.telegramBtn">Отправить заявку в Telegram</span>
           <svg class="nr-calcshow-send-arrow" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </button>
 
-        <button type="button" class="nr-calcshow-copy" onclick="copyCalcOrder()">
-          <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="9" y="9" width="11" height="11" rx="2"></rect>
-            <path d="M5 15V6a2 2 0 012-2h8"></path>
-          </svg>
-          <span data-i18n="services.priceCalc.form.copyBtn">Скопировать заявку</span>
-        </button>
+        <div class="nr-calcshow-actions">
+          <button type="button" class="nr-calcshow-copy" onclick="copyCalcOrder()">
+            <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="9" y="9" width="11" height="11" rx="2"></rect>
+              <path d="M5 15V6a2 2 0 012-2h8"></path>
+            </svg>
+            <span data-i18n="services.priceCalc.form.copyBtn">Скопировать заявку</span>
+          </button>
+
+          <button type="button" class="nr-calcshow-copy" onclick="openContactModal()">
+            <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+            <span data-i18n="services.priceCalc.form.contactsBtn">Контакты</span>
+          </button>
+        </div>
 
         <p class="nr-calcshow-note" data-i18n="services.priceCalc.resultSub">Это предварительный расчёт — точную цену я назову после прослушивания вашего материала.</p>
       </aside>

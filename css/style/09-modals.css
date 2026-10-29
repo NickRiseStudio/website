@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════════════
    css/style/09-modals.css — МОДАЛКИ, ОВЕРЛЕИ, БУРГЕР, ТОСТ, ВЫСОТА ПО dvh
    Что: оверлеи и окна, блокировка скролла под ними, высота через dvh,
-        бургер-меню, тост.
+        крестик окон (.nr-modal-close), бургер-меню, тост.
    Разметку создаёт: index.html → #contactModal, #aboutModal, #toast,
                     #mobileMenuDrawer.
    Подключён: index.html, после 08-mixer.css, до 10-player-bar.css.
@@ -89,6 +89,13 @@ body.nr-menu-open {
               visibility 0s linear;
 }
 
+/* Окно контактов открывается из сметы расчёта стоимости (кнопка «Контакты»,
+   js/modals.js → openContactModal), поэтому лежит ВЫШЕ раздела расчёта
+   (z-index 105) и ниже тоста (120). Утилита z-[100] в разметке этого не
+   решает: правило .modal-overlay идёт после tailwind.css и при равной
+   специфичности перебивает её. */
+#contactModal { z-index: 110; }
+
 .modal-content {
   transform: translate3d(0, 22px, 0) scale(0.96);
   -webkit-transform: translate3d(0, 22px, 0) scale(0.96);
@@ -137,23 +144,31 @@ body.nr-menu-open {
    СИСТЕМНУЮ overlay-полосу по краю окна и игнорирует ::-webkit-scrollbar — она
    торчит за скруглением .rack-card (border-radius 18px). Без стандартных
    свойств работает кастомная отрисовка, а border-radius дорожки и ползунка
-   держит её внутри скругления. */
-.modal-content::-webkit-scrollbar {
+   держит её внутри скругления.
+
+   .nr-about-scroll — прокручиваемое тело окна «Обо мне» (см. ниже): прокрутка
+   переехала с карточки на него, поэтому правила продублированы и для него,
+   иначе у профиля появилась бы системная серая полоса вместо янтарной. */
+.modal-content::-webkit-scrollbar,
+.nr-about-scroll::-webkit-scrollbar {
   display: block !important;
   width: 6px !important;
 }
 
-.modal-content::-webkit-scrollbar-track {
+.modal-content::-webkit-scrollbar-track,
+.nr-about-scroll::-webkit-scrollbar-track {
   background: transparent;
   border-radius: 18px;
 }
 
-.modal-content::-webkit-scrollbar-thumb {
+.modal-content::-webkit-scrollbar-thumb,
+.nr-about-scroll::-webkit-scrollbar-thumb {
   background: rgba(245, 158, 11, 0.35);
   border-radius: 18px;
 }
 
-.modal-content::-webkit-scrollbar-thumb:hover {
+.modal-content::-webkit-scrollbar-thumb:hover,
+.nr-about-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(245, 158, 11, 0.7);
 }
 
@@ -165,6 +180,45 @@ body.nr-menu-open {
   transition: transform 1.0s cubic-bezier(0.16, 1, 0.3, 1),
               opacity 1.0s cubic-bezier(0.16, 1, 0.3, 1),
               filter 1.0s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ─── КРЕСТИК ОКНА: ОБЩИЙ ДЛЯ ВСЕХ ВСПЛЫВАШЕК ──────────────────────────
+   Окна «Контакты» (#contactModal) и «Обо мне» (#aboutModal) раньше несли
+   крестик на утилитах Tailwind (absolute top-4 right-4 p-2 rounded-xl):
+   подложка появлялась только при наведении, и на телефоне, где наведения
+   нет, кнопка читалась как серая иконка, а не как кнопка. Здесь тот же
+   вид, что у крестиков раздела «Обо мне» (.nr-about-close) и расчёта
+   стоимости (.nr-calcshow-close): квадрат с рамкой и собственным фоном,
+   видимый всегда. Геометрия снята с .nr-calcshow-close — он ближе всех
+   по размеру к модалкам.
+
+   position: absolute — от .modal-content, у которого в разметке стоит
+   relative. Свой z-index выше содержимого окна: длинный профиль «Обо мне»
+   прокручивается под кнопкой. */
+.nr-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 11px;
+  background: rgba(20, 23, 31, 0.92);
+  border: 1px solid rgba(55, 65, 81, 0.8);
+  color: #9CA3AF;
+  cursor: pointer;
+  transition: color 0.4s ease, border-color 0.4s ease, background-color 0.4s ease;
+}
+
+.nr-modal-close svg { width: 18px; height: 18px; }
+
+.nr-modal-close:focus-visible {
+  outline: 2px solid #fbbf24;
+  outline-offset: 3px;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -211,6 +265,50 @@ body.nr-menu-open {
   overflow-y: auto;
 }
 
+/* ОКНО «ОБО МНЕ»: ПРОКРУТКА ВНУТРИ, КРЕСТИК НА КАРТОЧКЕ.
+
+   Профиль инженера длинный (статистика, FAQ, отзывы, четыре кнопки), поэтому
+   окно прокручивается — но не карточка, а вложенное тело .nr-about-scroll.
+   Схема та же, что у расчёта стоимости (css/style/
+   19-calculator.css → .nr-calcshow-panel + .nr-calcshow-form): панель стоит на
+   месте, листается только её содержимое.
+
+   Крестик лежит на карточке (position: absolute из общего .nr-modal-close), а
+   не в потоке содержимого: в потоке его отступ зависел бы и от padding окна, и
+   от ширины полосы прокрутки — та занимает 6px в раскладке и сдвигает
+   содержимое влево, поэтому справа зазор выходил бы на эти 6px меньше, чем
+   сверху. На карточке top/right отсчитываются от одного и того же края — 14px
+   на планшете и 12px на телефоне, без зависимости от полей окна и полосы
+   прокрутки. Отдельных правил для кнопки на планшете нет: прокрутка идёт
+   внутри, поэтому она не уезжает.
+
+   Карточка становится колонкой фиксированной высоты: overflow: hidden снимает
+   прокрутку с неё, padding: 0 — потому что отступы живут внутри тела
+   (иначе крестик висел бы на padding'е, а не на краю). */
+#aboutModal .modal-content {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Тело профиля — единственный прокручиваемый блок окна. min-height: 0 обязателен:
+   без него flex-элемент не сжимается ниже своего содержимого и карточка
+   вылезла бы за max-height вместо прокрутки. */
+.nr-about-scroll {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  /* Место под полосу зарезервировано всегда — как у .nr-calcshow-form: иначе
+     при появлении полосы текст переезжает вбок на её ширину. */
+  scrollbar-gutter: stable;
+  /* Поля окна: телефон 20px по верху и 16px по бокам (низ — с запасом под
+     домашнюю полосу iPhone). На планшете 25px со всех сторон — группа 2. */
+  padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+}
+
 /* ОКНО «ОБО МНЕ»: НЕСТАНДАРТНЫЕ ОТСТУПЫ (шага 15px в шкале Tailwind нет).
 
    Оба блока ниже размечены утилитами Tailwind, но нужные значения (15px)
@@ -219,17 +317,21 @@ body.nr-menu-open {
    нельзя (см. PROJECT-NOTES, §5). Поэтому отступы задаются здесь.
 
    Специфичность: селектор (1,2,0) выше утилит .my-6 и .mb-8 (обe 0,1,0)
-   и перебивает их без !important — css/style подключён после tailwind.css. */
+   и перебивает их без !important — css/style подключён после tailwind.css.
+
+   Селекторы идут через .nr-about-scroll, а не через .modal-content: содержимое
+   профиля лежит в прокручиваемом теле окна (см. .nr-about-scroll выше), и от
+   карточки эти блоки отделяет ещё один уровень вложенности. */
 /* 1) Плашка со статистикой (200+ / 6+ лет / 100%): my-6 = 24px сверху и
       снизу -> 15px. Селектор по :has() привязан к самой плашке, а не к
       позиции в разметке, поэтому не зацепит соседние блоки с .my-6. */
-#aboutModal .modal-content > .my-6:has(> .border-x) {
+#aboutModal .nr-about-scroll > .my-6:has(> .border-x) {
   margin-top: 15px;
   margin-bottom: 15px;
 }
 
 /* 2) Блок кнопок быстрого перехода к FAQ: mb-8 = 32px снизу -> 15px. */
-#aboutModal .modal-content > .mb-8 {
+#aboutModal .nr-about-scroll > .mb-8 {
   margin-bottom: 15px;
 }
 
@@ -237,20 +339,90 @@ body.nr-menu-open {
       нижнего внутреннего отступа -> 15px. Это зазор между подписью и линией
       border-b, отделяющей шапку от плашки статистики. Селектор привязан к
       классам самой шапки (pb-6 + border-b), а не к позиции в разметке. */
-#aboutModal .modal-content > .pb-6.border-b {
+#aboutModal .nr-about-scroll > .pb-6.border-b {
   padding-bottom: 15px;
 }
 
-/* 4) Внутренние отступы самого окна: утилиты p-5 sm:p-8 (на десктопе 32px
+/* 4) Внутренние отступы тела профиля: утилиты p-5 sm:p-8 (на десктопе 32px
       со всех сторон) -> 25px. Значения 25px в шкале Tailwind нет, утилит
       p-[25px] в собранном tailwind.css тоже нет. Работает только на широких
       экранах (min-width: 640px), чтобы не сломать мобильный вариант p-5,
-      который рассчитан на узкий экран. Специфичность (1,2,0) выше .sm\:p-8
-      (0,1,0), лишний !important не нужен. */
+      который рассчитан на узкий экран. Специфичность (0,1,0) равна базовому
+      .nr-about-scroll, поэтому правило стоит ниже него в файле и перебивает
+      padding без !important. */
 @media (min-width: 640px) {
-  #aboutModal .modal-content {
+  .nr-about-scroll {
     padding: 25px;
   }
+}
+
+/* ═══ ТЕЛЕФОН (max-width: 639.98px): «ОБО МНЕ» — НА ВЕСЬ ЭКРАН ═════════════
+
+   На телефоне окно «Обо мне» — лист на весь экран, а не карточка по центру:
+   внутри длинный профиль инженера, статистика, FAQ и четыре кнопки
+   (index.html → подвал #aboutModal). Карточка с полями по краям съедала и
+   ширину, и высоту, а листать такой объём в «окне внутри окна» неудобно.
+
+   Что меняется против общих правил:
+     • оверлей — без полей и с непрозрачным фоном: под листом ничего не видно,
+       а полупрозрачные 0.94 из мобильного блока выше просвечивали бы
+       страницу полосами по краям при появлении;
+     • окно — во всю ширину и высоту видимой области (dvh, как у оверлеев
+       ниже по файлу), без скруглений, рамки и тени: это уже не карточка;
+     • появление — только выезд снизу, БЕЗ scale(0.97): у листа на весь экран
+       масштаб давал бы тёмные полосы по краям на время анимации;
+     • нижний отступ — с запасом под домашнюю полосу iPhone.
+
+   Специфичность: id (1,1,0 и 1,2,0) против .modal-content (0,1,0) и
+   .modal-overlay.active .modal-content (0,3,0) — перебивает без !important.
+   Планшет (640–1023.98px) не затронут: там окно остаётся карточкой. */
+@media (max-width: 639.98px) {
+  #aboutModal {
+    padding: 0;
+    background: #0B0E15;
+    overflow: hidden;
+  }
+
+  #aboutModal .modal-content {
+    width: 100%;
+    max-width: 100%;
+    height: 100vh;      /* фолбэк для браузеров без dvh */
+    height: 100dvh;
+    max-height: 100vh;  /* фолбэк для браузеров без dvh */
+    max-height: 100dvh;
+    margin: 0;
+    /* Поля задаёт .nr-about-scroll (группа 1): карточка — только рамка листа,
+       прокручивается и держит отступы тело профиля. Иначе крестик, лежащий на
+       карточке, отсчитывался бы от её padding, а не от края экрана. */
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    transform: translate3d(0, 18px, 0);
+    -webkit-transform: translate3d(0, 18px, 0);
+  }
+
+  #aboutModal.active .modal-content {
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
+  }
+
+  /* Крестик окон: 40px со значком 20px — его нажимают пальцем, а не курсором;
+     12px от края вместо 14px — на узком экране каждый пиксель идёт содержимому,
+     но палец должен попадать в кнопку без прицеливания, поэтому отступ лишь
+     немного меньше планшетного. */
+  .nr-modal-close {
+    top: 12px;
+    right: 12px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .nr-modal-close svg { width: 20px; height: 20px; }
+
+  /* Тело профиля на телефоне: лист во всю высоту, поэтому нижний отступ — с
+     запасом под домашнюю полосу iPhone (он уже задан в группе 1 как базовый
+     padding .nr-about-scroll и здесь менять нечего). */
 }
 
 /* Toast Notifications */
@@ -329,4 +501,17 @@ body:has(#stickyPlayerBar.active) {
   -webkit-transform: translate3d(0, 0, 0) !important;
   opacity: 1;
   box-shadow: 0 -10px 45px rgba(0, 0, 0, 0.95), 0 -2px 16px rgba(245, 158, 11, 0.14);
+}
+
+/* ═══ 8. ВВОД: hover / pointer ══════════════════════════════════════════════ */
+
+/* Наведение подсвечиваем только там, где есть настоящий курсор: на телефонах
+   и планшетах :hover «залипает» на кнопке, оказавшейся под последним
+   касанием, — крестик оставался бы подсвеченным после закрытия окна. */
+@media (hover: hover) and (pointer: fine) {
+  .nr-modal-close:hover {
+    color: #F3F4F6;
+    border-color: rgba(245, 158, 11, 0.5);
+    background: #1C212E;
+  }
 }

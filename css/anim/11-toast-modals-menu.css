@@ -73,8 +73,12 @@
 
 #aboutModal .modal-content img { transition: transform 6s ease-out; }
 
+/* Медленный наезд картинок профиля. Прокручиваемое тело окна — единственный
+   блок верхнего уровня (.nr-about-scroll, css/style/09-modals.css), поэтому
+   селектор идёт через него, а не через «> div»: содержимое лежит внутри тела,
+   и «> div» указал бы на само тело. */
 .modal-overlay.active #aboutModal img,
-#aboutModal.active .modal-content > div img { transform: scale(1.06); }
+#aboutModal.active .modal-content > .nr-about-scroll img { transform: scale(1.06); }
 
 #aboutModal .grid > div { position: relative; }
 

@@ -80,9 +80,22 @@ function initModalAndToast() {
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      closeContactModal();
+      // Слои гасим строго сверху вниз по z-index: контакты (110) → расчёт
+      // стоимости (105) → «Обо мне» (100). Каждый следующий открывается поверх
+      // предыдущего (css/style/20-about.css), поэтому Esc снимает только верхний
+      // слой: иначе вместе с ним закрылась бы вся анкета с уже отмеченными
+      // услугами и сам раздел «Обо мне».
+      const contactModal = document.getElementById('contactModal');
+      if (contactModal && contactModal.classList.contains('active')) {
+        closeContactModal();
+        return;
+      }
+      const calcShowcase = document.getElementById('priceCalcShowcase');
+      if (calcShowcase && calcShowcase.classList.contains('active')) {
+        closePriceCalcShowcase();
+        return;
+      }
       closeAboutModal();
-      closePriceCalcShowcase();
     }
   });
 }
