@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 // js/calculator.js — КАЛЬКУЛЯТОР СТОИМОСТИ
 // Грузится после: js/state.js. Читает: currentLang, CONFIG, calcAnswers.
-// Владеет: calcAnswers, calcPerformers, CALC_ORDER_TELEGRAM_URL, calcHintVisibleId.
+// Владеет: calcAnswers, calcPerformers, calcRevealPlayed, CALC_ORDER_TELEGRAM_URL, calcHintVisibleId.
 // Публичные (window): openPriceCalc, openPriceCalcForService, openPriceCalcShowcase,
 //         closePriceCalcShowcase,
 //         showCalcSummaryView, showCalcFormView, resetPriceCalc, setCalcFormAnswer,
@@ -158,6 +158,12 @@ function calculatePriceCalcTotal() {
 // Чат, в который уходит заявка: тот же ник, что у кнопок в разделе контактов.
 const CALC_ORDER_TELEGRAM_URL = 'https://t.me/Nick_Rise';
 
+// Лента всплытия анкеты играется один раз за загрузку страницы: флаг живёт в
+// памяти модуля, поэтому при следующих открытиях на оверлее стоит is-revealed
+// и блоки всплывают короткой лесенкой (css/anim/16-calculator.css). Перезагрузка
+// страницы сбрасывает флаг.
+let calcRevealPlayed = false;
+
 function getCalcFormBox() {
   return document.getElementById('priceCalcShowcase');
 }
@@ -217,6 +223,9 @@ function openPriceCalcShowcase() {
   // Всегда с анкеты: в прошлый раз раздел могли закрыть на итоге.
   showCalcFormView();
   renderPriceCalcForm();
+  // Класс ставится до active: всплытие должно стартовать уже с ним.
+  box.classList.toggle('is-revealed', calcRevealPlayed);
+  calcRevealPlayed = true;
   box.classList.add('active');
   box.setAttribute('aria-hidden', 'false');
   lockPageScroll();

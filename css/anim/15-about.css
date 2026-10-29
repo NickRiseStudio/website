@@ -1,11 +1,13 @@
 /* ═══════════════════════════════════════════════════════════════════════
    css/anim/15-about.css — РАЗДЕЛ «ОБО МНЕ» НА ПК
    Что: смена кадров, появление подписей, точки-индикаторы, подсказка
-        «Листайте».
-   Разметку создаёт: index.html → #aboutShowcase; кадры — js/about.js →
-                    initAboutShowcase.
+        «Листайте» на компьютере; на телефоне и планшете — быстрое всплытие
+        блоков окна #aboutModal.
+   Разметку создаёт: index.html → #aboutShowcase, #aboutModal;
+                     кадры — js/about.js → initAboutShowcase.
    Подключён: index.html, после всех css/style/*; здесь после 14-particles.css — последний в проекте.
-   Группы блоков в файле: 1 (общие), 3 (компьютер), 9 (уменьшить движение).
+   Группы блоков в файле: 1 (общие), 3 (компьютер), 4 (всё, кроме
+                          компьютера), 9 (уменьшить движение).
    ═══════════════════════════════════════════════════════════════════════ */
 
 /* ── ПОРЯДОК БЛОКОВ В ФАЙЛЕ (одинаков во всех css/style и css/anim) ──
@@ -296,12 +298,41 @@
   .nr-about-hint-arrow { animation: nrAboutHintArrow 1.8s ease-in-out infinite; }
 }
 
+/* ═══ 4. ВСЁ, КРОМЕ КОМПЬЮТЕРА (max-width: 1023.98px) ═══════════════════════
+   «ОБО МНЕ»: ВСПЛЫТИЕ БЛОКОВ ОКНА #aboutModal
+
+   С 1024px профиль открывается разделом #aboutShowcase — там кадры и
+   таймлайны (группа 3). На телефоне и планшете тот же контент живёт в окне
+   #aboutModal (index.html), и блоки профиля всплывают при открытии тем же
+   ритмом, что повторный вход в кадр на компьютере: 0.75 с на блок, шаг
+   0.07 с. Долгих анимаций здесь нет намеренно — печать по буквам и таймлайны
+   остаются только на компьютере.
+
+   Первый блок (планка-стойка с «STUDIO ENGINEER PROFILE») не анимируется: в
+   разметке у неё opacity-40, а кадры nrAboutTextIn заканчиваются на
+   opacity: 1 — стойка стала бы ярче остального профиля.
+
+   Скрытое состояние держит сама анимация (fill-mode backwards): до своего шага
+   блок прозрачен, после — в обычном виде. Поэтому «уменьшить движение»
+   обходится снятием анимации (группа 9), возвращать opacity вручную не нужно. */
+@media (max-width: 1023.98px) {
+  #aboutModal.active .nr-about-scroll > *:nth-child(n + 2) {
+    animation: nrAboutTextIn 0.75s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+
+  #aboutModal.active .nr-about-scroll > *:nth-child(3) { animation-delay: 0.07s; }
+  #aboutModal.active .nr-about-scroll > *:nth-child(4) { animation-delay: 0.14s; }
+  #aboutModal.active .nr-about-scroll > *:nth-child(5) { animation-delay: 0.21s; }
+  #aboutModal.active .nr-about-scroll > *:nth-child(6) { animation-delay: 0.28s; }
+}
+
 /* ═══ 9. «УМЕНЬШИТЬ ДВИЖЕНИЕ» ═══════════════════════════════════════════════ */
 
 @media (prefers-reduced-motion: reduce) {
   .nr-about-slide.is-active .nr-about-text > *,
   .nr-about-hint.is-in,
-  .nr-about-hint-arrow {
+  .nr-about-hint-arrow,
+  #aboutModal.active .nr-about-scroll > * {
     animation: none !important;
   }
 }

@@ -1,7 +1,9 @@
 /* ═══════════════════════════════════════════════════════════════════════
    css/anim/16-calculator.css — РАСЧЁТ СТОИМОСТИ
    Что: всплытие блоков анкеты при открытии раздела — по очереди, сверху
-        вниз, чтобы клиенту было видно, что в окне нужно делать.
+        вниз, чтобы клиенту было видно, что в окне нужно делать. Полная
+        лента играется один раз за загрузку страницы, дальше блоки и смета
+        всплывают короткой лесенкой.
    Разметку создаёт: index.html → #priceCalcShowcase, шаги — атрибут
                      data-calc-rise; вид раздела — css/style/19-calculator.css.
    Подключён: index.html, после всех файлов css/style; здесь после 15-about.css — последний в проекте.
@@ -84,14 +86,63 @@
    анкеты скрыт (css/style/19-calculator.css, группа 1). */
 .nr-calcshow-overlay.active [data-calc-rise="9"] { animation-delay: 2.48s; }
 
+/* ── ПОВТОРНОЕ ОТКРЫТИЕ: КОРОТКАЯ ЛЕСЕНКА ──────────────────────────────────
+   Полная лента выше играется один раз за загрузку страницы: флаг
+   calcRevealPlayed живёт в js/calculator.js → openPriceCalcShowcase. Со второго
+   открытия на оверлее стоит класс is-revealed, и блоки всплывают тем же
+   ритмом, что повторный вход в «Обо мне» на компьютере
+   (css/anim/15-about.css → nrAboutTextIn): 0.75 с на блок, шаг 0.07 с.
+   Кадры, скрытое состояние и pointer-events остаются прежними — меняются
+   только длительность и задержки, поэтому вспышка «появился и исчез» (см.
+   выше) сюда не возвращается. */
+.nr-calcshow-overlay.is-revealed [data-calc-rise] {
+  animation-duration: 0.75s;
+}
+
+.nr-calcshow-overlay.is-revealed [data-calc-rise="1"] { animation-delay: 0s; }
+.nr-calcshow-overlay.is-revealed [data-calc-rise="2"] { animation-delay: 0.07s; }
+.nr-calcshow-overlay.is-revealed [data-calc-rise="3"] { animation-delay: 0.14s; }
+.nr-calcshow-overlay.is-revealed [data-calc-rise="4"] { animation-delay: 0.21s; }
+.nr-calcshow-overlay.is-revealed [data-calc-rise="5"] { animation-delay: 0.28s; }
+.nr-calcshow-overlay.is-revealed [data-calc-rise="6"] { animation-delay: 0.35s; }
+.nr-calcshow-overlay.is-revealed [data-calc-rise="7"] { animation-delay: 0.42s; }
+.nr-calcshow-overlay.is-revealed [data-calc-rise="8"] { animation-delay: 0.49s; }
+.nr-calcshow-overlay.is-revealed [data-calc-rise="9"] { animation-delay: 0.56s; }
+
+/* ── СМЕТА: БЫСТРОЕ ВСПЛЫТИЕ ────────────────────────────────────────────────
+   Правая колонка на компьютере и вторая страница на планшете и телефоне
+   (js/calculator.js → showCalcSummaryView) шагов таймлайна не имеют: строки
+   сметы всплывают лесенкой сразу, тем же ритмом (0.75 с на строку, шаг
+   0.07 с).
+   На узких экранах смета скрыта через display: none
+   (css/style/19-calculator.css, группа 4): браузер отменяет её анимации, и при
+   каждом переходе «Далее» лесенка начинается заново — отдельный класс для
+   перезапуска не нужен.
+   pointer-events в кадрах nrCalcRise гасят клики, пока строка не всплыла, —
+   иначе тап по ещё невидимой кнопке сработал бы вслепую. */
+.nr-calcshow-overlay.active .nr-calcshow-summary > * {
+  opacity: 0;
+  transform: translate3d(0, 16px, 0);
+  pointer-events: none;
+  animation: nrCalcRise 0.75s var(--nr-ease) both;
+}
+
+.nr-calcshow-overlay.active .nr-calcshow-summary > *:nth-child(2) { animation-delay: 0.07s; }
+.nr-calcshow-overlay.active .nr-calcshow-summary > *:nth-child(3) { animation-delay: 0.14s; }
+.nr-calcshow-overlay.active .nr-calcshow-summary > *:nth-child(4) { animation-delay: 0.21s; }
+.nr-calcshow-overlay.active .nr-calcshow-summary > *:nth-child(5) { animation-delay: 0.28s; }
+.nr-calcshow-overlay.active .nr-calcshow-summary > *:nth-child(6) { animation-delay: 0.35s; }
+.nr-calcshow-overlay.active .nr-calcshow-summary > *:nth-child(7) { animation-delay: 0.42s; }
+
 /* ═══ 9. «УМЕНЬШИТЬ ДВИЖЕНИЕ» ═══════════════════════════════════════════════ */
 
-/* Уважение к системной настройке: блоки стоят на месте с первой секунды.
-   opacity и transform возвращаем ЯВНО: выше у [data-calc-rise] объявлено
-   скрытое состояние для всплытия, и с animation: none блоки остались бы
-   невидимыми навсегда. */
+/* Уважение к системной настройке: блоки анкеты и строки сметы стоят на месте
+   с первой секунды. opacity и transform возвращаем ЯВНО: выше у
+   [data-calc-rise] и у детей сметы объявлено скрытое состояние для всплытия,
+   и с animation: none они остались бы невидимыми навсегда. */
 @media (prefers-reduced-motion: reduce) {
-  .nr-calcshow-overlay.active [data-calc-rise] {
+  .nr-calcshow-overlay.active [data-calc-rise],
+  .nr-calcshow-overlay.active .nr-calcshow-summary > * {
     opacity: 1;
     transform: none;
     pointer-events: auto;
