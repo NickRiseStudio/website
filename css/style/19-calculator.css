@@ -540,6 +540,9 @@
    рендерится. */
 .nr-calcshow-form-foot { display: none; }
 
+/* «Далее» — только планшет и телефон (на компьютере подвал анкеты скрыт).
+   Ореол симметричен: смещение по Y равно нулю, иначе янтарное свечение
+   ложится под кнопку и читается как тень. */
 .nr-calcshow-next {
   display: flex;
   align-items: center;
@@ -555,7 +558,7 @@
   font-size: 15px;
   font-weight: 900;
   cursor: pointer;
-  box-shadow: 0 14px 30px rgba(245, 158, 11, 0.28);
+  box-shadow: 0 0 30px rgba(245, 158, 11, 0.28);
   transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
               box-shadow 0.4s ease;
 }
@@ -688,6 +691,10 @@
 }
 
 /* ── Кнопки: отправка в Telegram и копирование ─────────────────────── */
+/* Ореол тот же, что у «Далее»: смещение по Y равно нулю (иначе янтарное
+   свечение ложится под корпус и читается как тень), блюр и плотность
+   совпадают — кнопки одного размера и стоят в одинаковых по ширине
+   колонках. */
 .nr-calcshow-send {
   display: flex;
   align-items: center;
@@ -703,7 +710,7 @@
   font-size: 14px;
   font-weight: 900;
   cursor: pointer;
-  box-shadow: 0 14px 30px rgba(245, 158, 11, 0.28);
+  box-shadow: 0 0 30px rgba(245, 158, 11, 0.28);
   transition: transform 0.55s cubic-bezier(0.16, 1, 0.3, 1),
               box-shadow 0.55s ease;
 }
@@ -1106,12 +1113,12 @@
 
   .nr-calcshow-send:hover {
     transform: translateY(-2px);
-    box-shadow: 0 20px 40px rgba(245, 158, 11, 0.38);
+    box-shadow: 0 0 40px rgba(245, 158, 11, 0.38);
   }
 
   .nr-calcshow-next:hover {
     transform: translateY(-2px);
-    box-shadow: 0 20px 40px rgba(245, 158, 11, 0.38);
+    box-shadow: 0 0 40px rgba(245, 158, 11, 0.38);
   }
 
   .nr-calcshow-copy:hover {

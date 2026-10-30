@@ -251,11 +251,16 @@ function showCalcSummaryView() {
   if (summary) summary.scrollTop = 0;
 }
 
-// Возврат к анкете с итога.
+// Возврат к анкете с итога. Класс is-revealed включает короткую лесенку
+// (css/anim/16-calculator.css): без него анкета, скрытая на итоге через
+// display: none, возвращалась полной лентой с задержками до 2.48 с — блоки
+// стояли невидимыми, и возврат читался как «ничего не произошло».
 function showCalcFormView() {
   const panel = getCalcPanel();
   if (!panel) return;
   panel.classList.remove('is-summary-view');
+  const box = getCalcFormBox();
+  if (box) box.classList.add('is-revealed');
   const form = panel.querySelector('.nr-calcshow-form');
   if (form) form.scrollTop = 0;
 }

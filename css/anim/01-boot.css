@@ -84,13 +84,15 @@ html.nr-boot-active body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 19px;
 }
 
-/* Логотип — сдержанно: рамка + лёгкое включение, без свечения */
+/* Логотип — сдержанно: рамка + лёгкое включение, без свечения.
+   Размер в px, картинка тянется на 100% (width/height в разметке — лишь
+   запасное соотношение до загрузки), поэтому масштабируется вместе с ним. */
 .nr-boot-logo {
-  width: 96px;
-  height: 96px;
+  width: 115px;
+  height: 115px;
   border-radius: 50%;
   overflow: hidden;
   border: 2px solid rgba(245, 158, 11, 0.45);
@@ -113,7 +115,7 @@ html.nr-boot-active body {
   font-family: 'Space Grotesk', 'Plus Jakarta Sans', 'Manrope', system-ui, sans-serif;
   font-weight: 700;
   letter-spacing: 0.18em;
-  font-size: 15px;
+  font-size: 18px;
   color: #f3f4f6;
   text-align: center;
   white-space: nowrap;
@@ -150,15 +152,15 @@ html.nr-boot-active body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 11px;
-  padding: 13px 20px;
-  border-radius: 10px;
+  gap: 13px;
+  padding: 16px 24px;
+  border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.09);
   background:
     repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 1px, rgba(0, 0, 0, 0.03) 1px 3px),
     linear-gradient(180deg, #2b303b 0%, #171b24 46%, #0d1017 100%);
   box-shadow:
-    0 18px 40px rgba(0, 0, 0, 0.62),
+    0 22px 48px rgba(0, 0, 0, 0.62),
     inset 0 1px 0 rgba(255, 255, 255, 0.15),
     inset 0 -1px 0 rgba(0, 0, 0, 0.75);
   animation: nrBootFadeIn 0.5s var(--nr-ease) 0.3s both;
@@ -167,8 +169,8 @@ html.nr-boot-active body {
 /* Болты по углам панели */
 .nr-boot-screw {
   position: absolute;
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #7b8291, #23262e 72%);
   box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.9), 0 1px 1px rgba(255, 255, 255, 0.12);
@@ -185,20 +187,20 @@ html.nr-boot-active body {
   transform: rotate(35deg);
 }
 
-.nr-boot-screw:nth-child(1) { left: 6px; top: 6px; }
+.nr-boot-screw:nth-child(1) { left: 7px; top: 7px; }
 
-.nr-boot-screw:nth-child(2) { right: 6px; top: 6px; }
+.nr-boot-screw:nth-child(2) { right: 7px; top: 7px; }
 
-.nr-boot-screw:nth-child(3) { left: 6px; bottom: 6px; }
+.nr-boot-screw:nth-child(3) { left: 7px; bottom: 7px; }
 
-.nr-boot-screw:nth-child(4) { right: 6px; bottom: 6px; }
+.nr-boot-screw:nth-child(4) { right: 7px; bottom: 7px; }
 
 /* Верхний ряд панели: слева тумблер питания, справа — ряд ламп накаливания */
 .nr-boot-rack-top {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 20px;
+  gap: 24px;
   width: 100%;
 }
 
@@ -212,9 +214,9 @@ html.nr-boot-active body {
 
 .nr-boot-switch {
   position: relative;
-  width: 16px;
-  height: 24px;
-  border-radius: 3px;
+  width: 19px;
+  height: 29px;
+  border-radius: 4px;
   background: linear-gradient(180deg, #3a4150 0%, #1a1e26 100%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 2px 5px rgba(0, 0, 0, 0.6);
 }
@@ -225,23 +227,25 @@ html.nr-boot-active body {
   left: 2px;
   right: 2px;
   top: 2px;
-  height: 11px;
-  border-radius: 2px;
+  height: 13px;
+  border-radius: 3px;
   background: linear-gradient(180deg, #e8eaee 0%, #9aa1ad 100%);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
   animation: nrBootSwitchFlip 0.4s ease-out 0.16s both;
 }
 
+/* Ход бегунка — до упора в нижнюю кромку корпуса (29px − 2px отступа − 13px
+   высоты = 14px), вверх — короткий отскок на 1px. */
 @keyframes nrBootSwitchFlip {
-  0%   { transform: translateY(9px); }
+  0%   { transform: translateY(14px); }
   70%  { transform: translateY(-1px); }
   100% { transform: translateY(0); }
 }
 
 .nr-boot-pilot {
   position: relative;
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: #3a2606;
   box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.8);
@@ -263,14 +267,15 @@ html.nr-boot-active body {
   100% { opacity: 1; }
 }
 
-/* VU-метры: светлая шкала, «стекло», стрелка с «нуля» к рабочей отметке */
-.nr-boot-meters { display: flex; gap: 11px; }
+/* VU-метры: светлая шкала, «стекло», стрелка с «нуля» к рабочей отметке.
+   Пропорция кадра — 100:58 из viewBox шкалы, поэтому 101 × 58.6. */
+.nr-boot-meters { display: flex; gap: 13px; }
 
 .nr-boot-meter {
   position: relative;
-  width: 84px;
-  height: 48.7px;
-  border-radius: 4px;
+  width: 101px;
+  height: 58.6px;
+  border-radius: 5px;
   overflow: hidden;
   background:
     radial-gradient(120% 90% at 50% 0%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 58%),
@@ -286,9 +291,9 @@ html.nr-boot-active body {
   position: absolute;
   left: 50%;
   bottom: 0;
-  width: 7px;
-  height: 7px;
-  margin-left: -3.5px;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
   border-radius: 50%;
   background: radial-gradient(circle at 38% 34%, #565b66, #101216 74%);
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
@@ -300,12 +305,12 @@ html.nr-boot-active body {
 .nr-boot-needle {
   position: absolute;
   left: 50%;
-  bottom: 3.5px;
+  bottom: 4px;
   width: 2px;
-  height: 33px;
+  height: 40px;
   margin-left: -1px;
   border-radius: 1px;
-  background: linear-gradient(180deg, #d13b2e 0 5px, #23262e 5px 100%);
+  background: linear-gradient(180deg, #d13b2e 0 6px, #23262e 6px 100%);
   transform-origin: 50% 100%;
   transform: rotate(-52deg);
   animation: nrBootNeedle 1.05s var(--nr-snap) 0.4s both;
@@ -314,7 +319,7 @@ html.nr-boot-active body {
 .nr-boot-glass {
   position: absolute;
   inset: 0;
-  border-radius: 4px;
+  border-radius: 5px;
   pointer-events: none;
   background: linear-gradient(115deg, rgba(255, 255, 255, 0.36) 0%, rgba(255, 255, 255, 0.07) 25%, rgba(255, 255, 255, 0) 44%, rgba(255, 255, 255, 0) 66%, rgba(255, 255, 255, 0.13) 100%);
 }
@@ -328,12 +333,12 @@ html.nr-boot-active body {
 /* Лампы накаливания — индикатор загрузки. Загораются по одной слева направо
    (animation-delay с шагом 0.21 с): так ряд читается как прогресс и заменяет
    прежнюю полосу. Последняя лампа «доезжает» ровно к ~1.5 с — моменту MIN_HOLD. */
-.nr-boot-tubes { display: flex; gap: 10px; }
+.nr-boot-tubes { display: flex; gap: 12px; }
 
 .nr-boot-tubes span {
   position: relative;
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: radial-gradient(circle at 40% 34%, #4a3a12 0%, #2a2008 60%, #17130a 100%);
   box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.7);
@@ -345,7 +350,7 @@ html.nr-boot-active body {
   inset: -2px;
   border-radius: 50%;
   background: radial-gradient(circle at 40% 34%, #fff7dc 0%, #fbbf24 40%, #b45309 76%, rgba(120, 72, 6, 0) 100%);
-  box-shadow: 0 0 14px rgba(245, 158, 11, 0.7);
+  box-shadow: 0 0 17px rgba(245, 158, 11, 0.7);
   opacity: 0;
   transform: scale(0.72);
   animation: nrBootTubeOn 0.34s ease-out both;
@@ -369,15 +374,16 @@ html.nr-boot-active body {
 
 /* ═══ 7. УЗКИЙ ТЕЛЕФОН (max-width: 480px / 380px) ═══════════════════════════ */
 
-/* Узкие экраны: rack уменьшается, чтобы влезал в ширину */
+/* Узкие экраны: rack уменьшается, чтобы влезал в ширину
+   (панель = 2×77 + 10 + 2×17 + 2px рамки ≈ 200px — влезает в 320px) */
 @media (max-width: 480px) {
-  .nr-boot-rack { gap: 9px; padding: 11px 14px; }
-  .nr-boot-rack-top { gap: 13px; }
-  .nr-boot-meters { gap: 8px; }
-  .nr-boot-meter { width: 64px; height: 37.1px; }
-  .nr-boot-needle { height: 24px; }
-  .nr-boot-tubes { gap: 7px; }
-  .nr-boot-tubes span { width: 10px; height: 10px; }
+  .nr-boot-rack { gap: 11px; padding: 13px 17px; }
+  .nr-boot-rack-top { gap: 16px; }
+  .nr-boot-meters { gap: 10px; }
+  .nr-boot-meter { width: 77px; height: 44.7px; }
+  .nr-boot-needle { height: 29px; }
+  .nr-boot-tubes { gap: 8px; }
+  .nr-boot-tubes span { width: 12px; height: 12px; }
 }
 
 /* ═══ 9. «УМЕНЬШИТЬ ДВИЖЕНИЕ» ═══════════════════════════════════════════════ */

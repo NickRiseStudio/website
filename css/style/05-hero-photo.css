@@ -50,6 +50,9 @@
   transform: translateX(-50%) !important;
   z-index: 10;
   margin: 0 !important;
+  /* Ореол симметричен: у shadow-lg из разметки смещение 10px и 4px вниз,
+     поэтому янтарное свечение ложилось под бейдж и читалось как тень. */
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.3);
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -58,7 +61,7 @@
    сглаживание — на Windows текст «сереет» и мылится. Вместо роста плитки
    даём подсветку фоном (group-hover:bg-amber-400 в разметке) и свечение. */
 .hero-mask-container:hover .hero-about-badge {
-  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.4), 0 12px 28px rgba(245, 158, 11, 0.5);
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.4), 0 0 28px rgba(245, 158, 11, 0.5);
 }
 
 /* ═══ 4. ВСЁ, КРОМЕ КОМПЬЮТЕРА (max-width: 1023.98px) ═══════════════════════ */

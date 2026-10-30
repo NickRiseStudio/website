@@ -179,11 +179,15 @@ body.nr-playing .nr-rings i:nth-child(3) { animation-delay: 1.6s; }
   50%      { transform: translate(-50%, -5px); }
 }
 
-/* Главная кнопка — «REC»: блик + кольцо готовности */
+/* Главная кнопка — «REC»: блик + кольцо готовности.
+   Ореол не нужен: у утилиты shadow-xl из разметки смещение 20px и 8px вниз,
+   то есть свечение ложилось под кнопку и читалось как тень, а ровное кольцо
+   на тёмном фоне почти незаметно. Тень снята целиком. */
 #hero a[href="#player"] {
   position: relative;
   overflow: hidden;
   isolation: isolate;
+  box-shadow: none;
 }
 
 #hero a[href="#player"]::before {
