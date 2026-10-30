@@ -141,15 +141,20 @@ let lastDetectedDevice = getDeviceType();
 function initI18n() {
   const langToggle = document.getElementById('langToggleContainer');
   if (langToggle) {
+    /* Клик ловится на капсуле целиком: по букве — переход на её язык, по фону
+       капсулы, ползунку или уже выбранной букве — на противоположный. Кнопки
+       настоящие, поэтому Enter и Space браузер превращает в click сам;
+       отдельный обработчик клавиш дал бы двойное переключение. */
     langToggle.addEventListener('click', (e) => {
       e.preventDefault();
-      toggleLanguage();
-    });
-    langToggle.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        toggleLanguage();
+      if (isSwitchingLanguage) return;
+      const btn = e.target.closest('[data-lang-btn]');
+      const want = btn ? btn.getAttribute('data-lang-btn') : '';
+      if (want && want !== currentLang) {
+        setLanguage(want, true, true);
+        return;
       }
+      toggleLanguage();
     });
   }
 
@@ -258,6 +263,11 @@ function setLanguage(lang, savePreference = true, animate = false) {
   const langToggle = document.getElementById('langToggleContainer');
   if (langToggle) {
     langToggle.setAttribute('data-lang', lang);
+    /* Настоящие кнопки букв: выбранная помечена aria-pressed, чтобы состояние
+       читалось скринридером. */
+    langToggle.querySelectorAll('[data-lang-btn]').forEach(btn => {
+      btn.setAttribute('aria-pressed', btn.getAttribute('data-lang-btn') === lang ? 'true' : 'false');
+    });
   }
 
   if (!animate) {

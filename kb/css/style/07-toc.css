@@ -1,0 +1,240 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   kb/css/style/07-toc.css — СОДЕРЖАНИЕ СТАТЬИ
+   Что: правая панель с разделами открытой статьи. На компьютере — третья
+        колонка рядом с текстом, на телефоне и планшете — шторка, которая
+        выезжает справа по кнопке «Содержание» на полосе #kbSidebarBar.
+        Пункт раздела, в котором сейчас читатель, подсвечен янтарной полосой.
+        При открытии статьи из приветствия колонка выезжает справа — место
+        в раскладке она занимает сразу, поэтому текст ложится по своей ширине
+        и не перекладывается по ходу движения (группа 3 → kbTocIn).
+   Разметку создаёт: kb/index.html → #kbToc, #kbTocToggle (внутри — по списку
+        .kb-toc-page на каждую статью).
+   Открытие, закрытие и подсветку раздела считает: kb/js/05-toc.js.
+   Подключён: kb/index.html, после 06-article.css, до слоя анимаций.
+   Группы блоков в файле: 1 (общие), 3 (компьютер), 4 (всё, кроме
+        компьютера), 5 (планшет), 6 (телефон), 8 (ввод), 9 (уменьшить движение).
+   Слои: затемнение шторки 39 → шторки 40 → полоса с кнопками 45 → шапка 50.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── ПОРЯДОК БЛОКОВ В ФАЙЛЕ ──
+   1. ОБЩИЕ — все устройства            6. ТЕЛЕФОН (max-width: 639.98px)
+   2. ПЛАНШЕТ И ШИРЕ (min-width: 640px) 7. УЗКИЙ ТЕЛЕФОН (480px / 380px)
+   3. КОМПЬЮТЕР (min-width: 1024px)     8. ВВОД (hover / pointer)
+   4. ВСЁ, КРОМЕ КОМПЬЮТЕРА (≤1023.98)  9. «УМЕНЬШИТЬ ДВИЖЕНИЕ»
+   5. ПЛАНШЕТ (640–1023.98px)
+   Границы те же, что на основном сайте: 639.98 / 1023.98, только px. */
+
+/* ═══ 1. ОБЩИЕ — ВСЕ УСТРОЙСТВА ═════════════════════════════════════════════ */
+
+/* Колонка существует только на компьютере (группа 3), шторка — только там,
+   где меню спрятано (группа 4). До них панели нет вовсе. */
+#kbToc {
+  display: none;
+}
+
+/* Содержание нужно только открытой статье: в приветствии нет ни колонки, ни
+   кнопки на полосе. Правило смотрит на «не статья», а не на «приветствие»:
+   до первого кадра скрипт ещё не успел поставить атрибут, и лишнего на
+   странице быть не должно. */
+html:not([data-kb-view="article"]) #kbToc,
+html:not([data-kb-view="article"]) #kbTocToggle {
+  display: none;
+}
+
+/* Список разделов свой у каждой статьи — виден тот, что открыт
+   (kb/js/05-toc.js). */
+.kb-toc-page {
+  display: none;
+}
+
+.kb-toc-page.is-current {
+  display: block;
+}
+
+/* Список разделов. Вертикальной линии нет: пункты плоские, а место читателя
+   показывает янтарная полоса у активного — как у пункта статьи в левом меню
+   (kb/css/style/05-sidebar.css → .kb-side-link.is-active). */
+.kb-toc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.kb-toc-link {
+  display: block;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--kb-text-dim);
+  transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease,
+              transform 0.12s ease;
+}
+
+.kb-toc-link:hover {
+  background-color: rgba(255, 255, 255, 0.045);
+  color: #FFFFFF;
+}
+
+.kb-toc-link.is-active {
+  background-color: rgba(245, 158, 11, 0.1);
+  box-shadow: inset 2px 0 0 var(--kb-amber);
+  color: #FFFFFF;
+}
+
+/* Нажатие: пункт содержания чуть проседает — тот же отклик, что у пунктов
+   меню статей. */
+.kb-toc-link:active {
+  transform: scale(0.985);
+}
+
+/* ═══ 3. КОМПЬЮТЕР (min-width: 1024px) ══════════════════════════════════════ */
+
+/* Третья колонка оболочки: своя прокрутка, как у меню статей, — прокрутка
+   идёт внутри панели, страница остаётся одним экраном. */
+@media (min-width: 1024px) {
+  #kbToc {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 260px;
+    width: 260px;
+    padding: 28px 14px 36px;
+    border-left: 1px solid rgba(31, 41, 55, 0.7);
+    background-color: var(--kb-surface);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .kb-toc-link {
+    font-size: 13px;
+  }
+
+  /* ── Выезд колонки при открытии статьи из приветствия ──────────────────
+     В приветствии панели нет вовсе (общее правило выше), и появлялась она
+     на месте целиком — статья и её содержание возникали в один кадр. Теперь
+     колонка выезжает из-за правого края экрана. Место в раскладке она
+     занимает с первого кадра — поэтому текст статьи сразу разложен по своей
+     окончательной ширине и по ходу движения не перекладывается.
+
+     Движется анимация, а не переход: у приветствия панель под display: none,
+     а с такого состояния браузер переходы не запускает. Кадры задают и
+     начало (за краем), и конец — класс is-opening ставит kb/js/05-toc.js →
+     playIn, по концу анимации снимает. */
+  @keyframes kbTocIn {
+    from {
+      opacity: 0;
+      transform: translate3d(100%, 0, 0);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  #kbToc.is-opening {
+    animation: kbTocIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) both;
+  }
+}
+
+/* ═══ 4. ВСЁ, КРОМЕ КОМПЬЮТЕРА (max-width: 1023.98px) ═══════════════════════ */
+
+/* Та же разметка — шторка под шапкой и полосой с кнопками. Выезжает справа
+   теми же 1.2s и той же кривой, что меню статей; затемнение общее с ним
+   (#kbSidebarOverlay), потому что открыта всегда только одна шторка. */
+@media (max-width: 1023.98px) {
+  #kbToc {
+    position: fixed;
+    top: calc(var(--kb-header-h) + var(--kb-bar-h));
+    right: 0;
+    width: 100%;
+    max-height: calc(100dvh - var(--kb-header-h) - var(--kb-bar-h));
+    display: flex;
+    flex-direction: column;
+    padding: 14px 12px 24px;
+    border-bottom: 1px solid rgba(31, 41, 55, 0.8);
+    background-color: #0C0E12;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.55);
+    z-index: 40;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    opacity: 0;
+    visibility: hidden;
+    transform: translate3d(100%, 0, 0);
+    pointer-events: none;
+    /* Обратный ход короче выезда — как у меню статей (kb/css/style/05-sidebar.css).
+       Открытие остаётся на 1.2s в .is-open. */
+    transition: transform 0.6s var(--kb-ease), opacity 0.25s ease,
+                visibility 0.6s step-end;
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  #kbToc.is-open {
+    opacity: 1;
+    visibility: visible;
+    transform: translate3d(0, 0, 0);
+    pointer-events: auto;
+    transition: transform 1.2s var(--kb-ease), opacity 0.15s ease,
+                visibility 0s linear;
+  }
+}
+
+/* ═══ 5. ПЛАНШЕТ (640–1023.98px) ════════════════════════════════════════════ */
+
+/* На планшете шторка уже не во всю ширину: справа остаётся видно текст
+   статьи, по которому видно, куда ведёт пункт. */
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  #kbToc {
+    width: 380px;
+    border-left: 1px solid rgba(31, 41, 55, 0.8);
+    border-bottom: 0;
+  }
+}
+
+/* ═══ 6. ТЕЛЕФОН (max-width: 639.98px) ══════════════════════════════════════ */
+
+@media (max-width: 639.98px) {
+  #kbToc {
+    padding: 12px 10px 20px;
+  }
+
+  .kb-toc-link {
+    font-size: 12px;
+    padding: 8px 10px;
+  }
+}
+
+/* ═══ 8. ВВОД ═══════════════════════════════════════════════════════════════ */
+
+/* На касании «залипшего» наведения не бывает: подсветка остаётся только
+   у настоящего курсора и у активного раздела. */
+@media (hover: none) {
+  .kb-toc-link:hover {
+    background-color: transparent;
+    color: var(--kb-text-dim);
+  }
+
+  .kb-toc-link.is-active:hover {
+    background-color: rgba(245, 158, 11, 0.1);
+    color: #FFFFFF;
+  }
+}
+
+/* ═══ 9. «УМЕНЬШИТЬ ДВИЖЕНИЕ» ═══════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  #kbToc,
+  #kbToc.is-open,
+  .kb-toc-link {
+    transition: none;
+  }
+
+  /* Выезд колонки — тоже движение: без него панель встаёт на место сразу. */
+  #kbToc.is-opening {
+    animation: none;
+  }
+}

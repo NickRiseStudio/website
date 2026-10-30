@@ -1,0 +1,319 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   kb/css/style/06-article.css — СТАТЬЯ
+   Что: типографика текста статьи в панели чтения — колонка чтения,
+        заголовки, абзацы, списки, чек-лист, врезки, иллюстрации, ссылки.
+        Все статьи лежат в одном документе, поэтому видна всегда одна секция:
+        её выбирает kb/js/07-articles.js по адресу страницы.
+        Появление панели чтения — в слое анимаций (css/anim/02-panels.css).
+   Разметку создаёт: kb/index.html → main#kbMain > #kbMainInner > article#kbArticle
+                    > section.kb-article-page (по секции на статью).
+   Подключён: kb/index.html, после 05-sidebar.css, до 07-toc.css.
+   Группы блоков в файле: 1 (общие), 2 (планшет и шире), 3 (компьютер),
+        4 (всё, кроме компьютера), 6 (телефон), 9 (уменьшить движение).
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ═══ 1. ОБЩИЕ — ВСЕ УСТРОЙСТВА ═════════════════════════════════════════════ */
+
+/* Колонка чтения: 72ch — та ширина, на которой строка не «расползается»
+   на широком мониторе. */
+#kbArticle {
+  display: none;
+  max-width: 72ch;
+  margin: 0 auto;
+  padding: 28px 16px 64px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #DCDFE4;
+}
+
+/* Статья есть только в режиме статьи: в приветствии её на панели нет вовсе,
+   иначе пустая колонка с отступами оставляла бы под приветствием полосу.
+   Атрибут ставит kb/js/07-articles.js. */
+html[data-kb-view="article"] #kbArticle {
+  display: block;
+}
+
+/* Показывается одна секция — та, что открыта по адресу. */
+#kbArticle .kb-article-page {
+  display: none;
+}
+
+#kbArticle .kb-article-page.is-current {
+  display: block;
+}
+
+#kbArticle p {
+  margin: 0 0 16px;
+}
+
+.kb-article-title {
+  margin: 0 0 18px;
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1.22;
+  letter-spacing: -0.02em;
+  color: #FFFFFF;
+  text-wrap: balance;
+}
+
+/* Лид — первые абзацы статьи: чуть крупнее и светлее основного текста. */
+.kb-lead {
+  font-size: 16px;
+  color: #E8EAED;
+}
+
+/* Раздел: янтарная черта слева вместо подчёркивания. scroll-margin-top —
+   чтобы при переходе из меню заголовок не прилипал к верхней кромке. */
+#kbArticle h2 {
+  margin: 34px 0 14px;
+  padding-left: 12px;
+  border-left: 3px solid var(--kb-amber);
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: #FFFFFF;
+  scroll-margin-top: 16px;
+  text-wrap: balance;
+}
+
+#kbArticle h3 {
+  margin: 22px 0 10px;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.35;
+  color: var(--kb-amber-lt);
+}
+
+#kbArticle strong {
+  font-weight: 800;
+  color: #FFFFFF;
+}
+
+#kbArticle ul,
+#kbArticle ol {
+  margin: 0 0 16px;
+  padding-left: 22px;
+}
+
+#kbArticle li {
+  margin: 0 0 8px;
+}
+
+#kbArticle li::marker {
+  color: var(--kb-amber);
+}
+
+#kbArticle hr {
+  margin: 26px 0;
+  border: 0;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.35), rgba(245, 158, 11, 0));
+}
+
+#kbArticle a {
+  color: var(--kb-amber-lt);
+  text-decoration: underline;
+  text-decoration-color: rgba(245, 158, 11, 0.4);
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+  transition: color 0.3s ease, text-decoration-color 0.3s ease;
+}
+
+#kbArticle a:hover {
+  color: #FFFFFF;
+  text-decoration-color: var(--kb-amber);
+}
+
+/* Ссылка на ещё не написанную статью: выглядит ссылкой, но не кликается —
+   пунктир говорит, что это заглушка. */
+.kb-link-soon {
+  color: var(--kb-amber-lt);
+  border-bottom: 1px dashed rgba(245, 158, 11, 0.5);
+}
+
+/* Врезка: совет, «куда дальше», предупреждение. */
+.kb-note {
+  margin: 20px 0;
+  padding: 14px 16px;
+  border: 1px solid var(--kb-line);
+  border-left: 3px solid var(--kb-amber);
+  border-radius: 12px;
+  background-color: rgba(245, 158, 11, 0.055);
+}
+
+/* Селектор с id, а не `.kb-note p`: id-правило `#kbArticle p` выше по весу
+   и вернуло бы нижний отступ внутри врезки. */
+#kbArticle .kb-note p {
+  margin: 0;
+}
+
+.kb-note--next {
+  border-left-color: var(--kb-amber-lt);
+  background-color: rgba(245, 158, 11, 0.09);
+}
+
+/* Иллюстрация. Пока картинок нет — рамка с подписью «в работе»; когда
+   файл появится, вместо .kb-figure-frame встанет <img>, и вёрстка та же. */
+.kb-figure {
+  margin: 22px 0;
+}
+
+.kb-figure-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 96px;
+  border: 1px dashed rgba(245, 158, 11, 0.35);
+  border-radius: 12px;
+  background-color: rgba(18, 21, 29, 0.7);
+}
+
+.kb-figure-badge {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(245, 158, 11, 0.75);
+}
+
+.kb-figure figcaption {
+  margin-top: 8px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--kb-text-dim);
+}
+
+/* Чек-лист: пустые квадратики рисует CSS, настоящих чекбоксов нет —
+   отмечать в статье нечего, это список того, что проверить перед записью.
+   Селектор с id — иначе #kbArticle ul вернёт отступ слева. */
+#kbArticle .kb-checklist {
+  list-style: none;
+  padding-left: 0;
+}
+
+.kb-checklist li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.kb-checklist li::before {
+  content: '';
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  margin-top: 5px;
+  border: 1.5px solid rgba(245, 158, 11, 0.55);
+  border-radius: 4px;
+}
+
+/* ═══ 2. ПЛАНШЕТ И ШИРЕ (min-width: 640px) ══════════════════════════════════ */
+
+@media (min-width: 640px) {
+  #kbArticle {
+    padding: 36px 28px 80px;
+    font-size: 16px;
+  }
+
+  .kb-article-title {
+    font-size: 30px;
+  }
+
+  .kb-lead {
+    font-size: 17px;
+  }
+
+  #kbArticle h2 {
+    margin: 40px 0 16px;
+    font-size: 24px;
+  }
+
+  #kbArticle h3 {
+    margin: 26px 0 12px;
+    font-size: 18px;
+  }
+
+  .kb-note {
+    padding: 16px 20px;
+  }
+
+  .kb-figure-frame {
+    min-height: 140px;
+  }
+}
+
+/* ═══ 3. КОМПЬЮТЕР (min-width: 1024px) ══════════════════════════════════════ */
+
+@media (min-width: 1024px) {
+  #kbArticle {
+    padding: 44px 36px 96px;
+  }
+
+  .kb-article-title {
+    font-size: 34px;
+  }
+
+  #kbArticle h2 {
+    font-size: 26px;
+  }
+
+  .kb-figure-frame {
+    min-height: 180px;
+  }
+}
+
+/* ═══ 4. ВСЁ, КРОМЕ КОМПЬЮТЕРА (max-width: 1023.98px) ═══════════════════════ */
+
+/* Колонка чтения занимает всю панель: рядом меню нет, делить ширину не с кем. */
+@media (max-width: 1023.98px) {
+  #kbArticle {
+    max-width: 100%;
+  }
+}
+
+/* ═══ 6. ТЕЛЕФОН (max-width: 639.98px) ══════════════════════════════════════ */
+
+@media (max-width: 639.98px) {
+  #kbArticle {
+    padding: 22px 14px 56px;
+    font-size: 14.5px;
+    line-height: 1.65;
+  }
+
+  .kb-article-title {
+    font-size: 22px;
+  }
+
+  .kb-lead {
+    font-size: 15px;
+  }
+
+  #kbArticle h2 {
+    margin: 28px 0 12px;
+    padding-left: 10px;
+    font-size: 18px;
+  }
+
+  #kbArticle h3 {
+    margin: 20px 0 10px;
+    font-size: 15.5px;
+  }
+
+  #kbArticle ul,
+  #kbArticle ol {
+    padding-left: 18px;
+  }
+
+  .kb-figure-frame {
+    min-height: 84px;
+  }
+}
+
+/* ═══ 9. «УМЕНЬШИТЬ ДВИЖЕНИЕ» ═══════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  #kbArticle a {
+    transition: none;
+  }
+}

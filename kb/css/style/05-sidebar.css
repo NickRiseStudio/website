@@ -1,0 +1,532 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   kb/css/style/05-sidebar.css — МЕНЮ СТАТЕЙ
+   Что: левая колонка со списком статей; под открытой статьёй — сопутствующие
+        статьи (те, на которые она ссылается) вложенным списком с кареткой
+        раскрытия. На компьютере это обычная колонка, на телефоне и планшете
+        та же разметка превращается в шторку, которая выезжает сверху по
+        кнопке «Статьи» (приём и тайминги — как у бургер-меню основного сайта,
+        css/anim/11-toast-modals-menu.css, но здесь всё своё). На полосе две
+        кнопки: «Статьи» слева и «Содержание» справа — вид у них общий, сама
+        панель содержания лежит в css/style/07-toc.css.
+   Разметку создаёт: kb/index.html → #kbSidebarBar, #kbSidebarToggle,
+                    #kbTocToggle, #kbSidebarOverlay, #kbSidebar.
+   Открытие и закрытие: kb/js/04-sidebar.js, kb/js/05-toc.js.
+   Пункт открытой статьи подсвечивает: kb/js/07-articles.js.
+   Подключён: kb/index.html, после 04-greeting.css, до 06-article.css.
+   Группы блоков в файле: 1 (общие), 2 (планшет и шире), 3 (компьютер),
+        4 (всё, кроме компьютера), 6 (телефон), 8 (ввод), 9 (уменьшить движение).
+   Слои: затемнение 39 → шторки 40 → полоса с кнопками 45 → шапка 50.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ═══ 1. ОБЩИЕ — ВСЕ УСТРОЙСТВА ═════════════════════════════════════════════ */
+
+#kbSidebar {
+  flex: 0 0 280px;
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 12px 28px;
+  border-right: 1px solid rgba(31, 41, 55, 0.7);
+  background-color: var(--kb-surface);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Заголовок панели: крупный капс с небольшой разрядкой. Тот же класс носит
+   заголовок правой панели содержания (kb/css/style/07-toc.css), поэтому размер
+   задан здесь один раз для обеих панелей. */
+.kb-side-title {
+  padding: 0 12px;
+  margin-bottom: 14px;
+  font-family: 'Space Grotesk', 'Plus Jakarta Sans', monospace;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(245, 158, 11, 0.9);
+}
+
+.kb-side-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.kb-side-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  color: #E5E7EB;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+  transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease,
+              transform 0.12s ease;
+}
+
+.kb-side-link:hover {
+  background-color: rgba(255, 255, 255, 0.045);
+  color: #FFFFFF;
+}
+
+/* Открытая статья: янтарная полоса слева и мягкая подсветка — то же
+   состояние, что у активного пункта в шапке сайта. */
+.kb-side-link.is-active {
+  background-color: rgba(245, 158, 11, 0.1);
+  box-shadow: inset 2px 0 0 var(--kb-amber);
+  color: #FFFFFF;
+}
+
+/* Каретка раскрытия у статьи с сопутствующими: смотрит вниз, когда список
+   открыт, и вправо, когда свёрнут (kb/js/04-sidebar.js). */
+.kb-side-caret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-left: auto;
+  color: var(--kb-amber);
+  transition: transform 0.3s var(--kb-ease);
+}
+
+.kb-side-caret svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Тема без статьи: пункт не кликается и говорит об этом цветом. */
+.kb-side-item.is-soon .kb-side-link {
+  color: var(--kb-text-dim);
+  cursor: default;
+}
+
+.kb-side-item.is-soon .kb-side-link:hover {
+  background-color: transparent;
+  color: var(--kb-text-dim);
+}
+
+.kb-side-soon {
+  margin-left: auto;
+  padding: 2px 7px;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(245, 158, 11, 0.8);
+}
+
+/* Сопутствующие статьи открытой статьи: вертикальная линия показывает
+   вложенность. Клик по самой статье сворачивает и разворачивает список.
+   Свёрнутый список не исчезает рывком через display: none — он уезжает по
+   высоте и гаснет. Высоту в --kb-subs-h кладёт kb/js/04-sidebar.js перед
+   каждым переключением: max-height должен идти от настоящей высоты списка,
+   а не от догадки. */
+.kb-side-subs {
+  list-style: none;
+  margin: 2px 0 10px 22px;
+  padding: 0 0 0 10px;
+  border-left: 1px solid rgba(245, 158, 11, 0.16);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: var(--kb-subs-h, 320px);
+  overflow: hidden;
+  /* Кривая ровнее, чем --kb-ease: у той половина пути за первые 10% времени,
+     и раскрытие списка читается рывком. */
+  transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              margin 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.35s ease,
+              transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Сопутствующие показываются только у открытой статьи: у остальных пунктов
+   списка их нет. Класс is-current ставит kb/js/07-articles.js. */
+.kb-side-item:not(.is-current) .kb-side-subs {
+  display: none;
+}
+
+/* Отступы уходят вместе с высотой, иначе свёрнутый список оставлял бы
+   за собой пустую полосу. */
+.kb-side-item.is-collapsed .kb-side-subs {
+  max-height: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: max-height 0.35s ease, margin 0.35s ease,
+              opacity 0.25s ease, transform 0.35s ease;
+}
+
+.kb-side-item.is-collapsed .kb-side-caret {
+  transform: rotate(-90deg);
+}
+
+/* ── РАСКРЫТИЕ СПИСКА ПРИ ПЕРЕХОДЕ НА СТАТЬЮ ────────────────────────────
+   У не-текущего пункта список лежит под display: none, а переход с такого
+   состояния браузер не играет вовсе — список оказывался на месте рывком.
+   Поэтому раскрытие играет анимация: она стартует и на только что показанном
+   списке. Кадры задают и начало (свёрнут), и конец — настоящую высоту из
+   --kb-subs-h (её кладёт kb/js/04-sidebar.js): с запасом из CSS список
+   успевал бы раскрыться за пару кадров. Класс is-opening ставит openSubs,
+   снимает его по концу анимации. */
+@keyframes kbSubsOut {
+  from {
+    max-height: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    opacity: 0;
+    transform: translate3d(0, -8px, 0);
+  }
+  to {
+    max-height: var(--kb-subs-h, 320px);
+    margin-top: 2px;
+    margin-bottom: 10px;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.kb-side-item.is-opening .kb-side-subs {
+  animation: kbSubsOut 0.6s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.kb-side-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--kb-text-dim);
+  transition: background-color 0.3s ease, color 0.3s ease, transform 0.12s ease;
+}
+
+.kb-side-sub:hover {
+  background-color: rgba(255, 255, 255, 0.045);
+  color: #FFFFFF;
+}
+
+/* Нажатие: пункт меню чуть проседает. Только transform — раскладка не едет,
+   а палец получает отклик раньше, чем начнётся переход на статью. */
+.kb-side-link:active,
+.kb-side-sub:active {
+  transform: scale(0.985);
+}
+
+/* Тема без статьи внутри сопутствующих: приглушена и не подсвечивается — как
+   в основном списке. Здесь пункт не ссылка, а span. */
+.kb-side-subs .is-soon .kb-side-sub {
+  color: var(--kb-text-dim);
+  cursor: default;
+}
+
+.kb-side-subs .is-soon .kb-side-sub:hover {
+  background-color: transparent;
+  color: var(--kb-text-dim);
+}
+
+/* Полоса с кнопками «Статьи» и «Содержание» существует только там, где меню
+   спрятано в шторку, — на компьютере её нет вовсе. Кнопка «Содержание»
+   показывается только у открытой статьи (css/style/07-toc.css). */
+#kbSidebarBar,
+#kbSidebarOverlay {
+  display: none;
+}
+
+/* ═══ 2. ПЛАНШЕТ И ШИРЕ (min-width: 640px) ══════════════════════════════════ */
+
+@media (min-width: 640px) {
+  #kbSidebar {
+    padding: 24px 14px 32px;
+  }
+
+  .kb-side-title {
+    font-size: 20px;
+  }
+
+  .kb-side-link {
+    font-size: 15px;
+    padding: 12px 14px;
+  }
+
+  .kb-side-sub {
+    font-size: 13px;
+  }
+}
+
+/* ═══ 3. КОМПЬЮТЕР (min-width: 1024px) ══════════════════════════════════════ */
+
+@media (min-width: 1024px) {
+  #kbSidebar {
+    flex-basis: 300px;
+    width: 300px;
+    padding: 28px 16px 36px;
+  }
+
+  .kb-side-title {
+    padding: 0 14px;
+    font-size: 22px;
+  }
+}
+
+/* ═══ 4. ВСЁ, КРОМЕ КОМПЬЮТЕРА (max-width: 1023.98px) ═══════════════════════ */
+
+/* Колонка превращается в шторку под шапкой и полосой с кнопками. Она
+   выезжает сверху теми же 1.2s и той же кривой, что меню основного сайта;
+   пункты появляются каскадом. */
+@media (max-width: 1023.98px) {
+  #kbSidebarBar {
+    position: relative;
+    z-index: 45;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    height: var(--kb-bar-h);
+    padding: 0 12px;
+    background-color: rgba(12, 14, 18, 0.92);
+    border-bottom: 1px solid rgba(31, 41, 55, 0.6);
+  }
+
+  #kbSidebarToggle,
+  #kbTocToggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 6px 12px 6px 8px;
+    border: 1px solid #1F2937;
+    border-radius: 10px;
+    background-color: #14171F;
+    color: #E5E7EB;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: color 0.3s ease, border-color 0.3s ease, transform 0.12s ease;
+  }
+
+  /* Отклик на нажатие — как у пунктов меню: кнопка чуть проседает. */
+  #kbSidebarToggle:active,
+  #kbTocToggle:active {
+    transform: scale(0.97);
+  }
+
+  #kbSidebarToggle:hover,
+  #kbTocToggle:hover {
+    color: #FFFFFF;
+    border-color: rgba(245, 158, 11, 0.45);
+  }
+
+  /* Две иконки в одной коробке: гамбургер уходит, крестик приходит —
+     ровно как у кнопки меню основного сайта. */
+  .kb-sidebar-icons {
+    position: relative;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    color: var(--kb-amber-lt);
+  }
+
+  .kb-sidebar-icons svg {
+    position: absolute;
+    inset: 0;
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+    transform-origin: center;
+    transition: transform 1.2s var(--kb-ease), opacity 0.3s ease;
+  }
+
+  #kbSidebarClose,
+  #kbTocClose {
+    opacity: 0;
+    transform: scale(0.5) rotate(90deg);
+  }
+
+  #kbSidebarToggle.is-open #kbSidebarOpen,
+  #kbTocToggle.is-open #kbTocOpen {
+    opacity: 0;
+    transform: scale(0.5) rotate(-90deg);
+  }
+
+  #kbSidebarToggle.is-open #kbSidebarClose,
+  #kbTocToggle.is-open #kbTocClose {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+
+  #kbSidebarOverlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 39;
+    background-color: rgba(0, 0, 0, 0.75);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.3s ease, visibility 0.3s step-end;
+    will-change: opacity;
+  }
+
+  #kbSidebarOverlay.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity 0.45s var(--kb-ease), visibility 0s linear;
+  }
+
+  #kbSidebar {
+    position: fixed;
+    top: calc(var(--kb-header-h) + var(--kb-bar-h));
+    left: 0;
+    right: 0;
+    width: auto;
+    flex: none;
+    max-height: calc(100dvh - var(--kb-header-h) - var(--kb-bar-h));
+    padding: 14px 12px 24px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(31, 41, 55, 0.8);
+    background-color: #0C0E12;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.55);
+    z-index: 40;
+    opacity: 0;
+    visibility: hidden;
+    transform: translate3d(0, -110%, 0);
+    pointer-events: none;
+    /* Обратный ход короче выезда: панель своё дело сделала, ждать полторы
+       секунды незачем. Открытие остаётся на 1.2s ниже, в .is-open. */
+    transition: transform 0.6s var(--kb-ease), opacity 0.25s ease,
+                visibility 0.6s step-end;
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  #kbSidebar.is-open {
+    opacity: 1;
+    visibility: visible;
+    transform: translate3d(0, 0, 0);
+    pointer-events: auto;
+    transition: transform 1.2s var(--kb-ease), opacity 0.15s ease,
+                visibility 0s linear;
+  }
+
+  /* Каскад пунктов при выезде шторки. */
+  .kb-side-item {
+    opacity: 0;
+    transform: translate3d(0, -22px, 0);
+    transition: opacity 0.55s var(--kb-ease), transform 0.65s var(--kb-ease);
+    will-change: opacity, transform;
+  }
+
+  #kbSidebar.is-open .kb-side-item {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+
+  #kbSidebar.is-open .kb-side-item:nth-child(1) { transition-delay: 0.18s; }
+  #kbSidebar.is-open .kb-side-item:nth-child(2) { transition-delay: 0.30s; }
+  #kbSidebar.is-open .kb-side-item:nth-child(3) { transition-delay: 0.42s; }
+  #kbSidebar.is-open .kb-side-item:nth-child(4) { transition-delay: 0.54s; }
+
+  /* При закрытии пункты уходят синхронно, без задержек. */
+  #kbSidebar:not(.is-open) .kb-side-item {
+    transform: translate3d(0, -12px, 0);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    transition-delay: 0s !important;
+  }
+}
+
+/* ═══ 6. ТЕЛЕФОН (max-width: 639.98px) ══════════════════════════════════════ */
+
+@media (max-width: 639.98px) {
+  #kbSidebar {
+    padding: 12px 10px 20px;
+  }
+
+  .kb-side-link {
+    font-size: 14px;
+    padding: 10px 12px;
+  }
+
+  .kb-side-subs {
+    margin-left: 18px;
+    padding-left: 8px;
+  }
+
+  .kb-side-sub {
+    font-size: 12px;
+    padding: 7px 8px;
+  }
+}
+
+/* ═══ 8. ВВОД ═══════════════════════════════════════════════════════════════ */
+
+/* На касании «залипшего» наведения не бывает: подсветка остаётся только
+   у настоящего курсора. */
+@media (hover: none) {
+  .kb-side-link:hover,
+  .kb-side-sub:hover {
+    background-color: transparent;
+  }
+
+  .kb-side-link:hover {
+    color: #E5E7EB;
+  }
+
+  .kb-side-link.is-active:hover {
+    background-color: rgba(245, 158, 11, 0.1);
+    color: #FFFFFF;
+  }
+
+  .kb-side-item.is-soon .kb-side-link:hover {
+    background-color: transparent;
+    color: var(--kb-text-dim);
+  }
+
+  #kbSidebarToggle:hover,
+  #kbTocToggle:hover {
+    color: #E5E7EB;
+    border-color: #1F2937;
+  }
+}
+
+/* ═══ 9. «УМЕНЬШИТЬ ДВИЖЕНИЕ» ═══════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  #kbSidebar,
+  #kbSidebar.is-open,
+  #kbSidebarOverlay,
+  #kbSidebarOverlay.is-open,
+  .kb-side-item,
+  .kb-side-caret,
+  .kb-sidebar-icons svg,
+  .kb-side-link,
+  .kb-side-sub,
+  .kb-side-subs,
+  #kbSidebarToggle,
+  #kbTocToggle {
+    transition: none;
+  }
+
+  #kbSidebar .kb-side-item,
+  .kb-side-subs {
+    transform: none;
+  }
+
+  /* Раскрытие списка сопутствующих при переходе на статью — без движения:
+     список просто виден (kb/js/04-sidebar.js в этом случае класс не ставит). */
+  .kb-side-item.is-opening .kb-side-subs {
+    animation: none;
+  }
+}

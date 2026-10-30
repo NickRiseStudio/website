@@ -1,0 +1,143 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   kb/css/style/03-hint.css — ПОДСКАЗКА ПОД ЛОГОТИПОМ
+   Что: бабл «Мой основной сайт» с хвостиком вверх и крестиком. Появляется
+        при заходе в базу знаний, после гашения заставки, и уходит по крестику
+        (kb/js/03-hint.js). Статьи открываются внутри того же документа,
+        поэтому подсказка одна на заход.
+   Разметку создаёт: kb/index.html → #kbHint.
+   Позицию и место хвостика считает: kb/js/03-hint.js → positionHint.
+   Подключён: kb/index.html, после 02-header.css, до 04-greeting.css.
+   Группы блоков в файле: 1 (общие), 6 (телефон), 9 (уменьшить движение).
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ═══ 1. ОБЩИЕ — ВСЕ УСТРОЙСТВА ═════════════════════════════════════════════ */
+
+/* z-index 60 — выше шапки (50): бабл стоит под ней, но при наложении не
+   прячется.
+   Вид — как у подсказки логотипа на основном сайте (css/style/14-hints.css →
+   .nr-ab-hint-tip): то же скругление 20px, тот же диагональный градиент
+   плашки, та же двойная тень (глубокая чёрная + янтарный ореол) и та же
+   типографика. Появление — с той же кривой cubic-bezier(0.16, 1, 0.3, 1):
+   бабл мягко «выезжает» сверху, без пружины. */
+.kb-hint {
+  position: fixed;
+  z-index: 60;
+  max-width: min(300px, calc(100vw - 32px));
+  padding: 13px 38px 15px 18px;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-radius: 20px;
+  background: linear-gradient(160deg, rgba(18, 22, 34, 0.98), rgba(9, 12, 18, 0.98));
+  box-shadow: 0 0 38px rgba(0, 0, 0, 0.7), 0 0 26px rgba(245, 158, 11, 0.2);
+  color: #F3F4F6;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: center;
+  opacity: 0;
+  visibility: hidden;
+  transform: translate3d(0, -10px, 0);
+  pointer-events: none;
+  transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+              visibility 0.45s step-end;
+}
+
+.kb-hint.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translate3d(0, 0, 0);
+  pointer-events: auto;
+  transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+              visibility 0s;
+}
+
+/* Хвостик смотрит ВВЕРХ, на логотип: квадрат с левым и верхним ребром,
+   повёрнутый на 45°. Горизонталь задаёт --kb-hint-tail-x из скрипта.
+   Скрипт отдаёт середину логотипа, поэтому 16-пиксельный квадрат сдвинут
+   влево на половину своей ширины — острие смотрит ровно в центр плитки.
+   Фон хвостика — нижняя точка градиента плашки: угол 45° смотрит вниз-влево,
+   а там как раз самый тёмный тон, поэтому шва на стыке не видно. */
+.kb-hint::after {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: var(--kb-hint-tail-x, 28px);
+  width: 16px;
+  height: 16px;
+  margin-left: -8px;
+  transform: rotate(45deg);
+  background-color: rgba(9, 12, 18, 0.98);
+  border-left: 1px solid rgba(245, 158, 11, 0.45);
+  border-top: 1px solid rgba(245, 158, 11, 0.45);
+  border-top-left-radius: 5px;
+}
+
+.kb-hint-accent {
+  color: var(--kb-amber-lt);
+  font-weight: 700;
+}
+
+/* Крестик — справа ПО ЦЕНТРУ по вертикали: в углу в него трудно попасть
+   пальцем. Кнопка 36px, сама иконка — 24px; на телефоне крупнее (см. media
+   ниже: там палец, а не курсор). right: 2px — кнопка вплотную к краю бабла,
+   пустоты справа от иконки нет. */
+.kb-hint-close {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #9CA3AF;
+  cursor: pointer;
+  transition: color 0.3s ease, background-color 0.3s ease;
+}
+
+.kb-hint-close svg {
+  width: 24px;
+  height: 24px;
+}
+
+.kb-hint-close:hover {
+  color: #FFFFFF;
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.kb-hint-close:focus-visible,
+.kb-hint-close:active {
+  color: #F59E0B;
+  background: rgba(245, 158, 11, 0.14);
+  outline: none;
+}
+
+/* ═══ 6. ТЕЛЕФОН (max-width: 639.98px) ══════════════════════════════════════ */
+
+/* Тач-цель крестика больше: палец, а не курсор. */
+@media (max-width: 639.98px) {
+  .kb-hint {
+    max-width: min(280px, calc(100vw - 32px));
+    padding-right: 44px;
+  }
+
+  .kb-hint-close {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* ═══ 9. «УМЕНЬШИТЬ ДВИЖЕНИЕ» ═══════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  .kb-hint,
+  .kb-hint.show {
+    transform: none;
+  }
+}

@@ -35,6 +35,9 @@ const CONFIG = {
         faq: 'FAQ',
         contacts: 'Контакты',
         reviews: 'Отзывы',
+        // Пункт шапки и меню-шторки: скроллит к секции #kb (index.html, вид —
+        // css/style/21-kb.css). Саму базу знаний открывает кнопка в секции.
+        kb: 'База знаний',
         // Кнопки «Заказать»: шапка, меню-шторка и CTA под примерами A/B.
         // Ведёт в расчёт стоимости — js/calculator.js → openPriceCalc().
         orderBtn: 'Заказать'
@@ -201,6 +204,14 @@ const CONFIG = {
       faq: {
         title: 'Частые вопросы'
       },
+      // Секция-анонс после FAQ (index.html → #kb, вид — css/style/21-kb.css).
+      // Волну под заголовком рисует animations.js → initEqLines.
+      kb: {
+        title: 'База знаний',
+        subtitle: 'Реально много полезной информации',
+        ps: 'P.S. Базу знаний лучше всего смотреть с компьютера',
+        button: 'БАЗА ЗНАНИЙ'
+      },
       contacts: {
         subtitle: '<span class="font-semibold text-gray-200">Свяжитесь со мной напрямую<br class="lg:hidden"/> для обсуждения вашего проекта.</span><br/><span class="text-amber-400 font-extrabold mt-1 inline-block">На связи 7 дней в неделю.</span>',
         telegramBtn: 'Открыть Telegram',
@@ -333,6 +344,9 @@ const CONFIG = {
         faq: 'FAQ',
         contacts: 'Contacts',
         reviews: 'Reviews',
+        // Пункт шапки и меню-шторки: скроллит к секции #kb (index.html, вид —
+        // css/style/21-kb.css). Саму базу знаний открывает кнопка в секции.
+        kb: 'Knowledge Base',
         // Кнопки «Заказать»: шапка, меню-шторка и CTA под примерами A/B.
         // Ведёт в расчёт стоимости — js/calculator.js → openPriceCalc().
         orderBtn: 'Order'
@@ -479,6 +493,14 @@ const CONFIG = {
       },
       faq: {
         title: 'FAQ'
+      },
+      // Секция-анонс после FAQ (index.html → #kb, вид — css/style/21-kb.css).
+      // Волну под заголовком рисует animations.js → initEqLines.
+      kb: {
+        title: 'Knowledge Base',
+        subtitle: 'A lot of genuinely useful information',
+        ps: 'P.S. The Knowledge Base is best viewed on a desktop',
+        button: 'KNOWLEDGE BASE'
       },
       contacts: {
         subtitle: '<span class="font-semibold text-gray-200">Reach out directly to discuss your project.</span><br/><span class="text-amber-400 font-extrabold mt-1 inline-block">Available 7 days a week.</span>',

@@ -1,0 +1,175 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   kb/css/style/04-greeting.css — ПРИВЕТСТВИЕ В ПРАВОЙ ПАНЕЛИ
+   Что: приветственный заголовок по центру панели чтения, строка «Выберите
+        интересующую вас статью» и стрелка налево — в сторону меню статей.
+        Кнопок тем здесь нет: выбор статьи живёт в меню (kb/css/style/05-sidebar.css).
+        Блок виден только в режиме приветствия: атрибут html[data-kb-view]
+        ставит kb/js/07-articles.js, открытая статья его снимает.
+   Разметку создаёт: kb/index.html → main#kbMain > #kbMainInner > .kb-greeting,
+                    #kbGreeting, .kb-greeting-pick, .kb-greeting-arrow.
+   Подключён: kb/index.html, после 03-hint.css, до 05-sidebar.css.
+   Группы блоков в файле: 1 (общие), 2 (планшет и шире), 3 (компьютер),
+        4 (всё, кроме компьютера), 6 (телефон), 9 (уменьшить движение).
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ═══ 1. ОБЩИЕ — ВСЕ УСТРОЙСТВА ═════════════════════════════════════════════ */
+
+/* Панель и её обёртка становятся флекс-контейнерами, а блок приветствия —
+   единственным ребёнком с margin: auto. Так содержимое стоит по центру,
+   а когда не влезает — прокручивается целиком, без обрезанной верхушки
+   (с justify-content: center верх уезжал бы за край). */
+html[data-kb-view="greeting"] #kbMain {
+  display: flex;
+}
+
+html[data-kb-view="greeting"] #kbMainInner {
+  display: flex;
+  width: 100%;
+}
+
+/* Открытая статья приветствие прячет: панель одна на оба вида. */
+html[data-kb-view="article"] .kb-greeting {
+  display: none;
+}
+
+.kb-greeting {
+  margin: auto;
+  width: 100%;
+  max-width: 680px;
+  padding: 32px 16px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+#kbGreeting {
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: #FFFFFF;
+  text-wrap: balance;
+}
+
+.kb-greeting-pick {
+  margin-top: 18px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--kb-text-dim);
+  text-wrap: balance;
+}
+
+/* Стрелка показывает влево — на меню статей. Сдвиг живёт на самой SVG,
+   поворот — на обёртке: иначе на телефоне они перебивали бы друг друга. */
+.kb-greeting-arrow {
+  display: block;
+  margin-top: 14px;
+  color: var(--kb-amber);
+}
+
+.kb-greeting-arrow svg {
+  display: block;
+  animation: kbArrowNudge 2.4s ease-in-out infinite;
+}
+
+@keyframes kbArrowNudge {
+  0%, 100% { transform: translateX(0); }
+  50%      { transform: translateX(-8px); }
+}
+
+/* ═══ 2. ПЛАНШЕТ И ШИРЕ (min-width: 640px) ══════════════════════════════════ */
+
+@media (min-width: 640px) {
+  .kb-greeting {
+    max-width: 720px;
+    padding: 40px 24px 56px;
+  }
+
+  #kbGreeting {
+    font-size: 26px;
+  }
+
+  .kb-greeting-pick {
+    margin-top: 22px;
+    font-size: 16px;
+  }
+
+  .kb-greeting-arrow {
+    margin-top: 18px;
+  }
+
+  .kb-greeting-arrow svg {
+    width: 40px;
+    height: 30px;
+  }
+}
+
+/* ═══ 3. КОМПЬЮТЕР (min-width: 1024px) ══════════════════════════════════════ */
+
+@media (min-width: 1024px) {
+  .kb-greeting {
+    max-width: 760px;
+    padding: 48px 32px 64px;
+  }
+
+  #kbGreeting {
+    font-size: 32px;
+  }
+
+  .kb-greeting-pick {
+    margin-top: 26px;
+    font-size: 17px;
+  }
+
+  .kb-greeting-arrow svg {
+    width: 46px;
+    height: 34px;
+  }
+}
+
+/* ═══ 4. ВСЁ, КРОМЕ КОМПЬЮТЕРА (max-width: 1023.98px) ═══════════════════════ */
+
+/* Меню статей здесь спрятано в шторку под кнопкой «Статьи» — значит стрелка
+   указывает не влево, а вверх, на эту кнопку. */
+@media (max-width: 1023.98px) {
+  .kb-greeting-arrow {
+    transform: rotate(90deg);
+  }
+}
+
+/* ═══ 6. ТЕЛЕФОН (max-width: 639.98px) ══════════════════════════════════════ */
+
+@media (max-width: 639.98px) {
+  .kb-greeting {
+    max-width: 420px;
+    padding: 24px 14px 36px;
+  }
+
+  #kbGreeting {
+    font-size: 18px;
+  }
+
+  .kb-greeting-pick {
+    margin-top: 14px;
+    font-size: 13px;
+  }
+
+  .kb-greeting-arrow {
+    margin-top: 12px;
+  }
+
+  .kb-greeting-arrow svg {
+    width: 28px;
+    height: 21px;
+  }
+}
+
+/* ═══ 9. «УМЕНЬШИТЬ ДВИЖЕНИЕ» ═══════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  .kb-greeting-arrow svg {
+    animation: none;
+  }
+}

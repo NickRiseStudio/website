@@ -1101,7 +1101,7 @@
       '<stop offset="100%" stop-color="#F59E0B" stop-opacity="0"/></defs>';
     document.body.appendChild(defs);
 
-    ['#player', '#services', '#faq', '#contacts', '#reviews'].forEach(function (sel) {
+    ['#player', '#services', '#faq', '#contacts', '#reviews', '#kb'].forEach(function (sel) {
       var sec = $(sel);
       if (!sec) return;
       var h2 = $('h2', sec);

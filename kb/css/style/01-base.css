@@ -1,0 +1,218 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   kb/css/style/01-base.css — ОСНОВА БАЗЫ ЗНАНИЙ
+   Что: сброс, переменные цветов и высот шапки, шрифт, тёмный фон, запрет
+        прокрутки страницы, каркас (оболочка и панели), переключение языка
+        по html[data-lang], слой пылинок.
+   Разметку создаёт: kb/index.html → body, #kbShell, #kbShellBody, main#kbMain
+                    > #kbMainInner.
+   Подключён: kb/index.html, после css/fonts.css, до 02-header.css.
+   Группы блоков в файле: 1 (общие), 2 (планшет и шире), 6 (телефон),
+        9 (уменьшить движение).
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── ПОРЯДОК БЛОКОВ В ФАЙЛЕ ──
+   1. ОБЩИЕ — все устройства            6. ТЕЛЕФОН (max-width: 639.98px)
+   2. ПЛАНШЕТ И ШИРЕ (min-width: 640px) 7. УЗКИЙ ТЕЛЕФОН (480px / 380px)
+   3. КОМПЬЮТЕР (min-width: 1024px)     8. ВВОД (hover / pointer)
+   4. ВСЁ, КРОМЕ КОМПЬЮТЕРА (≤1023.98)  9. «УМЕНЬШИТЬ ДВИЖЕНИЕ»
+   5. ПЛАНШЕТ (640–1023.98px)
+   Границы те же, что на основном сайте: 639.98 / 1023.98, только px. */
+
+/* ═══ 1. ОБЩИЕ — ВСЕ УСТРОЙСТВА ═════════════════════════════════════════════ */
+
+:root {
+  --kb-amber: #F59E0B;
+  --kb-amber-lt: #FBBF24;
+  --kb-amber-dk: #D97706;
+  --kb-bg: #0C0E12;
+  --kb-surface: #12151D;
+  --kb-surface-hover: #171B24;
+  --kb-text: #F3F4F6;
+  --kb-text-dim: #9CA3AF;
+  --kb-line: rgba(245, 158, 11, 0.18);
+  --kb-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Высота шапки и полосы с кнопкой «Статьи»: по ним считаются отступ
+     оболочки и место, откуда выезжает меню статей на телефоне. */
+  --kb-header-h: 64px;
+  --kb-bar-h: 52px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+/* ПРОКРУТКИ НА СТРАНИЦЕ НЕТ: вся страница — один экран, контент по центру.
+   overflow скрыт на обоих корнях, иначе Safari на iOS продолжает «резинить»
+   страницу даже при overflow: hidden на body. */
+html {
+  height: 100%;
+  overflow: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  /* isolation: isolate — отдельный контекст наложения, чтобы слой пылинок
+     с z-index: -1 ушёл под содержимое, но остался над фоном body. */
+  isolation: isolate;
+  background-color: var(--kb-bg);
+  color: var(--kb-text);
+  font-family: 'Plus Jakarta Sans', 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Прокрутки нет — «резинку» и подсветку тапов на телефоне гасим. */
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ДВА ЯЗЫКА В РАЗМЕТКЕ. Оба текста лежат в HTML, показывается нужный по
+   атрибуту html[data-lang] — его ставит kb/js/01-lang.js. Так страница
+   читается поисковиками и работает, даже если скрипт не выполнился:
+   до его запуска в html уже стоит data-lang="ru". */
+html[data-lang="ru"] body [data-lang="en"],
+html[data-lang="en"] body [data-lang="ru"] {
+  display: none;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+p,
+h1 {
+  margin: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--kb-amber-lt);
+  outline-offset: 2px;
+}
+
+/* ── КАРКАС: ОБОЛОЧКА ПОД ШАПКОЙ ─────────────────────────────────────────
+   Шапка зафиксирована сверху и места в потоке не занимает, поэтому её высоту
+   компенсирует отступ оболочки. Внутри две колонки всегда (меню статей и
+   панель контента) и третья у открытой статьи — содержание (#kbToc,
+   kb/css/style/07-toc.css). Прокручивается только панель (и меню, если не влезает) —
+   сама страница остаётся одним экраном.
+   Своего z-index у оболочки нет намеренно: иначе она стала бы отдельным
+   контекстом наложения и шторка меню (z-index 40) оказалась бы под
+   затемнением (39), которое лежит вне оболочки. */
+#kbShell {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding-top: var(--kb-header-h);
+}
+
+#kbShellBody {
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 0;
+}
+
+#kbMain {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Полоса прокрутки тонкая и янтарная: системная светлая полоса на тёмной
+   панели читалась бы как чужой элемент. */
+#kbMain,
+#kbSidebar,
+#kbToc {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(245, 158, 11, 0.3) transparent;
+}
+
+#kbMain::-webkit-scrollbar,
+#kbSidebar::-webkit-scrollbar,
+#kbToc::-webkit-scrollbar {
+  width: 8px;
+}
+
+#kbMain::-webkit-scrollbar-thumb,
+#kbSidebar::-webkit-scrollbar-thumb,
+#kbToc::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background-color: rgba(245, 158, 11, 0.22);
+}
+
+#kbMain::-webkit-scrollbar-thumb:hover,
+#kbSidebar::-webkit-scrollbar-thumb:hover,
+#kbToc::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(245, 158, 11, 0.4);
+}
+
+/* ── ПЫЛИНКИ-ЧАСТИЦЫ (канвас создаёт kb/js/02-dust.js) ──────────────────
+   Едва заметные янтарные пылинки медленно плывут вверх по тёмному фону.
+   Один fixed-канвас на всю страницу, позади контента, клики пропускает.
+   Привязка к низу и 100lvh — как на основном сайте: при скрытии адресной
+   плашки в Chrome на Android уезжает верхняя кромка вьюпорта, и слой,
+   привязанный к верху, полз бы вместе с ней. */
+#kb-dust {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: auto;
+  bottom: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100lvh;
+  z-index: -1;
+  pointer-events: none;
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* ═══ 2. ПЛАНШЕТ И ШИРЕ (min-width: 640px) ══════════════════════════════════ */
+
+@media (min-width: 640px) {
+  :root {
+    --kb-header-h: 80px;
+    --kb-bar-h: 56px;
+  }
+}
+
+/* ═══ 6. ТЕЛЕФОН (max-width: 639.98px) ══════════════════════════════════════ */
+
+/* На телефоне адресная плашка браузера меняет высоту — 100dvh считает её
+   сам, отдельного правила не нужно. */
+
+/* ═══ 9. «УМЕНЬШИТЬ ДВИЖЕНИЕ» ═══════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  /* Слой не создаётся скриптом; это страховка, если настройку сменили
+     на лету. */
+  #kb-dust {
+    display: none;
+  }
+}

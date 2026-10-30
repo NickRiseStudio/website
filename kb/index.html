@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="ru" data-lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>База знаний — Nick Rise Studio</title>
+  <meta name="description" content="База знаний Nick Rise Studio: запись вокала, экспорт трека на сведение, расстановка студийных мониторов, обустройство комнаты для записи.">
+
+  <!-- Open Graph: ссылки на базу знаний уходят в мессенджеры, превью нужно. -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="База знаний — Nick Rise Studio">
+  <meta property="og:description" content="Запись вокала, экспорт на сведение, расстановка мониторов, обустройство комнаты — в удобном виде.">
+  <meta property="og:site_name" content="Nick Rise Studio">
+  <meta property="og:url" content="https://nickrisestudio.github.io/website/kb/">
+  <meta property="og:image" content="https://nickrisestudio.github.io/website/image/Logo.webp">
+  <meta property="og:locale" content="ru_RU">
+  <meta property="og:locale:alternate" content="en_US">
+  <link rel="canonical" href="https://nickrisestudio.github.io/website/kb/">
+  <meta name="theme-color" content="#0C0E12">
+
+  <link rel="icon" type="image/png" sizes="32x32" href="./image/favicon-32.png">
+  <link rel="apple-touch-icon" sizes="256x256" href="./image/logo-256.webp">
+
+  <!-- Свои шрифты и стили: css/style — вёрстка по секциям, css/anim — слой
+       анимаций после всех стилей (как на основном сайте). Ни один файл сайта
+       не подключается: папку kb можно удалить целиком, и сайт останется
+       рабочим. -->
+  <link rel="stylesheet" href="./css/fonts.css">
+  <link rel="stylesheet" href="./css/style/01-base.css">
+  <link rel="stylesheet" href="./css/style/02-header.css">
+  <link rel="stylesheet" href="./css/style/03-hint.css">
+  <link rel="stylesheet" href="./css/style/04-greeting.css">
+  <link rel="stylesheet" href="./css/style/05-sidebar.css">
+  <link rel="stylesheet" href="./css/style/06-article.css">
+  <link rel="stylesheet" href="./css/style/07-toc.css">
+  <link rel="stylesheet" href="./css/anim/01-boot.css">
+  <link rel="stylesheet" href="./css/anim/02-panels.css">
+
+  <!-- Язык ставится ДО отрисовки: скрипт без defer в head успевает выставить
+       html[data-lang] раньше, чем браузер нарисует первый кадр, поэтому
+       страница не мигает чужим языком. -->
+  <script src="./js/01-lang.js"></script>
+
+  <!-- Вид страницы ставится ДО отрисовки: статьи лежат в этом же документе,
+       поэтому по адресу (?article=<slug>) заранее видно, что открыто, —
+       приветствие или статья. От этого зависит и вход панели
+       (css/anim/02-panels.css). Класс kb-intro держит колонки в начальном
+       состоянии, пока видна заставка; снимает его kb/animations.js. Ставит
+       скрипт, а не разметка: без JS панели обязаны остаться видимыми, а
+       приветствие — открытым. -->
+  <script>
+    (function () {
+      try {
+        var found = /[?&]article=([^&#]*)/.exec(window.location.search);
+        document.documentElement.setAttribute('data-kb-view', found && found[1] ? 'article' : 'greeting');
+        document.documentElement.classList.add('kb-intro');
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body>
+
+  <!-- ЗАСТАВКА — копия экрана загрузки основного сайта (css/anim/01-boot.css).
+       Видна при каждом заходе и переходе внутри базы знаний. Внутри: логотип
+       и надпись по центру + rack-панель — ряд ламп накаливания (они и
+       показывают прогресс: загораются по одной слева направо) и два VU-метра
+       со стрелками. Гасит её kb/animations.js (initBoot): оверлей уходит
+       фейдом, в тот же момент колонки начинают вход, а в момент display:none
+       страница разблокируется. Ниже инлайн-страховка на случай сбоя JS
+       (максимум 4 с, чтобы заставка не «зависала»). -->
+  <div id="kb-boot" aria-hidden="true">
+    <div class="kb-boot-inner">
+      <div class="kb-boot-logo">
+        <img src="./image/logo-256.webp" alt="" width="96" height="96" class="kb-boot-logo-img">
+      </div>
+      <div class="kb-boot-title">NICK RISE <span class="kb-boot-title-accent">STUDIO</span></div>
+      <svg class="kb-boot-vu-defs" width="0" height="0" aria-hidden="true" focusable="false">
+        <defs>
+          <g id="kbVuDial" fill="none">
+            <path d="M15.33 28.91 A44 44 0 0 1 84.67 28.91" stroke="#23262e" stroke-width="1.6"/>
+            <path d="M77.69 21.81 A44 44 0 0 1 84.67 28.91" stroke="#cf3a2c" stroke-width="2.4"/>
+            <line x1="15.33" y1="28.91" x2="20.06" y2="32.60" stroke="#23262e" stroke-width="1.2"/>
+            <line x1="22.31" y1="21.81" x2="26.09" y2="26.47" stroke="#23262e" stroke-width="0.7"/>
+            <line x1="30.71" y1="16.45" x2="33.34" y2="21.85" stroke="#23262e" stroke-width="1.2"/>
+            <line x1="40.10" y1="13.13" x2="41.45" y2="18.97" stroke="#23262e" stroke-width="0.7"/>
+            <line x1="50" y1="12" x2="50" y2="18" stroke="#23262e" stroke-width="1.2"/>
+            <line x1="59.90" y1="13.13" x2="58.55" y2="18.97" stroke="#23262e" stroke-width="0.7"/>
+            <line x1="69.29" y1="16.45" x2="66.66" y2="21.85" stroke="#23262e" stroke-width="1.2"/>
+            <line x1="77.69" y1="21.81" x2="73.91" y2="26.47" stroke="#23262e" stroke-width="0.7"/>
+            <line x1="84.67" y1="28.91" x2="79.94" y2="32.60" stroke="#23262e" stroke-width="1.2"/>
+            <text x="50" y="45" text-anchor="middle" fill="#23262e" font-family="monospace" font-size="9" font-weight="700" letter-spacing="0.5">VU</text>
+          </g>
+        </defs>
+      </svg>
+      <div class="kb-boot-rack" aria-hidden="true">
+        <span class="kb-boot-screw"></span>
+        <span class="kb-boot-screw"></span>
+        <span class="kb-boot-screw"></span>
+        <span class="kb-boot-screw"></span>
+        <div class="kb-boot-rack-top">
+          <div class="kb-boot-power">
+            <span class="kb-boot-switch"></span>
+            <span class="kb-boot-pilot"></span>
+          </div>
+          <div class="kb-boot-tubes">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+        <div class="kb-boot-meters">
+          <div class="kb-boot-meter">
+            <svg class="kb-boot-vu" viewBox="0 0 100 58" aria-hidden="true"><use href="#kbVuDial"/></svg>
+            <span class="kb-boot-needle"></span>
+            <span class="kb-boot-glass"></span>
+          </div>
+          <div class="kb-boot-meter">
+            <svg class="kb-boot-vu" viewBox="0 0 100 58" aria-hidden="true"><use href="#kbVuDial"/></svg>
+            <span class="kb-boot-needle"></span>
+            <span class="kb-boot-glass"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      try {
+        setTimeout(function () {
+          var b = document.getElementById('kb-boot');
+          if (!b || b.classList.contains('kb-boot-done')) return;
+          document.documentElement.classList.remove('kb-boot-active');
+          document.documentElement.classList.remove('kb-intro');
+          b.style.pointerEvents = 'none';
+          b.style.opacity = '0';
+          setTimeout(function () { b.style.display = 'none'; }, 500);
+          try { document.dispatchEvent(new CustomEvent('kb:boot-done')); } catch (err) {}
+        }, 4000);
+      } catch (e) {}
+    })();
+  </script>
+
+  <!-- ШАПКА -->
+  <header id="kbHeader">
+    <!-- Логотип ведёт на основной сайт. Тот же приём, что в шапке сайта:
+         рамка, янтарное свечение, две строки подписи. -->
+    <a id="kbLogoLink" href="../index.html" aria-label="Nick Rise Studio — на главную">
+      <span class="kb-logo-frame">
+        <img src="./image/logo-256.webp" width="48" height="48" alt="" decoding="async" fetchpriority="high">
+      </span>
+      <span class="kb-logo-text">
+        <span class="kb-logo-title">Nick Rise Studio</span>
+        <span class="kb-logo-sub">Nick Rise - One Rise</span>
+      </span>
+    </a>
+
+    <!-- По центру — название раздела вместо меню сайта. Это ссылка на
+         приветствие: клик по ней закрывает открытую статью, не перезагружая
+         страницу (kb/js/07-articles.js). -->
+    <a id="kbTitle" href="./" aria-current="page" data-kb-article="">
+      <span data-lang="ru">БАЗА ЗНАНИЙ</span>
+      <span data-lang="en">KNOWLEDGE BASE</span>
+    </a>
+
+    <!-- Справа — переключатель языка. Кнопки настоящие: работает и мышью,
+         и с клавиатуры, и тапом. Язык переключается от нажатия в любом месте
+         капсулы (kb/js/01-lang.js). -->
+    <div id="kbLangToggle" role="group" aria-label="Язык / Language">
+      <span class="kb-lang-pill" aria-hidden="true"></span>
+      <button id="kbLangRu" type="button" data-kb-lang="ru" aria-pressed="true">RU</button>
+      <button id="kbLangEn" type="button" data-kb-lang="en" aria-pressed="false">EN</button>
+    </div>
+  </header>
+
+  <!-- ПОДСКАЗКА ПОД ЛОГОТИПОМ: показывает, что логотип ведёт на основной сайт.
+       Появляется при заходе в базу знаний; переходы между её страницами её не
+       повторяют (js/03-hint.js). -->
+  <div id="kbHint" class="kb-hint">
+    <span>
+      <span data-lang="ru">Мой <span class="kb-hint-accent">основной сайт</span></span>
+      <span data-lang="en">My <span class="kb-hint-accent">main site</span></span>
+    </span>
+    <button id="kbHintClose" type="button" class="kb-hint-close" aria-label="Закрыть подсказку">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+        <path d="M6 6l12 12M18 6L6 18"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- ЗАТЕМНЕНИЕ ПОД ШТОРКОЙ МЕНЮ СТАТЕЙ: телефон и планшет. -->
+  <div id="kbSidebarOverlay" aria-hidden="true"></div>
+
+  <div id="kbShell">
+    <!-- ПОЛОСА С КНОПКАМИ «СТАТЬИ» И «СОДЕРЖАНИЕ»: только телефон и планшет.
+         На компьютере меню и содержание — обычные колонки, и кнопок нет. -->
+    <div id="kbSidebarBar">
+      <button id="kbSidebarToggle" type="button" aria-expanded="false" aria-controls="kbSidebar">
+        <span class="kb-sidebar-icons" aria-hidden="true">
+          <svg id="kbSidebarOpen" viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
+          <svg id="kbSidebarClose" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </span>
+        <span data-lang="ru">Статьи</span>
+        <span data-lang="en">Articles</span>
+      </button>
+
+      <!-- Вторая шторка — содержание статьи (kb/js/05-toc.js). Открыта
+           всегда только одна: открытие этой закрывает меню. -->
+      <button id="kbTocToggle" type="button" aria-expanded="false" aria-controls="kbToc">
+        <span class="kb-sidebar-icons" aria-hidden="true">
+          <svg id="kbTocOpen" viewBox="0 0 24 24"><path d="M3 5h18v2H3zm0 6h12v2H3zm0 6h18v2H3z"/></svg>
+          <svg id="kbTocClose" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </span>
+        <span data-lang="ru">Содержание</span>
+        <span data-lang="en">Contents</span>
+      </button>
+    </div>
+
+    <div id="kbShellBody">
+      <!-- МЕНЮ СТАТЕЙ: слева на компьютере, шторкой сверху на телефоне.
+           Тема без статьи показана как «скоро» и не кликается. -->
+      <aside id="kbSidebar" aria-label="Статьи / Articles">
+        <p class="kb-side-title">
+          <span data-lang="ru">Статьи</span>
+          <span data-lang="en">Articles</span>
+        </p>
+        <nav>
+          <ul class="kb-side-list">
+            <li class="kb-side-item">
+              <a class="kb-side-link" href="?article=vocal-recording" data-kb-article="vocal-recording" aria-expanded="false" aria-controls="kbSideSubsVocal">
+                <span data-lang="ru">Как записывать вокал</span>
+                <span data-lang="en">How to record vocals</span>
+                <!-- Каретка: повторный клик по открытой статье сворачивает и
+                     разворачивает её сопутствующие (kb/js/04-sidebar.js). -->
+                <span class="kb-side-caret" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                </span>
+              </a>
+              <!-- Сопутствующие статьи — те, на которые ссылается текст
+                   статьи. Тема без статьи показана как «скоро». -->
+              <ul class="kb-side-subs" id="kbSideSubsVocal">
+                <li class="is-soon"><span class="kb-side-sub"><span data-lang="ru">Как настроить DAW под запись вокала</span><span data-lang="en">Setting up a DAW for vocal recording</span><span class="kb-side-soon" data-lang="ru">скоро</span><span class="kb-side-soon" data-lang="en">soon</span></span></li>
+                <li class="is-soon"><span class="kb-side-sub"><span data-lang="ru">Как выбрать микрофон для вокала</span><span data-lang="en">How to choose a vocal microphone</span><span class="kb-side-soon" data-lang="ru">скоро</span><span class="kb-side-soon" data-lang="en">soon</span></span></li>
+                <li class="is-soon"><span class="kb-side-sub"><span data-lang="ru">Как обустроить комнату для записи</span><span data-lang="en">How to treat a recording room</span><span class="kb-side-soon" data-lang="ru">скоро</span><span class="kb-side-soon" data-lang="en">soon</span></span></li>
+              </ul>
+            </li>
+            <li class="kb-side-item is-soon">
+              <span class="kb-side-link">
+                <span data-lang="ru">Как экспортировать трек на сведение</span>
+                <span data-lang="en">How to export a track for mixing</span>
+                <span class="kb-side-soon" data-lang="ru">скоро</span>
+                <span class="kb-side-soon" data-lang="en">soon</span>
+              </span>
+            </li>
+            <li class="kb-side-item is-soon">
+              <span class="kb-side-link">
+                <span data-lang="ru">Как расположить студийные мониторы в комнате</span>
+                <span data-lang="en">How to place studio monitors in a room</span>
+                <span class="kb-side-soon" data-lang="ru">скоро</span>
+                <span class="kb-side-soon" data-lang="en">soon</span>
+              </span>
+            </li>
+          </ul>
+        </nav>
+      </aside>
+
+      <!-- ПАНЕЛЬ КОНТЕНТА: приветствие по центру. Прокручивается только она —
+           сама страница остаётся одним экраном. -->
+      <main id="kbMain">
+        <!-- Панель одна на оба вида: приветствие и все статьи лежат в этом же
+             документе, а обёртка нужна движку прокрутки — он следит за высотой
+             единственного ребёнка панели (kb/js/06-smooth-scroll.js). Какой вид
+             открыт, решает html[data-kb-view], переключает kb/js/07-articles.js. -->
+        <div id="kbMainInner">
+          <div class="kb-greeting">
+            <h1 id="kbGreeting">
+              <span data-lang="ru">Привет, здесь ты можешь найти очень много полезной информации в удобном виде</span>
+              <span data-lang="en">Hi, here you can find a lot of useful information in a convenient form</span>
+            </h1>
+
+            <p class="kb-greeting-pick">
+              <span data-lang="ru">Выберите интересующую вас статью</span>
+              <span data-lang="en">Choose an article to read</span>
+            </p>
+
+            <!-- Стрелка смотрит налево — на меню статей. На телефоне она
+                 повёрнута вверх: там меню открывается кнопкой над панелью
+                 (css/style/04-greeting.css). -->
+            <span class="kb-greeting-arrow" aria-hidden="true">
+              <svg viewBox="0 0 32 24" width="32" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M29 12H4"/>
+                <path d="M12 3 4 12l9 9"/>
+              </svg>
+            </span>
+          </div>
+
+          <article id="kbArticle">
+            <section class="kb-article-page" data-kb-article="vocal-recording">
+              <h1 class="kb-article-title">
+                <span data-lang="ru">Как записывать вокал дома: руководство для вокалистов</span>
+                <span data-lang="en">How to record vocals at home: a guide for singers</span>
+              </h1>
+
+              <p class="kb-lead" data-lang="ru">Я звукорежиссёр, и большую часть вокала, который мне приносят, приходится спасать: перезаписать невозможно, а вычищать — долго и дорого. Почти все эти проблемы возникают не из-за дешёвого микрофона, а из-за нескольких мелочей, которые человек просто не знал. Эта статья — про них.</p>
+              <p class="kb-lead" data-lang="en">I'm a mixing engineer, and most of the vocals that come to me have to be rescued: re-recording isn't possible, and cleaning them up takes a long time and costs money. Almost all of these problems come not from a cheap microphone but from a few small things the singer simply didn't know. This article is about them.</p>
+
+              <p class="kb-lead" data-lang="ru">Хорошая новость: 90% качества вокального трека решается <strong>до</strong> нажатия Record. Ниже — вся цепочка: голос, комната, микрофон, уровни, настройка программы, поведение за микрофоном и то минимальное, что стоит сделать с записью сразу после.</p>
+              <p class="kb-lead" data-lang="en">The good news: 90% of a vocal track's quality is decided <strong>before</strong> you hit Record. Below is the whole chain: the voice, the room, the microphone, levels, software setup, how you behave at the mic, and the bare minimum to do with the take right after.</p>
+
+              <h2 id="how-to-read">
+                <span data-lang="ru">Как читать эту статью</span>
+                <span data-lang="en">How to read this article</span>
+              </h2>
+
+              <p data-lang="ru">Здесь я подробно разбираю только то, что нельзя объяснить в двух абзацах: <strong>как стоять у микрофона</strong> и <strong>как вести сессию самому себе</strong>. Всё, что требует пошаговых инструкций и скриншотов, вынесено в отдельные статьи:</p>
+              <p data-lang="en">Here I go deep only into what can't be explained in two paragraphs: <strong>how to stand at the microphone</strong> and <strong>how to run a session by yourself</strong>. Everything that needs step-by-step instructions and screenshots lives in separate articles:</p>
+
+              <ul data-lang="ru">
+                <li><strong>Настройка DAW под запись вокала</strong> (Ableton, Logic, FL Studio, Cubase, REAPER, Pro Tools, Studio One) — <span class="kb-link-soon">→ ссылка</span></li>
+                <li><strong>Как выбрать микрофон для вокала</strong> — <span class="kb-link-soon">→ ссылка</span></li>
+                <li><strong>Как обустроить комнату для записи: акустика и шумы</strong> — <span class="kb-link-soon">→ ссылка</span></li>
+                <li><strong>Прямые ссылки на официальные руководства DAW</strong> — в конце этой статьи</li>
+              </ul>
+              <ul data-lang="en">
+                <li><strong>Setting up a DAW for vocal recording</strong> (Ableton, Logic, FL Studio, Cubase, REAPER, Pro Tools, Studio One) — <span class="kb-link-soon">→ link</span></li>
+                <li><strong>How to choose a vocal microphone</strong> — <span class="kb-link-soon">→ link</span></li>
+                <li><strong>How to treat a recording room: acoustics and noise</strong> — <span class="kb-link-soon">→ link</span></li>
+                <li><strong>Direct links to the official DAW manuals</strong> — at the end of this article</li>
+              </ul>
+
+              <hr>
+
+              <h2 id="voice">
+                <span data-lang="ru">1. Начните с голоса, а не с техники</span>
+                <span data-lang="en">1. Start with the voice, not the gear</span>
+              </h2>
+
+              <p data-lang="ru">Никакой микрофон не спасёт неподготовленный голос, а вот уставший голос испортит даже идеальную запись.</p>
+              <p data-lang="en">No microphone will save an unprepared voice, while a tired voice will ruin even a perfect recording.</p>
+
+              <ul data-lang="ru">
+                <li><strong>Разомнитесь.</strong> 5–10 минут: дыхание, артикуляция, резонанс, расслабление мышц. Не переусердствуйте — голос устаёт быстро, и усталость слышна на записи отчётливее, чем вам кажется.</li>
+                <li><strong>Пейте воду.</strong> Всё, что сушит (кофе, чай, кола, алкоголь, сладкое) или оставляет налёт (молочка), — против вас. Несколько глотков тёплого чая с лимоном и имбирём заметно уменьшают губные щелчки и «чмоки».</li>
+                <li><strong>Не пойте песню двадцать раз «на черновик».</strong> Это самая дорогая ошибка: к моменту настоящей записи голос уже уставший. Черновой прогон — один, максимум два.</li>
+              </ul>
+              <ul data-lang="en">
+                <li><strong>Warm up.</strong> 5–10 minutes: breathing, articulation, resonance, relaxing the muscles. Don't overdo it — the voice tires quickly, and that tiredness is more audible on the recording than you think.</li>
+                <li><strong>Drink water.</strong> Everything that dries you out (coffee, tea, cola, alcohol, sweets) or leaves a film (dairy) works against you. A few sips of warm tea with lemon and ginger noticeably reduce lip clicks and smacks.</li>
+                <li><strong>Don't sing the song twenty times «as a demo».</strong> This is the most expensive mistake: by the time you record for real, the voice is already tired. One run-through, two at most.</li>
+              </ul>
+
+              <hr>
+              <h2 id="room">
+                <span data-lang="ru">2. Комната важнее микрофона</span>
+                <span data-lang="en">2. The room matters more than the microphone</span>
+              </h2>
+
+              <p data-lang="ru">Это главное, что стоит принять: <strong>дешёвый микрофон в хорошей комнате звучит лучше дорогого в плохой.</strong></p>
+              <p data-lang="en">This is the main thing to accept: <strong>a cheap microphone in a good room sounds better than an expensive one in a bad room.</strong></p>
+
+              <p data-lang="ru">Две вещи, которые нужно знать сразу: не пойте в шкафу с одеждой и в маленькой комнате с поролоном — по размеру это похоже на вокальную будку, но без реальной обработки звук получается бубнящим. Лучше взять комнату побольше и повесить за своей спиной пуховое одеяло.</p>
+              <p data-lang="en">Two things to know right away: don't sing in a wardrobe full of clothes or in a small room covered with foam — in size it looks like a vocal booth, but without real treatment the sound comes out boomy. Better to take a bigger room and hang a duvet behind your back.</p>
+
+              <p data-lang="ru">Плюс выключите холодильник, кондиционер и вентиляцию, закройте двери и окна и заткните щели: ваши уши эти звуки отфильтровывают, а микрофон — нет. И да, запись в 3 часа ночи тише.</p>
+              <p data-lang="en">Also turn off the fridge, the air conditioner and the ventilation, close the doors and windows and plug the gaps: your ears filter these sounds out, the microphone does not. And yes, recording at 3 a.m. is quieter.</p>
+
+              <h3>
+                <span data-lang="ru">Почему «акустический экран» и «мини-будка» не спасают</span>
+                <span data-lang="en">Why an «acoustic screen» and a «mini booth» don't help</span>
+              </h3>
+
+              <p data-lang="ru">Это, пожалуй, самое популярное заблуждение домашней записи. Разберём по пунктам.</p>
+              <p data-lang="en">This is probably the most popular misconception in home recording. Let's go point by point.</p>
+
+              <p data-lang="ru"><strong>Акустический экран за микрофоном</strong> (его ещё называют reflection filter) сделан из тонкого поролона или ткани:</p>
+              <p data-lang="en"><strong>An acoustic screen behind the microphone</strong> (also called a reflection filter) is made of thin foam or fabric:</p>
+
+              <ul data-lang="ru">
+                <li>Тонкий материал поглощает только верх — примерно от нескольких килогерц. Всё, что ниже — гул, низкая середина, тот самый «коробочный» оттенок — он пропускает, а между экраном, микрофоном и вашим лицом образуется маленькая замкнутая полость, которая этот низ ещё и подкрашивает.</li>
+                <li><strong>Он стоит не с той стороны.</strong> Кардиоидный микрофон почти не слышит то, что находится за ним, — то есть сам экран. Он слышит вас спереди и отражения сзади: от стены за вашей спиной, от потолка, от боковых стен. Экран эти отражения не перехватывает — он не на их пути.</li>
+                <li>Близкая поверхность рядом с капсюлем даёт гребенчатую фильтрацию: звук становится «пластиковым», «телефонным». И это не лечится эквалайзером, потому что проблема не в тембре голоса, а в искажённой АЧХ, которая ещё и плавает от положения головы.</li>
+                <li>Итог: экран убирает «воздух» и оставляет «коробку» — ровно наоборот от того, что вам нужно.</li>
+              </ul>
+              <ul data-lang="en">
+                <li>Thin material absorbs only the top end — roughly from a few kilohertz upwards. Everything below — the boom, the low mids, that very «boxy» tint — it lets through, and between the screen, the microphone and your face a small closed cavity forms that colours that low end even more.</li>
+                <li><strong>It sits on the wrong side.</strong> A cardioid microphone barely hears what is behind it — that is, the screen itself. It hears you from the front and the reflections from behind: from the wall behind your back, from the ceiling, from the side walls. The screen does not intercept those reflections — it is not in their path.</li>
+                <li>A close surface near the capsule causes comb filtering: the sound turns «plastic», «telephone-like». And EQ does not fix it, because the problem is not the timbre of the voice but a distorted frequency response that also drifts with the position of your head.</li>
+                <li>The bottom line: the screen removes the «air» and keeps the «box» — exactly the opposite of what you need.</li>
+              </ul>
+              <p data-lang="ru"><strong>Мини-будка, «шкаф», самодельный ящик из поролона</strong> — та же история, но хуже. Маленький замкнутый объём имеет собственные резонансы в низкой середине, и вы получаете характерный звук «изнутри ящика». Плюс там нечем дышать, не проветривается, и поёте вы хуже — а это слышно на записи сильнее, чем любые отражения. Настоящая профессиональная будка работает не потому, что она маленькая, а потому, что там толстые поглотители и рассчитанная геометрия. Поролон на стенках шкафа — это не будка, это шкаф с поролоном.</p>
+              <p data-lang="en"><strong>A mini booth, a «wardrobe», a home-made foam box</strong> — the same story, but worse. A small closed volume has its own resonances in the low mids, and you get the characteristic sound of «the inside of a box». On top of that there is no air to breathe, no ventilation, and you sing worse — and that is more audible on the recording than any reflections. A real professional booth works not because it is small, but because it has thick absorbers and calculated geometry. Foam on wardrobe walls is not a booth — it is a wardrobe with foam.</p>
+
+              <p data-lang="ru"><strong>Что делать вместо этого:</strong> поглощение там, куда реально смотрит микрофон и откуда реально приходят отражения — за вашей спиной, над головой, за микрофоном; и по возможности комната побольше. Пуховое одеяло на стойке работает лучше экрана, потому что оно толстое, висит далеко от капсюля и стоит на пути отражений.</p>
+              <p data-lang="en"><strong>What to do instead:</strong> absorb where the microphone actually points and where the reflections actually come from — behind your back, above your head, behind the microphone; and a bigger room if possible. A duvet on a stand works better than a screen, because it is thick, hangs far from the capsule and stands in the path of the reflections.</p>
+
+              <blockquote class="kb-note kb-note--tip">
+                <p data-lang="ru"><strong>Если экран у вас уже есть</strong> — не выбрасывайте сразу: запишите одну фразу с ним и без него на вашей обычной дистанции и сравните. Достаточно часто вариант «без» звучит живее и чище.</p>
+                <p data-lang="en"><strong>If you already own a screen</strong> — don't throw it away right now: record one phrase with it and without it at your usual distance, and compare. Quite often the «without» version sounds livelier and cleaner.</p>
+              </blockquote>
+
+              <figure class="kb-figure">
+                <div class="kb-figure-frame">
+                  <span class="kb-figure-badge" data-lang="ru">Иллюстрация в работе</span>
+                  <span class="kb-figure-badge" data-lang="en">Illustration in progress</span>
+                </div>
+                <figcaption>
+                  <span data-lang="ru"><strong>Картинка 1.</strong> План комнаты сверху: певец, микрофон, за спиной певца — одеяло/поглотитель, над головой — поглотитель, компьютер/интерфейс отнесён в сторону. Подписи: «поглощение за спиной певца», «поглощение за микрофоном», «не ставить микрофон в угол».</span>
+                  <span data-lang="en"><strong>Picture 1.</strong> Top view of the room: the singer, the microphone, a duvet/absorber behind the singer's back, an absorber above the head, the computer/interface moved aside. Captions: «absorption behind the singer's back», «absorption behind the microphone», «don't put the microphone in a corner».</span>
+                </figcaption>
+              </figure>
+
+              <figure class="kb-figure">
+                <div class="kb-figure-frame">
+                  <span class="kb-figure-badge" data-lang="ru">Иллюстрация в работе</span>
+                  <span class="kb-figure-badge" data-lang="en">Illustration in progress</span>
+                </div>
+                <figcaption>
+                  <span data-lang="ru"><strong>Картинка 2.</strong> Слева — экран за микрофоном: стрелки отражений идут от стены за спиной певца в микрофон, минуя экран; красная подпись «не перехватывает». Справа — одеяло за спиной певца: стрелки упираются в одеяло; зелёная подпись «перехватывает то, что реально попадает в микрофон».</span>
+                  <span data-lang="en"><strong>Picture 2.</strong> On the left — a screen behind the microphone: reflection arrows go from the wall behind the singer into the microphone, past the screen; a red caption «does not intercept». On the right — a duvet behind the singer's back: the arrows hit the duvet; a green caption «intercepts what actually reaches the microphone».</span>
+                </figcaption>
+              </figure>
+
+              <blockquote class="kb-note kb-note--next">
+                <p data-lang="ru"><strong>Куда дальше:</strong> как расставить поглотители, что делать с гулкой комнатой и как найти все источники шума — в статье <span class="kb-link-soon">«Как обустроить комнату для записи»</span>.</p>
+                <p data-lang="en"><strong>Where next:</strong> how to place absorbers, what to do with a boomy room and how to find every noise source — in the article <span class="kb-link-soon">«How to treat a recording room»</span>.</p>
+              </blockquote>
+
+              <hr>
+              <h2 id="mic">
+                <span data-lang="ru">3. Микрофон: три вещи, которые решают всё</span>
+                <span data-lang="en">3. The microphone: three things that decide everything</span>
+              </h2>
+
+              <p data-lang="ru">Про выбор микрофона — отдельная статья. Здесь — то, что нужно знать <strong>любому</strong> микрофону.</p>
+              <p data-lang="en">Choosing a microphone is a separate article. Here is what you need to know about <strong>any</strong> microphone.</p>
+
+              <p data-lang="ru"><strong>Куда петь.</strong> Это ошибка №1 у новичков. У динамических микрофонов (тип SM58) поют <strong>в торец</strong>. У больших конденсаторных рабочая сторона — <strong>боковая</strong>, обычно та, где логотип. Петь в «спинку» конденсаторного микрофона — классика жанра, и звук при этом получается глухой и странный.</p>
+              <p data-lang="en"><strong>Where to sing.</strong> This is mistake No. 1 for beginners. With dynamic microphones (the SM58 type) you sing <strong>into the end</strong>. With large condensers the working side is <strong>the side</strong>, usually the one with the logo. Singing into the «back» of a condenser microphone is a classic, and the sound comes out dull and strange.</p>
+
+              <p data-lang="ru"><strong>На какой высоте.</strong> Ставьте микрофон так, чтобы вам было удобно, а дальше двигайте под задачу:</p>
+              <p data-lang="en"><strong>At what height.</strong> Set the microphone so that you are comfortable, and then move it to suit the task:</p>
+
+              <ul data-lang="ru">
+                <li>если вы сутулитесь над микрофоном — горло сжимается, звук становится глухим; поднимите микрофон чуть выше, чтобы вы подняли голову;</li>
+                <li>микрофон <strong>выше</strong> уровня рта, смотрит вниз — меньше шипящих и меньше воздушных хлопков от «п» и «б»;</li>
+                <li>микрофон <strong>ниже</strong> — больше грудного, «телесного» звука.</li>
+              </ul>
+              <ul data-lang="en">
+                <li>if you hunch over the microphone, your throat tightens and the sound goes dull; raise the microphone a little so that you lift your head;</li>
+                <li>a microphone <strong>above</strong> mouth level, pointing down — fewer sibilants and fewer breath pops from «p» and «b»;</li>
+                <li>a microphone <strong>lower</strong> — more chest, more «body» in the sound.</li>
+              </ul>
+
+              <p data-lang="ru"><strong>На каком расстоянии.</strong> Отправная точка — <strong>15–16 см</strong> (ширина ладони). Ближе 10 см — обычно уже плохо: хлопки, гул, риск перегруза. Дальше 30 см — тоже плохо: в запись приедет комната. Поп-фильтр — это ещё и линейка: он физически не даёт подойти слишком близко.</p>
+              <p data-lang="en"><strong>At what distance.</strong> The starting point is <strong>15–16 cm</strong> (the width of a palm). Closer than 10 cm is usually already bad: pops, rumble, risk of clipping. Farther than 30 cm is bad too: the room comes into the recording. A pop filter is also a ruler — it physically keeps you from getting too close.</p>
+
+              <p data-lang="ru">Два важных следствия:</p>
+              <p data-lang="en">Two important consequences:</p>
+
+              <ul data-lang="ru">
+                <li><strong>Не «работайте микрофоном», как на сцене.</strong> Если вы отъезжаете и приезжаете, меняется количество комнаты, и запись получается неровной по звуку. Держите дистанцию стабильной.</li>
+                <li><strong>Близко = больше низа.</strong> У всех направленных микрофонов при приближении непропорционально растёт низ. Иногда это плюс (тонкий голос, яркий микрофон), но если вы просто хотите сухо и естественно — это будет мешать.</li>
+              </ul>
+              <ul data-lang="en">
+                <li><strong>Don't «work the mic» as you would on stage.</strong> If you move away and back in, the amount of room changes and the recording becomes uneven in sound. Keep the distance stable.</li>
+                <li><strong>Close = more low end.</strong> With every directional microphone the low end grows disproportionately as you get closer. Sometimes that is a plus (a thin voice, a bright microphone), but if you just want it dry and natural, it will get in the way.</li>
+              </ul>
+              <figure class="kb-figure">
+                <div class="kb-figure-frame">
+                  <span class="kb-figure-badge" data-lang="ru">Иллюстрация в работе</span>
+                  <span class="kb-figure-badge" data-lang="en">Illustration in progress</span>
+                </div>
+                <figcaption>
+                  <span data-lang="ru"><strong>Картинка 3.</strong> Голова вокалиста, микрофон, поп-фильтр, вид сбоку. Три зоны подписать: «ближе 10 см — хлопки и перегруз» (красная), «15–16 см — старт» (зелёная), «дальше 30 см — комната и шум» (жёлтая).</span>
+                  <span data-lang="en"><strong>Picture 3.</strong> The singer's head, the microphone, the pop filter, side view. Label three zones: «closer than 10 cm — pops and clipping» (red), «15–16 cm — start here» (green), «farther than 30 cm — room and noise» (yellow).</span>
+                </figcaption>
+              </figure>
+
+              <figure class="kb-figure">
+                <div class="kb-figure-frame">
+                  <span class="kb-figure-badge" data-lang="ru">Иллюстрация в работе</span>
+                  <span class="kb-figure-badge" data-lang="en">Illustration in progress</span>
+                </div>
+                <figcaption>
+                  <span data-lang="ru"><strong>Картинка 4.</strong> Два рисунка рядом: динамический микрофон (стрелка «петь в торец») и конденсаторный (стрелка в бок с логотипом, крестики на торце и «спинке», подпись «в неправильную сторону поют чаще всего именно конденсатор»).</span>
+                  <span data-lang="en"><strong>Picture 4.</strong> Two drawings side by side: a dynamic microphone (an arrow «sing into the end») and a condenser (an arrow into the side with the logo, crosses on the end and the «back», caption «it is the condenser that people most often sing into the wrong way»).</span>
+                </figcaption>
+              </figure>
+
+              <blockquote class="kb-note kb-note--next">
+                <p data-lang="ru"><strong>Куда дальше:</strong> какой микрофон выбрать под ваш голос и бюджет — в статье <span class="kb-link-soon">«Как выбрать микрофон для вокала»</span>.</p>
+                <p data-lang="en"><strong>Where next:</strong> which microphone to choose for your voice and budget — in the article <span class="kb-link-soon">«How to choose a vocal microphone»</span>.</p>
+              </blockquote>
+
+              <hr>
+
+              <h2 id="levels">
+                <span data-lang="ru">4. Уровни: почему не надо «писать громко»</span>
+                <span data-lang="en">4. Levels: why you shouldn't «record loud»</span>
+              </h2>
+
+              <p data-lang="ru">Это то, из-за чего чаще всего присылают испорченные дубли.</p>
+              <p data-lang="en">This is what most often gets ruined takes sent to me.</p>
+
+              <ul data-lang="ru">
+                <li>Пишите в <strong>24 бита</strong> — тогда «погромче, чтобы не было шума» не нужно.</li>
+                <li>Ориентир: пики около <strong>−10 dBFS</strong>. Это оставляет запас на случай, если на эмоциях вы споёте громче, чем на саундчеке.</li>
+                <li>Саундчек делайте не на «ля-ля», а на <strong>самых громких фразах</strong> песни в полную силу.</li>
+                <li>Если слышите искажения, а индикаторы не в красном — скорее всего перегружен вход интерфейса, а не сама запись. Убавьте гейн и проверьте снова.</li>
+              </ul>
+              <ul data-lang="en">
+                <li>Record at <strong>24 bit</strong> — then «louder so there's no noise» is not needed.</li>
+                <li>Target: peaks around <strong>−10 dBFS</strong>. That leaves headroom in case you sing louder on emotion than you did during the soundcheck.</li>
+                <li>Do the soundcheck not on «la-la», but on the <strong>loudest phrases</strong> of the song, at full power.</li>
+                <li>If you hear distortion while the meters are not in the red, the interface input is most likely overloading, not the recording itself. Lower the gain and check again.</li>
+              </ul>
+
+              <hr>
+              <h2 id="daw">
+                <span data-lang="ru">5. Настройка программы: короткий чек и ссылки</span>
+                <span data-lang="en">5. Software setup: a quick check and links</span>
+              </h2>
+
+              <p data-lang="ru">Что должно быть настроено до записи: вход выбран правильно, включён <strong>прямой мониторинг</strong> (чтобы слышать себя без задержки), буфер не раздут, включён метроном и отсчёт, дорожка в режиме записи, выбрана папка, куда сохраняются дубли.</p>
+              <p data-lang="en">What has to be set before you record: the input is selected correctly, <strong>direct monitoring</strong> is on (so you hear yourself without latency), the buffer is not bloated, the metronome and count-in are on, the track is armed for recording, and the folder where takes are saved is chosen.</p>
+
+              <p data-lang="ru">Пошагово для каждой DAW — в отдельной статье <span class="kb-link-soon">«Настройка DAW под запись вокала»</span>. Официальные руководства, если хотите первоисточник:</p>
+              <p data-lang="en">Step by step for each DAW — in a separate article <span class="kb-link-soon">«Setting up a DAW for vocal recording»</span>. Official manuals, if you want the primary source:</p>
+
+              <ul data-lang="ru">
+                <li><strong>Ableton Live 12:</strong> <a href="https://www.ableton.com/en/live-manual/12/recording-new-clips/" target="_blank" rel="noopener">ableton.com/en/live-manual/12/recording-new-clips</a></li>
+                <li><strong>Logic Pro (мониторинг входа):</strong> <a href="https://support.apple.com/guide/logicpro/turn-on-input-monitoring-for-audio-tracks-lgcpbfbefa96/mac" target="_blank" rel="noopener">support.apple.com → input monitoring</a></li>
+                <li><strong>FL Studio:</strong> <a href="https://www.image-line.com/fl-studio-learning-content/fl-studio-online-manual/html/recording_audio.htm" target="_blank" rel="noopener">image-line.com → recording audio</a></li>
+                <li><strong>Cubase Pro 15:</strong> <a href="https://www.steinberg.help/r/cubase-pro/15.0/en/cubase_nuendo/topics/recording/recording_c.html" target="_blank" rel="noopener">steinberg.help → recording</a></li>
+                <li><strong>REAPER:</strong> <a href="https://www.reaper.fm/userguide.php" target="_blank" rel="noopener">reaper.fm/userguide.php</a></li>
+                <li><strong>Pro Tools (PDF):</strong> <a href="https://resources.avid.com/SupportFiles/attach/Pro_Tools/12.3/Pro_Tools_Reference_Guide.pdf" target="_blank" rel="noopener">Pro Tools Reference Guide</a></li>
+                <li><strong>Studio One (PDF, v5):</strong> <a href="https://pae-web.presonusmusic.com/downloads/products/pdf/Studio_One_5_Reference_Manual_05072020.pdf" target="_blank" rel="noopener">Studio One 5 Reference Manual</a> — актуальную версию смотрите в программе: Help → Reference Manual.</li>
+              </ul>
+              <ul data-lang="en">
+                <li><strong>Ableton Live 12:</strong> <a href="https://www.ableton.com/en/live-manual/12/recording-new-clips/" target="_blank" rel="noopener">ableton.com/en/live-manual/12/recording-new-clips</a></li>
+                <li><strong>Logic Pro (input monitoring):</strong> <a href="https://support.apple.com/guide/logicpro/turn-on-input-monitoring-for-audio-tracks-lgcpbfbefa96/mac" target="_blank" rel="noopener">support.apple.com → input monitoring</a></li>
+                <li><strong>FL Studio:</strong> <a href="https://www.image-line.com/fl-studio-learning-content/fl-studio-online-manual/html/recording_audio.htm" target="_blank" rel="noopener">image-line.com → recording audio</a></li>
+                <li><strong>Cubase Pro 15:</strong> <a href="https://www.steinberg.help/r/cubase-pro/15.0/en/cubase_nuendo/topics/recording/recording_c.html" target="_blank" rel="noopener">steinberg.help → recording</a></li>
+                <li><strong>REAPER:</strong> <a href="https://www.reaper.fm/userguide.php" target="_blank" rel="noopener">reaper.fm/userguide.php</a></li>
+                <li><strong>Pro Tools (PDF):</strong> <a href="https://resources.avid.com/SupportFiles/attach/Pro_Tools/12.3/Pro_Tools_Reference_Guide.pdf" target="_blank" rel="noopener">Pro Tools Reference Guide</a></li>
+                <li><strong>Studio One (PDF, v5):</strong> <a href="https://pae-web.presonusmusic.com/downloads/products/pdf/Studio_One_5_Reference_Manual_05072020.pdf" target="_blank" rel="noopener">Studio One 5 Reference Manual</a> — for the current version look inside the app: Help → Reference Manual.</li>
+              </ul>
+
+              <hr>
+              <h2 id="headphones">
+                <span data-lang="ru">6. Наушники: что вы слышите и почему это важно</span>
+                <span data-lang="en">6. Headphones: what you hear and why it matters</span>
+              </h2>
+
+              <p data-lang="ru">Чище всего писать в <strong>закрытых</strong> наушниках — звук из них не подмешивается в микрофон. Если вы привыкли снимать одну чашку, чтобы слышать себя «в комнате», проследите, чтобы чашка смотрела <strong>внутрь</strong>, а не излучала звук в комнату.</p>
+              <p data-lang="en">The cleanest recordings come from <strong>closed-back</strong> headphones — their sound does not bleed into the microphone. If you are used to taking one cup off to hear yourself «in the room», make sure the cup faces <strong>inwards</strong> rather than radiating sound into the room.</p>
+
+              <h3>
+                <span data-lang="ru">Обработку в наушниках — можно</span>
+                <span data-lang="en">Processing in the headphones is fine</span>
+              </h3>
+
+              <p data-lang="ru">Устаревший совет «во время записи никаких эффектов» сегодня больше мешает, чем помогает. В современной музыке петь в обработке не просто можно, а часто нужно: это часть исполнения.</p>
+              <p data-lang="en">The outdated advice «no effects while recording» does more harm than good today. In modern music, singing with processing is not just allowed — it is often necessary: it is part of the performance.</p>
+
+              <ul data-lang="ru">
+                <li><strong>Тюн (питч-коррекция) в наушниках</strong> — норма для попа, хип-хопа, современного R&amp;B. Вы слышите, как вокал «сядет» в трек, и попадаете увереннее.</li>
+                <li><strong>Реверб и дилей</strong> — помогают интонировать и дают ощущение пространства, в котором хочется петь громче и смелее.</li>
+                <li><strong>Сатурация, дабл, дакинг от минуса</strong> — если это помогает вам звучать так, как вы задумали, пойте с ними.</li>
+              </ul>
+              <ul data-lang="en">
+                <li><strong>Tuning (pitch correction) in the headphones</strong> — normal for pop, hip-hop, modern R&amp;B. You hear how the vocal will «sit» in the track and you hit the notes more confidently.</li>
+                <li><strong>Reverb and delay</strong> — they help with intonation and give a sense of space in which you want to sing louder and more boldly.</li>
+                <li><strong>Saturation, a double, ducking from the backing track</strong> — if it helps you sound the way you intended, sing with them.</li>
+              </ul>
+              <p data-lang="ru">Главное правило одно: <strong>обработка живёт в наушниках, а в файл должен попасть чистый сигнал.</strong> Тогда у меня, звукорежиссёра, будет из чего лепить финальный звук, а у вас — комфорт во время записи.</p>
+              <p data-lang="en">There is one main rule: <strong>processing lives in the headphones, while the file must get a clean signal.</strong> Then I, the mixing engineer, have something to build the final sound from, and you have comfort while recording.</p>
+
+              <p data-lang="ru">Как это устроено на практике:</p>
+              <p data-lang="en">How it works in practice:</p>
+
+              <ul data-lang="ru">
+                <li>В <strong>подавляющем большинстве DAW</strong> плагины на дорожке слышны, но в записываемый файл не попадают — запись идёт «до» обработки. Проверьте это один раз на своей программе, а не верьте на слово: запишите пару фраз с включённым тюном, послушайте результат в соло.</li>
+                <li>Если в вашей DAW есть режимы вроде «записать выход дорожки» / resampling / record output — их надо <strong>выключить</strong>, иначе обработка запишется навсегда.</li>
+                <li>В интерфейсах с внутренним DSP (Universal Audio Apollo, RME TotalMix FX, MOTU и подобные) удобнее всего: в наушники идёт обработанный сигнал, в файл — сухой, и без задержки.</li>
+                <li><strong>Про задержку:</strong> плагины питч-коррекции добавляют её заметно. Если в наушниках появляется «эхо» на собственном голосе — уменьшите буфер, используйте DSP интерфейса или откажитесь от тюна именно в момент записи.</li>
+              </ul>
+              <ul data-lang="en">
+                <li>In <strong>the vast majority of DAWs</strong> plug-ins on the track are audible but never reach the recorded file — recording happens «before» processing. Check it once in your own software instead of taking it on faith: record a couple of phrases with the tuner on and listen back in solo.</li>
+                <li>If your DAW has modes like «record the track output» / resampling / record output, they must be <strong>switched off</strong>, otherwise the processing gets printed for good.</li>
+                <li>With interfaces that have built-in DSP (Universal Audio Apollo, RME TotalMix FX, MOTU and similar) it is the most convenient: the processed signal goes to the headphones, the dry one to the file, and with no latency.</li>
+                <li><strong>About latency:</strong> pitch-correction plug-ins add a noticeable amount of it. If you hear an «echo» on your own voice in the headphones, reduce the buffer, use the interface's DSP, or drop the tuner for the moment of recording.</li>
+              </ul>
+
+              <p data-lang="ru">И честное предупреждение: не привыкайте петь <strong>только</strong> на тюне. Он прощает интонацию, и на живом выступлении это может неприятно удивить.</p>
+              <p data-lang="en">And an honest warning: don't get used to singing <strong>only</strong> with a tuner. It forgives intonation, and at a live show that can surprise you unpleasantly.</p>
+
+              <hr>
+              <h2 id="self-recording">
+                <span data-lang="ru">7. Как записывать себя самому</span>
+                <span data-lang="en">7. How to record yourself</span>
+              </h2>
+
+              <p data-lang="ru">Здесь вам придётся быть себе и певцом, и продюсером. Это навык, и он нарабатывается.</p>
+              <p data-lang="en">Here you have to be both the singer and the producer at the same time. It is a skill, and it builds with practice.</p>
+
+              <p data-lang="ru"><strong>Не пишите песню целиком по двадцать раз.</strong> Записывайте <strong>фрагментами</strong>: куплет, припев, сложная строка отдельно. Пять-шесть осмысленных дублей обычно достаточно.</p>
+              <p data-lang="en"><strong>Don't record the whole song twenty times.</strong> Record <strong>in pieces</strong>: a verse, a chorus, a difficult line on its own. Five or six meaningful takes are usually enough.</p>
+
+              <p data-lang="ru"><strong>Самое сложное — первым.</strong> Высокие ноты и «пиковые» припевы пишите в начале сессии, пока голос свежий.</p>
+              <p data-lang="en"><strong>The hardest part first.</strong> Record high notes and «peak» choruses at the start of the session, while the voice is fresh.</p>
+
+              <p data-lang="ru"><strong>Слушайте себя критически, но по списку.</strong> После дубля проверьте три вещи, которые забывают чаще всего: все ли ноты взяты, все ли слова пропеты разборчиво, нет ли «ляпов» в тексте.</p>
+              <p data-lang="en"><strong>Listen to yourself critically, but by a checklist.</strong> After a take, check the three things people most often forget: were all the notes hit, were all the words sung clearly, are there any slips in the lyrics.</p>
+
+              <p data-lang="ru"><strong>Не решайте «на эмоциях».</strong> Дубль, который кажется отличным сразу, часто не лучший. Отложите прослушивание на 20 минут или на следующий день: слышно будет гораздо честнее.</p>
+              <p data-lang="en"><strong>Don't decide «on emotion».</strong> The take that feels great right away is often not the best one. Put the listening off for 20 minutes or until the next day: you will hear it far more honestly.</p>
+
+              <p data-lang="ru"><strong>Не удаляйте дубли.</strong> Диск дешёвый, а хорошая фраза из «плохого» дубля может спасти припев.</p>
+              <p data-lang="en"><strong>Don't delete takes.</strong> Disk space is cheap, and a good phrase from a «bad» take can save the chorus.</p>
+
+              <p data-lang="ru"><strong>Ведите себя как с артистом.</strong> Это не шутка: обесценивание («всё плохо, давай заново») убивает голос быстрее усталости. Формулируйте себе задачу конкретно: не «спой лучше», а «вторую строчку — тише и ближе к тексту».</p>
+              <p data-lang="en"><strong>Treat yourself the way you would treat an artist.</strong> This is not a joke: devaluing («it's all bad, let's start over») kills the voice faster than fatigue does. State the task concretely: not «sing better», but «the second line — quieter and closer to the text».</p>
+
+              <hr>
+              <h2 id="after">
+                <span data-lang="ru">8. Что сделать с записью сразу после</span>
+                <span data-lang="en">8. What to do with the take right after</span>
+              </h2>
+
+              <p data-lang="ru">Минимум, без которого запись неудобно слушать и который не является «миксом»:</p>
+              <p data-lang="en">The minimum without which the take is unpleasant to listen to, and which is not a «mix»:</p>
+
+              <ol data-lang="ru">
+                <li><strong>Уберите мусор:</strong> щелчки, лишние вдохи, шорохи, случайные звуки между фразами.</li>
+                <li><strong>Срежьте низ.</strong> Низкочастотный мусор (гул, хлопки от «п») не слышен, но съедает запас и мешает дальше. Начните примерно с 80 Гц и поднимайте частоту среза, пока не начнёте слышать влияние на тембр, — потом отступите чуть назад.</li>
+                <li><strong>Мягкая компрессия</strong> — только чтобы выровнять громкие и тихие фразы, без «сплющивания». Если после обработки голос звучит неестественно — вы перестарались.</li>
+                <li><strong>Де-эссер</strong>, если шипящие режут слух.</li>
+              </ol>
+              <ol data-lang="en">
+                <li><strong>Clean up the junk:</strong> clicks, extra breaths, rustles, random sounds between phrases.</li>
+                <li><strong>Cut the low end.</strong> Low-frequency junk (rumble, pops from «p») is inaudible but eats headroom and gets in the way later. Start at around 80 Hz and raise the cut-off until you begin to hear an effect on the timbre — then back off a little.</li>
+                <li><strong>Gentle compression</strong> — only to even out loud and quiet phrases, without «squashing» them. If the voice sounds unnatural after processing, you overdid it.</li>
+                <li><strong>A de-esser</strong>, if the sibilants cut your ears.</li>
+              </ol>
+
+              <p data-lang="ru">Всё остальное — эквалайзер, сатурация, реверб, дилеи, дабл-треки — это уже микс, и там свои правила, свои инструменты и своя цена ошибки.</p>
+              <p data-lang="en">Everything else — EQ, saturation, reverb, delays, double tracks — is already mixing, with its own rules, its own tools and its own price for a mistake.</p>
+
+              <blockquote class="kb-note kb-note--next">
+                <p data-lang="ru"><strong>Дальше начинается моя работа.</strong> Если вы дошли до этого места и поняли, что не хотите во всём разбираться сами — присылайте сухие дубли: я занимаюсь обработкой и сведением вокала и сделаю из чистой записи готовый трек. <a href="../index.html#services">→ Услуги и примеры работ</a></p>
+                <p data-lang="en"><strong>This is where my work begins.</strong> If you have read this far and realized you don't want to figure it all out yourself, send me the dry takes: I do vocal processing and mixing and will turn a clean recording into a finished track. <a href="../index.html#services">→ Services and examples of work</a></p>
+              </blockquote>
+
+              <hr>
+              <h2 id="tips">
+                <span data-lang="ru">9. Фишки, которые реально работают</span>
+                <span data-lang="en">9. Tricks that actually work</span>
+              </h2>
+
+              <ol data-lang="ru">
+                <li><strong>Одеяло за спиной.</strong> Самое дешёвое улучшение звука, которое вы можете сделать сегодня.</li>
+                <li><strong>Микрофон-приманка.</strong> Если вы склонны «съедать» микрофон — поставьте пустой микрофон на комфортном расстоянии, а настоящий поднимите выше и направьте вниз.</li>
+                <li><strong>Перевёрнутый микрофон.</strong> Подвесить на буме головой вниз: больше места для рук, аккуратнее кабель, меньше ударов по стойке.</li>
+                <li><strong>Чай с лимоном и имбирём</strong> перед дублем — меньше губных щелчков, которые потом вырезать вручную.</li>
+                <li><strong>Один и тот же дубль — дважды.</strong> Спойте фразу два раза подряд одинаково. Потом сможете выбрать лучшую половину или склеить — это нормальная практика, а не читерство.</li>
+                <li><strong>Пойте стоя, даже если «удобно сидя».</strong> Сидя диафрагма сжата, и это слышно.</li>
+                <li><strong>Не смотрите в экран во время дубля.</strong> Взгляд в монитор тянет голову вниз и ломает осанку. Текст — на уровне глаз, экран — в стороне.</li>
+                <li><strong>Кабель не должен быть натянут.</strong> Натянутый кабель передаёт в микрофон стук ноги и стойки.</li>
+                <li><strong>Записывайте «воздух» — 5 секунд тишины комнаты</strong> перед сессией. Пригодится, чтобы понять, какой шум у вас в комнате.</li>
+                <li><strong>Пишите в одно и то же время суток.</strong> У голоса есть своё расписание: у одних он «просыпается» через час, у других — к вечеру.</li>
+              </ol>
+              <ol data-lang="en">
+                <li><strong>A duvet behind your back.</strong> The cheapest sound improvement you can make today.</li>
+                <li><strong>The decoy microphone.</strong> If you tend to «eat» the microphone, put an empty microphone at a comfortable distance and raise the real one higher, pointing it down.</li>
+                <li><strong>The upside-down microphone.</strong> Hang it on the boom head-down: more room for your hands, a neater cable, fewer knocks against the stand.</li>
+                <li><strong>Tea with lemon and ginger</strong> before a take — fewer lip clicks to cut out by hand later.</li>
+                <li><strong>The same take — twice.</strong> Sing a phrase twice in a row the same way. Then you can pick the better half or splice them together — that is normal practice, not cheating.</li>
+                <li><strong>Sing standing, even if sitting «feels comfortable».</strong> Sitting compresses the diaphragm, and it is audible.</li>
+                <li><strong>Don't look at the screen during a take.</strong> Looking at the monitor pulls your head down and breaks your posture. Lyrics at eye level, the screen off to the side.</li>
+                <li><strong>The cable must not be taut.</strong> A taut cable passes the knock of your foot and of the stand into the microphone.</li>
+                <li><strong>Record the «room air» — 5 seconds of silence</strong> before the session. It will help you understand what noise you have in the room.</li>
+                <li><strong>Record at the same time of day.</strong> The voice has its own schedule: for some it «wakes up» an hour in, for others it comes by the evening.</li>
+              </ol>
+
+              <hr>
+
+              <h2 id="mistakes">
+                <span data-lang="ru">10. Пять ошибок, из-за которых перезаписывают</span>
+                <span data-lang="en">10. Five mistakes that force a re-record</span>
+              </h2>
+
+              <ol data-lang="ru">
+                <li><strong>Поют в «спинку» микрофона</strong> — звук глухой, и это не лечится эквалайзером.</li>
+                <li><strong>Поют в шкафу или в комнате с поролоном</strong> — бубнящий, «коробочный» звук.</li>
+                <li><strong>Меняют дистанцию во время дубля</strong> — запись неровная по звуку и по комнате.</li>
+                <li><strong>Пишут «погромче»</strong> — и ловят перегруз на самом громком месте припева.</li>
+                <li><strong>Поют всю песню целиком по двадцать раз</strong> — к нужному дублю голос уже уставший, а лучшие фразы разбросаны по разным файлам.</li>
+              </ol>
+              <ol data-lang="en">
+                <li><strong>Singing into the «back» of the microphone</strong> — the sound is dull, and EQ will not fix it.</li>
+                <li><strong>Singing in a wardrobe or in a foam-covered room</strong> — a boomy, «boxy» sound.</li>
+                <li><strong>Changing the distance during a take</strong> — the recording is uneven in sound and in room.</li>
+                <li><strong>Recording «louder»</strong> — and clipping at the loudest moment of the chorus.</li>
+                <li><strong>Singing the whole song twenty times</strong> — by the take you need, the voice is already tired, and the best phrases are scattered across different files.</li>
+              </ol>
+
+              <hr>
+              <h2 id="checklist">
+                <span data-lang="ru">11. Чек-лист перед нажатием Record</span>
+                <span data-lang="en">11. Checklist before you hit Record</span>
+              </h2>
+
+              <ul class="kb-checklist" data-lang="ru">
+                <li>Разогрелся, вода рядом, ничего не сушит горло</li>
+                <li>Холодильник, кондиционер, вентиляция выключены; двери и окна закрыты</li>
+                <li>За спиной — одеяло или поглотитель; микрофон не в углу</li>
+                <li>Поп-фильтр стоит, микрофон в 15–16 см, кабель не натянут</li>
+                <li>Пою в правильную сторону микрофона</li>
+                <li>24 бита, пики около −10 dBFS, проверено на самых громких фразах</li>
+                <li>Прямой мониторинг включён, задержки нет</li>
+                <li>В наушниках — та обработка, с которой удобно петь; в файл пишется сухой сигнал</li>
+                <li>Текст перед глазами, экран в стороне</li>
+                <li>Самое сложное в песне записываю первым</li>
+              </ul>
+              <ul class="kb-checklist" data-lang="en">
+                <li>I'm warmed up, water is at hand, nothing dries my throat</li>
+                <li>The fridge, the air conditioner and the ventilation are off; doors and windows are closed</li>
+                <li>A duvet or an absorber is behind my back; the microphone is not in a corner</li>
+                <li>The pop filter is on, the microphone is at 15–16 cm, the cable is not taut</li>
+                <li>I am singing into the correct side of the microphone</li>
+                <li>24 bit, peaks around −10 dBFS, checked on the loudest phrases</li>
+                <li>Direct monitoring is on, there is no latency</li>
+                <li>In the headphones — the processing I am comfortable singing with; the file gets the dry signal</li>
+                <li>The lyrics are in front of my eyes, the screen is off to the side</li>
+                <li>The hardest part of the song is recorded first</li>
+              </ul>
+
+              <hr>
+              <h2 id="sources">
+                <span data-lang="ru">Источники</span>
+                <span data-lang="en">Sources</span>
+              </h2>
+
+              <p data-lang="ru">Материал собран по публикациям профессиональных звукорежиссёров и производителей микрофонов:</p>
+              <p data-lang="en">The material is based on publications by professional recording engineers and microphone manufacturers:</p>
+
+              <ol>
+                <li><strong>Sound On Sound — «Recording Vocals» (Matt Houghton, 2022)</strong> — <a href="https://www.soundonsound.com/techniques/recording-vocals" target="_blank" rel="noopener">soundonsound.com/techniques/recording-vocals</a></li>
+                <li><strong>Sound On Sound — «Vocal Production» (Paul White, 2012)</strong> — <a href="https://www.soundonsound.com/techniques/vocal-production" target="_blank" rel="noopener">soundonsound.com/techniques/vocal-production</a></li>
+                <li><strong>iZotope — «Crafting a basic vocal chain» (Nick Messitte, 2023)</strong> — <a href="https://www.izotope.com/community/blog/crafting-a-basic-vocal-chain" target="_blank" rel="noopener">izotope.com → crafting a basic vocal chain</a></li>
+                <li><strong>DPA Microphone University — «Proximity effect in microphones explained» (Eddy Bøgh Brixen)</strong> — <a href="https://www.dpamicrophones.com/mic-university/background-knowledge/proximity-effect-in-microphones-explained/" target="_blank" rel="noopener">dpamicrophones.com → proximity effect</a></li>
+                <li><strong>Shure — «Microphone Techniques for Recording»</strong> — <a href="https://www.shure.com/en-US/docs/education/Microphone-Techniques-for-Recording" target="_blank" rel="noopener">shure.com → microphone techniques</a></li>
+                <li><strong>Sound On Sound — «20 Tips On Recording Vocals»</strong> — <a href="https://www.soundonsound.com/sound-advice/20-tips-recording-vocals" target="_blank" rel="noopener">soundonsound.com/sound-advice/20-tips-recording-vocals</a></li>
+                <li><strong>Sound On Sound Podcast — Recording Vocals (Mark Mynett)</strong> — <a href="https://www.soundonsound.com/techniques/recording-vocals-podcast" target="_blank" rel="noopener">soundonsound.com/techniques/recording-vocals-podcast</a></li>
+                <li><strong>Produce Like A Pro (Warren Huart)</strong> — <a href="https://www.youtube.com/watch?v=YlNoKbAlTOI" target="_blank" rel="noopener">youtube.com → Produce Like A Pro</a></li>
+              </ol>
+            </section>
+          </article>
+        </div>
+      </main>
+
+      <!-- СОДЕРЖАНИЕ: справа на компьютере, шторкой справа на телефоне и
+           планшете. Список свой у каждой статьи (.kb-toc-page) — показывает
+           его kb/js/05-toc.js; якоря совпадают с id заголовков статьи. -->
+      <aside id="kbToc" aria-label="Содержание / Contents">
+        <p class="kb-side-title">
+          <span data-lang="ru">Содержание</span>
+          <span data-lang="en">Contents</span>
+        </p>
+        <nav class="kb-toc-page" data-kb-article="vocal-recording">
+          <ul class="kb-toc-list">
+            <li><a class="kb-toc-link" href="#how-to-read"><span data-lang="ru">Как читать эту статью</span><span data-lang="en">How to read this article</span></a></li>
+            <li><a class="kb-toc-link" href="#voice"><span data-lang="ru">1. Начните с голоса</span><span data-lang="en">1. Start with the voice</span></a></li>
+            <li><a class="kb-toc-link" href="#room"><span data-lang="ru">2. Комната важнее микрофона</span><span data-lang="en">2. The room matters more</span></a></li>
+            <li><a class="kb-toc-link" href="#mic"><span data-lang="ru">3. Микрофон</span><span data-lang="en">3. The microphone</span></a></li>
+            <li><a class="kb-toc-link" href="#levels"><span data-lang="ru">4. Уровни записи</span><span data-lang="en">4. Recording levels</span></a></li>
+            <li><a class="kb-toc-link" href="#daw"><span data-lang="ru">5. Настройка программы</span><span data-lang="en">5. Software setup</span></a></li>
+            <li><a class="kb-toc-link" href="#headphones"><span data-lang="ru">6. Наушники</span><span data-lang="en">6. Headphones</span></a></li>
+            <li><a class="kb-toc-link" href="#self-recording"><span data-lang="ru">7. Как записывать себя</span><span data-lang="en">7. How to record yourself</span></a></li>
+            <li><a class="kb-toc-link" href="#after"><span data-lang="ru">8. Что сделать сразу после</span><span data-lang="en">8. What to do right after</span></a></li>
+            <li><a class="kb-toc-link" href="#tips"><span data-lang="ru">9. Фишки, которые работают</span><span data-lang="en">9. Tricks that work</span></a></li>
+            <li><a class="kb-toc-link" href="#mistakes"><span data-lang="ru">10. Пять ошибок</span><span data-lang="en">10. Five mistakes</span></a></li>
+            <li><a class="kb-toc-link" href="#checklist"><span data-lang="ru">11. Чек-лист перед Record</span><span data-lang="en">11. Checklist before Record</span></a></li>
+            <li><a class="kb-toc-link" href="#sources"><span data-lang="ru">Источники</span><span data-lang="en">Sources</span></a></li>
+          </ul>
+        </nav>
+      </aside>
+    </div>
+  </div>
+
+  <script src="./js/02-dust.js" defer></script>
+  <script src="./js/03-hint.js" defer></script>
+  <script src="./js/04-sidebar.js" defer></script>
+  <script src="./js/05-toc.js" defer></script>
+  <!-- Плавная прокрутка панели: своя копия библиотеки Lenis (не ../vendor —
+       база знаний остаётся автономной) и обёртка над ней. Движку нужна
+       готовая разметка панели. -->
+  <script src="./js/vendor/lenis.min.js" defer></script>
+  <script src="./js/06-smooth-scroll.js" defer></script>
+  <!-- Статьи в одном документе: показ по адресу ?article=<slug>. После
+       05-toc.js (пересборка содержания) и 06-smooth-scroll.js (прокрутка
+       панели). -->
+  <script src="./js/07-articles.js" defer></script>
+
+  <!-- animations.js — эффекты базы знаний: заставка (#kb-boot) и вход панелей.
+       Подключается последним, как на основном сайте: ему нужны готовая
+       разметка, язык и плавная прокрутка. -->
+  <script src="./animations.js" defer></script>
+</body>
+</html>

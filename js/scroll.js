@@ -154,7 +154,7 @@ let scrollSpyDirection = 'down';
    текущий scrollY — на страницу, которая между пересчётами не меняла высоту,
    это точная эквивалентная величина. Пересчёт вешает сам scroll-spy и
    внешние вызовы (смена языка, раскрытие отзывов/FAQ, появление плеера). */
-const NAV_SECTIONS = ['player', 'services', 'reviews', 'contacts', 'faq'];
+const NAV_SECTIONS = ['player', 'services', 'reviews', 'contacts', 'faq', 'kb'];
 let scrollSpyAnchors = Object.create(null); /* id → top в координатах документа */
 let scrollSpyDocHeight = 0;  /* высота документа на момент замера */
 let scrollSpyHeaderH = 0;    /* высота шапки на момент замера */
@@ -256,10 +256,10 @@ function updateActiveNavSection() {
     lastScrollSpyY = scrollY;
   }
 
-  // Если прокрутили до самого низа страницы — гарантированно активен FAQ
-  // (последний раздел страницы перед подвалом)
+  // Если прокрутили до самого низа страницы — гарантированно активен последний
+  // раздел (сейчас это «База знаний», перед подвалом)
   if (scrollY + windowHeight >= documentHeight - 50) {
-    setActiveNavSection('faq');
+    setActiveNavSection('kb');
     return;
   }
 
@@ -367,7 +367,7 @@ function initSmoothAnchorNavigation() {
         const targetY = currentY + rect.top - headerH - extraOffset;
 
         const targetId = href.startsWith('#') ? href.slice(1) : null;
-        if (targetId && ['player', 'services', 'faq', 'contacts', 'reviews'].includes(targetId)) {
+        if (targetId && ['player', 'services', 'faq', 'contacts', 'reviews', 'kb'].includes(targetId)) {
           setActiveNavSection(targetId);
           if (scrollSpyClickLockTimer) clearTimeout(scrollSpyClickLockTimer);
           scrollSpyClickLockTimer = setTimeout(() => {

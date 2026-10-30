@@ -1,0 +1,297 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   kb/css/style/02-header.css — ШАПКА БАЗЫ ЗНАНИЙ
+   Что: плашка 64/80px. Слева логотип и «Nick Rise Studio» (ссылка на
+        основной сайт), по центру «База знаний» (ссылка на приветствие базы
+        знаний), справа RU/EN. Кнопки «Заказать» и бургер-меню здесь нет,
+        прозрачность плашки не анимируется — страница не прокручивается.
+   Разметку создаёт: kb/index.html → header#kbHeader.
+   Подключён: kb/index.html, после 01-base.css, до 03-hint.css.
+   Группы блоков в файле: 1 (общие), 2 (планшет и шире), 3 (компьютер),
+        6 (телефон), 9 (уменьшить движение).
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ═══ 1. ОБЩИЕ — ВСЕ УСТРОЙСТВА ═════════════════════════════════════════════ */
+
+#kbHeader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  background-color: rgba(12, 14, 18, 0.9);
+  border-bottom: 1px solid rgba(31, 41, 55, 0.6);
+}
+
+/* ── Логотип: ссылка на основной сайт ────────────────────────────────── */
+#kbLogoLink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* Вид и анимации плитки — те же, что в шапке сайта (css/anim/03-header.css):
+   непрерывный янтарный пульс nrLogoBreath, при наведении плитка чуть
+   разворачивается и вспыхивает ореолом. box-shadow здесь занят пульсом,
+   поэтому вспышку даёт симметричный filter: drop-shadow — он ложится по
+   силуэту плитки и с анимацией не конфликтует. */
+.kb-logo-frame {
+  display: block;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-radius: 8px;
+  animation: nrLogoBreath 5.5s ease-in-out infinite;
+  transition: transform 0.5s var(--kb-ease), border-color 0.3s ease,
+              box-shadow 0.45s var(--kb-ease), filter 0.35s ease;
+  will-change: transform;
+}
+
+/* Картинка поднята в собственный GPU-слой: браузер рисует её один раз в полном
+   разрешении и при наведении только композитит готовую текстуру — плитка
+   остаётся резкой. */
+.kb-logo-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+@keyframes nrLogoBreath {
+  0%, 100% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.12); }
+  50%      { box-shadow: 0 0 30px rgba(245, 158, 11, 0.36); }
+}
+
+.kb-logo-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.kb-logo-title {
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  color: #FFFFFF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.3s ease;
+}
+
+.kb-logo-sub {
+  font-family: 'Space Grotesk', 'Plus Jakarta Sans', monospace;
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--kb-amber);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Наведение: лёгкий разворот плитки и янтарная вспышка. Рамку не трогаем —
+   иначе после ухода курсора она тускнела бы и «подскакивала» вместе с
+   перезапустившимся пульсом. Пульс не отключаем по той же причине: animation
+   сбросилась бы в 0% (самый тусклый кадр). */
+#kbLogoLink:hover .kb-logo-frame {
+  transform: rotate(-4deg) scale(1.06);
+  filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.6)) drop-shadow(0 0 24px rgba(245, 158, 11, 0.35));
+}
+
+#kbLogoLink:hover .kb-logo-title {
+  color: var(--kb-amber-lt);
+}
+
+/* ── Название раздела по центру ──────────────────────────────────────────
+   Абсолютное центрирование: надпись стоит ровно по центру плашки и не
+   зависит от ширины логотипа и переключателя. Это ссылка на приветствие
+   базы знаний (./index.html): клик по ней закрывает открытую статью. */
+#kbTitle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #FFFFFF;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+#kbTitle:hover {
+  color: var(--kb-amber-lt);
+}
+
+/* ── Переключатель языка ─────────────────────────────────────────────────
+   Тот же вид, что в шапке основного сайта: капсула с ползунком. Ползунок
+   сдвигается по html[data-lang], цвет букв — оттуда же.
+   Клик ловится на капсуле целиком (kb/js/01-lang.js): по букве — её язык, по
+   фону капсулы или уже выбранной букве — противоположный. Поэтому у самой
+   капсулы курсор-указатель и запрет выделения, как у кнопки. */
+#kbLangToggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 2px;
+  border: 1px solid #1F2937;
+  border-radius: 8px;
+  background-color: #0D1017;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#kbLangToggle:hover {
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+/* Ползунок — часть капсулы: клики по нему уходят на неё, а не теряются. */
+.kb-lang-pill {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  width: calc(50% - 2px);
+  border-radius: 6px;
+  background-color: var(--kb-amber);
+  transition: transform 0.3s var(--kb-ease);
+  pointer-events: none;
+}
+
+html[data-lang="ru"] .kb-lang-pill {
+  transform: translate3d(0, 0, 0);
+}
+
+html[data-lang="en"] .kb-lang-pill {
+  transform: translate3d(100%, 0, 0);
+}
+
+#kbLangRu,
+#kbLangEn {
+  position: relative;
+  z-index: 1;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--kb-text-dim);
+  transition: color 0.3s ease;
+}
+
+html[data-lang="ru"] #kbLangRu,
+html[data-lang="en"] #kbLangEn {
+  color: #020617;
+}
+
+/* ═══ 2. ПЛАНШЕТ И ШИРЕ (min-width: 640px) ══════════════════════════════════ */
+
+@media (min-width: 640px) {
+  #kbHeader {
+    height: 80px;
+    padding: 0 24px;
+  }
+
+  #kbLogoLink {
+    gap: 14px;
+  }
+
+  .kb-logo-frame {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+  }
+
+  .kb-logo-title {
+    font-size: 18px;
+  }
+
+  .kb-logo-sub {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+  }
+
+  #kbTitle {
+    font-size: 20px;
+  }
+
+  #kbLangToggle {
+    padding: 4px;
+    border-radius: 12px;
+  }
+
+  .kb-lang-pill {
+    top: 4px;
+    bottom: 4px;
+    left: 4px;
+    width: calc(50% - 4px);
+    border-radius: 8px;
+  }
+
+  #kbLangRu,
+  #kbLangEn {
+    padding: 4px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+  }
+}
+
+/* ═══ 3. КОМПЬЮТЕР (min-width: 1024px) ══════════════════════════════════════ */
+
+@media (min-width: 1024px) {
+  #kbHeader {
+    padding: 0 32px;
+  }
+
+  #kbTitle {
+    font-size: 22px;
+  }
+}
+
+/* ═══ 6. ТЕЛЕФОН (max-width: 639.98px) ══════════════════════════════════════ */
+
+/* На узком экране подпись «Nick Rise Studio» не помещается рядом с
+   центральной надписью и переключателем — остаётся только логотип.
+   Он и есть ссылка на основной сайт. */
+@media (max-width: 639.98px) {
+  .kb-logo-text {
+    display: none;
+  }
+}
+
+/* ═══ 9. «УМЕНЬШИТЬ ДВИЖЕНИЕ» ═══════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  .kb-lang-pill,
+  .kb-logo-frame,
+  .kb-logo-title,
+  #kbTitle {
+    transition: none;
+  }
+
+  /* Пульс логотипа — непрерывное движение, при «уменьшить движение» его нет.
+     Ореол остаётся статичным (кадр 0% анимации). */
+  .kb-logo-frame {
+    animation: none;
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.12);
+  }
+
+  /* Наведение без разворота: плитка только подсвечивается. */
+  #kbLogoLink:hover .kb-logo-frame {
+    transform: none;
+  }
+}

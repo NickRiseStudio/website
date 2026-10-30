@@ -1,0 +1,405 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   kb/css/anim/01-boot.css — ЗАСТАВКА «ВКЛЮЧЕНИЯ ПУЛЬТА» (#kb-boot)
+   Что: появление заставки, rack-панели, ламп и VU-метров, растворение.
+   Разметку создаёт: kb/index.html → #kb-boot;
+        скрывает kb/animations.js → initBoot.
+   Подключён: kb/index.html, после всех css/style; здесь первым, до 02-panels.css.
+   Группы блоков в файле: 1 (общие), 7 (узкий телефон), 9 (уменьшить движение).
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── ПОРЯДОК БЛОКОВ В ФАЙЛЕ (одинаков во всех css/style и css/anim) ──
+   1. ОБЩИЕ — все устройства            5. ПЛАНШЕТ (640–1023.98px)
+   2. ПЛАНШЕТ И ШИРЕ (min-width: 640px) 6. ТЕЛЕФОН (max-width: 639.98px)
+   3. КОМПЬЮТЕР (min-width: 1024px)     7. УЗКИЙ ТЕЛЕФОН (480px / 380px)
+   4. ВСЁ, КРОМЕ КОМПЬЮТЕРА (≤1023.98)  8. ВВОД (hover / pointer)
+                                        9. «УМЕНЬШИТЬ ДВИЖЕНИЕ»
+   «И выше» — min-width, «и ниже» — max-width на 0.02px меньше границы
+   Tailwind (sm 640, lg 1024): так соседние диапазоны не пересекаются и
+   между ними не остаётся полосы без правил. Печатаются только те группы,
+   блоки которых в файле есть. */
+
+/* ═══ 1. ОБЩИЕ — ВСЕ УСТРОЙСТВА ═════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════════════════
+   СЛОЙ АНИМАЦИЙ БАЗЫ ЗНАНИЙ (css/anim)
+   Подключается ПОСЛЕ всех css/style: добавляет только движение поверх
+   готовой вёрстки и ничего в ней не переопределяет.
+   Цвета и --kb-ease уже объявлены в css/style/01-base.css. Здесь одна
+   переменная — --kb-snap: короткая «пружинка» стрелок VU-метров.
+   ═══════════════════════════════════════════════════════════════════════ */
+:root {
+  --kb-snap: cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+/* ═══ ЗАСТАВКА — оболочка оверлея (kb/index.html → #kb-boot)
+   Видна при каждом заходе в базу знаний и при перезагрузке; статьи
+   открываются внутри документа, поэтому её не повторяют. Прячет
+   kb/animations.js → initBoot после готовности. ВАЖНО: все движения здесь
+   через transform/opacity (композитор) — никаких чтений layout и изменений
+   width/height. Пока заставка видна — страница заморожена
+   (html.kb-boot-active): фокус не уходит из оверлея, клавиши и колесо
+   гасит скрипт, клики съедает #kb-boot. Разблокировка происходит только
+   в момент #kb-boot-done (display:none).  */
+#kb-boot {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(1100px 560px at 50% -12%, rgba(245, 158, 11, 0.09), transparent 60%),
+    radial-gradient(800px 500px at 50% 115%, rgba(245, 158, 11, 0.05), transparent 55%),
+    linear-gradient(180deg, #0b0e14 0%, #0C0E12 46%, #07090d 100%);
+  pointer-events: auto;
+  outline: none; /* tabindex=-1: фокус «держится» на заставке без ринга */
+  opacity: 1;
+  transition: opacity 0.42s ease;
+}
+
+/* Пока заставка видна (класс вешает kb/animations.js на <html>) — страница
+   заморожена: без скролла и без «ухода» фокуса на контент. Снимается
+   ровно в момент #kb-boot-done (display:none). */
+html.kb-boot-active,
+html.kb-boot-active body {
+  overflow: hidden;
+  height: 100%;
+  overscroll-behavior: none;
+}
+
+/* Начали прятать: оверлей гаснет, но по-прежнему перехватывает клики,
+   пока не наступит #kb-boot-done и JS не снимет лок страницы. */
+#kb-boot.kb-boot-hide {
+  opacity: 0;
+}
+
+/* Финальное скрытие: элемент больше не занимает слой */
+#kb-boot.kb-boot-done {
+  display: none !important;
+}
+
+.kb-boot-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 19px;
+}
+
+/* Логотип — сдержанно: рамка + лёгкое включение, без свечения.
+   Размер в px, картинка тянется на 100% (width/height в разметке — лишь
+   запасное соотношение до загрузки), поэтому масштабируется вместе с ним. */
+.kb-boot-logo {
+  width: 115px;
+  height: 115px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid rgba(245, 158, 11, 0.45);
+  animation: kbBootLogoIn 0.7s var(--kb-ease) both;
+}
+
+.kb-boot-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+@keyframes kbBootLogoIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.94); }
+  to   { opacity: 1; transform: none; }
+}
+
+.kb-boot-title {
+  font-family: 'Space Grotesk', 'Plus Jakarta Sans', 'Manrope', system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  font-size: 18px;
+  color: #f3f4f6;
+  text-align: center;
+  white-space: nowrap;
+  animation: kbBootFadeIn 0.6s var(--kb-ease) 0.08s both;
+}
+
+.kb-boot-title-accent {
+  color: var(--kb-amber-lt);
+  text-shadow: 0 0 12px rgba(245, 158, 11, 0.5);
+}
+
+@keyframes kbBootFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* «Прогрев лампового усилителя»: 1U-панель с brushed-металлом и болтами.
+   Два ряда: сверху — тумблер питания и ряд ламп накаливания (лампы
+   загораются по одной слева направо и служат индикатором загрузки),
+   снизу — два VU-метра, стрелки которых уходят с «нуля» к рабочей
+   отметке. Движение — только opacity/transform (композитор). */
+/* Скрытый источник SVG-шкалы VU (инстансы — через <use href="#kbVuDial">).
+   position:absolute убирает его из flex-потока .kb-boot-inner (иначе 0-й
+   элемент добавил бы лишний gap перед панелью). */
+.kb-boot-vu-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.kb-boot-rack {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 13px;
+  padding: 16px 24px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 1px, rgba(0, 0, 0, 0.03) 1px 3px),
+    linear-gradient(180deg, #2b303b 0%, #171b24 46%, #0d1017 100%);
+  box-shadow:
+    0 22px 48px rgba(0, 0, 0, 0.62),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.75);
+  animation: kbBootFadeIn 0.5s var(--kb-ease) 0.3s both;
+}
+
+/* Болты по углам панели */
+.kb-boot-screw {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #7b8291, #23262e 72%);
+  box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.9), 0 1px 1px rgba(255, 255, 255, 0.12);
+}
+
+.kb-boot-screw::after {
+  content: '';
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  top: 50%;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.65);
+  transform: rotate(35deg);
+}
+
+.kb-boot-screw:nth-child(1) { left: 7px; top: 7px; }
+
+.kb-boot-screw:nth-child(2) { right: 7px; top: 7px; }
+
+.kb-boot-screw:nth-child(3) { left: 7px; bottom: 7px; }
+
+.kb-boot-screw:nth-child(4) { right: 7px; bottom: 7px; }
+
+/* Верхний ряд панели: слева тумблер питания, справа — ряд ламп накаливания */
+.kb-boot-rack-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  width: 100%;
+}
+
+/* Питание: тумблер и пилот-лампа */
+.kb-boot-power {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.kb-boot-switch {
+  position: relative;
+  width: 19px;
+  height: 29px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #3a4150 0%, #1a1e26 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 2px 5px rgba(0, 0, 0, 0.6);
+}
+
+.kb-boot-switch::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  top: 2px;
+  height: 13px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #e8eaee 0%, #9aa1ad 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+  animation: kbBootSwitchFlip 0.4s ease-out 0.16s both;
+}
+
+/* Ход бегунка — до упора в нижнюю кромку корпуса (29px − 2px отступа − 13px
+   высоты = 14px), вверх — короткий отскок на 1px. */
+@keyframes kbBootSwitchFlip {
+  0%   { transform: translateY(14px); }
+  70%  { transform: translateY(-1px); }
+  100% { transform: translateY(0); }
+}
+
+.kb-boot-pilot {
+  position: relative;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #3a2606;
+  box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.8);
+}
+
+.kb-boot-pilot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #ff5a4d;
+  box-shadow: 0 0 9px rgba(239, 68, 68, 0.9);
+  opacity: 0;
+  animation: kbBootPilotOn 0.4s ease-out 0.36s both;
+}
+
+@keyframes kbBootPilotOn {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* VU-метры: светлая шкала, «стекло», стрелка с «нуля» к рабочей отметке.
+   Пропорция кадра — 100:58 из viewBox шкалы, поэтому 101 × 58.6. */
+.kb-boot-meters { display: flex; gap: 13px; }
+
+.kb-boot-meter {
+  position: relative;
+  width: 101px;
+  height: 58.6px;
+  border-radius: 5px;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 58%),
+    linear-gradient(180deg, #f3eddf 0%, #e0d7c2 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.4),
+    inset 0 2px 5px rgba(0, 0, 0, 0.32),
+    0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.kb-boot-meter::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 34%, #565b66, #101216 74%);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+.kb-boot-vu { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+/* Стрелка: закреплена по оси снизу, уходит с «нуля» к рабочей отметке */
+.kb-boot-needle {
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  width: 2px;
+  height: 40px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: linear-gradient(180deg, #d13b2e 0 6px, #23262e 6px 100%);
+  transform-origin: 50% 100%;
+  transform: rotate(-52deg);
+  animation: kbBootNeedle 1.05s var(--kb-snap) 0.4s both;
+}
+
+.kb-boot-glass {
+  position: absolute;
+  inset: 0;
+  border-radius: 5px;
+  pointer-events: none;
+  background: linear-gradient(115deg, rgba(255, 255, 255, 0.36) 0%, rgba(255, 255, 255, 0.07) 25%, rgba(255, 255, 255, 0) 44%, rgba(255, 255, 255, 0) 66%, rgba(255, 255, 255, 0.13) 100%);
+}
+
+@keyframes kbBootNeedle {
+  0%   { transform: rotate(-52deg); }
+  72%  { transform: rotate(32deg); }
+  100% { transform: rotate(26deg); }
+}
+
+/* Лампы накаливания — индикатор загрузки. Загораются по одной слева направо
+   (animation-delay с шагом 0.21 с): так ряд читается как прогресс и заменяет
+   прежнюю полосу. Последняя лампа «доезжает» ровно к ~1.5 с — моменту MIN_HOLD. */
+.kb-boot-tubes { display: flex; gap: 12px; }
+
+.kb-boot-tubes span {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 34%, #4a3a12 0%, #2a2008 60%, #17130a 100%);
+  box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.7);
+}
+
+.kb-boot-tubes span::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 34%, #fff7dc 0%, #fbbf24 40%, #b45309 76%, rgba(120, 72, 6, 0) 100%);
+  box-shadow: 0 0 17px rgba(245, 158, 11, 0.7);
+  opacity: 0;
+  transform: scale(0.72);
+  animation: kbBootTubeOn 0.34s ease-out both;
+}
+
+.kb-boot-tubes span:nth-child(1)::after { animation-delay: 0.32s; }
+
+.kb-boot-tubes span:nth-child(2)::after { animation-delay: 0.53s; }
+
+.kb-boot-tubes span:nth-child(3)::after { animation-delay: 0.74s; }
+
+.kb-boot-tubes span:nth-child(4)::after { animation-delay: 0.95s; }
+
+.kb-boot-tubes span:nth-child(5)::after { animation-delay: 1.16s; }
+
+@keyframes kbBootTubeOn {
+  0%   { opacity: 0; transform: scale(0.72); }
+  55%  { opacity: 1; transform: scale(1.15); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* ═══ 7. УЗКИЙ ТЕЛЕФОН (max-width: 480px / 380px) ═══════════════════════════ */
+
+/* Узкие экраны: rack уменьшается, чтобы влезал в ширину
+   (панель = 2×77 + 10 + 2×17 + 2px рамки ≈ 200px — влезает в 320px) */
+@media (max-width: 480px) {
+  .kb-boot-rack { gap: 11px; padding: 13px 17px; }
+  .kb-boot-rack-top { gap: 16px; }
+  .kb-boot-meters { gap: 10px; }
+  .kb-boot-meter { width: 77px; height: 44.7px; }
+  .kb-boot-needle { height: 29px; }
+  .kb-boot-tubes { gap: 8px; }
+  .kb-boot-tubes span { width: 12px; height: 12px; }
+}
+
+/* ═══ 9. «УМЕНЬШИТЬ ДВИЖЕНИЕ» ═══════════════════════════════════════════════ */
+
+/* Пользователям prefers-reduced-motion заставка показывается статичным
+   кадром «прогрева»: без движения — лампы горят, стрелки в рабочем
+   положении. Скрывается как обычно (по загрузке), но держится недолго:
+   в initBoot для reduced-motion MIN_HOLD короткий. */
+@media (prefers-reduced-motion: reduce) {
+  #kb-boot,
+  #kb-boot *,
+  #kb-boot *::before,
+  #kb-boot *::after {
+    animation: none !important;
+  }
+  #kb-boot { transition: none; }
+  #kb-boot .kb-boot-switch::after { transform: none; }
+  #kb-boot .kb-boot-pilot::after { opacity: 1; }
+  #kb-boot .kb-boot-tubes span::after { opacity: 1; transform: scale(1); }
+  #kb-boot .kb-boot-needle { transform: rotate(26deg); }
+}

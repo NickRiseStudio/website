@@ -82,6 +82,7 @@
   <link rel="stylesheet" href="./css/style/18-reviews.css">
   <link rel="stylesheet" href="./css/style/19-calculator.css">
   <link rel="stylesheet" href="./css/style/20-about.css">
+  <link rel="stylesheet" href="./css/style/21-kb.css">
 
   <!-- Animation Layer: 16 файлов анимаций (css/anim), добавляют только движение,
        ни одно правило стилей не переопределяют. Подключаются после css/style. -->
@@ -290,13 +291,21 @@
         <a href="#reviews" class="hover:text-amber-400 transition-colors whitespace-nowrap" data-nav-section="reviews"><span data-i18n="nav.reviews">Отзывы</span></a>
         <a href="#contacts" class="hover:text-amber-400 transition-colors whitespace-nowrap" data-nav-section="contacts"><span data-i18n="nav.contacts">Контакты</span></a>
         <a href="#faq" class="hover:text-amber-400 transition-colors whitespace-nowrap" data-nav-section="faq"><span data-i18n="nav.faq">FAQ</span></a>
+        <!-- Скроллит к секции #kb, как остальные пункты меню (js/scroll.js →
+             NAV_SECTIONS). Сама база знаний открывается кнопкой в этой секции. -->
+        <a href="#kb" class="hover:text-amber-400 transition-colors whitespace-nowrap" data-nav-section="kb"><span data-i18n="nav.kb">База знаний</span></a>
       </nav>
 
       <div id="headerActions" class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-        <div id="langToggleContainer" class="relative inline-flex items-center bg-[#0d1017] p-0.5 sm:p-1 rounded-lg sm:rounded-xl border border-gray-800 cursor-pointer select-none hover:border-amber-500/40 transition-colors" data-lang="ru" role="button" tabindex="0" aria-label="Toggle language">
+        <!-- Переключатель языка — та же схема, что в базе знаний (kb/index.html):
+             капсула и две настоящие кнопки. Клик ловится на капсуле целиком
+             (js/i18n.js → initI18n): по букве — переход на её язык, по фону
+             капсулы, ползунку или уже выбранной букве — на противоположный.
+             Ползунок едет по data-lang капсулы (css/style/13-switchers.css). -->
+        <div id="langToggleContainer" class="relative inline-flex items-center bg-[#0d1017] p-0.5 sm:p-1 rounded-lg sm:rounded-xl border border-gray-800 cursor-pointer select-none hover:border-amber-500/40 transition-colors" data-lang="ru" role="group" aria-label="Язык / Language">
           <div id="langSlidePill" class="lang-slider-pill pointer-events-none"></div>
-          <span id="btnLangRu" class="relative z-10 px-2 sm:px-3 py-1 text-xs font-extrabold rounded-md sm:rounded-lg pointer-events-none">RU</span>
-          <span id="btnLangEn" class="relative z-10 px-2 sm:px-3 py-1 text-xs font-extrabold rounded-md sm:rounded-lg pointer-events-none">EN</span>
+          <button type="button" id="btnLangRu" data-lang-btn="ru" aria-pressed="true" class="relative z-10 px-2 sm:px-3 py-1 text-xs font-extrabold rounded-md sm:rounded-lg cursor-pointer">RU</button>
+          <button type="button" id="btnLangEn" data-lang-btn="en" aria-pressed="false" class="relative z-10 px-2 sm:px-3 py-1 text-xs font-extrabold rounded-md sm:rounded-lg cursor-pointer">EN</button>
         </div>
 
         <!-- Кнопка «Заказать» на панели: ведёт в расчёт стоимости
@@ -361,6 +370,14 @@
 
       <a href="#faq" onclick="closeMobileMenu()" class="mobile-drawer-item nav-drawer-link px-4 py-3 rounded-xl bg-[#12151D] border border-gray-800/60 hover:bg-[#1A1F2B] hover:text-amber-400 transition-all flex items-center justify-between" data-nav-section="faq">
         <span data-i18n="nav.faq">FAQ</span>
+        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+      </a>
+
+      <!-- Скроллит к секции #kb, как остальные пункты. Шторку закрываем сами:
+           у остальных пунктов это делает общий обработчик якорей, но полагаться
+           на него здесь не нужно — closeMobileMenu вызывается до скролла. -->
+      <a href="#kb" onclick="closeMobileMenu()" class="mobile-drawer-item nav-drawer-link px-4 py-3 rounded-xl bg-[#12151D] border border-gray-800/60 hover:bg-[#1A1F2B] hover:text-amber-400 transition-all flex items-center justify-between" data-nav-section="kb">
+        <span data-i18n="nav.kb">База знаний</span>
         <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
       </a>
 
@@ -779,6 +796,37 @@
           <!-- Заполняется из js/player-ui.js -->
         </div>
 
+      </div>
+    </section>
+
+    <!-- 6.6 БАЗА ЗНАНИЙ — анонс отдельной страницы ./kb/
+         Ссылка ведёт в новую вкладку: страница базы знаний живёт своей папкой
+         и своими файлами, основной сайт от неё не зависит. Пункт «База знаний»
+         в шапке и шторке ведёт не сюда, а к этой секции (href="#kb"), чтобы
+         посетитель сначала прочитал анонс. Волну под заголовком создаёт
+         animations.js → initEqLines (та же кривая, что под остальными
+         разделами) — css/style/21-kb.css. -->
+    <section id="kb">
+      <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <!-- Обёртка только вокруг заголовка: initEqLines добавляет волну в конец
+             родителя h2, то есть ровно под заголовок, а не под кнопку. -->
+        <div class="nr-kb-head">
+          <h2 class="text-3xl sm:text-4xl font-black text-white tracking-tight" data-i18n="kb.title">
+            База знаний
+          </h2>
+        </div>
+        <p class="nr-kb-subtitle" data-i18n="kb.subtitle">
+          Реально много полезной информации
+        </p>
+        <p class="nr-kb-ps" data-i18n="kb.ps">
+          P.S. Базу знаний лучше всего смотреть с компьютера
+        </p>
+        <!-- Класс nr-calc-cta — общий для призывов к действию сайта
+             (css/anim/13-cta.css): пульс, бегущий блик и расходящееся кольцо.
+             Цвета кнопки и её теней — в css/style/21-kb.css. -->
+        <a href="./kb/" target="_blank" rel="noopener" class="nr-kb-btn nr-calc-cta" data-i18n="kb.button">
+          БАЗА ЗНАНИЙ
+        </a>
       </div>
     </section>
 
