@@ -1,18 +1,14 @@
 // ═══════════════════════════════════════════════════════════════════════
-// kb/js/05-toc.js — СОДЕРЖАНИЕ СТАТЬИ: ШТОРКА И ПОДСВЕТКА РАЗДЕЛА
-// Грузится: kb/index.html — в конце body, defer. После kb/js/04-sidebar.js:
-//         меню статей уже умеет закрывать эту шторку.
-// Читает: #kbToc, .kb-toc-page.is-current, #kbTocToggle, #kbMain,
-//         #kbSidebarOverlay, #kbSidebar, #kbSidebarToggle и h2 открытой статьи.
+// kb/js/05-toc.js — СОДЕРЖАНИЕ СТАТЬИ: ПОДСВЕТКА РАЗДЕЛА
+// Грузится: kb/index.html — в конце body, defer. После kb/js/04-sidebar.js.
+// Читает: #kbToc, .kb-toc-page.is-current, #kbMain и h2 открытой статьи.
 // Публичные (window): kbToc → refresh (пересобрать под открытую статью),
 //         playIn (выезд колонки, когда статья открывается из приветствия),
-//         close (закрыть шторку). Зовёт kb/js/07-articles.js.
+//         close (снять недокрученный выезд). Зовёт kb/js/07-articles.js.
 // Блоки файла:
 //   • collect / refresh — списки берутся у той статьи, что открыта.
 //   • updateActive / setActiveSection — подсветка раздела, который читают.
-//   • setTocOpen — шторка на телефоне и планшете (на ПК это колонка).
 //   • playIn — выезд колонки справа при открытии статьи из приветствия.
-//   • Переход по пункту — плавная прокрутка панели (kb/js/06-smooth-scroll.js).
 //   • Прокрутка #kbMain: пересчёт на кадр и первый пересчёт после загрузки.
 // ═══════════════════════════════════════════════════════════════════════ */
 
@@ -24,13 +20,13 @@
   var TOC_ACTIVE_OFFSET_PX = 24;
 
   var toc = document.getElementById('kbToc');
-  var toggle = document.getElementById('kbTocToggle');
   var main = document.getElementById('kbMain');
-  if (!toc || !toggle || !main) return;
+  if (!toc || !main) return;
 
-  var overlay = document.getElementById('kbSidebarOverlay');
-  var sidebar = document.getElementById('kbSidebar');
-  var sidebarToggle = document.getElementById('kbSidebarToggle');
+  /* Содержания на телефоне и планшете нет вовсе: колонка — только компьютер.
+     Ширина нужна playIn, чтобы на узком экране не играть входа в невидимую
+     панель. */
+  var desktopQuery = window.matchMedia('(min-width: 1024px)');
   var links = [];
   var headings = [];
 
@@ -114,52 +110,15 @@
     });
   }, { passive: true });
 
-  /* ── ШТОРКА: телефон и планшет ─────────────────────────────────────────
-     На компьютере панель — обычная колонка, и кнопки на полосе нет. */
-  function isOpen() {
-    return toc.classList.contains('is-open');
-  }
-
-  function closeSidebar() {
-    if (!sidebar || !sidebarToggle) return;
-    sidebar.classList.remove('is-open');
-    sidebarToggle.classList.remove('is-open');
-    sidebarToggle.setAttribute('aria-expanded', 'false');
-  }
-
-  function setTocOpen(open) {
-    if (open) closeSidebar();
-    toc.classList.toggle('is-open', open);
-    toggle.classList.toggle('is-open', open);
-    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-    if (overlay) overlay.classList.toggle('is-open', open);
-    if (open) updateActive();
-  }
-
-  toggle.addEventListener('click', function () {
-    setTocOpen(!isOpen());
-  });
-
-  if (overlay) {
-    overlay.addEventListener('click', function () {
-      if (isOpen()) setTocOpen(false);
-    });
-  }
-
-  document.addEventListener('keydown', function (e) {
-    if ((e.key === 'Escape' || e.key === 'Esc') && isOpen()) setTocOpen(false);
-  });
-
-  /* Переход по пункту: шторка закрывается, а прокрутку панели ведёт
-     kb/js/06-smooth-scroll.js. Если движка нет (тач-онли устройства шириной
-     меньше 1024px), ссылка работает как обычный якорь: панель прокручивает
-     сам браузер. */
+  /* ── ПЕРЕХОД ПО ПУНКТУ ─────────────────────────────────────────────────
+     Плавную прокрутку панели ведёт kb/js/06-smooth-scroll.js. Если движка нет,
+     ссылка работает как обычный якорь: панель прокручивает сам браузер. */
   toc.addEventListener('click', function (e) {
     if (!e.target.closest) return;
     var link = e.target.closest('a.kb-toc-link');
     if (!link) return;
     var hash = link.getAttribute('href') || '';
-    if (hash.charAt(0) !== '#') { setTocOpen(false); return; }
+    if (hash.charAt(0) !== '#') return;
     var smooth = window.nrSmoothScroll;
     if (smooth && typeof smooth.scrollToSection === 'function' &&
         smooth.scrollToSection(hash.slice(1))) {
@@ -167,20 +126,7 @@
       /* Адрес сохраняет якорь: ссылкой на раздел можно поделиться. */
       if (window.history && window.history.pushState) window.history.pushState(null, '', hash);
     }
-    setTocOpen(false);
   });
-
-  /* Окно доросло до ширины компьютера — панель там уже колонка, открытое
-     состояние шторки не нужно. */
-  var desktopQuery = window.matchMedia('(min-width: 1024px)');
-  var closeOnDesktop = function (mq) {
-    if (mq.matches && isOpen()) setTocOpen(false);
-  };
-  if (typeof desktopQuery.addEventListener === 'function') {
-    desktopQuery.addEventListener('change', closeOnDesktop);
-  } else if (typeof desktopQuery.addListener === 'function') {
-    desktopQuery.addListener(closeOnDesktop); /* старые Safari */
-  }
 
   /* ── ВЫЕЗД КОЛОНКИ, КОГДА СТАТЬЯ ОТКРЫВАЕТСЯ ИЗ ПРИВЕТСТВИЯ ────────────
      В приветствии панели нет вовсе, и раньше она появлялась на месте целиком.
@@ -193,8 +139,7 @@
      при переключении статей панель остаётся на месте и не мигает, а при
      загрузке страницы свой вход играет панель оболочки (kb/css/anim). */
   function playIn() {
-    /* На телефоне и планшете это шторка со своим ходом (группа 4) — там
-       входа нет. */
+    /* На телефоне и планшете колонки нет вовсе — входить нечему. */
     if (!desktopQuery.matches) return;
     /* «Уменьшить движение»: панель просто видна, движения нет. */
     if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -215,7 +160,7 @@
   }
 
   /* Публичное: смена статьи пересобирает список, возврат к приветствию
-     закрывает шторку (kb/js/07-articles.js). */
+     снимает недокрученный выезд (kb/js/07-articles.js). */
   window.kbToc = {
     refresh: refresh,
     playIn: playIn,
@@ -223,7 +168,6 @@
       /* Выезд могли прервать возвратом к приветствию: анимация тогда не
          заканчивается, и класс снял бы только этот вызов. */
       toc.classList.remove('is-opening');
-      setTocOpen(false);
     }
   };
 

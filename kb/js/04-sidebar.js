@@ -2,12 +2,11 @@
 // kb/js/04-sidebar.js — МЕНЮ СТАТЕЙ: ШТОРКА НА ТЕЛЕФОНЕ И ПЛАНШЕТЕ
 // Грузится: kb/index.html — в конце body, defer. После kb/js/01-lang.js
 //         (язык на кнопках уже стоит).
-// Читает: #kbSidebar, #kbSidebarOverlay, #kbSidebarToggle, #kbToc,
-//         #kbTocToggle (вторая шторка — содержание статьи).
+// Читает: #kbSidebar, #kbSidebarOverlay, #kbSidebarToggle.
 // Публичные (window): kbSidebar → openSubs (раскрыть сопутствующие статьи
 //         открывшейся статьи движением). Зовёт kb/js/07-articles.js.
 // Блоки файла:
-//   • setSidebarOpen — одно место переключения: классы, aria-expanded.
+//   • setSidebarOpen — одно место переключения: классы, aria-expanded, шапка.
 //   • Обработчики: кнопка, затемнение, Esc, клик по пункту.
 //   • openSubs — раскрытие сопутствующих при переходе на статью.
 //   • Сопутствующие статьи открытой статьи: повторный клик сворачивает их.
@@ -20,30 +19,22 @@
   var sidebar = document.getElementById('kbSidebar');
   var overlay = document.getElementById('kbSidebarOverlay');
   var toggle = document.getElementById('kbSidebarToggle');
-  /* Вторая шторка живёт в kb/js/05-toc.js; здесь только закрываем её, когда
-     открывается меню, — двух открытых шторок не бывает. */
-  var toc = document.getElementById('kbToc');
-  var tocToggle = document.getElementById('kbTocToggle');
   if (!sidebar || !toggle) return;
 
   function isOpen() {
     return sidebar.classList.contains('is-open');
   }
 
-  function closeToc() {
-    if (!toc || !tocToggle) return;
-    toc.classList.remove('is-open');
-    tocToggle.classList.remove('is-open');
-    tocToggle.setAttribute('aria-expanded', 'false');
-  }
-
   /* Одна точка переключения: разметка шторки, иконка кнопки (гамбургер ↔
-     крестик) и aria-expanded живут в одном состоянии. */
+     крестик), aria-expanded и класс на <html> живут в одном состоянии.
+     Класс kb-menu-open читает шапка: у открытой шторки на телефоне и планшете
+     показывается подпись «← А это мой сайт», а центральное название раздела
+     уступает ей место (kb/css/style/02-header.css). */
   function setSidebarOpen(open) {
-    if (open) closeToc();
     sidebar.classList.toggle('is-open', open);
     toggle.classList.toggle('is-open', open);
     toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    document.documentElement.classList.toggle('kb-menu-open', open);
     if (overlay) overlay.classList.toggle('is-open', open);
   }
 

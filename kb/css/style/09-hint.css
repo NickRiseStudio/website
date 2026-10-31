@@ -1,0 +1,186 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   kb/css/style/09-hint.css — ПОДСКАЗКИ К ТЕРМИНАМ (кружок «i»)
+   Что: кружок «i» рядом с термином в тексте статьи и бабл с объяснением.
+        Вид взят с основного сайта (css/style/14-hints.css → .nr-calc-hint-dot
+        и бабл .nr-ab-hint-tip), но масштаб меньше: здесь подсказка стоит
+        внутри абзаца, а не рядом с названием услуги.
+   Разметку создаёт: kb/index.html → button.kb-hint + span.kb-hint-tip
+        в том же абзаце, по паре на каждый язык.
+   Показ, позицию и хвостик считает kb/js/09-hint.js → openHint, placeHint.
+   Подключён: kb/index.html, после 08-editor.css, до css/anim.
+   Группы блоков в файле: 1 (общие), 2 (планшет и шире), 6 (телефон),
+        8 (ввод), 9 (уменьшить движение).
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── ПОРЯДОК БЛОКОВ В ФАЙЛЕ ──
+   1. ОБЩИЕ — все устройства            6. ТЕЛЕФОН (max-width: 639.98px)
+   2. ПЛАНШЕТ И ШИРЕ (min-width: 640px) 7. УЗКИЙ ТЕЛЕФОН (480px / 380px)
+   3. КОМПЬЮТЕР (min-width: 1024px)     8. ВВОД (hover / pointer)
+   4. ВСЁ, КРОМЕ КОМПЬЮТЕРА (≤1023.98)  9. «УМЕНЬШИТЬ ДВИЖЕНИЕ»
+   5. ПЛАНШЕТ (640–1023.98px)
+   Границы те же, что на основном сайте: 639.98 / 1023.98, только px. */
+
+/* ═══ 1. ОБЩИЕ — ВСЕ УСТРОЙСТВА ═════════════════════════════════════════════ */
+
+/* КРУЖОК. Стоит в строке сразу после термина, поэтому выравнивается по
+   базовой линии текста, а не по центру строки: vertical-align держит его чуть
+   выше базовой линии, как на сайте.
+   Гасим системную подсветку тапа: иначе на телефоне поверх кружка на миг
+   всплывает серый квадрат и «залипает» до следующего касания. */
+.kb-hint {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  margin-left: 3px;
+  padding: 0;
+  border: 1.5px solid rgba(245, 158, 11, 0.85);
+  border-radius: 50%;
+  background-color: rgba(245, 158, 11, 0.12);
+  color: var(--kb-amber);
+  font-family: 'Space Grotesk', 'Manrope', ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  font-style: normal;
+  line-height: 1;
+  vertical-align: 1px;
+  cursor: help;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.3s ease, color 0.3s ease,
+              border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Открытая подсказка подсвечена так же, как при наведении: на тач-экране
+   наведения нет, и без этого кружок не показывал бы, что бабл относится
+   именно к нему. */
+.kb-hint:hover,
+.kb-hint:focus-visible,
+.kb-hint[aria-expanded="true"] {
+  border-color: var(--kb-amber);
+  background-color: var(--kb-amber);
+  color: #0C0E12;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.55);
+  outline: none;
+}
+
+/* БАБЛ. Лежит в разметке рядом с кружком, но в раскладке не участвует:
+   position: fixed вынимает его из потока. Поэтому длинный текст определения
+   не сдвигает ни строку абзаца, ни соседние блоки.
+   Пока закрыт — visibility: hidden, а не display: none: у скрытого так
+   элемента остаётся размер, и kb/js/09-hint.js меряет бабл до показа, не
+   пересобирая раскладку дважды.
+   Слой 48 — выше полосы правки (46), ниже шапки (50). */
+.kb-hint-tip {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 48;
+  max-width: min(300px, calc(100vw - 28px));
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: linear-gradient(160deg, rgba(18, 22, 34, 0.98), rgba(9, 12, 18, 0.98));
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  box-shadow: 0 0 26px rgba(0, 0, 0, 0.7), 0 0 18px rgba(245, 158, 11, 0.18);
+  color: #F3F4F6;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: left;
+  /* Место хвостика по горизонтали пишет kb/js/09-hint.js. */
+  --kb-hint-tail-x: 50%;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translate3d(0, 6px, 0);
+  transition: opacity 0.28s var(--kb-ease),
+              transform 0.28s var(--kb-ease),
+              visibility 0.28s step-end;
+}
+
+.kb-hint-tip.is-open {
+  opacity: 1;
+  visibility: visible;
+  transform: translate3d(0, 0, 0);
+  transition: opacity 0.28s var(--kb-ease),
+              transform 0.28s var(--kb-ease),
+              visibility 0s;
+}
+
+/* Хвостик: повёрнутый квадрат с двумя рёбрами — тот же приём, что у плашек
+   основного сайта. По умолчанию смотрит вниз: бабл стоит над кружком. */
+.kb-hint-tip::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: var(--kb-hint-tail-x);
+  width: 16px;
+  height: 16px;
+  transform: translateX(-50%) rotate(45deg);
+  background-color: rgba(10, 13, 20, 0.98);
+  border-right: 1px solid rgba(245, 158, 11, 0.45);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.45);
+  border-bottom-right-radius: 5px;
+}
+
+/* Бабл показан ПОД кружком (сверху места нет) — хвостик разворачивается
+   вверх. Класс ставит kb/js/09-hint.js. */
+.kb-hint-tip.is-below::after {
+  top: -8px;
+  bottom: auto;
+  background-color: rgba(10, 13, 20, 0.98);
+  border-right: none;
+  border-bottom: none;
+  border-left: 1px solid rgba(245, 158, 11, 0.45);
+  border-top: 1px solid rgba(245, 158, 11, 0.45);
+  border-bottom-right-radius: 0;
+  border-top-left-radius: 5px;
+}
+
+/* ═══ 2. ПЛАНШЕТ И ШИРЕ (min-width: 640px) ══════════════════════════════════ */
+
+/* На широком экране кружок чуть крупнее: рядом с текстом 15px он читается
+   как знак препинания, а не как кнопка. */
+@media (min-width: 640px) {
+  .kb-hint {
+    width: 17px;
+    height: 17px;
+    font-size: 12px;
+  }
+}
+
+/* ═══ 6. ТЕЛЕФОН (max-width: 639.98px) ══════════════════════════════════════ */
+
+/* Палец крупнее курсора: кружку нужен запас на нажатие. Расширяем не сам
+   кружок (у него сброс box-sizing: border-box — padding сжал бы содержимое,
+   а фон вылез бы за рамку), а невидимую область касания псевдоэлементом:
+   вид остаётся прежним, отзывчивость на тап — лучше. */
+@media (max-width: 639.98px) {
+  .kb-hint::before {
+    content: '';
+    position: absolute;
+    inset: -8px;
+  }
+}
+
+/* ═══ 8. ВВОД: hover / pointer ══════════════════════════════════════════════ */
+
+/* Нажатие — только там, где есть настоящий курсор: на сенсорных экранах
+   состояние :active «залипает» после тапа до следующего касания. */
+@media (hover: hover) and (pointer: fine) {
+  .kb-hint:active {
+    transform: scale(0.92);
+  }
+}
+
+/* ═══ 9. «УМЕНЬШИТЬ ДВИЖЕНИЕ» ═══════════════════════════════════════════════ */
+
+/* Системная настройка: бабл просто проявляется на месте, без подъезда снизу. */
+@media (prefers-reduced-motion: reduce) {
+  .kb-hint-tip,
+  .kb-hint-tip.is-open {
+    transform: none;
+  }
+}

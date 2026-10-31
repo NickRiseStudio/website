@@ -4,18 +4,18 @@
         статьи (те, на которые она ссылается) вложенным списком с кареткой
         раскрытия. На компьютере это обычная колонка, на телефоне и планшете
         та же разметка превращается в шторку, которая выезжает сверху по
-        кнопке «Статьи» (приём и тайминги — как у бургер-меню основного сайта,
-        css/anim/11-toast-modals-menu.css, но здесь всё своё). На полосе две
-        кнопки: «Статьи» слева и «Содержание» справа — вид у них общий, сама
-        панель содержания лежит в css/style/07-toc.css.
-   Разметку создаёт: kb/index.html → #kbSidebarBar, #kbSidebarToggle,
-                    #kbTocToggle, #kbSidebarOverlay, #kbSidebar.
-   Открытие и закрытие: kb/js/04-sidebar.js, kb/js/05-toc.js.
+        компактной кнопке меню в шапке (приём и тайминги — как у бургер-меню
+        основного сайта, css/anim/11-toast-modals-menu.css, но здесь всё своё).
+        Панель содержания лежит в css/style/07-toc.css.
+   Разметку создаёт: kb/index.html → #kbSidebarToggle (в шапке),
+                     #kbSidebarOverlay, #kbSidebar.
+   Открытие и закрытие: kb/js/04-sidebar.js.
    Пункт открытой статьи подсвечивает: kb/js/07-articles.js.
    Подключён: kb/index.html, после 04-greeting.css, до 06-article.css.
    Группы блоков в файле: 1 (общие), 2 (планшет и шире), 3 (компьютер),
-        4 (всё, кроме компьютера), 6 (телефон), 8 (ввод), 9 (уменьшить движение).
-   Слои: затемнение 39 → шторки 40 → полоса с кнопками 45 → шапка 50.
+        4 (всё, кроме компьютера), 5 (планшет), 6 (телефон), 8 (ввод),
+        9 (уменьшить движение).
+   Слои: затемнение 39 → шторка 40 → шапка 50.
    ═══════════════════════════════════════════════════════════════════════ */
 
 /* ═══ 1. ОБЩИЕ — ВСЕ УСТРОЙСТВА ═════════════════════════════════════════════ */
@@ -80,6 +80,27 @@
   background-color: rgba(245, 158, 11, 0.1);
   box-shadow: inset 2px 0 0 var(--kb-amber);
   color: #FFFFFF;
+}
+
+/* ПОДПИСЬ ГРУППЫ («Старт», «До записи», «Запись», «После записи»).
+   Стоит отдельным пунктом того же списка, а не своим блоком: отступы между
+   группами считает общий gap списка. Кегль мельче заголовка панели, цвет
+   приглушённый — это ориентир в маршруте, а не раздел. Верхний отступ
+   отделяет группу от статей предыдущей; у первой он лишний, поэтому
+   снимается правилом :first-child. */
+.kb-side-group-title {
+  display: block;
+  padding: 16px 12px 4px;
+  font-family: 'Space Grotesk', 'Plus Jakarta Sans', monospace;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(156, 163, 175, 0.85);
+}
+
+.kb-side-group:first-child .kb-side-group-title {
+  padding-top: 0;
 }
 
 /* Каретка раскрытия у статьи с сопутствующими: смотрит вниз, когда список
@@ -223,6 +244,14 @@
   transform: scale(0.985);
 }
 
+/* Открытая сопутствующая статья: та же янтарная подсветка, что у пункта
+   верхнего уровня, только без полосы слева — пункт и так внутри списка.
+   Класс is-active и aria-current ставит kb/js/07-articles.js. */
+.kb-side-sub.is-active {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: #FFFFFF;
+}
+
 /* Тема без статьи внутри сопутствующих: приглушена и не подсвечивается — как
    в основном списке. Здесь пункт не ссылка, а span. */
 .kb-side-subs .is-soon .kb-side-sub {
@@ -235,10 +264,9 @@
   color: var(--kb-text-dim);
 }
 
-/* Полоса с кнопками «Статьи» и «Содержание» существует только там, где меню
-   спрятано в шторку, — на компьютере её нет вовсе. Кнопка «Содержание»
-   показывается только у открытой статьи (css/style/07-toc.css). */
-#kbSidebarBar,
+/* Кнопка меню и затемнение существуют только там, где меню спрятано
+   в шторку: на компьютере меню обычная колонка, и кнопки в шапке нет. */
+#kbSidebarToggle,
 #kbSidebarOverlay {
   display: none;
 }
@@ -281,48 +309,33 @@
 
 /* ═══ 4. ВСЁ, КРОМЕ КОМПЬЮТЕРА (max-width: 1023.98px) ═══════════════════════ */
 
-/* Колонка превращается в шторку под шапкой и полосой с кнопками. Она
-   выезжает сверху теми же 1.2s и той же кривой, что меню основного сайта;
-   пункты появляются каскадом. */
+/* Колонка превращается в шторку под шапкой. Она выезжает сверху теми же
+   1.2s и той же кривой, что меню основного сайта; пункты появляются каскадом. */
 @media (max-width: 1023.98px) {
-  #kbSidebarBar {
-    position: relative;
-    z-index: 45;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    height: var(--kb-bar-h);
-    padding: 0 12px;
-    background-color: rgba(12, 14, 18, 0.92);
-    border-bottom: 1px solid rgba(31, 41, 55, 0.6);
-  }
-
-  #kbSidebarToggle,
-  #kbTocToggle {
+  /* Кнопка меню — в шапке, справа от переключателя языка: компактная, как
+     бургер основного сайта, квадрат с одной иконкой. Подпись для скринридера
+     живёт в aria-label. */
+  #kbSidebarToggle {
     display: inline-flex;
     align-items: center;
-    gap: 9px;
-    padding: 6px 12px 6px 8px;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    margin-left: 8px;
     border: 1px solid #1F2937;
     border-radius: 10px;
     background-color: #14171F;
     color: #E5E7EB;
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
     transition: color 0.3s ease, border-color 0.3s ease, transform 0.12s ease;
   }
 
   /* Отклик на нажатие — как у пунктов меню: кнопка чуть проседает. */
-  #kbSidebarToggle:active,
-  #kbTocToggle:active {
-    transform: scale(0.97);
+  #kbSidebarToggle:active {
+    transform: scale(0.94);
   }
 
-  #kbSidebarToggle:hover,
-  #kbTocToggle:hover {
+  #kbSidebarToggle:hover {
     color: #FFFFFF;
     border-color: rgba(245, 158, 11, 0.45);
   }
@@ -347,20 +360,17 @@
     transition: transform 1.2s var(--kb-ease), opacity 0.3s ease;
   }
 
-  #kbSidebarClose,
-  #kbTocClose {
+  #kbSidebarClose {
     opacity: 0;
     transform: scale(0.5) rotate(90deg);
   }
 
-  #kbSidebarToggle.is-open #kbSidebarOpen,
-  #kbTocToggle.is-open #kbTocOpen {
+  #kbSidebarToggle.is-open #kbSidebarOpen {
     opacity: 0;
     transform: scale(0.5) rotate(-90deg);
   }
 
-  #kbSidebarToggle.is-open #kbSidebarClose,
-  #kbTocToggle.is-open #kbTocClose {
+  #kbSidebarToggle.is-open #kbSidebarClose {
     opacity: 1;
     transform: scale(1) rotate(0deg);
   }
@@ -387,12 +397,12 @@
 
   #kbSidebar {
     position: fixed;
-    top: calc(var(--kb-header-h) + var(--kb-bar-h));
+    top: var(--kb-header-h);
     left: 0;
     right: 0;
     width: auto;
     flex: none;
-    max-height: calc(100dvh - var(--kb-header-h) - var(--kb-bar-h));
+    max-height: calc(100dvh - var(--kb-header-h));
     padding: 14px 12px 24px;
     border-right: 0;
     border-bottom: 1px solid rgba(31, 41, 55, 0.8);
@@ -421,29 +431,54 @@
                 visibility 0s linear;
   }
 
-  /* Каскад пунктов при выезде шторки. */
-  .kb-side-item {
+  /* Каскад строк при выезде шторки. Идёт по всем прямым потомкам списка, а не
+     только по статьям: в списке стоят ещё подписи групп (li.kb-side-group), и
+     без этого они появлялись бы сразу, а пункты под ними — позже. */
+  .kb-side-list > * {
     opacity: 0;
     transform: translate3d(0, -22px, 0);
     transition: opacity 0.55s var(--kb-ease), transform 0.65s var(--kb-ease);
     will-change: opacity, transform;
   }
 
-  #kbSidebar.is-open .kb-side-item {
+  #kbSidebar.is-open .kb-side-list > * {
     opacity: 1;
     transform: translate3d(0, 0, 0);
   }
 
-  #kbSidebar.is-open .kb-side-item:nth-child(1) { transition-delay: 0.18s; }
-  #kbSidebar.is-open .kb-side-item:nth-child(2) { transition-delay: 0.30s; }
-  #kbSidebar.is-open .kb-side-item:nth-child(3) { transition-delay: 0.42s; }
-  #kbSidebar.is-open .kb-side-item:nth-child(4) { transition-delay: 0.54s; }
+  /* Шаг 0.05s: тринадцать строк меню — девять статей и четыре подписи групп —
+     успевают проявиться раньше, чем шторка доедет. */
+  #kbSidebar.is-open .kb-side-list > *:nth-child(1) { transition-delay: 0.18s; }
+  #kbSidebar.is-open .kb-side-list > *:nth-child(2) { transition-delay: 0.23s; }
+  #kbSidebar.is-open .kb-side-list > *:nth-child(3) { transition-delay: 0.28s; }
+  #kbSidebar.is-open .kb-side-list > *:nth-child(4) { transition-delay: 0.33s; }
+  #kbSidebar.is-open .kb-side-list > *:nth-child(5) { transition-delay: 0.38s; }
+  #kbSidebar.is-open .kb-side-list > *:nth-child(6) { transition-delay: 0.43s; }
+  #kbSidebar.is-open .kb-side-list > *:nth-child(7) { transition-delay: 0.48s; }
+  #kbSidebar.is-open .kb-side-list > *:nth-child(8) { transition-delay: 0.53s; }
+  #kbSidebar.is-open .kb-side-list > *:nth-child(9) { transition-delay: 0.58s; }
+  #kbSidebar.is-open .kb-side-list > *:nth-child(10) { transition-delay: 0.63s; }
+  #kbSidebar.is-open .kb-side-list > *:nth-child(11) { transition-delay: 0.68s; }
+  #kbSidebar.is-open .kb-side-list > *:nth-child(12) { transition-delay: 0.73s; }
+  #kbSidebar.is-open .kb-side-list > *:nth-child(13) { transition-delay: 0.78s; }
 
-  /* При закрытии пункты уходят синхронно, без задержек. */
-  #kbSidebar:not(.is-open) .kb-side-item {
+  /* При закрытии строки уходят синхронно, без задержек. */
+  #kbSidebar:not(.is-open) .kb-side-list > * {
     transform: translate3d(0, -12px, 0);
     transition: opacity 0.3s ease, transform 0.3s ease;
     transition-delay: 0s !important;
+  }
+}
+
+/* ═══ 5. ПЛАНШЕТ (640–1023.98px) ════════════════════════════════════════════ */
+
+/* Кнопка меню растёт вместе с бургером основного сайта: 36px на телефоне,
+   40px на планшете (`w-9` / `sm:w-10` в разметке сайта). */
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  #kbSidebarToggle {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
   }
 }
 
@@ -489,13 +524,17 @@
     color: #FFFFFF;
   }
 
+  .kb-side-sub.is-active:hover {
+    background-color: rgba(245, 158, 11, 0.1);
+    color: #FFFFFF;
+  }
+
   .kb-side-item.is-soon .kb-side-link:hover {
     background-color: transparent;
     color: var(--kb-text-dim);
   }
 
-  #kbSidebarToggle:hover,
-  #kbTocToggle:hover {
+  #kbSidebarToggle:hover {
     color: #E5E7EB;
     border-color: #1F2937;
   }
@@ -508,18 +547,17 @@
   #kbSidebar.is-open,
   #kbSidebarOverlay,
   #kbSidebarOverlay.is-open,
-  .kb-side-item,
+  .kb-side-list > *,
   .kb-side-caret,
   .kb-sidebar-icons svg,
   .kb-side-link,
   .kb-side-sub,
   .kb-side-subs,
-  #kbSidebarToggle,
-  #kbTocToggle {
+  #kbSidebarToggle {
     transition: none;
   }
 
-  #kbSidebar .kb-side-item,
+  #kbSidebar .kb-side-list > *,
   .kb-side-subs {
     transform: none;
   }

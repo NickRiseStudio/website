@@ -5,6 +5,7 @@
 //         до kb/animations.js.
 // Читает: ?article=<slug> в адресе, #kbMain, #kbArticle, .kb-article-page,
 //         .kb-toc-page, #kbSidebar, #kbTitle.
+// Пишет: html[data-kb-view], html[data-kb-toc] (есть ли у статьи содержание).
 // Публичные (window): нет — модуль самодостаточный.
 // Зовёт: window.kbToc (kb/js/05-toc.js), window.kbSidebar (kb/js/04-sidebar.js).
 // Блоки файла:
@@ -65,13 +66,25 @@
     for (i = 0; i < pages.length; i++) {
       pages[i].classList.toggle('is-current', pages[i] === page);
     }
+    var hasTocList = false;
     for (i = 0; i < tocPages.length; i++) {
-      tocPages[i].classList.toggle('is-current',
-        !!page && tocPages[i].getAttribute('data-kb-article') === slug);
+      var isTocPage = !!page && tocPages[i].getAttribute('data-kb-article') === slug;
+      if (isTocPage) hasTocList = true;
+      tocPages[i].classList.toggle('is-current', isTocPage);
     }
+    /* У статьи без разделов списка содержания нет — это заглушка, которая
+       ждёт текста. Пустую колонку ей не показываем (kb/css/style/07-toc.css). */
+    document.documentElement.setAttribute('data-kb-toc', hasTocList ? 'on' : 'none');
     for (i = 0; i < sideItems.length; i++) {
       var link = sideItems[i].querySelector('.kb-side-link');
-      var isCurrent = !!page && !!link && link.getAttribute('data-kb-article') === slug;
+      /* «Своя» статья пункта — та, что стоит ссылкой верхнего уровня. */
+      var own = !!page && !!link && link.getAttribute('data-kb-article') === slug;
+      /* Открытая сопутствующая: текущим выглядит пункт-родитель, иначе список
+         сопутствующих скрыт (05-sidebar.css гасит список у не-текущего пункта).
+         is-active и aria-current остаются у «своей» статьи, поэтому клик по
+         названию родителя по-прежнему открывает его статью. */
+      var subLink = !!page ? sideItems[i].querySelector('a.kb-side-sub[data-kb-article="' + slug + '"]') : null;
+      var isCurrent = own || !!subLink;
       if (isCurrent && !sideItems[i].classList.contains('is-current')) openedItem = sideItems[i];
       sideItems[i].classList.toggle('is-current', isCurrent);
       /* Свёрнутые сопутствующие не переживают закрытие статьи: вернувшись,
@@ -81,13 +94,17 @@
         sideItems[i].classList.remove('is-collapsed');
         if (window.kbSidebar) window.kbSidebar.closeSubs(sideItems[i]);
       }
-      if (!link) continue;
-      link.classList.toggle('is-active', isCurrent);
-      /* aria-expanded — только у статей: у темы «скоро» пункт не ссылка. */
-      if (link.getAttribute('data-kb-article') !== null) {
-        link.setAttribute('aria-expanded', isCurrent ? 'true' : 'false');
+      /* Открытая сопутствующая подсвечивается в своём списке — по классу и
+         aria-current, чтобы состояние читалось и глазами, и скринридером. */
+      var subs = sideItems[i].querySelectorAll('.kb-side-sub');
+      for (var k = 0; k < subs.length; k++) {
+        if (subs[k] === subLink) subs[k].setAttribute('aria-current', 'page');
+        else subs[k].removeAttribute('aria-current');
+        subs[k].classList.toggle('is-active', subs[k] === subLink);
       }
-      if (isCurrent) link.setAttribute('aria-current', 'page');
+      if (!link) continue;
+      link.classList.toggle('is-active', own);
+      if (own) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
     }
 

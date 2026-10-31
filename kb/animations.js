@@ -1,8 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 // kb/animations.js — ЭФФЕКТЫ БАЗЫ ЗНАНИЙ: ЗАСТАВКА И ВХОД ПАНЕЛЕЙ
 // Грузится: kb/index.html — в конце body, defer, СТРОГО последним: после
-//         kb/js/07-articles.js (вид страницы уже расставлен) и
-//         kb/js/03-hint.js (он ждёт событие kb:boot-done). Заставке нужен
+//         kb/js/07-articles.js (вид страницы уже расставлен). Заставке нужен
 //         готовый window.nrSmoothScroll — его отдаёт kb/js/06-smooth-scroll.js.
 // Читает: #kb-boot, <html> (класс kb-intro), document.readyState,
 //         prefers-reduced-motion, window.load.
@@ -95,10 +94,9 @@
       setTimeout(function () {
         boot.classList.add('kb-boot-done'); /* display:none — последний кадр окна */
         unlockPage();                       /* только теперь страница интерактивна */
-        /* Подсказка (kb/js/03-hint.js) показывает себя только после этого
-           события: пока заставка видна, бабл ей не место. Событие шлём здесь,
-           а не в unlockPage: при «уменьшить движение» лока нет и unlockPage
-           выходит сразу. */
+        /* Событие «заставка погашена»: по нему внешние сценарии понимают,
+           что страница уже видна. Шлём здесь, а не в unlockPage: при
+           «уменьшить движение» лока нет и unlockPage выходит сразу. */
         document.dispatchEvent(new CustomEvent('kb:boot-done'));
       }, FADE_MS);
     }

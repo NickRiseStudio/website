@@ -153,10 +153,16 @@ html[data-kb-view="article"] #kbArticle {
   background-color: rgba(245, 158, 11, 0.09);
 }
 
-/* Иллюстрация. Пока картинок нет — рамка с подписью «в работе»; когда
-   файл появится, вместо .kb-figure-frame встанет <img>, и вёрстка та же. */
+/* Иллюстрация: <img> в рамке со скруглением, под ним подпись. Пока файла
+   нет — вместо картинки заглушка .kb-figure-frame с бейджем «в работе»;
+   рамка у обоих одна, поэтому замена ничего не сдвигает. */
 .kb-figure {
   margin: 22px 0;
+}
+
+.kb-figure img {
+  border: 1px solid var(--kb-line);
+  border-radius: 12px;
 }
 
 .kb-figure-frame {

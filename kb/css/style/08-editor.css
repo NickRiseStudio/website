@@ -1,0 +1,212 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   kb/css/style/08-editor.css — РЕЖИМ ПРАВКИ СТАТЬИ
+   Что: полоса режима правки (видна только при ?edit=1 в адресе), подсветка
+        правимого текста, признак «есть несохранённые правки», бейдж и пустой
+        абзац черновика темы «скоро».
+        Разметку полосы строит kb/js/08-editor.js — в index.html её нет,
+        поэтому у посетителей страница остаётся прежней.
+   Разметку создаёт: kb/js/08-editor.js → buildBar (div#kbEditBar),
+        openDraft (section.kb-article-page.is-draft).
+   Подключён: kb/index.html, после 07-toc.css, до css/anim.
+   Группы блоков в файле: 1 (общие), 2 (планшет и шире), 6 (телефон),
+        9 (уменьшить движение).
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ═══ 1. ОБЩИЕ — ВСЕ УСТРОЙСТВА ═════════════════════════════════════════════ */
+
+/* Полоса правки плавает снизу по центру: раскладку она не двигает, поэтому
+   отступы панелей и прокрутку трогать не нужно. Слой 46 — выше шторки меню
+   (40), ниже шапки (50). */
+#kbEditBar {
+  position: fixed;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 46;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100vw - 24px);
+  padding: 8px 10px 8px 14px;
+  border: 1px solid rgba(245, 158, 11, 0.34);
+  border-radius: 14px;
+  background-color: rgba(13, 15, 21, 0.95);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.6);
+  font-family: inherit;
+  font-size: 12.5px;
+  line-height: 1.2;
+  color: #DCDFE4;
+}
+
+/* На приветствии править нечего — полосе там места нет. */
+html:not([data-kb-view="article"]) #kbEditBar {
+  display: none;
+}
+
+.kb-edit-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 800;
+  color: #FFFFFF;
+  white-space: nowrap;
+}
+
+/* Точка — единственный признак «изменено»: пока правок нет, она янтарная. */
+.kb-edit-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--kb-amber);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.75);
+}
+
+#kbEditBar.is-dirty .kb-edit-dot {
+  background-color: #E5533D;
+  box-shadow: 0 0 8px rgba(229, 83, 61, 0.8);
+}
+
+.kb-edit-tag {
+  padding: 2px 7px;
+  border: 1px solid rgba(245, 158, 11, 0.34);
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: rgba(245, 158, 11, 0.85);
+}
+
+.kb-edit-status {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 240px;
+  overflow: hidden;
+  font-size: 11.5px;
+  color: var(--kb-text-dim);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.kb-edit-btn {
+  padding: 7px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 9px;
+  background-color: transparent;
+  font: inherit;
+  font-weight: 700;
+  color: #DCDFE4;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+
+.kb-edit-btn:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+  color: #FFFFFF;
+}
+
+.kb-edit-btn--primary {
+  border-color: rgba(245, 158, 11, 0.55);
+  background-color: rgba(245, 158, 11, 0.16);
+  color: #FDE68A;
+}
+
+.kb-edit-btn--primary:hover {
+  background-color: rgba(245, 158, 11, 0.3);
+  color: #FFFFFF;
+}
+
+/* Правимая статья. Обводки у всей колонки нет: подсветка идёт по блоку под
+   курсором, иначе страница читается как форма, а не как текст. Каретка
+   янтарная — она и показывает, что здесь можно писать. */
+html[data-kb-edit] #kbArticle .kb-article-page.is-current {
+  outline: none;
+  caret-color: var(--kb-amber);
+}
+
+html[data-kb-edit] #kbArticle .kb-article-page.is-current > p:hover,
+html[data-kb-edit] #kbArticle .kb-article-page.is-current > h2:hover,
+html[data-kb-edit] #kbArticle .kb-article-page.is-current > h3:hover,
+html[data-kb-edit] #kbArticle .kb-article-page.is-current > ul > li:hover,
+html[data-kb-edit] #kbArticle .kb-article-page.is-current > ol > li:hover,
+html[data-kb-edit] #kbArticle .kb-article-page.is-current > blockquote > p:hover {
+  border-radius: 6px;
+  background-color: rgba(245, 158, 11, 0.055);
+}
+
+/* Черновик темы «скоро»: бейдж вместо служебного текста и пустой абзац, в
+   который можно поставить курсор. */
+#kbArticle .kb-draft-badge {
+  display: inline-flex;
+  margin: 0 0 16px;
+  padding: 3px 9px;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(245, 158, 11, 0.85);
+}
+
+#kbArticle .kb-article-page.is-draft > p {
+  min-height: 1.7em;
+}
+
+/* У черновика разделов ещё нет — колонка содержания показывала бы пустоту. */
+html[data-kb-draft] #kbToc {
+  display: none;
+}
+
+/* ═══ 2. ПЛАНШЕТ И ШИРЕ (min-width: 640px) ══════════════════════════════════ */
+
+@media (min-width: 640px) {
+  #kbEditBar {
+    bottom: 22px;
+    padding: 9px 12px 9px 16px;
+    font-size: 13px;
+  }
+
+  .kb-edit-status {
+    max-width: 300px;
+  }
+}
+
+/* ═══ 6. ТЕЛЕФОН (max-width: 639.98px) ══════════════════════════════════════ */
+
+/* На телефоне полоса занимает всю ширину и переносится: подпись и три кнопки
+   в строку не влезают. Статус убираем — состояние видно по точке. */
+@media (max-width: 639.98px) {
+  #kbEditBar {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    max-width: none;
+    transform: none;
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .kb-edit-label {
+    flex: 1 1 100%;
+  }
+
+  .kb-edit-status {
+    display: none;
+  }
+
+  .kb-edit-btn {
+    flex: 1 1 auto;
+    padding: 8px 10px;
+    font-size: 11.5px;
+  }
+}
+
+/* ═══ 9. «УМЕНЬШИТЬ ДВИЖЕНИЕ» ═══════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  .kb-edit-btn {
+    transition: none;
+  }
+}
