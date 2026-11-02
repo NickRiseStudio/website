@@ -59,7 +59,10 @@ html.kb-intro[data-kb-view="greeting"] #kbMain {
 
 #kbMain.kb-view-in #kbArticle,
 #kbMain.kb-view-in .kb-greeting {
-  animation: kbViewIn 0.42s var(--kb-ease) both;
+  /* Без fill-mode both: конечный кадр совпадает с обычными стилями, а
+     «залитая» анимация держала бы статью на отдельном слое композитинга —
+     на нём волосяные линии разделителей теряют альфу при прокрутке. */
+  animation: kbViewIn 0.42s var(--kb-ease);
 }
 
 /* ═══ 3. КОМПЬЮТЕР (min-width: 1024px) ══════════════════════════════════════ */

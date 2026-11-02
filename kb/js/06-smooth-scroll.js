@@ -10,7 +10,8 @@
 //   • enable / destroy — движок на панели; на тач-онли устройствах шириной
 //         меньше 1024px прокрутка остаётся нативной.
 //   • cancel / resync / scrollTo — инерция, пересчёт размеров, якоря.
-//   • scrollToSection — якорь из содержания (kb/js/05-toc.js).
+//   • scrollToSection — якорь из содержания (kb/js/05-toc.js): цель и довески
+//         (offset — где встанет заголовок, onComplete — панель встала).
 // ═══════════════════════════════════════════════════════════════════════
 
 (function () {
@@ -107,14 +108,21 @@
   }
 
   /* Якорь из содержания: id заголовка внутри панели. false — движка нет
-     или раздела не нашли, тогда переход делает сам браузер. */
-  function scrollToSection(id) {
+     или раздела не нашли, тогда переход делает сам браузер.
+     options — довески Lenis: offset сдвигает позицию (чем больше, тем выше
+     встанет заголовок), onComplete зовётся, когда панель остановилась. Их
+     передаёт kb/js/05-toc.js: по клику заголовок встаёт на линию чтения, а не
+     под кромку панели. Ссылка ?article=<slug>#раздел опций не передаёт и
+     ведёт себя как раньше — по scroll-margin-top заголовка. */
+  function scrollToSection(id, options) {
     if (!lenis || !id) return false;
     var el = panel();
     var target = document.getElementById(id);
     if (!el || !target || !el.contains(target)) return false;
+    var opts = { duration: ANCHOR_DURATION_S };
+    if (options) for (var k in options) opts[k] = options[k];
     try {
-      lenis.scrollTo(target, { duration: ANCHOR_DURATION_S });
+      lenis.scrollTo(target, opts);
       return true;
     } catch (e) { return false; }
   }
