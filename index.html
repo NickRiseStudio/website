@@ -271,18 +271,19 @@
 
   <!-- 1. ШАПКА -->
   <header id="mainHeader" class="fixed top-0 left-0 right-0 z-50 bg-[#0C0E12]/90 border-b border-gray-800/60 transition-colors duration-300">
-    <div class="px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
+    <!-- Контейнер шапки повторяет контентную колонку сайта (max-w-7xl):
+         на широких мониторах логотип и «Заказать» стоят по краям колонки,
+         а не по углам экрана. -->
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
       
-      <button id="headerLogoBtn" type="button" onclick="openAboutModal()" class="flex items-center gap-2 sm:gap-3.5 group min-w-0 text-left cursor-pointer focus:outline-none" title="Обо мне // Nick Rise" data-i18n-title="a11y.aboutTitle" aria-label="Обо мне - Nick Rise Studio" data-i18n-aria-label="a11y.aboutAria">
-        <div class="w-9 h-9 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl overflow-hidden border border-amber-500/30 group-hover:border-amber-500 transition-colors shadow-lg shadow-amber-500/10 flex-shrink-0">
-          <img src="./image/logo-256.webp" width="48" height="48" alt="Nick Rise Studio Logo" class="w-full h-full object-cover" decoding="async" fetchpriority="high">
-        </div>
-        <div class="flex flex-col min-w-0">
-          <span class="font-black text-sm sm:text-lg text-white tracking-tight group-hover:text-amber-400 transition-colors truncate" data-i18n="nav.logoTitle">
-            Nick Rise Studio
-          </span>
-          <span class="text-[8px] sm:text-[10px] font-mono text-amber-500 uppercase tracking-wider sm:tracking-widest truncate">Nick Rise - One Rise</span>
-        </div>
+      <!-- Логотип в шапке: один файл (image/logo-wordmark.png) вместо прежней
+           плитки с фотографией и двух подписей «Nick Rise Studio» /
+           «Nick Rise - One Rise». Клик по-прежнему открывает «Обо мне»
+           (openAboutModal) — на этом завязаны подсказка js/logo-hint.js и
+           гашение логотипа при прокрутке. Вид и анимация — css/anim/03-header.css,
+           блок «Логотип в шапке». -->
+      <button id="headerLogoBtn" type="button" onclick="openAboutModal()" class="flex items-center group min-w-0 text-left cursor-pointer focus:outline-none" title="Обо мне // Nick Rise" data-i18n-title="a11y.aboutTitle" aria-label="Обо мне - Nick Rise Studio" data-i18n-aria-label="a11y.aboutAria">
+        <img src="./image/logo-wordmark.png" width="860" height="280" alt="Nick Rise Studio Logo" class="nr-header-logo" decoding="async" fetchpriority="high">
       </button>
 
       <nav class="hidden lg:flex items-center gap-3 xl:gap-6 text-xs lg:text-sm font-semibold text-gray-300">
@@ -746,9 +747,23 @@
           </p>
 
           <div id="contactsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
+            <!-- Telegram/ВК: fill-rule="evenodd" обязателен — глиф это второй
+                 подпуть и должен стать «дыркой» в круге. Контуры взяты из
+                 simple-icons (Telegram) и boxicons (ВК): они замкнуты, поэтому
+                 у самолёта и «K» нет «палок». Ручная правка координат рвёт
+                 контур, и z дорисовывает через фигуру лишнюю линию.
+                 Самолёт стоит не по геометрическому центру, а по центру масс:
+                 0.85 влево (cx=11.15) и 0.5 вниз (cy=12.45). Его масса
+                 смещена к носу-вправо и вверх, поэтому ровная коробка выглядит
+                 сдвинутой. Центр масс в итоге 12.97 / 12.26.
+                 ВК опущен на 0.5 от исходного (cy=12.6), чтобы обе иконки стояли
+                 на одной линии: центр масс 12.28 / 12.48.
+                 Копии иконок — в модалке и в #nrSocialRail, правь все три.
+                 Внимание: этот же круг есть у бейджа в шапке и у «?»-подсказки,
+                 не заменяй пути по общему префиксу круга. -->
             <a href="https://t.me/Nick_Rise" target="_blank" rel="noopener noreferrer" class="p-4 rounded-xl bg-[#1A202C] hover:bg-[#222A3A] border border-gray-700/80 transition-all flex items-center justify-center gap-3 group active:scale-95">
-              <svg class="w-6 h-6 fill-amber-400" viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.69-.52.36-1 .53-1.42.52-.47-.01-1.37-.26-2.03-.48-.82-.27-1.47-.42-1.42-.88.03-.24.37-.49 1.02-.74 4-1.74 6.68-2.89 8.04-3.45 3.83-1.6 4.62-1.88 5.14-1.89.11 0 .37.03.54.17.14.12.18.28.2.45-.02.07-.02.13-.03.22z"/>
+              <svg class="w-6 h-6 fill-amber-400" fill-rule="evenodd" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM17.08 6.98C17.18 6.98 17.4 7 17.55 7.12A0.51 0.51 0 0 1 17.72 7.45C17.74 7.55 17.76 7.76 17.74 7.93C17.56 9.85 16.77 14.52 16.37 16.67C16.2 17.58 15.86 17.88 15.54 17.91C14.83 17.98 14.3 17.45 13.61 17C12.54 16.3 11.94 15.86 10.9 15.18C9.7 14.39 10.48 13.95 11.16 13.24C11.34 13.06 14.45 10.23 14.51 9.97C14.52 9.94 14.52 9.82 14.45 9.76C14.38 9.69 14.28 9.71 14.2 9.73C14.09 9.76 12.38 10.89 9.07 13.12C8.59 13.45 8.15 13.62 7.76 13.61C7.32 13.6 6.49 13.36 5.87 13.16C5.11 12.91 4.5 12.78 4.55 12.36C4.58 12.14 4.88 11.92 5.46 11.69C9 10.15 11.36 9.13 12.55 8.64C15.92 7.23 16.62 6.99 17.08 6.98Z"/>
               </svg>
               <span class="font-extrabold text-white text-sm" data-i18n="contacts.telegramBtn">Открыть Telegram</span>
             </a>
@@ -761,17 +776,25 @@
               <span class="font-bold text-gray-200 text-sm" data-i18n="contacts.copyTgUsername">Копировать TG</span>
             </button>
 
-            <button onclick="copyText('nickrisemusic@gmail.com', 'Email copied to clipboard!')" class="p-4 rounded-xl bg-[#1A202C] hover:bg-[#222A3A] border border-gray-700/80 transition-all flex items-center justify-center gap-3 group active:scale-95 cursor-pointer">
+            <!-- Письмо открывается в новой вкладке в Gmail, а НЕ через mailto:
+                 mailto требует настроенного почтового клиента — без него
+                 браузер на ПК просто открывает пустую вкладку.
+                 На телефоне и планшете ссылку переписывает js/i18n.js →
+                 syncContactEmailLinks: приложение Gmail перехватывает адрес
+                 mail.google.com и показывает «Входящие», теряя to=, поэтому
+                 там открывается mailto (форма нового письма с заполненным
+                 «Кому»). Адрес один на весь сайт — config.js → CONTACT_EMAIL. -->
+            <a href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=nickrisemusic@gmail.com" target="_blank" rel="noopener noreferrer" data-contact-email class="p-4 rounded-xl bg-[#1A202C] hover:bg-[#222A3A] border border-gray-700/80 transition-all flex items-center justify-center gap-3 group active:scale-95">
               <svg class="w-5 h-5 stroke-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
                 <polyline points="22,6 12,13 2,6"></polyline>
               </svg>
-              <span class="font-bold text-gray-200 text-sm" data-i18n="contacts.copyEmail">Копировать Email</span>
-            </button>
+              <span class="font-bold text-gray-200 text-sm" data-i18n="contacts.emailBtn">Написать на Email</span>
+            </a>
 
             <a href="https://vk.com/nick_rise" target="_blank" rel="noopener noreferrer" class="p-4 rounded-xl bg-[#1A202C] hover:bg-[#222A3A] border border-gray-700/80 transition-all flex items-center justify-center gap-3 group active:scale-95">
-              <svg class="w-6 h-6 fill-amber-400" viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5.72 13.52h-1.41c-.53 0-.7-.42-1.65-1.38-.84-.81-1.21-.92-1.42-.92-.29 0-.37.08-.37.48v1.24c0 .34-.11.55-1.01.55-1.49 0-3.14-.9-4.31-2.58-1.75-2.48-2.23-4.34-2.23-4.72 0-.2.08-.39.48-.39h1.41c.36 0 .49.16.63.55.68 1.99 1.83 3.74 2.31 3.74.18 0 .26-.08.26-.53V9.77c-.05-.97-.57-1.05-.57-1.39 0-.16.14-.33.35-.33h2.21c.3 0 .41.15.41.49v2.66c0 .29.12.39.21.39.18 0 .33-.11.66-.44 1.01-1.13 1.73-2.84 1.73-2.84.1-.2.27-.39.63-.39h1.41c.42 0 .52.22.42.52-.18.82-1.9 3.25-1.98 3.37-.16.26-.22.38 0 .68.15.2.66.64 1 1.04.85.96 1.5 1.76 1.68 2.32.09.3-.07.46-.41.46z"/>
+              <svg class="w-6 h-6 fill-amber-400" fill-rule="evenodd" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM18.97 8.85C19.07 8.51 18.97 8.26 18.48 8.26L16.89 8.26C16.48 8.26 16.29 8.48 16.19 8.72C16.19 8.72 15.38 10.7 14.23 11.98C13.86 12.35 13.69 12.47 13.48 12.47C13.38 12.47 13.24 12.35 13.24 12.02L13.24 8.85C13.24 8.44 13.12 8.26 12.78 8.26L10.27 8.26C10.01 8.26 9.86 8.45 9.86 8.63C9.86 9.02 10.44 9.1 10.5 10.19L10.5 12.54C10.5 13.06 10.4 13.15 10.2 13.15C9.66 13.15 8.34 11.16 7.56 8.89C7.41 8.44 7.25 8.26 6.85 8.26L5.25 8.26C4.79 8.26 4.7 8.48 4.7 8.72C4.7 9.14 5.24 11.24 7.22 14.01C8.54 15.91 10.4 16.94 12.09 16.94C13.11 16.94 13.23 16.71 13.23 16.31L13.23 14.88C13.23 14.43 13.33 14.33 13.65 14.33C13.89 14.33 14.3 14.45 15.24 15.37C16.33 16.45 16.51 16.94 17.11 16.94L18.71 16.94C19.17 16.94 19.39 16.71 19.26 16.26C19.12 15.81 18.6 15.16 17.92 14.39C17.54 13.95 16.99 13.47 16.82 13.23C16.58 12.93 16.65 12.79 16.82 12.52C16.82 12.52 18.76 9.78 18.97 8.85Z"/>
               </svg>
               <span class="font-bold text-gray-200 text-sm" data-i18n="contacts.vkBtn">Открыть ВК</span>
             </a>
@@ -867,8 +890,8 @@
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
         <a href="https://t.me/Nick_Rise" target="_blank" rel="noopener noreferrer" class="p-4 rounded-xl bg-[#1A202C] hover:bg-[#222A3A] border border-gray-700/80 transition-all flex items-center justify-center gap-3 group active:scale-95">
-          <svg class="w-6 h-6 fill-amber-400" viewBox="0 0 24 24">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.69-.52.36-1 .53-1.42.52-.47-.01-1.37-.26-2.03-.48-.82-.27-1.47-.42-1.42-.88.03-.24.37-.49 1.02-.74 4-1.74 6.68-2.89 8.04-3.45 3.83-1.6 4.62-1.88 5.14-1.89.11 0 .37.03.54.17.14.12.18.28.2.45-.02.07-.02.13-.03.22z"/>
+          <svg class="w-6 h-6 fill-amber-400" fill-rule="evenodd" viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM17.08 6.98C17.18 6.98 17.4 7 17.55 7.12A0.51 0.51 0 0 1 17.72 7.45C17.74 7.55 17.76 7.76 17.74 7.93C17.56 9.85 16.77 14.52 16.37 16.67C16.2 17.58 15.86 17.88 15.54 17.91C14.83 17.98 14.3 17.45 13.61 17C12.54 16.3 11.94 15.86 10.9 15.18C9.7 14.39 10.48 13.95 11.16 13.24C11.34 13.06 14.45 10.23 14.51 9.97C14.52 9.94 14.52 9.82 14.45 9.76C14.38 9.69 14.28 9.71 14.2 9.73C14.09 9.76 12.38 10.89 9.07 13.12C8.59 13.45 8.15 13.62 7.76 13.61C7.32 13.6 6.49 13.36 5.87 13.16C5.11 12.91 4.5 12.78 4.55 12.36C4.58 12.14 4.88 11.92 5.46 11.69C9 10.15 11.36 9.13 12.55 8.64C15.92 7.23 16.62 6.99 17.08 6.98Z"/>
           </svg>
           <span class="font-extrabold text-white text-sm" data-i18n="contacts.telegramBtn">Открыть Telegram</span>
         </a>
@@ -881,17 +904,20 @@
           <span class="font-bold text-gray-200 text-sm" data-i18n="contacts.copyTgUsername">Копировать TG</span>
         </button>
 
-        <button onclick="copyText('nickrisemusic@gmail.com', 'Email copied to clipboard!')" class="p-4 rounded-xl bg-[#1A202C] hover:bg-[#222A3A] border border-gray-700/80 transition-all flex items-center justify-center gap-3 group active:scale-95 cursor-pointer">
+        <!-- Кнопка письма в модалке: поведение то же, что в секции контактов —
+             на телефоне и планшете ссылку переписывает js/i18n.js →
+             syncContactEmailLinks на mailto. -->
+        <a href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=nickrisemusic@gmail.com" target="_blank" rel="noopener noreferrer" data-contact-email class="p-4 rounded-xl bg-[#1A202C] hover:bg-[#222A3A] border border-gray-700/80 transition-all flex items-center justify-center gap-3 group active:scale-95">
           <svg class="w-5 h-5 stroke-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
             <polyline points="22,6 12,13 2,6"></polyline>
           </svg>
-          <span class="font-bold text-gray-200 text-sm" data-i18n="contacts.copyEmail">Копировать Email</span>
-        </button>
+          <span class="font-bold text-gray-200 text-sm" data-i18n="contacts.emailBtn">Написать на Email</span>
+        </a>
 
         <a href="https://vk.com/nick_rise" target="_blank" rel="noopener noreferrer" class="p-4 rounded-xl bg-[#1A202C] hover:bg-[#222A3A] border border-gray-700/80 transition-all flex items-center justify-center gap-3 group active:scale-95">
-          <svg class="w-6 h-6 fill-amber-400" viewBox="0 0 24 24">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5.72 13.52h-1.41c-.53 0-.7-.42-1.65-1.38-.84-.81-1.21-.92-1.42-.92-.29 0-.37.08-.37.48v1.24c0 .34-.11.55-1.01.55-1.49 0-3.14-.9-4.31-2.58-1.75-2.48-2.23-4.34-2.23-4.72 0-.2.08-.39.48-.39h1.41c.36 0 .49.16.63.55.68 1.99 1.83 3.74 2.31 3.74.18 0 .26-.08.26-.53V9.77c-.05-.97-.57-1.05-.57-1.39 0-.16.14-.33.35-.33h2.21c.3 0 .41.15.41.49v2.66c0 .29.12.39.21.39.18 0 .33-.11.66-.44 1.01-1.13 1.73-2.84 1.73-2.84.1-.2.27-.39.63-.39h1.41c.42 0 .52.22.42.52-.18.82-1.9 3.25-1.98 3.37-.16.26-.22.38 0 .68.15.2.66.64 1 1.04.85.96 1.5 1.76 1.68 2.32.09.3-.07.46-.41.46z"/>
+          <svg class="w-6 h-6 fill-amber-400" fill-rule="evenodd" viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM18.97 8.85C19.07 8.51 18.97 8.26 18.48 8.26L16.89 8.26C16.48 8.26 16.29 8.48 16.19 8.72C16.19 8.72 15.38 10.7 14.23 11.98C13.86 12.35 13.69 12.47 13.48 12.47C13.38 12.47 13.24 12.35 13.24 12.02L13.24 8.85C13.24 8.44 13.12 8.26 12.78 8.26L10.27 8.26C10.01 8.26 9.86 8.45 9.86 8.63C9.86 9.02 10.44 9.1 10.5 10.19L10.5 12.54C10.5 13.06 10.4 13.15 10.2 13.15C9.66 13.15 8.34 11.16 7.56 8.89C7.41 8.44 7.25 8.26 6.85 8.26L5.25 8.26C4.79 8.26 4.7 8.48 4.7 8.72C4.7 9.14 5.24 11.24 7.22 14.01C8.54 15.91 10.4 16.94 12.09 16.94C13.11 16.94 13.23 16.71 13.23 16.31L13.23 14.88C13.23 14.43 13.33 14.33 13.65 14.33C13.89 14.33 14.3 14.45 15.24 15.37C16.33 16.45 16.51 16.94 17.11 16.94L18.71 16.94C19.17 16.94 19.39 16.71 19.26 16.26C19.12 15.81 18.6 15.16 17.92 14.39C17.54 13.95 16.99 13.47 16.82 13.23C16.58 12.93 16.65 12.79 16.82 12.52C16.82 12.52 18.76 9.78 18.97 8.85Z"/>
           </svg>
           <span class="font-bold text-gray-200 text-sm" data-i18n="contacts.vkBtn">Открыть ВК</span>
         </a>
@@ -1902,6 +1928,50 @@
       <path d="M6 22C13 16 19 8 24 6C29 8 35 16 42 22" stroke="currentColor" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   </button>
+
+  <!-- 8.6 ИКОНКИ СОЦСЕТЕЙ (ПРАВЫЙ НИЖНИЙ УГОЛ)
+       Telegram — в самом углу, ВК — над ним: блок колонкой, поэтому в разметке
+       ВК идёт первой. Компьютер: видны всегда. Телефон и планшет: проявляются
+       при прокрутке — ровно пока в шапке гаснет логотип (opacity считается
+       обратной величиной к --nr-header-fade, величину пишет
+       animations.js → paintHeaderFade). Под открытым бургер-меню кнопки уходят:
+       меню должно быть сверху. Иконки — те же, что в «Контактах».
+       ПОДСКАЗКИ. При наведении мышью слева от иконки всплывает бабл со
+       стрелочкой в её сторону — в том же фирменном виде, что подсказка при
+       заходе на сайт (градиент, янтарная рамка, свечение). Текст — config.js →
+       contacts.vkTip / contacts.telegramTip. Нативного title у ссылок нет
+       намеренно: браузерный тултип всплывал бы рядом вторым, поверх нашего.
+       aria-label остаётся — это для скринридеров, на экране его не видно.
+       Стили — css/style/17-contacts.css, блок «ИКОНКИ СОЦСЕТЕЙ В УГЛУ». -->
+  <div id="nrSocialRail" class="nr-social-rail">
+    <a
+      href="https://vk.com/nick_rise"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="nr-social-btn"
+      aria-label="Открыть ВК"
+      data-i18n-aria-label="contacts.vkBtn"
+    >
+      <svg viewBox="0 0 24 24" fill-rule="evenodd" aria-hidden="true">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM18.97 8.85C19.07 8.51 18.97 8.26 18.48 8.26L16.89 8.26C16.48 8.26 16.29 8.48 16.19 8.72C16.19 8.72 15.38 10.7 14.23 11.98C13.86 12.35 13.69 12.47 13.48 12.47C13.38 12.47 13.24 12.35 13.24 12.02L13.24 8.85C13.24 8.44 13.12 8.26 12.78 8.26L10.27 8.26C10.01 8.26 9.86 8.45 9.86 8.63C9.86 9.02 10.44 9.1 10.5 10.19L10.5 12.54C10.5 13.06 10.4 13.15 10.2 13.15C9.66 13.15 8.34 11.16 7.56 8.89C7.41 8.44 7.25 8.26 6.85 8.26L5.25 8.26C4.79 8.26 4.7 8.48 4.7 8.72C4.7 9.14 5.24 11.24 7.22 14.01C8.54 15.91 10.4 16.94 12.09 16.94C13.11 16.94 13.23 16.71 13.23 16.31L13.23 14.88C13.23 14.43 13.33 14.33 13.65 14.33C13.89 14.33 14.3 14.45 15.24 15.37C16.33 16.45 16.51 16.94 17.11 16.94L18.71 16.94C19.17 16.94 19.39 16.71 19.26 16.26C19.12 15.81 18.6 15.16 17.92 14.39C17.54 13.95 16.99 13.47 16.82 13.23C16.58 12.93 16.65 12.79 16.82 12.52C16.82 12.52 18.76 9.78 18.97 8.85Z"/>
+      </svg>
+      <span class="nr-social-tip" data-i18n="contacts.vkTip">Мой ВК</span>
+    </a>
+
+    <a
+      href="https://t.me/Nick_Rise"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="nr-social-btn"
+      aria-label="Открыть Telegram"
+      data-i18n-aria-label="contacts.telegramBtn"
+    >
+      <svg viewBox="0 0 24 24" fill-rule="evenodd" aria-hidden="true">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM17.08 6.98C17.18 6.98 17.4 7 17.55 7.12A0.51 0.51 0 0 1 17.72 7.45C17.74 7.55 17.76 7.76 17.74 7.93C17.56 9.85 16.77 14.52 16.37 16.67C16.2 17.58 15.86 17.88 15.54 17.91C14.83 17.98 14.3 17.45 13.61 17C12.54 16.3 11.94 15.86 10.9 15.18C9.7 14.39 10.48 13.95 11.16 13.24C11.34 13.06 14.45 10.23 14.51 9.97C14.52 9.94 14.52 9.82 14.45 9.76C14.38 9.69 14.28 9.71 14.2 9.73C14.09 9.76 12.38 10.89 9.07 13.12C8.59 13.45 8.15 13.62 7.76 13.61C7.32 13.6 6.49 13.36 5.87 13.16C5.11 12.91 4.5 12.78 4.55 12.36C4.58 12.14 4.88 11.92 5.46 11.69C9 10.15 11.36 9.13 12.55 8.64C15.92 7.23 16.62 6.99 17.08 6.98Z"/>
+      </svg>
+      <span class="nr-social-tip" data-i18n="contacts.telegramTip">Мой Telegram</span>
+    </a>
+  </div>
 
   <!-- ВСПЛЫВАЮЩЕЕ УВЕДОМЛЕНИЕ -->
   <div class="toast-container">

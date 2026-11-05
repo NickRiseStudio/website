@@ -2,7 +2,12 @@
  * NICK RISE STUDIO — config.js (тексты и данные сайта).
  * Тексты — обычные строки; исключение: hero.subtitle (на телефоне короче).
  * FAQ_PROMO_RU/EN — общий промо-блок со скидкой, добавляется в конец ответов FAQ.
+ * CONTACT_EMAIL — адрес для кнопки «Написать на Email» (index.html, секция и
+ * модалка контактов). Ссылку под устройство собирает js/i18n.js →
+ * syncContactEmailLinks.
  */
+
+const CONTACT_EMAIL = 'nickrisemusic@gmail.com';
 
 const FAQ_PROMO_RU = '<div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200/90 text-sm flex items-start sm:items-center gap-3"><svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V6a2 2 0 10-2 2h2zm0 13C10.832 21 2 20 2 15V8a2 2 0 012-2h16a2 2 0 012 2v7c0 5-8.832 6-10 6z"/></svg><span>Вижу вам интересно сотрудничество со мной! Напишите мне в Телеграм <button type="button" class="faq-promo-code" data-copy-promo title="Скопировать промокод">«NRSDiscount»</button> и получите скидку на первый заказ в размере <strong class="text-amber-400 font-bold">10%</strong></span></div>';
 const FAQ_PROMO_EN = '<div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200/90 text-sm flex items-start sm:items-center gap-3"><svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V6a2 2 0 10-2 2h2zm0 13C10.832 21 2 20 2 15V8a2 2 0 012-2h16a2 2 0 012 2v7c0 5-8.832 6-10 6z"/></svg><span>Interested in working together? Message me <button type="button" class="faq-promo-code" data-copy-promo title="Copy promo code">«NRSDiscount»</button> on Telegram and get <strong class="text-amber-400 font-bold">10% off</strong> your first order.</span></div>';
@@ -25,7 +30,6 @@ const CONFIG = {
   i18n: {
     ru: {
       nav: {
-        logoTitle: 'Nick Rise Studio',
         // Подсказка про логотип в шапке: всплывает при заходе на сайт под
         // логотипом (js/logo-hint.js → maybeShowLogoHint). Оранжевый акцент — тем же
         // классом nr-ab-hint-accent, что у подсказки плеера и калькулятора.
@@ -216,8 +220,12 @@ const CONFIG = {
         subtitle: '<span class="font-semibold text-gray-200">Свяжитесь со мной напрямую<br class="lg:hidden"/> для обсуждения вашего проекта.</span><br/><span class="text-amber-400 font-extrabold mt-1 inline-block">На связи 7 дней в неделю.</span>',
         telegramBtn: 'Открыть Telegram',
         copyTgUsername: 'Копировать TG',
-        copyEmail: 'Копировать Email',
+        emailBtn: 'Написать на Email',
         vkBtn: 'Открыть ВК',
+        // Подсказки при наведении мышью на иконки соцсетей в правом нижнем
+        // углу (index.html → #nrSocialRail). Вид бабла — css/style/17-contacts.css.
+        vkTip: 'Мой ВК',
+        telegramTip: 'Мой Telegram',
         toastTgCopied: 'Никнейм @Nick_Rise скопирован!',
         toastEmailCopied: 'Email скопирован в буфер обмена!'
       },
@@ -337,7 +345,6 @@ const CONFIG = {
 
     en: {
       nav: {
-        logoTitle: 'Nick Rise Studio',
         logoHint: 'Here you can learn <span class="nr-ab-hint-accent">about me</span>',
         abPlayer: 'A/B Demos',
         services: 'Services',
@@ -506,8 +513,12 @@ const CONFIG = {
         subtitle: '<span class="font-semibold text-gray-200">Reach out directly to discuss your project.</span><br/><span class="text-amber-400 font-extrabold mt-1 inline-block">Available 7 days a week.</span>',
         telegramBtn: 'Open Telegram',
         copyTgUsername: 'Copy Telegram',
-        copyEmail: 'Copy Email',
+        emailBtn: 'Send an Email',
         vkBtn: 'Open VK',
+        // Подсказки при наведении мышью на иконки соцсетей в правом нижнем
+        // углу (index.html → #nrSocialRail). Вид бабла — css/style/17-contacts.css.
+        vkTip: 'My VK',
+        telegramTip: 'My Telegram',
         toastTgCopied: 'Username @Nick_Rise copied to clipboard!',
         toastEmailCopied: 'Email copied to clipboard!'
       },

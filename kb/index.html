@@ -145,18 +145,12 @@
 
   <!-- ШАПКА -->
   <header id="kbHeader">
-    <!-- Логотип ведёт на основной сайт. Тот же приём, что в шапке сайта:
-         рамка, янтарное свечение, две строки подписи. Адрес — боевой, а не
+    <!-- Логотип ведёт на основной сайт: один файл-логотип без подписей (своя
+         копия в kb/image — база знаний автономна). Адрес — боевой, а не
          ../index.html: база знаний может лежать и отдельной папкой, и
          отдельным адресом, и относительный путь тогда уводит в 404. -->
     <a id="kbLogoLink" href="https://nickrisestudio.github.io/website/" aria-label="Nick Rise Studio — на главную">
-      <span class="kb-logo-frame">
-        <img src="./image/logo-256.webp" width="48" height="48" alt="" decoding="async" fetchpriority="high">
-      </span>
-      <span class="kb-logo-text">
-        <span class="kb-logo-title">Nick Rise Studio</span>
-        <span class="kb-logo-sub">Nick Rise - One Rise</span>
-      </span>
+      <img src="./image/logo-wordmark.png" width="860" height="280" alt="" class="kb-logo-img" decoding="async" fetchpriority="high">
     </a>
 
     <!-- Надпись вместо прежней подсказки: стрелка смотрит на логотип, который

@@ -474,6 +474,7 @@
   var headerClear = false; /* панель растворена целиком — клики сквозь неё */
   var headerNav = null;   /* меню шапки: «овал» под пунктами, см. css/anim */
   var logoHintEl = null;  /* подсказка про логотип: на телефоне гаснет вместе с ним */
+  var socialRail = null;  /* иконки соцсетей: на телефоне и планшете проявляются обратно логотипу */
 
   function paintHeaderFade(y) {
     var t = (y - FADE_START) / (FADE_END - FADE_START);
@@ -527,6 +528,23 @@
       logoHintEl.style.setProperty('--nr-header-fade', alpha.toFixed(4));
       logoHintEl.classList.toggle('nr-logo-hint-fade', alpha < 0.999);
       logoHintEl.classList.toggle('nr-logo-hint-clear', isClear);
+    }
+
+    /* Иконки соцсетей в правом нижнем углу: на телефоне и планшете они
+       проявляются РОВНО в той мере, в какой погас логотип — CSS считает их
+       прозрачность обратной величиной (1 − --nr-header-fade), поэтому величина
+       нужна та же. Пишем её на сам блок, а не на <html>: он лежит в body и до
+       inline-переменной шапки не достаёт, а запись на корне помечала бы
+       пересчитать стили всего документа в каждом кадре прокрутки. На компьютере
+       кнопки видны всегда — правила чтения этой переменной там нет, поэтому
+       запись безвредна и одинакова на всех ширинах (как у бабла подсказки).
+       Класс nr-social-clear отключает клики у погасшего блока: иначе прозрачные
+       кнопки ловили бы тапы по контенту сайта. Гаснет он, наоборот, когда
+       логотип ещё цел (alpha 1) — то есть вверху страницы. */
+    if (!socialRail) socialRail = $('#nrSocialRail');
+    if (socialRail) {
+      socialRail.style.setProperty('--nr-header-fade', alpha.toFixed(4));
+      socialRail.classList.toggle('nr-social-clear', alpha >= 0.999);
     }
 
     /* «Овал» под пунктами меню (десктоп) проявляется ровно в той мере, в

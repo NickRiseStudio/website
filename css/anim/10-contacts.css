@@ -57,6 +57,17 @@
   45%      { transform: scale(1.25); }
 }
 
+/* Конверт почты качается влево-вправо. Зацепка — атрибут data-contact-email, а
+   не href: адрес ссылки разный на ПК (форма нового письма в Gmail) и на
+   телефоне (mailto), его подставляет js/i18n.js → syncContactEmailLinks. */
+@keyframes nrMailWave {
+  0%, 100% { transform: rotate(0deg); }
+  20%      { transform: rotate(-8deg); }
+  45%      { transform: rotate(8deg); }
+  70%      { transform: rotate(-4deg); }
+  85%      { transform: rotate(3deg); }
+}
+
 /* Отклик на тап по карточкам контактов. На сенсорных экранах :hover не
    работает (правила выше), поэтому подъём, свечение и анимацию иконки
    включает класс .nr-contact-tap: его ставит animations.js ровно на клик
@@ -78,6 +89,10 @@
 #contactModal .grid > a[href*="vk"].nr-contact-tap svg,
 #contacts .grid > a[href*="instagram"].nr-contact-tap svg,
 #contactModal .grid > a[href*="instagram"].nr-contact-tap svg { animation: nrPop 0.6s var(--nr-snap); }
+
+/* Конверт на тапе: та же «волна», что при наведении мышью */
+#contacts .grid > a[data-contact-email].nr-contact-tap svg,
+#contactModal .grid > a[data-contact-email].nr-contact-tap svg { animation: nrMailWave 0.75s var(--nr-ease); }
 
 /* Успешное копирование — зелёная вспышка */
 .nr-copied { animation: nrCopied 0.9s ease; }
@@ -120,6 +135,11 @@
   #contactModal .grid > a[href*="vk"]:hover svg,
   #contacts .grid > a[href*="instagram"]:hover svg,
   #contactModal .grid > a[href*="instagram"]:hover svg { animation: nrPop 0.6s var(--nr-snap); }
+
+/* Конверт почты — «волна» ±8°. Длительность и кривая те же, что у соседей,
+   поэтому кнопка в отклике не выбивается из ряда. */
+  #contacts .grid > a[data-contact-email]:hover svg,
+  #contactModal .grid > a[data-contact-email]:hover svg { animation: nrMailWave 0.75s var(--nr-ease); }
 
   #reviews .review-card:hover {
     transform: translateY(-3px);

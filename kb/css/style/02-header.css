@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════════
    kb/css/style/02-header.css — ШАПКА БАЗЫ ЗНАНИЙ
-   Что: плашка 64/80px. Слева логотип и «Nick Rise Studio» (ссылка на
+   Что: плашка 64/80px. Слева логотип без подписей (ссылка на
         основной сайт) и надпись «← А это мой сайт :)» — подсказка к
         логотипу, сама не кликается; по центру «База знаний» (ссылка на
         приветствие базы знаний); справа RU/EN и компактная кнопка меню
@@ -12,7 +12,7 @@
    Подключён: kb/index.html, после 01-base.css, до 04-greeting.css.
    Группы блоков в файле: 1 (общие), 2 (планшет и шире), 3 (компьютер),
         4 (всё, кроме компьютера), 6 (телефон), 7 (узкий телефон),
-        9 (уменьшить движение).
+        8 (очень узкий телефон), 9 (уменьшить движение).
    ═══════════════════════════════════════════════════════════════════════ */
 
 /* ═══ 1. ОБЩИЕ — ВСЕ УСТРОЙСТВА ═════════════════════════════════════════════ */
@@ -40,87 +40,67 @@
   min-width: 0;
 }
 
-/* Вид и анимации плитки — те же, что в шапке сайта (css/anim/03-header.css):
-   непрерывный янтарный пульс nrLogoBreath, при наведении плитка чуть
-   разворачивается и вспыхивает ореолом. box-shadow здесь занят пульсом,
-   поэтому вспышку даёт симметричный filter: drop-shadow — он ложится по
-   силуэту плитки и с анимацией не конфликтует. */
-.kb-logo-frame {
+/* Логотип — один файл (kb/image/logo-wordmark.png, 860x280, PNG с прозрачным
+   фоном): прежней плитки 36x36 с фотографией и подписей «Nick Rise Studio» /
+   «Nick Rise - One Rise» больше нет. Приём тот же, что в шапке основного
+   сайта (css/anim/03-header.css): фон прозрачный, поэтому подсвечивается не
+   прямоугольник файла, а силуэт букв — filter: drop-shadow.
+
+   ДВА НАБОРА КАДРОВ. Один filter нельзя одновременно анимировать «дыханием»
+   и перебивать правилом наведения — анимация всегда выигрывает, и вспышка не
+   появилась бы. Поэтому у наведения своё имя кадров, и hover подменяет
+   animation-name целиком. */
+.kb-logo-img {
   display: block;
-  width: 36px;
-  height: 36px;
+  position: relative;
+  left: -4px;
+  top: -2px;
+  height: 32px;
+  width: auto;
+  /* На самом узком экране (320–340px) в плашку не влезают сразу логотип,
+     подпись, RU/EN и кнопка меню. max-width не даёт картинке выехать за
+     ссылку и налезть на стрелку, а object-fit: contain сохраняет пропорции:
+     при нехватке места логотип уменьшается целиком, а не сжимается по
+     ширине. */
+  max-width: 100%;
+  object-fit: contain;
   flex-shrink: 0;
-  overflow: hidden;
-  border: 1px solid rgba(245, 158, 11, 0.45);
-  border-radius: 8px;
   animation: nrLogoBreath 5.5s ease-in-out infinite;
-  transition: transform 0.5s var(--kb-ease), border-color 0.3s ease,
-              box-shadow 0.45s var(--kb-ease), filter 0.35s ease;
+  transition: transform 0.5s var(--kb-ease), filter 0.35s ease;
   will-change: transform;
 }
 
-/* Картинка поднята в собственный GPU-слой: браузер рисует её один раз в полном
-   разрешении и при наведении только композитит готовую текстуру — плитка
-   остаётся резкой. */
-.kb-logo-frame img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-}
-
+/* «Дыхание»: тёмная тень читаемости + янтарный контур, который разгорается
+   и гаснет. Оба слоя едут в одном filter — так перерисовка одна. */
 @keyframes nrLogoBreath {
-  0%, 100% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.12); }
-  50%      { box-shadow: 0 0 30px rgba(245, 158, 11, 0.36); }
+  0%, 100% {
+    filter: drop-shadow(0 1px 2px rgba(6, 8, 12, 0.85)) drop-shadow(0 0 6px rgba(245, 158, 11, 0.18));
+  }
+  50% {
+    filter: drop-shadow(0 1px 2px rgba(6, 8, 12, 0.85)) drop-shadow(0 0 14px rgba(245, 158, 11, 0.42));
+  }
 }
 
-.kb-logo-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
+
+/* Наведение — БЕЗ поворота: логотип чуть приподнимается, контур вспыхивает
+   ярче и «дышит» чаще (свой набор кадров, см. выше про два набора). */
+#kbLogoLink:hover .kb-logo-img {
+  transform: translateY(-2px);
+  animation-name: nrLogoHover;
+  animation-duration: 2.4s;
 }
 
-.kb-logo-title {
-  font-size: 14px;
-  font-weight: 900;
-  letter-spacing: -0.01em;
-  color: #FFFFFF;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: color 0.3s ease;
-}
-
-.kb-logo-sub {
-  font-family: 'Space Grotesk', 'Plus Jakarta Sans', monospace;
-  font-size: 8px;
-  font-weight: 500;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--kb-amber);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Наведение: лёгкий разворот плитки и янтарная вспышка. Рамку не трогаем —
-   иначе после ухода курсора она тускнела бы и «подскакивала» вместе с
-   перезапустившимся пульсом. Пульс не отключаем по той же причине: animation
-   сбросилась бы в 0% (самый тусклый кадр). */
-#kbLogoLink:hover .kb-logo-frame {
-  transform: rotate(-4deg) scale(1.06);
-  filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.6)) drop-shadow(0 0 24px rgba(245, 158, 11, 0.35));
-}
-
-#kbLogoLink:hover .kb-logo-title {
-  color: var(--kb-amber-lt);
+@keyframes nrLogoHover {
+  0%, 100% {
+    filter: drop-shadow(0 1px 2px rgba(6, 8, 12, 0.85)) drop-shadow(0 0 12px rgba(245, 158, 11, 0.6)) drop-shadow(0 0 26px rgba(245, 158, 11, 0.3));
+  }
+  50% {
+    filter: drop-shadow(0 1px 2px rgba(6, 8, 12, 0.85)) drop-shadow(0 0 18px rgba(245, 158, 11, 0.85)) drop-shadow(0 0 38px rgba(245, 158, 11, 0.45));
+  }
 }
 
 /* ── Надпись «А это мой сайт» ────────────────────────────────────────────
-   Заменила подсказку под логотипом: стрелка слева смотрит на плитку, которая
+   Заменила подсказку под логотипом: стрелка слева смотрит на логотип, который
    ведёт на основной сайт. Сама надпись — подсказка, а не ссылка: поэтому у
    неё нет ни :hover, ни курсора-указателя, ни перехода цвета. На компьютере
    стоит всегда; на телефоне и планшете её показывает html.kb-menu-open —
@@ -132,14 +112,19 @@
   gap: 6px;
   margin-left: 10px;
   color: var(--kb-amber-lt);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
   cursor: default;
 }
 
+/* Стрелка растёт вместе с буквами: размер задаётся здесь, а не атрибутами
+   width/height в разметке, иначе при крупной подписи она выглядела бы мелкой.
+   21x15 — это пропорции viewBox (24:16), поэтому контур не искажается. */
 .kb-site-tag svg {
   flex-shrink: 0;
+  width: 21px;
+  height: 15px;
 }
 
 /* ── Название раздела по центру ──────────────────────────────────────────
@@ -241,19 +226,10 @@ html[data-lang="en"] #kbLangEn {
     gap: 14px;
   }
 
-  .kb-logo-frame {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-  }
-
-  .kb-logo-title {
-    font-size: 18px;
-  }
-
-  .kb-logo-sub {
-    font-size: 10px;
-    letter-spacing: 0.18em;
+  .kb-logo-img {
+    height: 40px;
+    left: -6px;
+    top: -3px;
   }
 
   #kbTitle {
@@ -262,7 +238,12 @@ html[data-lang="en"] #kbLangEn {
 
   .kb-site-tag {
     margin-left: 16px;
-    font-size: 12px;
+    font-size: 14px;
+  }
+
+  .kb-site-tag svg {
+    width: 22px;
+    height: 15px;
   }
 
   #kbLangToggle {
@@ -298,7 +279,12 @@ html[data-lang="en"] #kbLangEn {
   }
 
   .kb-site-tag {
-    font-size: 13px;
+    font-size: 15px;
+  }
+
+  .kb-site-tag svg {
+    width: 24px;
+    height: 17px;
   }
 }
 
@@ -325,18 +311,25 @@ html[data-lang="en"] #kbLangEn {
 
 /* ═══ 6. ТЕЛЕФОН (max-width: 639.98px) ══════════════════════════════════════ */
 
-/* На узком экране подпись «Nick Rise Studio» не помещается рядом с названием
-   раздела и переключателем — остаётся только логотип.
-   Он и есть ссылка на основной сайт. */
+/* На узком экране логотип остаётся ссылкой на основной сайт, а подпись
+   «А это мой сайт» ужимается: рядом ещё название раздела и переключатель. */
 @media (max-width: 639.98px) {
-  .kb-logo-text {
-    display: none;
-  }
-
   .kb-site-tag {
     gap: 5px;
     margin-left: 8px;
-    font-size: 10px;
+    font-size: 11px;
+  }
+
+  /* В тесной плашке телефона стрелка ужимается вместе с подписью. */
+  .kb-site-tag svg {
+    width: 19px;
+    height: 13px;
+  }
+
+  /* «БАЗА ЗНАНИЙ» центрировано абсолютно и на телефоне подходило вплотную к
+     капсуле RU/EN (в 380px зазор был 6px). 13px оставляют 14px и больше. */
+  #kbTitle {
+    font-size: 13px;
   }
 }
 
@@ -344,12 +337,55 @@ html[data-lang="en"] #kbLangEn {
 
 /* На 320–379px в строку у открытой шторки еле влезают логотип, подпись со
    стрелкой, RU/EN и кнопка меню: подпись чуть мельче, отступы теснее.
-   Стрелка остаётся — она и указывает на логотип. */
+   Стрелка остаётся — она и указывает на логотип.
+   Здесь же ужимается центральное «БАЗА ЗНАНИЙ»: оно центрировано абсолютно и
+   на такой ширине краем заезжало под капсулу RU/EN (15px + разрядка 0.08em
+   давали 119px). 12px и 0.06em — это ~91px, они расходятся с капсулой с
+   зазором. */
 @media (max-width: 379.98px) {
   .kb-site-tag {
     gap: 4px;
     margin-left: 6px;
-    font-size: 9px;
+    font-size: 10px;
+  }
+
+  .kb-site-tag svg {
+    width: 18px;
+    height: 12px;
+  }
+
+  #kbTitle {
+    font-size: 12px;
+    letter-spacing: 0.06em;
+  }
+}
+
+/* ═══ 8. ОЧЕНЬ УЗКИЙ ТЕЛЕФОН (max-width: 359.98px) ═════════════════════════ */
+
+/* На 320–359px четыре элемента (логотип, подпись, RU/EN, кнопка меню) уже не
+   расходятся по плашке: подпись в открытой шторке упирается в переключатель
+   языка, а центральное «БАЗА ЗНАНИЙ» наезжает на правый край логотипа.
+   Поэтому здесь логотип на шаг меньше — тот же приём, что в шапке основного
+   сайта, где на узком экране он тоже ужимается. С 360px включается обычный
+   размер, там всё помещается с зазором. */
+@media (max-width: 359.98px) {
+  .kb-logo-img {
+    height: 24px;
+  }
+
+  .kb-site-tag {
+    margin-left: 4px;
+  }
+
+  /* 320–359px — единственная ширина, где «БАЗА ЗНАНИЙ» ещё задевает капсулу:
+     10px без разрядки дают ~70px. Заголовок центрирован по плашке, а свободное
+     место слева шире правого (слева логотип короче пары «RU/EN + кнопка меню»),
+     поэтому те же 12px сдвига возвращают его в середину свободной зоны и дают
+     12px зазора до капсулы. */
+  #kbTitle {
+    left: calc(50% - 12px);
+    font-size: 10px;
+    letter-spacing: normal;
   }
 }
 
@@ -357,21 +393,17 @@ html[data-lang="en"] #kbLangEn {
 
 @media (prefers-reduced-motion: reduce) {
   .kb-lang-pill,
-  .kb-logo-frame,
-  .kb-logo-title,
+  .kb-logo-img,
   #kbTitle {
     transition: none;
   }
 
-  /* Пульс логотипа — непрерывное движение, при «уменьшить движение» его нет.
-     Ореол остаётся статичным (кадр 0% анимации). */
-  .kb-logo-frame {
+  /* «Дыхание» контура и подъём на hover — это движение, при этой настройке
+     его нет. Остаётся статичная тёмная тень читаемости. */
+  .kb-logo-img,
+  #kbLogoLink:hover .kb-logo-img {
     animation: none;
-    box-shadow: 0 0 20px rgba(245, 158, 11, 0.12);
-  }
-
-  /* Наведение без разворота: плитка только подсвечивается. */
-  #kbLogoLink:hover .kb-logo-frame {
     transform: none;
+    filter: drop-shadow(0 1px 2px rgba(6, 8, 12, 0.85));
   }
 }

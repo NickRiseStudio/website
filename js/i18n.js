@@ -8,6 +8,7 @@
 // Блоки файла:
 //   • Автоопределение языка по региону (RU_SPHERE_*): RU для России и СНГ.
 //   • getDeviceType и resolveDeviceText — выбор desktop/tablet/mobile текста.
+//   • syncContactEmailLinks — ссылка «Написать на Email» под устройство.
 //   • I18N-система: расстановка текстов по data-i18n, updateDocumentMeta.
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -135,6 +136,31 @@ function resolveI18nValue(obj, lang = currentLang, device = getDeviceType()) {
   return resolveDeviceText(fallback, device);
 }
 
+// --- ССЫЛКА «НАПИСАТЬ НА EMAIL»: ПОЧТА УСТРОЙСТВА ИЛИ GMAIL В БРАУЗЕРЕ ---
+// mail.google.com на телефоне и планшете перехватывает приложение Gmail: оно
+// открывает «Входящие», а параметры view=cm&to= теряются. Поэтому там ведём на
+// mailto — система откроет форму нового письма, поле «Кому» уже заполнено
+// (на Android это тот же Gmail). На мыши остаётся форма письма в Gmail: отправителя
+// выбирает сама почта по аккаунту, под которым человек вошёл, — сайт этого не
+// решает. target="_blank" на mailto снимаем: иначе поверх почты остаётся пустая
+// вкладка. Адрес — config.js → CONTACT_EMAIL.
+function syncContactEmailLinks() {
+  const touchOnly = typeof window.matchMedia === 'function' &&
+    window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+
+  document.querySelectorAll('[data-contact-email]').forEach((link) => {
+    if (touchOnly) {
+      link.setAttribute('href', 'mailto:' + CONTACT_EMAIL);
+      link.removeAttribute('target');
+      link.removeAttribute('rel');
+      return;
+    }
+    link.setAttribute('href', 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(CONTACT_EMAIL));
+    link.setAttribute('target', '_blank');
+    link.setAttribute('rel', 'noopener noreferrer');
+  });
+}
+
 // --- СИСТЕМА ПЕРЕВОДОВ ---
 let lastDetectedDevice = getDeviceType();
 
@@ -170,6 +196,8 @@ function initI18n() {
       renderTrackList(false);
     }
   }, { passive: true });
+
+  syncContactEmailLinks();
 
   const initialLang = detectUserLanguage();
   setLanguage(initialLang, false);
