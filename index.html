@@ -1616,35 +1616,25 @@
         </div>
 
         <!-- Отправка: ссылка t.me с уже набранным текстом заявки
-             (js/calculator.js → sendCalcOrderToTelegram). Ниже — два
-             запасных пути одним рядом: «Скопировать заявку» (буфер обмена,
-             если Telegram черновик не подставил) и «Контакты» — открывают
-             окно #contactModal поверх расчёта (js/modals.js →
-             openContactModal). Вид ряда — css/style/19-calculator.css,
-             блок .nr-calcshow-actions. -->
+             (js/calculator.js → sendCalcOrderToTelegram). Ниже — «Контакты»:
+             кнопка того же размера, но спокойная оранжевая и без анимаций.
+             Она копирует заявку в буфер обмена, показывает тост о копировании
+             и открывает окно #contactModal поверх расчёта (js/calculator.js →
+             copyCalcOrder, js/modals.js → openContactModal). Вид обеих кнопок —
+             css/style/19-calculator.css, блок «Кнопки: отправка». -->
         <button type="button" class="nr-calcshow-send" onclick="sendCalcOrderToTelegram()">
           <svg class="nr-calcshow-send-icon" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
           <span data-i18n="services.priceCalc.form.telegramBtn">Отправить заявку в Telegram</span>
           <svg class="nr-calcshow-send-arrow" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </button>
 
-        <div class="nr-calcshow-actions">
-          <button type="button" class="nr-calcshow-copy" onclick="copyCalcOrder()">
-            <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
-              <rect x="9" y="9" width="11" height="11" rx="2"></rect>
-              <path d="M5 15V6a2 2 0 012-2h8"></path>
-            </svg>
-            <span data-i18n="services.priceCalc.form.copyBtn">Скопировать заявку</span>
-          </button>
-
-          <button type="button" class="nr-calcshow-copy" onclick="openContactModal()">
-            <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-              <polyline points="22,6 12,13 2,6"></polyline>
-            </svg>
-            <span data-i18n="services.priceCalc.form.contactsBtn">Контакты</span>
-          </button>
-        </div>
+        <button type="button" class="nr-calcshow-contacts" onclick="copyCalcOrder(); openContactModal()">
+          <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+            <polyline points="22,6 12,13 2,6"></polyline>
+          </svg>
+          <span data-i18n="services.priceCalc.form.contactsBtn">Контакты</span>
+        </button>
 
         <p class="nr-calcshow-note" data-i18n="services.priceCalc.resultSub">Это предварительный расчёт — точную цену я назову после прослушивания вашего материала.</p>
       </aside>

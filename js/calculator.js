@@ -479,7 +479,8 @@ function buildCalcOrderText() {
 
 // Ссылка t.me с черновиком сообщения: в приложениях Telegram и в Web-версии
 // открывается чат с уже набранным текстом. Если клиент черновик не подставил,
-// рядом стоит «Скопировать заявку».
+// рядом стоит «Контакты»: она копирует ту же заявку в буфер обмена и
+// открывает окно контактов (index.html → кнопка .nr-calcshow-contacts).
 function sendCalcOrderToTelegram() {
   const text = buildCalcOrderText();
   if (!text) return;
