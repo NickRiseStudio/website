@@ -143,6 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initMixerFaderScroll();
   initSmoothAnchorNavigation();
   initScrollSpy();
+  initAddressHash();
   initScrollToTop();
   initCalcHints();
   initPriceCalcForm();

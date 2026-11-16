@@ -77,8 +77,9 @@ html[data-kb-toc="none"] #kbToc {
               transform 0.12s ease;
 }
 
+/* Наведение — только текст, без плашки: залипшее наведение после смены
+   статьи читалось бы как второй выделенный раздел рядом с янтарным. */
 .kb-toc-link:hover {
-  background-color: rgba(255, 255, 255, 0.045);
   color: #FFFFFF;
 }
 
@@ -109,6 +110,10 @@ html[data-kb-toc="none"] #kbToc {
     background-color: var(--kb-surface);
     overflow-y: auto;
     overscroll-behavior: contain;
+    /* Жёлоб под полосу зарезервирован всегда — как у меню и панели чтения:
+       длинное содержание статьи не должно сдвигать текст при появлении
+       полосы. */
+    scrollbar-gutter: stable;
   }
 
   .kb-toc-link {
@@ -148,12 +153,10 @@ html[data-kb-toc="none"] #kbToc {
    у настоящего курсора и у активного раздела. */
 @media (hover: none) {
   .kb-toc-link:hover {
-    background-color: transparent;
     color: var(--kb-text-dim);
   }
 
   .kb-toc-link.is-active:hover {
-    background-color: rgba(245, 158, 11, 0.1);
     color: #FFFFFF;
   }
 }

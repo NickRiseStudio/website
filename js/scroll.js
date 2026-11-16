@@ -4,10 +4,12 @@
 // Владеет: activeScrollTween, NAV_SECTIONS, scrollSpyAnchors, scrollSpyDocHeight,
 //         scrollSpyTicking.
 // Публичные (window): initSmoothAnchorNavigation, initScrollSpy, initScrollToTop, scrollToTop,
-//         goToFaqItem, initMixerFaderScroll, refreshScrollSpyAnchors, setActiveNavSection.
+//         goToFaqItem, initMixerFaderScroll, refreshScrollSpyAnchors, setActiveNavSection,
+//         initAddressHash, applyInitialUrlState.
 // Блоки файла:
 //   • Плавные якоря через Lenis (window.SmoothScroll) — секция «якоря».
 //   • Scroll-spy: подсветка пункта меню по текущей секции.
+//   • Адрес страницы: хэш раздела виден только в адресной строке (blur/focus).
 //   • Кнопка «наверх» по центру внизу.
 //   • Фейдер бокового микшера: --fader-y, вид — css/style/08-mixer.css.
 // ═══════════════════════════════════════════════════════════════════════
@@ -390,6 +392,144 @@ function initSmoothAnchorNavigation() {
       // Некорректные селекторы пропускаются
     }
   });
+}
+
+// --- АДРЕС СТРАНИЦЫ: ЯКОРЬ ВХОДА И ХЭШ ТОЛЬКО В АДРЕСНОЙ СТРОКЕ ---
+/* Пока листаешь, адрес чистый: у сайта одна ссылка. Хэш раздела дописывается
+   в момент, когда фокус уходит из окна (щелчок по адресной строке), и снимается,
+   когда фокус вернулся, — так ссылку на раздел можно скопировать.
+   Вход по ссылке: js/state.js → initAddressHash, сам раздел открывается позже,
+   из animations.js → unlockPage → applyInitialUrlState (заставка уже погасла,
+   замок снят, Lenis пересоздан). Перезагрузка раздел не восстанавливает. */
+const ADDRESS_SECTIONS = ['player', 'services', 'reviews', 'contacts', 'faq', 'kb'];
+/* Открытые поверх страницы окна: пока они на экране, адрес показывает их. */
+const ADDRESS_LAYERS = [
+  ['aboutShowcase', 'about'],
+  ['aboutModal', 'about'],
+  ['priceCalcShowcase', 'order']
+];
+let addressHashWritten = '';     /* что сейчас записано в адрес ('' — чисто) */
+let entryStateApplied = false;   /* якорь входа разобран один раз за загрузку */
+let entryTargetId = '';          /* раздел, к которому едем после заставки */
+let entryScrollStartedAt = 0;    /* когда стартовал этот проезд */
+let entryUserMoved = false;      /* пользователь уже листал сам — не догоняем */
+let entryRealignTimer = 0;
+
+function isAddressLayerOpen(id) {
+  const el = document.getElementById(id);
+  return !!el && el.classList.contains('active');
+}
+
+/* Якорь, который показываем в адресной строке: открытое окно перекрывает
+   положение страницы, иначе — раздел, чей заголовок прошёл 45% высоты экрана. */
+function getAddressTarget() {
+  for (let i = 0; i < ADDRESS_LAYERS.length; i++) {
+    if (isAddressLayerOpen(ADDRESS_LAYERS[i][0])) return ADDRESS_LAYERS[i][1];
+  }
+
+  const scrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+  const windowHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+  if (scrollY < 120) return '';
+
+  const documentHeight = scrollSpyDocHeight || Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+  if (scrollY + windowHeight >= documentHeight - 50) return ADDRESS_SECTIONS[ADDRESS_SECTIONS.length - 1];
+
+  const line = scrollY + windowHeight * 0.45;
+  let target = '';
+  for (let i = 0; i < ADDRESS_SECTIONS.length; i++) {
+    const top = scrollSpyAnchors[ADDRESS_SECTIONS[i]];
+    if (typeof top === 'number' && top <= line) target = ADDRESS_SECTIONS[i];
+  }
+  return target;
+}
+
+function writeAddressHash(target) {
+  if (!window.history || typeof window.history.replaceState !== 'function') return;
+  const next = target ? '#' + target : '';
+  if (next === addressHashWritten) return;
+  addressHashWritten = next;
+  /* replaceState: запись в истории не появляется, прокрутка не дёргается. */
+  window.history.replaceState(null, '', window.location.pathname + window.location.search + next);
+}
+
+/* Проезд к разделу — та же арифметика, что при клике по пункту меню
+   (initSmoothAnchorNavigation): шапка + 14px и замок scroll-spy на 1300 мс. */
+function scrollSectionLikeNavClick(id, customDuration) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  refreshScrollSpyAnchors();
+  const header = document.querySelector('header');
+  const headerH = header ? header.offsetHeight : 72;
+  const rect = el.getBoundingClientRect();
+  const currentY = window.pageYOffset || document.documentElement.scrollTop || 0;
+
+  setActiveNavSection(id);
+  if (scrollSpyClickLockTimer) clearTimeout(scrollSpyClickLockTimer);
+  scrollSpyClickLockTimer = setTimeout(() => {
+    scrollSpyClickLockTimer = null;
+    updateActiveNavSection();
+  }, 1300);
+
+  smoothScrollTo(currentY + rect.top - headerH - 14, customDuration);
+}
+
+/* Догоняем раздел, если раскладка сдвинулась уже после старта проезда
+   (встали шрифты, догрузились картинки): только пока пользователь не листал сам
+   и только когда первый проезд закончился. */
+function scheduleEntryRealign() {
+  if (!entryTargetId || entryUserMoved) return;
+  /* Первый проезд длится до 1.55 с — догоняем только после его конца, чтобы не
+     оборвать анимацию: если раскладка не сдвинулась, smoothScrollTo выйдет сам. */
+  const wait = Math.max(0, 1750 - (Date.now() - entryScrollStartedAt));
+  if (entryRealignTimer) clearTimeout(entryRealignTimer);
+  entryRealignTimer = setTimeout(() => {
+    entryRealignTimer = 0;
+    if (!entryTargetId || entryUserMoved) return;
+    scrollSectionLikeNavClick(entryTargetId, 0.9);
+  }, wait);
+}
+
+/* Вход по ссылке с якорем: «Обо мне» и «Заказать» открываются окнами, остальные
+   разделы — плавным проездом, как по клику в шапке. */
+function applyInitialUrlState() {
+  if (entryStateApplied) return;
+  entryStateApplied = true;
+
+  /* Перезагрузка (F5) — всегда главный экран. */
+  let navType = '';
+  try {
+    const nav = performance.getEntriesByType ? performance.getEntriesByType('navigation')[0] : null;
+    navType = nav && nav.type ? nav.type : '';
+  } catch (err) {}
+  if (navType === 'reload') return;
+
+  const hash = (window.nrEntryHash || '').replace(/^#/, '');
+  if (!hash) return;
+
+  if (hash === 'about') {
+    if (typeof openAboutModal === 'function') openAboutModal();
+    return;
+  }
+  if (hash === 'order') {
+    if (typeof openPriceCalc === 'function') openPriceCalc();
+    return;
+  }
+  if (ADDRESS_SECTIONS.indexOf(hash) === -1) return;
+
+  entryTargetId = hash;
+  entryScrollStartedAt = Date.now();
+  scrollSectionLikeNavClick(hash);
+
+  window.addEventListener('load', scheduleEntryRealign, { once: true });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(scheduleEntryRealign);
+  ['wheel', 'touchstart', 'keydown'].forEach(name => {
+    window.addEventListener(name, () => { entryUserMoved = true; }, { once: true, passive: true });
+  });
+}
+
+function initAddressHash() {
+  window.addEventListener('blur', () => writeAddressHash(getAddressTarget()));
+  window.addEventListener('focus', () => writeAddressHash(''));
 }
 
 // --- КНОПКА «НАВЕРХ» (ПО ЦЕНТРУ СНИЗУ) ---

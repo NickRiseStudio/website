@@ -122,6 +122,9 @@
        можно раньше — до разбора <body>, чтобы прыжка не было вовсе. */
     try {
       if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+      /* Якорь входа запоминаем для js/scroll.js → applyInitialUrlState: раздел
+         откроется после заставки. Перезагрузка (F5) раздел не восстанавливает. */
+      window.nrEntryHash = location.hash || '';
       if (location.hash) history.replaceState(null, '', location.pathname + location.search);
     } catch (e) {}
     try {

@@ -1,15 +1,19 @@
 /* ═══════════════════════════════════════════════════════════════════════
    kb/css/style/05-sidebar.css — МЕНЮ СТАТЕЙ
-   Что: левая колонка со списком статей; под открытой статьёй — сопутствующие
-        статьи (те, на которые она ссылается) вложенным списком с кареткой
-        раскрытия. На компьютере это обычная колонка, на телефоне и планшете
-        та же разметка превращается в шторку, которая выезжает сверху по
-        компактной кнопке меню в шапке (приём и тайминги — как у бургер-меню
-        основного сайта, css/anim/11-toast-modals-menu.css, но здесь всё своё).
+   Что: левая колонка с оглавлением базы — восемь разделов карты знаний.
+        Раздел — раскрывающаяся кнопка: по клику под ней появляются его
+        статьи, по повторному — прячутся. Разделы независимы, закрыты по
+        умолчанию, а раздел открытой статьи раскрывается сам. У пункта три
+        части: номер, название и пилюля уровня сложности
+        (база / средне / продвинутое). На компьютере это
+        обычная колонка, на телефоне и планшете та же разметка превращается
+        в шторку, которая выезжает сверху по компактной кнопке меню в шапке
+        (приём и тайминги — как у бургер-меню основного сайта,
+        css/anim/11-toast-modals-menu.css, но здесь всё своё).
         Панель содержания лежит в css/style/07-toc.css.
    Разметку создаёт: kb/index.html → #kbSidebarToggle (в шапке),
                      #kbSidebarOverlay, #kbSidebar.
-   Открытие и закрытие: kb/js/04-sidebar.js.
+   Шторку и раскрытие разделов ведёт: kb/js/04-sidebar.js.
    Пункт открытой статьи подсвечивает: kb/js/07-articles.js.
    Подключён: kb/index.html, после 04-greeting.css, до 06-article.css.
    Группы блоков в файле: 1 (общие), 2 (планшет и шире), 3 (компьютер),
@@ -21,8 +25,12 @@
 /* ═══ 1. ОБЩИЕ — ВСЕ УСТРОЙСТВА ═════════════════════════════════════════════ */
 
 #kbSidebar {
-  flex: 0 0 280px;
-  width: 280px;
+  /* Ширина на 11px больше прежней: ровно столько забирает зарезервированный
+     жёлоб полосы прокрутки (см. scrollbar-gutter ниже). Без этой прибавки
+     содержимое стало бы уже и длинные названия разделов («8. Работа со
+     звукорежиссёром») начали бы переноситься на вторую строку. */
+  flex: 0 0 291px;
+  width: 291px;
   display: flex;
   flex-direction: column;
   padding: 20px 12px 28px;
@@ -30,6 +38,12 @@
   background-color: var(--kb-surface);
   overflow-y: auto;
   overscroll-behavior: contain;
+  /* Место под полосу зарезервировано всегда: раскрытый раздел удлиняет
+     список, появляется полоса, внутренняя ширина уменьшается на её ширину —
+     и каретки разделов, прижатые к правому краю, уезжают влево, а длинные
+     названия перескакивают на вторую строку. С жёлобом ширина не меняется
+     ни при раскрытии, ни при закрытии. */
+  scrollbar-gutter: stable;
 }
 
 /* Заголовок панели: крупный капс с небольшой разрядкой. Тот же класс носит
@@ -69,57 +83,165 @@
               transform 0.12s ease;
 }
 
+/* Наведение — подсказка «сюда можно нажать»: янтарная заливка вдвое слабее,
+   чем у открытой статьи (0.035 против 0.07), чтобы наведённый пункт не спорил
+   с активным. Полоса слева и белый текст остаются приметой открытой статьи. */
 .kb-side-link:hover {
-  background-color: rgba(255, 255, 255, 0.045);
-  color: #FFFFFF;
+  background-color: rgba(245, 158, 11, 0.035);
 }
 
-/* Открытая статья: янтарная полоса слева и мягкая подсветка — то же
-   состояние, что у активного пункта в шапке сайта. */
+/* Открытая статья: мягкая янтарная заливка — та же, что раньше была
+   у раскрытого раздела, — и полоса слева, чтобы пункт находился в длинном
+   списке. Цвет теперь значит «вы читаете это», а не «раздел раскрыт». */
 .kb-side-link.is-active {
-  background-color: rgba(245, 158, 11, 0.1);
+  background-color: rgba(245, 158, 11, 0.07);
   box-shadow: inset 2px 0 0 var(--kb-amber);
   color: #FFFFFF;
 }
 
-/* ПОДПИСЬ ГРУППЫ («Старт», «До записи», «Запись», «После записи»).
-   Стоит отдельным пунктом того же списка, а не своим блоком: отступы между
-   группами считает общий gap списка. Кегль мельче заголовка панели, цвет
-   приглушённый — это ориентир в маршруте, а не раздел. Верхний отступ
-   отделяет группу от статей предыдущей; у первой он лишний, поэтому
-   снимается правилом :first-child. */
-.kb-side-group-title {
-  display: block;
-  padding: 16px 12px 4px;
+/* Статья, с которой читатель ушёл: заливка остаётся, полосы нет. Так в меню
+   видно две вещи сразу — где вы сейчас (полоса) и откуда пришли (заливка).
+   Класс ставит kb/js/07-articles.js; он живёт только на одном пункте. */
+.kb-side-link.is-visited {
+  background-color: rgba(245, 158, 11, 0.07);
+}
+
+/* ── НОМЕР, НАЗВАНИЕ И УРОВЕНЬ СЛОЖНОСТИ ────────────────────────────────
+   Пункт меню собран из трёх частей: номер статьи, её название и пилюля
+   уровня. Номер держит общий левый край для всех названий, поэтому у него
+   своя ширина, а не отступ. Пилюля прижата к правому краю, название
+   занимает остаток строки и переносится, если не влезает. */
+.kb-side-num {
+  flex: 0 0 auto;
+  min-width: 22px;
   font-family: 'Space Grotesk', 'Plus Jakarta Sans', monospace;
   font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(156, 163, 175, 0.85);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: rgba(245, 158, 11, 0.65);
 }
 
-.kb-side-group:first-child .kb-side-group-title {
-  padding-top: 0;
+.kb-side-name {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
-/* Каретка раскрытия у статьи с сопутствующими: смотрит вниз, когда список
-   открыт, и вправо, когда свёрнут (kb/js/04-sidebar.js). */
-.kb-side-caret {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 18px;
-  height: 18px;
+/* Уровень сложности: та же форма, что у бейджа «скоро» — рамка, капсула,
+   мелкий шрифт, — только цвет служит признаком уровня. Три уровня читаются
+   как шкала: от спокойного серо-голубого к янтарному и розовому. Надписи
+   строчные: «продвинутое» капсом занимает полстроки и давит название. */
+.kb-level {
+  flex: 0 0 auto;
   margin-left: auto;
-  color: var(--kb-amber);
-  transition: transform 0.3s var(--kb-ease);
+  padding: 2px 7px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
-.kb-side-caret svg {
-  width: 14px;
-  height: 14px;
+.kb-level--base {
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.kb-level--mid {
+  color: rgba(245, 158, 11, 0.85);
+}
+
+.kb-level--adv {
+  color: rgba(251, 113, 133, 0.9);
+}
+
+/* РАЗДЕЛ («1. Старт», «6. Сведение») — раскрывающаяся кнопка.
+   Кегль и вес те же, что у названий статей, и цвет белый: раздел читается
+   как строка того же уровня, а не как служебная подпись. Отступы совпадают
+   с пунктами статей, поэтому номера «1.» и «1.1» стоят в одной колонке.
+   Каретка справа поворачивается при раскрытии (kb/js/04-sidebar.js ставит
+   is-open на li раздела). */
+.kb-side-group-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 10px;
+  font-family: 'Space Grotesk', 'Plus Jakarta Sans', monospace;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: 0;
+  text-align: left;
+  color: #FFFFFF;
+}
+
+/* Раздел отвечает на наведение кареткой, а не заливкой строки: плашка,
+   оставшаяся от прошлого касания, читалась бы как подсветка. */
+.kb-side-group-title:hover .kb-side-group-caret {
+  color: var(--kb-amber-lt);
+}
+
+.kb-side-group-name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.kb-side-group-caret {
+  flex: 0 0 auto;
+  color: var(--kb-amber);
+  transition: transform 0.3s var(--kb-ease), color 0.2s ease;
+}
+
+/* Раскрытый раздел: только каретка смотрит вверх. Фон заголовка не
+   подсвечиваем — цвет в меню закреплён за открытой статьёй, иначе в списке
+   горят два места и непонятно, где читатель. */
+.kb-side-group.is-open .kb-side-group-caret {
+  transform: rotate(180deg);
+}
+
+/* СТАТЬИ РАЗДЕЛА. В закрытом виде списка нет: max-height: 0 обрезает его, а
+   visibility: hidden убирает ссылки из обхода по Tab — иначе в закрытом
+   разделе они оставались бы доступны с клавиатуры. Настоящую высоту знает
+   только браузер, поэтому её меряет kb/js/04-sidebar.js и кладёт в
+   --kb-grp-h; он же пересчитывает замер при смене языка и ширины окна, чтобы
+   двухстрочное название статьи не обрезалось. */
+.kb-side-sublist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+  max-height: 0;
+  visibility: hidden;
+  transition: max-height 0.45s var(--kb-ease), visibility 0s linear 0.45s;
+}
+
+.kb-side-group.is-open > .kb-side-sublist {
+  max-height: var(--kb-grp-h, 2000px);
+  visibility: visible;
+  transition: max-height 0.45s var(--kb-ease), visibility 0s linear;
+}
+
+/* Разделы независимы: каждый открывается и закрывается сам. */
+.kb-side-group.is-instant > .kb-side-sublist {
+  transition: none;
+}
+
+/* Между разделами воздуха больше, чем между статьями внутри раздела: иначе
+   семь разом закрытых разделов читались бы одной простынёй, а стартовая
+   статья не отделялась бы от первой папки. */
+.kb-side-group + .kb-side-group,
+.kb-side-item + .kb-side-group {
+  margin-top: 8px;
+}
+
+/* Пункты раздела стоят с отступом слева: видно, что они внутри раздела. */
+.kb-side-sublist .kb-side-link {
+  padding-left: 22px;
 }
 
 /* Тема без статьи: пункт не кликается и говорит об этом цветом. */
@@ -145,125 +267,6 @@
   color: rgba(245, 158, 11, 0.8);
 }
 
-/* Сопутствующие статьи открытой статьи: вертикальная линия показывает
-   вложенность. Клик по самой статье сворачивает и разворачивает список.
-   Свёрнутый список не исчезает рывком через display: none — он уезжает по
-   высоте и гаснет. Высоту в --kb-subs-h кладёт kb/js/04-sidebar.js перед
-   каждым переключением: max-height должен идти от настоящей высоты списка,
-   а не от догадки. */
-.kb-side-subs {
-  list-style: none;
-  margin: 2px 0 10px 22px;
-  padding: 0 0 0 10px;
-  border-left: 1px solid rgba(245, 158, 11, 0.16);
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  max-height: var(--kb-subs-h, 320px);
-  overflow: hidden;
-  /* Кривая ровнее, чем --kb-ease: у той половина пути за первые 10% времени,
-     и раскрытие списка читается рывком. */
-  transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-              margin 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.35s ease,
-              transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Сопутствующие показываются только у открытой статьи: у остальных пунктов
-   списка их нет. Класс is-current ставит kb/js/07-articles.js. */
-.kb-side-item:not(.is-current) .kb-side-subs {
-  display: none;
-}
-
-/* Отступы уходят вместе с высотой, иначе свёрнутый список оставлял бы
-   за собой пустую полосу. */
-.kb-side-item.is-collapsed .kb-side-subs {
-  max-height: 0;
-  margin-top: 0;
-  margin-bottom: 0;
-  opacity: 0;
-  transform: translateY(-6px);
-  transition: max-height 0.35s ease, margin 0.35s ease,
-              opacity 0.25s ease, transform 0.35s ease;
-}
-
-.kb-side-item.is-collapsed .kb-side-caret {
-  transform: rotate(-90deg);
-}
-
-/* ── РАСКРЫТИЕ СПИСКА ПРИ ПЕРЕХОДЕ НА СТАТЬЮ ────────────────────────────
-   У не-текущего пункта список лежит под display: none, а переход с такого
-   состояния браузер не играет вовсе — список оказывался на месте рывком.
-   Поэтому раскрытие играет анимация: она стартует и на только что показанном
-   списке. Кадры задают и начало (свёрнут), и конец — настоящую высоту из
-   --kb-subs-h (её кладёт kb/js/04-sidebar.js): с запасом из CSS список
-   успевал бы раскрыться за пару кадров. Класс is-opening ставит openSubs,
-   снимает его по концу анимации. */
-@keyframes kbSubsOut {
-  from {
-    max-height: 0;
-    margin-top: 0;
-    margin-bottom: 0;
-    opacity: 0;
-    transform: translate3d(0, -8px, 0);
-  }
-  to {
-    max-height: var(--kb-subs-h, 320px);
-    margin-top: 2px;
-    margin-bottom: 10px;
-    opacity: 1;
-    transform: none;
-  }
-}
-
-.kb-side-item.is-opening .kb-side-subs {
-  animation: kbSubsOut 0.6s cubic-bezier(0.4, 0, 0.2, 1) both;
-}
-
-.kb-side-sub {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
-  border-radius: 8px;
-  font-size: 12.5px;
-  line-height: 1.35;
-  color: var(--kb-text-dim);
-  transition: background-color 0.3s ease, color 0.3s ease, transform 0.12s ease;
-}
-
-.kb-side-sub:hover {
-  background-color: rgba(255, 255, 255, 0.045);
-  color: #FFFFFF;
-}
-
-/* Нажатие: пункт меню чуть проседает. Только transform — раскладка не едет,
-   а палец получает отклик раньше, чем начнётся переход на статью. */
-.kb-side-link:active,
-.kb-side-sub:active {
-  transform: scale(0.985);
-}
-
-/* Открытая сопутствующая статья: та же янтарная подсветка, что у пункта
-   верхнего уровня, только без полосы слева — пункт и так внутри списка.
-   Класс is-active и aria-current ставит kb/js/07-articles.js. */
-.kb-side-sub.is-active {
-  background-color: rgba(245, 158, 11, 0.1);
-  color: #FFFFFF;
-}
-
-/* Тема без статьи внутри сопутствующих: приглушена и не подсвечивается — как
-   в основном списке. Здесь пункт не ссылка, а span. */
-.kb-side-subs .is-soon .kb-side-sub {
-  color: var(--kb-text-dim);
-  cursor: default;
-}
-
-.kb-side-subs .is-soon .kb-side-sub:hover {
-  background-color: transparent;
-  color: var(--kb-text-dim);
-}
-
 /* Кнопка меню и затемнение существуют только там, где меню спрятано
    в шторку: на компьютере меню обычная колонка, и кнопки в шапке нет. */
 #kbSidebarToggle,
@@ -287,8 +290,13 @@
     padding: 12px 14px;
   }
 
-  .kb-side-sub {
-    font-size: 13px;
+  .kb-side-group-title {
+    font-size: 15px;
+    padding: 12px 14px;
+  }
+
+  .kb-side-sublist .kb-side-link {
+    padding-left: 24px;
   }
 }
 
@@ -296,8 +304,9 @@
 
 @media (min-width: 1024px) {
   #kbSidebar {
-    flex-basis: 300px;
-    width: 300px;
+    /* 300 + 11px жёлоба — см. комментарий у основного правила. */
+    flex-basis: 311px;
+    width: 311px;
     padding: 28px 16px 36px;
   }
 
@@ -431,9 +440,10 @@
                 visibility 0s linear;
   }
 
-  /* Каскад строк при выезде шторки. Идёт по всем прямым потомкам списка, а не
-     только по статьям: в списке стоят ещё подписи групп (li.kb-side-group), и
-     без этого они появлялись бы сразу, а пункты под ними — позже. */
+  /* Каскад строк при выезде шторки. Идёт по прямым потомкам списка — это
+     семь папок и стартовая статья, восемь строк: статья живёт внутри
+     раздела, и каскад считает разделы, а не пятьдесят четыре строки, как
+     было при плоском меню. Задержка одна на весь список. */
   .kb-side-list > * {
     opacity: 0;
     transform: translate3d(0, -22px, 0);
@@ -444,23 +454,8 @@
   #kbSidebar.is-open .kb-side-list > * {
     opacity: 1;
     transform: translate3d(0, 0, 0);
+    transition-delay: 0.18s;
   }
-
-  /* Шаг 0.05s: тринадцать строк меню — девять статей и четыре подписи групп —
-     успевают проявиться раньше, чем шторка доедет. */
-  #kbSidebar.is-open .kb-side-list > *:nth-child(1) { transition-delay: 0.18s; }
-  #kbSidebar.is-open .kb-side-list > *:nth-child(2) { transition-delay: 0.23s; }
-  #kbSidebar.is-open .kb-side-list > *:nth-child(3) { transition-delay: 0.28s; }
-  #kbSidebar.is-open .kb-side-list > *:nth-child(4) { transition-delay: 0.33s; }
-  #kbSidebar.is-open .kb-side-list > *:nth-child(5) { transition-delay: 0.38s; }
-  #kbSidebar.is-open .kb-side-list > *:nth-child(6) { transition-delay: 0.43s; }
-  #kbSidebar.is-open .kb-side-list > *:nth-child(7) { transition-delay: 0.48s; }
-  #kbSidebar.is-open .kb-side-list > *:nth-child(8) { transition-delay: 0.53s; }
-  #kbSidebar.is-open .kb-side-list > *:nth-child(9) { transition-delay: 0.58s; }
-  #kbSidebar.is-open .kb-side-list > *:nth-child(10) { transition-delay: 0.63s; }
-  #kbSidebar.is-open .kb-side-list > *:nth-child(11) { transition-delay: 0.68s; }
-  #kbSidebar.is-open .kb-side-list > *:nth-child(12) { transition-delay: 0.73s; }
-  #kbSidebar.is-open .kb-side-list > *:nth-child(13) { transition-delay: 0.78s; }
 
   /* При закрытии строки уходят синхронно, без задержек. */
   #kbSidebar:not(.is-open) .kb-side-list > * {
@@ -494,38 +489,26 @@
     padding: 10px 12px;
   }
 
-  .kb-side-subs {
-    margin-left: 18px;
-    padding-left: 8px;
+  .kb-side-group-title {
+    padding: 10px 12px;
   }
 
-  .kb-side-sub {
-    font-size: 12px;
-    padding: 7px 8px;
+  .kb-side-sublist .kb-side-link {
+    padding-left: 20px;
   }
 }
 
 /* ═══ 8. ВВОД ═══════════════════════════════════════════════════════════════ */
 
 /* На касании «залипшего» наведения не бывает: подсветка остаётся только
-   у настоящего курсора. */
+   у открытой статьи и у той, с которой ушли. */
 @media (hover: none) {
-  .kb-side-link:hover,
-  .kb-side-sub:hover {
-    background-color: transparent;
-  }
-
   .kb-side-link:hover {
+    background-color: transparent;
     color: #E5E7EB;
   }
 
   .kb-side-link.is-active:hover {
-    background-color: rgba(245, 158, 11, 0.1);
-    color: #FFFFFF;
-  }
-
-  .kb-side-sub.is-active:hover {
-    background-color: rgba(245, 158, 11, 0.1);
     color: #FFFFFF;
   }
 
@@ -534,6 +517,11 @@
     color: var(--kb-text-dim);
   }
 
+  /* Каретка раздела на касании тоже не откликается: отклик — только
+     у открытой статьи. */
+  .kb-side-group-title:hover .kb-side-group-caret {
+    color: var(--kb-amber);
+  }
   #kbSidebarToggle:hover {
     color: #E5E7EB;
     border-color: #1F2937;
@@ -548,23 +536,22 @@
   #kbSidebarOverlay,
   #kbSidebarOverlay.is-open,
   .kb-side-list > *,
-  .kb-side-caret,
   .kb-sidebar-icons svg,
   .kb-side-link,
-  .kb-side-sub,
-  .kb-side-subs,
   #kbSidebarToggle {
     transition: none;
   }
 
-  #kbSidebar .kb-side-list > *,
-  .kb-side-subs {
+  #kbSidebar .kb-side-list > * {
     transform: none;
   }
 
-  /* Раскрытие списка сопутствующих при переходе на статью — без движения:
-     список просто виден (kb/js/04-sidebar.js в этом случае класс не ставит). */
-  .kb-side-item.is-opening .kb-side-subs {
-    animation: none;
+  /* Разделы раскрываются мгновенно: высоту списка ведёт переход, без него
+     max-height меняется сразу, и подстановка --kb-grp-h не нужна. */
+  .kb-side-sublist,
+  .kb-side-group.is-open > .kb-side-sublist,
+  .kb-side-group-caret,
+  .kb-side-group-title {
+    transition: none;
   }
 }

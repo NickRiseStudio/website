@@ -2654,6 +2654,9 @@
          текущим местом (после перезагрузки это главный экран). */
       if (typeof window.refreshScrollSpyAnchors === 'function') safe(window.refreshScrollSpyAnchors);
       if (typeof window.updateActiveNavSection === 'function') safe(window.updateActiveNavSection);
+      /* Вход по ссылке с якорем (#player … #kb, #about, #order): раздел
+         открываем только теперь — заставка погасла, страница интерактивна. */
+      if (typeof window.applyInitialUrlState === 'function') safe(window.applyInitialUrlState);
     }
 
     function hideBoot() {

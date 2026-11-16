@@ -312,9 +312,9 @@
     if (activePage === draft) activePage = null;
     draft = null;
     document.documentElement.removeAttribute('data-kb-draft');
-    var real = currentPage();
-    document.documentElement.setAttribute('data-kb-view', real ? 'article' : 'greeting');
-    if (real) activate();
+    /* Вид один — статья: черновик закрывается, остаётся открытая статья. */
+    document.documentElement.setAttribute('data-kb-view', 'article');
+    if (currentPage()) activate();
   }
   /* ── MARKDOWN ─────────────────────────────────────────────────────── */
 

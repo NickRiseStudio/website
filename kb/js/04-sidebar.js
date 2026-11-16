@@ -1,16 +1,16 @@
 // ═══════════════════════════════════════════════════════════════════════
-// kb/js/04-sidebar.js — МЕНЮ СТАТЕЙ: ШТОРКА НА ТЕЛЕФОНЕ И ПЛАНШЕТЕ
+// kb/js/04-sidebar.js — МЕНЮ СТАТЕЙ: ШТОРКА И РАСКРЫТИЕ РАЗДЕЛОВ
 // Грузится: kb/index.html — в конце body, defer. После kb/js/01-lang.js
 //         (язык на кнопках уже стоит).
-// Читает: #kbSidebar, #kbSidebarOverlay, #kbSidebarToggle.
-// Публичные (window): kbSidebar → openSubs (раскрыть сопутствующие статьи
-//         открывшейся статьи движением). Зовёт kb/js/07-articles.js.
+// Читает: #kbSidebar, #kbSidebarOverlay, #kbSidebarToggle, а внутри меню —
+//         li.kb-side-group, button.kb-side-group-title, ul.kb-side-sublist.
+// Публичные (window): kbSidebar.openGroup — раскрыть раздел статьёй, которую
+//         открыл kb/js/07-articles.js.
 // Блоки файла:
 //   • setSidebarOpen — одно место переключения: классы, aria-expanded, шапка.
 //   • Обработчики: кнопка, затемнение, Esc, клик по пункту.
-//   • openSubs — раскрытие сопутствующих при переходе на статью.
-//   • Сопутствующие статьи открытой статьи: повторный клик сворачивает их.
 //   • Защита прокрутки под меню и автозакрытие на ширине компьютера.
+//   • Разделы меню: раскрытие (setGroupOpen, замер высоты, пересчёт).
 // ═══════════════════════════════════════════════════════════════════════
 
 (function () {
@@ -62,98 +62,11 @@
   });
 
   /* Переход по пункту меню: статья открывается в этом же документе
-     (kb/js/07-articles.js), а шторка закрывается сама. Клик по статье,
-     которая уже открыта, никуда не ведёт — он сворачивает и разворачивает
-     список её сопутствующих статей. */
+     (kb/js/07-articles.js), а шторка закрывается сама. */
   sidebar.addEventListener('click', function (e) {
     if (!e.target.closest) return;
-
-    var activeLink = e.target.closest('a.kb-side-link.is-active');
-    if (activeLink) {
-      var item = activeLink.closest('.kb-side-item');
-      var subs = item ? item.querySelector('.kb-side-subs') : null;
-      if (subs) {
-        e.preventDefault();
-        /* Точная высота нужна только на время перехода: по ней CSS ведёт
-           max-height (kb/css/style/05-sidebar.css). scrollHeight отдаёт полную
-           высоту и в свёрнутом виде тоже — обрезает список max-height,
-           а не он сам. При «уменьшить движение» переходов нет, высота
-           не нужна. */
-        var noMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        if (!noMotion) subs.style.setProperty('--kb-subs-h', subs.scrollHeight + 'px');
-
-        var collapsed = item.classList.toggle('is-collapsed');
-        activeLink.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-
-        /* Раскрытый список возвращаем к запасу из CSS: с точной высотой он
-           обрезал бы текст, который стал выше, — другой язык, узкая полоса
-           меню. */
-        if (!collapsed) {
-          if (noMotion) {
-            subs.style.removeProperty('--kb-subs-h');
-          } else {
-            subs.addEventListener('transitionend', function endExpand(ev) {
-              if (ev.propertyName !== 'max-height') return;
-              subs.removeEventListener('transitionend', endExpand);
-              subs.style.removeProperty('--kb-subs-h');
-            });
-          }
-        }
-      }
-      return;
-    }
-
-    if (e.target.closest('a.kb-side-link, a.kb-side-sub')) setSidebarOpen(false);
+    if (e.target.closest('a.kb-side-link')) setSidebarOpen(false);
   });
-
-  /* Сопутствующие статьи раскрываются движением и при переходе на статью:
-     пункт становится текущим (kb/js/07-articles.js), а список в этот момент
-     только что попал в раскладку. Переходом такое раскрытие не сыграть —
-     с display: none переходы не запускаются, — поэтому его играет анимация
-     (kb/css/style/05-sidebar.css → kbSubsOut). Конец анимации — настоящая
-     высота списка: её кладём в --kb-subs-h, иначе анимация шла бы к запасу
-     из CSS и список раскрылся бы за пару кадров. */
-  function openSubs(item) {
-    var subs = item ? item.querySelector('.kb-side-subs') : null;
-    if (!subs || !item.classList.contains('is-current')) return;
-
-    /* «Уменьшить движение»: список просто виден, анимации нет. */
-    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
-    /* Список уже в раскладке: класс is-current поставил apply до этого вызова. */
-    var height = subs.scrollHeight;
-    if (!height) return;   /* раскрывать нечего */
-
-    subs.style.setProperty('--kb-subs-h', height + 'px');
-    item.classList.add('is-opening');
-
-    subs.addEventListener('animationend', function endOpen(ev) {
-      if (ev.animationName !== 'kbSubsOut') return;
-      subs.removeEventListener('animationend', endOpen);
-      closeSubs(item);
-    });
-  }
-
-  /* Снять движение раскрытия и точную высоту: дальше список живёт на запасе
-     высоты из CSS и не обрезает текст, который стал выше. Зовёт
-     kb/js/07-articles.js, когда пункт перестаёт быть текущим, — иначе
-     недокрученная анимация осталась бы висеть на пункте; и сам openSubs
-     по концу анимации. Свёрнутость (.is-collapsed) не трогаем: её ведёт клик
-     по каретке выше. */
-  function closeSubs(item) {
-    if (!item) return;
-    item.classList.remove('is-opening');
-    var subs = item.querySelector('.kb-side-subs');
-    if (subs) subs.style.removeProperty('--kb-subs-h');
-  }
-
-  /* Публичное: раскрыть сопутствующие статьи пункта (openSubs) и вернуть
-     список в обычное состояние (closeSubs). Зовёт kb/js/07-articles.js при
-     смене статьи — там движение смены вида. */
-  window.kbSidebar = {
-    openSubs: openSubs,
-    closeSubs: closeSubs
-  };
 
   /* Окно доросло до ширины компьютера — меню там уже обычная колонка,
      открытое состояние шторки не нужно. */
@@ -166,4 +79,94 @@
   } else if (typeof desktopQuery.addListener === 'function') {
     desktopQuery.addListener(closeOnDesktop); /* старые Safari */
   }
+
+  /* ── РАЗДЕЛЫ МЕНЮ: РАСКРЫТИЕ ───────────────────────────────────────── */
+
+  var groups = Array.prototype.slice.call(sidebar.querySelectorAll('.kb-side-group'));
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  /* Раскрытие раздела. В CSS у закрытого списка max-height: 0, а у открытого —
+     var(--kb-grp-h): настоящую высоту знает только браузер, поэтому замер идёт
+     здесь. Пока раздел открыт, замер остаётся действующим ограничением — так
+     список не может «прыгнуть» выше себя, — а при смене языка или ширины окна
+     пересчитывается (refreshOpenGroups). */
+  function setGroupOpen(group, open, animate) {
+    var list = group.querySelector('.kb-side-sublist');
+    var title = group.querySelector('.kb-side-group-title');
+    if (!list || !title) return;
+
+    title.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (group.classList.contains('is-open') === open) return;
+
+    /* Открытие: замер — стартовая точка перехода. Закрытие: ограничение уже
+       стоит с прошлого замера, его и хватает. */
+    if (open) group.style.setProperty('--kb-grp-h', list.scrollHeight + 'px');
+
+    /* Без движения — первый показ статьи по ссылке и «уменьшить движение» в
+       настройках системы. Класс is-instant снимает переход на один кадр: иначе
+       открытие шло бы к запасным 2000px и «догоняло» уже видимый текст. */
+    if (animate === false || reduceMotion.matches) {
+      group.classList.add('is-instant');
+      group.classList.toggle('is-open', open);
+      void list.offsetHeight;
+      group.classList.remove('is-instant');
+      return;
+    }
+
+    group.classList.toggle('is-open', open);
+  }
+
+  /* Смена языка меняет длину названий статей: пункт может стать двухстрочным,
+     и раздел вырос бы выше прошлого замера. Пересчитываем открытые разделы при
+     смене html[data-lang] и при изменении ширины окна — высота меняется тем же
+     переходом, без рывка. */
+  function refreshOpenGroups() {
+    for (var i = 0; i < groups.length; i++) {
+      if (!groups[i].classList.contains('is-open')) continue;
+      var list = groups[i].querySelector('.kb-side-sublist');
+      if (list) groups[i].style.setProperty('--kb-grp-h', list.scrollHeight + 'px');
+    }
+  }
+
+  var refreshFrame = 0;
+  window.addEventListener('resize', function () {
+    if (refreshFrame) return;
+    refreshFrame = window.requestAnimationFrame(function () {
+      refreshFrame = 0;
+      refreshOpenGroups();
+    });
+  });
+
+  /* Шрифты догружаются после первой отрисовки и меняют высоту строк: без
+     пересчёта открытый раздел обрезал бы последний пункт. */
+  window.addEventListener('load', refreshOpenGroups);
+  if (document.fonts && typeof document.fonts.ready === 'object') {
+    document.fonts.ready.then(refreshOpenGroups);
+  }
+
+  if (window.MutationObserver) {
+    new MutationObserver(refreshOpenGroups).observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-lang']
+    });
+  }
+
+  /* Клик по названию раздела открывает и закрывает только его: разделы
+     независимы, соседние не трогаются. Кнопка нативная, поэтому Enter и Space
+     браузер превращает в click сам. */
+  sidebar.addEventListener('click', function (e) {
+    var title = e.target.closest ? e.target.closest('.kb-side-group-title') : null;
+    if (!title) return;
+    var group = title.closest('.kb-side-group');
+    if (group) setGroupOpen(group, !group.classList.contains('is-open'), true);
+  });
+
+  /* Меню другого модуля: kb/js/07-articles.js раскрывает раздел статьи,
+     открытой по ссылке, — иначе её подсветка осталась бы в закрытом списке. */
+  window.kbSidebar = {
+    openGroup: function (group, animate) {
+      if (group) setGroupOpen(group, true, animate);
+    }
+  };
+
 })();

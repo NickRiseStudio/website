@@ -77,6 +77,9 @@ html[data-kb-view="article"] #kbArticle {
   text-wrap: balance;
 }
 
+/* Подзаголовок внутри раздела: группа строк таблицы («Минимум — около
+   $250») или подпись к части раздела. Мельче h2 и в янтаре — читается
+   заголовком, но не спорит с разделами. */
 #kbArticle h3 {
   margin: 22px 0 10px;
   font-size: 16px;
@@ -102,6 +105,68 @@ html[data-kb-view="article"] #kbArticle {
 
 #kbArticle li::marker {
   color: var(--kb-amber);
+}
+
+/* Таблица: сравнение вариантов и бюджеты. Строки разделяет горизонтальная
+   линия, колонки — вертикальная: в бюджете без неё «пример» и «цена»
+   сливаются в одну длинную строку и глаз теряет, где кончается одно
+   и начинается другое. */
+#kbArticle table {
+  width: 100%;
+  margin: 0 0 18px;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+#kbArticle th,
+#kbArticle td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--kb-line);
+  text-align: left;
+  vertical-align: top;
+}
+
+/* Разделитель колонок — только между ними: у первой колонки линии слева
+   нет, иначе она читается как рамка таблицы. При border-collapse две
+   соседние границы схлопываются, поэтому лишней толщины не появляется. */
+#kbArticle th + th,
+#kbArticle td + td {
+  border-left: 1px solid rgba(245, 158, 11, 0.1);
+}
+
+#kbArticle th {
+  padding-top: 0;
+  padding-bottom: 7px;
+  border-bottom-color: rgba(245, 158, 11, 0.35);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--kb-amber-lt);
+}
+
+/* Первая колонка — название позиции: она держит строку, поэтому чуть
+   плотнее остальных. Ширину не фиксируем: в разных таблицах разное число
+   колонок, и жёсткая ширина ломала бы раскладку. */
+#kbArticle th:first-child,
+#kbArticle td:first-child {
+  padding-left: 0;
+  color: var(--kb-text);
+}
+
+#kbArticle td:first-child {
+  font-weight: 600;
+}
+
+#kbArticle th:last-child,
+#kbArticle td:last-child {
+  padding-right: 0;
+}
+
+/* Последняя строка без линии: снизу уже отступ до следующего абзаца. */
+#kbArticle tbody tr:last-child td {
+  border-bottom-color: transparent;
 }
 
 /* Разделитель: 2px, а не 1px. Однопиксельный блок, попав не на целую строку
@@ -137,7 +202,7 @@ html[data-kb-view="article"] #kbArticle {
   border-bottom: 1px dashed rgba(245, 158, 11, 0.5);
 }
 
-/* Врезка: совет, «куда дальше», предупреждение. */
+/* Врезка: совет или предупреждение. */
 .kb-note {
   margin: 20px 0;
   padding: 14px 16px;
@@ -153,19 +218,30 @@ html[data-kb-view="article"] #kbArticle {
   margin: 0;
 }
 
-.kb-note--next {
-  border-left-color: var(--kb-amber-lt);
+/* Финал статьи: подводка к услугам. Подсветка та же, что у врезки, — блок
+   закрывает текст и не читается как продолжение абзаца. Селектор с id:
+   иначе `#kbArticle p` вернёт нижний отступ и обычный цвет. */
+#kbArticle .kb-cta {
+  margin: 26px 0 0;
+  padding: 16px 18px;
+  border: 1px solid var(--kb-line);
+  border-left: 3px solid var(--kb-amber-lt);
+  border-radius: 12px;
   background-color: rgba(245, 158, 11, 0.09);
+  color: #E8EAED;
 }
 
-/* Иллюстрация: <img> в рамке со скруглением, под ним подпись. Пока файла
-   нет — вместо картинки заглушка .kb-figure-frame с бейджем «в работе»;
-   рамка у обоих одна, поэтому замена ничего не сдвигает. */
+/* Иллюстрация: <img> в рамке со скруглением, под ним подпись. Картинка
+   занимает всю ширину колонки чтения, как и текст: узкая и прижатая влево
+   выглядела случайной вставкой. height: auto при живых width/height в
+   разметке держит пропорции — страница не прыгает при загрузке. */
 .kb-figure {
   margin: 22px 0;
 }
 
 .kb-figure img {
+  width: 100%;
+  height: auto;
   border: 1px solid var(--kb-line);
   border-radius: 12px;
 }
@@ -203,18 +279,23 @@ html[data-kb-view="article"] #kbArticle {
   padding-left: 0;
 }
 
+/* Квадратик вынесен из потока, сам пункт остаётся обычным текстом.
+   С flex каждый ребёнок пункта становился отдельным блоком: ссылка или
+   <strong> посреди фразы вставали в строку как кнопка и рвали текст.
+   Абсолютный ::before держит квадрат слева при любом содержимом пункта,
+   а перенос строки идёт под текст, с отступом 25px (15px квадрат + 10px). */
 .kb-checklist li {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  position: relative;
+  padding-left: 25px;
 }
 
 .kb-checklist li::before {
   content: '';
-  flex-shrink: 0;
+  position: absolute;
+  left: 0;
+  top: 5px;
   width: 15px;
   height: 15px;
-  margin-top: 5px;
   border: 1.5px solid rgba(245, 158, 11, 0.55);
   border-radius: 4px;
 }
@@ -243,6 +324,10 @@ html[data-kb-view="article"] #kbArticle {
   #kbArticle h3 {
     margin: 26px 0 12px;
     font-size: 18px;
+  }
+
+  #kbArticle table {
+    font-size: 14px;
   }
 
   .kb-note {
@@ -309,6 +394,25 @@ html[data-kb-view="article"] #kbArticle {
   #kbArticle h3 {
     margin: 20px 0 10px;
     font-size: 15.5px;
+  }
+
+  /* Таблица шире экрана не должна растягивать колонку чтения: она
+     прокручивается сама, текст абзацев остаётся на месте. */
+  #kbArticle table {
+    display: block;
+    overflow-x: auto;
+    font-size: 12.5px;
+  }
+
+  #kbArticle th,
+  #kbArticle td {
+    padding: 7px 8px;
+    white-space: nowrap;
+  }
+
+  #kbArticle .kb-cta {
+    margin-top: 22px;
+    padding: 14px;
   }
 
   #kbArticle ul,

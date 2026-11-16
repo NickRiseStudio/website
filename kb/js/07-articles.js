@@ -7,9 +7,11 @@
 //         .kb-toc-page, #kbSidebar, #kbTitle.
 // Пишет: html[data-kb-view], html[data-kb-toc] (есть ли у статьи содержание).
 // Публичные (window): нет — модуль самодостаточный.
-// Зовёт: window.kbToc (kb/js/05-toc.js), window.kbSidebar (kb/js/04-sidebar.js).
+// Зовёт: window.kbToc (kb/js/05-toc.js), window.kbSidebar (kb/js/04-sidebar.js —
+//         раскрыть раздел меню с открытой статьёй).
 // Блоки файла:
 //   • apply — единственная точка смены вида: классы, адрес, меню, содержание.
+//   • Память прокрутки — у каждой статьи своя позиция чтения до перезагрузки.
 //   • show — смена статьи из меню или по названию раздела, с движением.
 //   • Клики по ссылкам статей, кнопки «назад»/«вперёд», якорь из адреса.
 //
@@ -31,8 +33,25 @@
   var tocPages = toc ? toc.querySelectorAll('.kb-toc-page') : [];
   var sideItems = document.querySelectorAll('#kbSidebar .kb-side-item');
 
-  /* Открытая секция; null — открыто приветствие. */
+  /* Стартовая статья 0.1: она же открыта, когда в адресе нет ?article=,
+     и когда в адресе slug, которого в базе больше нет. */
+  var DEFAULT_SLUG = 'start-here';
+
+  /* Открытая секция; пустой адрес открывает стартовую статью. */
   var openPage = null;
+
+  /* Где читатель остановился в каждой статье: slug → scrollTop. Живёт
+     в памяти вкладки и переживает любые переходы внутри базы, а при
+     перезагрузке начинается заново — свежий заход открывает статью сверху. */
+  var scrollMemory = {};
+
+  function scrollKey() {
+    return openPage ? openPage.getAttribute('data-kb-article') : '';
+  }
+
+  function rememberScroll() {
+    scrollMemory[scrollKey()] = main.scrollTop;
+  }
 
   /* Статья по имени из адреса: имя же стоит в data-kb-article у секции,
      у списка содержания и у пункта меню — это единственная связь между ними. */
@@ -43,8 +62,8 @@
     return null;
   }
 
-  /* Адрес статьи — ?article=<slug>, приветствие — корень базы знаний без
-     параметра. Поэтому серверу не нужно ничего перенастраивать, а ссылка
+  /* Адрес статьи — ?article=<slug>, стартовая статья — корень базы знаний
+     без параметра. Поэтому серверу не нужно ничего перенастраивать, а ссылка
      на статью работает и при заходе снаружи. */
   function slugFromUrl() {
     var found = /[?&]article=([^&#]*)/.exec(window.location.search);
@@ -57,78 +76,76 @@
      адрес уже верный, и историю трогать нельзя. move — играть движение смены:
      при загрузке (первый вызов) двигать нечего, там работает вход панели. */
   function apply(slug, remember, move) {
-    var page = slug ? findPage(slug) : null;
+    var page = findPage(slug) || findPage(DEFAULT_SLUG);
+    var pageSlug = page ? page.getAttribute('data-kb-article') : '';
     var i;
-    /* Пункт меню, который открылся именно сейчас: его сопутствующие статьи
-       раскрываем движением (kb/js/04-sidebar.js). */
-    var openedItem = null;
+
+    /* Статья, с которой уходим. Её пункт останется с одной заливкой, без
+       янтарной полосы: видно, где читатель был и где он сейчас. */
+    var prevSlug = openPage ? openPage.getAttribute('data-kb-article') : '';
+
+    /* Позицию чтения запоминаем до подмены вида: иначе вернувшийся читатель
+       попадал бы в начало статьи. Ключ — статья, из которой уходим. */
+    rememberScroll();
 
     for (i = 0; i < pages.length; i++) {
       pages[i].classList.toggle('is-current', pages[i] === page);
     }
     var hasTocList = false;
     for (i = 0; i < tocPages.length; i++) {
-      var isTocPage = !!page && tocPages[i].getAttribute('data-kb-article') === slug;
+      var isTocPage = !!page && tocPages[i].getAttribute('data-kb-article') === pageSlug;
       if (isTocPage) hasTocList = true;
       tocPages[i].classList.toggle('is-current', isTocPage);
     }
     /* У статьи без разделов списка содержания нет — это заглушка, которая
        ждёт текста. Пустую колонку ей не показываем (kb/css/style/07-toc.css). */
     document.documentElement.setAttribute('data-kb-toc', hasTocList ? 'on' : 'none');
+    var activeLink = null;
     for (i = 0; i < sideItems.length; i++) {
       var link = sideItems[i].querySelector('.kb-side-link');
-      /* «Своя» статья пункта — та, что стоит ссылкой верхнего уровня. */
-      var own = !!page && !!link && link.getAttribute('data-kb-article') === slug;
-      /* Открытая сопутствующая: текущим выглядит пункт-родитель, иначе список
-         сопутствующих скрыт (05-sidebar.css гасит список у не-текущего пункта).
-         is-active и aria-current остаются у «своей» статьи, поэтому клик по
-         названию родителя по-прежнему открывает его статью. */
-      var subLink = !!page ? sideItems[i].querySelector('a.kb-side-sub[data-kb-article="' + slug + '"]') : null;
-      var isCurrent = own || !!subLink;
-      if (isCurrent && !sideItems[i].classList.contains('is-current')) openedItem = sideItems[i];
-      sideItems[i].classList.toggle('is-current', isCurrent);
-      /* Свёрнутые сопутствующие не переживают закрытие статьи: вернувшись,
-         читатель должен увидеть список развёрнутым. Тем же вызовом снимается
-         недокрученное движение раскрытия (kb/js/04-sidebar.js → closeSubs). */
-      if (!isCurrent) {
-        sideItems[i].classList.remove('is-collapsed');
-        if (window.kbSidebar) window.kbSidebar.closeSubs(sideItems[i]);
-      }
-      /* Открытая сопутствующая подсвечивается в своём списке — по классу и
-         aria-current, чтобы состояние читалось и глазами, и скринридером. */
-      var subs = sideItems[i].querySelectorAll('.kb-side-sub');
-      for (var k = 0; k < subs.length; k++) {
-        if (subs[k] === subLink) subs[k].setAttribute('aria-current', 'page');
-        else subs[k].removeAttribute('aria-current');
-        subs[k].classList.toggle('is-active', subs[k] === subLink);
-      }
       if (!link) continue;
+      /* Открытая статья: янтарная полоса слева и aria-current у её пункта.
+         Подсветка живёт на ссылке — подписи групп и номера не трогаем. */
+      var own = !!page && link.getAttribute('data-kb-article') === pageSlug;
       link.classList.toggle('is-active', own);
-      if (own) link.setAttribute('aria-current', 'page');
-      else link.removeAttribute('aria-current');
+      /* Пункт прошлой статьи: та же янтарная заливка, но без полосы. Полоса
+         остаётся приметой одного места — той статьи, что открыта сейчас. */
+      link.classList.toggle('is-visited', !own && !!prevSlug &&
+        link.getAttribute('data-kb-article') === prevSlug);
+      if (own) {
+        link.setAttribute('aria-current', 'page');
+        activeLink = link;
+      } else {
+        link.removeAttribute('aria-current');
+      }
     }
 
-    /* Содержание приходит вместе со статьёй: если панели в раскладке ещё не
-       было («приветствие → статья»), она выезжает справа от края экрана —
-       kb/js/05-toc.js → playIn. При переключении статей не мигаем. */
-    var tocEnters = !!page && document.documentElement.getAttribute('data-kb-view') !== 'article';
-    document.documentElement.setAttribute('data-kb-view', page ? 'article' : 'greeting');
+    /* Пункт открытой статьи лежит внутри своего раздела, а разделы закрыты.
+       Раскрываем нужный, иначе подсветки не видно. При первой загрузке
+       (move = false) — без движения: там играет вход панели. */
+    var activeGroup = activeLink && activeLink.closest
+      ? activeLink.closest('.kb-side-group')
+      : null;
+    if (activeGroup && window.kbSidebar) window.kbSidebar.openGroup(activeGroup, move);
+
+    /* Вид один — статья. Выезда содержания справа, как при переходе с
+       приветствия, больше нет: колонка просто встаёт на место. */
+    document.documentElement.setAttribute('data-kb-view', 'article');
     openPage = page;
-    main.scrollTop = 0;
+    /* Статья, в которой читатель уже был, открывается там, где он её
+       оставил; новая — с начала. */
+    main.scrollTop = scrollMemory[pageSlug] || 0;
 
-    /* Сопутствующие статьи новой статьи раскрываем движением — как по клику
-       на каретку (kb/js/04-sidebar.js). При загрузке не двигаем: там список
-       раскрыт сразу, а панели входят по kb/css/anim/02-panels.css. */
-    if (move && openedItem && window.kbSidebar) window.kbSidebar.openSubs(openedItem);
-
+    /* Стартовая статья живёт по чистому адресу базы — /kb/ без параметра. */
     if (remember && window.history && window.history.pushState) {
-      window.history.pushState(null, '', page ? '?article=' + slug : window.location.pathname);
+      window.history.pushState(null, '', pageSlug === DEFAULT_SLUG
+        ? window.location.pathname
+        : '?article=' + pageSlug);
     }
 
     if (window.kbToc) {
       if (page) {
         window.kbToc.refresh();
-        if (move && tocEnters) window.kbToc.playIn();
       } else {
         window.kbToc.close();
       }
